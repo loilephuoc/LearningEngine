@@ -47,4 +47,17 @@ class AndroidReviewHubPresentationTest {
         assertTrue(source.contains("contentDescription = null"))
         assertTrue(source.contains("LearningEngineSecondaryButton("))
     }
+
+    @Test
+    fun `runtime-only Quick Review summary is compact accessible and delegates difficult entry`() {
+        assertTrue(source.contains("quickReviewSummary?.takeIf { it.totalExposures > 0 }"))
+        assertTrue(source.contains("Quick Review vừa rồi"))
+        assertTrue(source.contains("${'$'}{summary.totalExposures} lượt · Lướt ${'$'}{summary.skipped}"))
+        assertTrue(source.contains("Again ${'$'}{summary.again} · Hard ${'$'}{summary.hard}"))
+        assertTrue(source.contains("clearAndSetSemantics { contentDescription = semanticSummary }"))
+        assertTrue(source.contains("AndroidStudyEvent.Start(AndroidSessionEntry.DIFFICULT)"))
+        assertTrue(source.contains("difficultAvailable = home.availability.canStartDifficultPractice"))
+        assertFalse(source.contains("studyQueue"))
+        assertFalse(source.contains("MemoryState"))
+    }
 }

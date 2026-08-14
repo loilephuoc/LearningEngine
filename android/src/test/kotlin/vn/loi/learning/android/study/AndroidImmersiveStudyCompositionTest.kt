@@ -33,14 +33,14 @@ class AndroidImmersiveStudyCompositionTest {
     @Test
     fun `Introduction front is image then meaning without answer controls`() {
         assertTrue(screen.contains("state.meaning ?: \"Nghĩa tiếng Việt\""))
-        assertTrue(screen.contains("Learning image, tap to discover"))
-        assertTrue(screen.contains("Learning canvas, tap to discover the English word"))
+        assertTrue(screen.contains("Learning image, reveal answer"))
+        assertTrue(screen.contains("Learning canvas, reveal the English word"))
         assertFalse(screen.contains("Text(\"Tap to reveal\""))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction)"))
         val introduction = introductionSource()
-        assertTrue(introduction.contains("visible = !state.revealed"))
-        assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("text = meaning"))
-        assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("StudyAnswerSection("))
+        assertTrue(introduction.contains("targetState = state.revealed"))
+        assertTrue(introduction.indexOf("IntroductionHeroMedia(") < introduction.indexOf("text = meaning"))
+        assertTrue(introduction.indexOf("IntroductionHeroMedia(") < introduction.indexOf("StudyAnswerSection("))
         assertTrue(introduction.contains("modifier = Modifier.fillMaxSize().graphicsLayer"))
         assertTrue(introduction.contains("verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)"))
         assertFalse(introduction.contains("Arrangement.Bottom"))
@@ -50,7 +50,8 @@ class AndroidImmersiveStudyCompositionTest {
     @Test
     fun `revealed Introduction uses non-overlapping stage and persistent four way dock`() {
         assertFalse(screen.contains("label = \"introduction reveal\""))
-        assertFalse(screen.contains("AnimatedContent(\n                targetState = state.revealed"))
+        assertTrue(screen.contains("targetState = state.revealed"))
+        assertTrue(screen.contains("label = \"Introduction coordinated reveal\""))
         assertTrue(screen.contains("StudyRatingBar"))
         listOf("Again", "Hard", "Good", "Easy").forEach { rating ->
             assertTrue(controls.contains("RatingButton(\"$rating\""))
@@ -60,7 +61,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("\"Example\""))
         assertFalse(screen.contains("\"Translation\""))
         val introduction = introductionSource()
-        val image = introduction.indexOf("LearningEngineImage(")
+        val image = introduction.indexOf("IntroductionHeroMedia(")
         val answer = introduction.indexOf("StudyAnswerSection(")
         assertTrue(image < answer)
         assertTrue(introduction.contains("StudyStageCard("))
@@ -260,11 +261,11 @@ class AndroidImmersiveStudyCompositionTest {
     }
 
     @Test
-    fun `Introduction context bar keeps package position except for endless Quick Review`() {
+    fun `Introduction context bar keeps package position outside focused skim UX`() {
         assertTrue(screen.contains("?.packagePosition ?: state.currentPosition"))
         assertTrue(screen.contains("?.packageTotal ?: state.totalItems"))
-        assertTrue(screen.contains("currentPosition = if (quickReview) null else"))
-        assertTrue(screen.contains("totalItems = if (quickReview) null else"))
+        assertTrue(screen.contains("currentPosition = if (focusedSkimUx) null else"))
+        assertTrue(screen.contains("totalItems = if (focusedSkimUx) null else"))
     }
 
     @Test

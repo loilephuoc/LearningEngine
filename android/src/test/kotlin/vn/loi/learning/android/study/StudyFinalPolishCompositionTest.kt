@@ -37,7 +37,8 @@ class StudyFinalPolishCompositionTest {
         assertTrue(introduction.contains("StudyMotionRole.PRESS"))
         assertTrue(introduction.contains("StudyMotionRole.MEDIA_RESIZE"))
         assertTrue(introduction.contains("StudyMotionRole.REVEAL"))
-        assertTrue(introduction.contains("StudyMotionRole.CARD_EXIT"))
+        assertTrue(introduction.contains("label = \"Introduction coordinated reveal\""))
+        assertFalse(introduction.contains("visible = !state.revealed"))
         assertFalse(introduction.contains("learn new front motion"))
         assertFalse(introduction.contains("durationMillis = 1400"))
     }

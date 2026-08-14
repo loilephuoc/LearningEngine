@@ -33,6 +33,8 @@ sealed interface AndroidStudyEvent {
     data object Next : AndroidStudyEvent
     data object PreviousVisited : AndroidStudyEvent
     data object NextVisited : AndroidStudyEvent
+    data object QuickReviewUnratedAdvance : AndroidStudyEvent
+    data object DifficultPracticeAdvance : AndroidStudyEvent
     data object PauseTyping : AndroidStudyEvent
     data object ResumeTyping : AndroidStudyEvent
     data object CheckTypingTimeout : AndroidStudyEvent
@@ -58,6 +60,8 @@ class AndroidStudyViewModel(
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<AndroidStudyState>(AndroidStudyState.Loading)
     val state: StateFlow<AndroidStudyState> = mutableState.asStateFlow()
+    private val mutableQuickReviewSummary = MutableStateFlow<QuickReviewSessionInsights?>(null)
+    val quickReviewSummary: StateFlow<QuickReviewSessionInsights?> = mutableQuickReviewSummary.asStateFlow()
     private val operationMutex = Mutex()
     private val reviewHistory = mutableListOf<AndroidStudyState.Runtime>()
     private var reviewHistoryCursor = -1
@@ -69,6 +73,7 @@ class AndroidStudyViewModel(
     private val typingPreparedNext = mutableMapOf<String, AndroidStudyState>()
     private var typingViMuted = typingViMutedInitially
     private var homeSnapshotValid = false
+    private val quickReviewInsights = QuickReviewInsightsAccumulator()
 
     init {
         AndroidStartupTrace.mark("study_view_model_constructed")
@@ -131,6 +136,8 @@ class AndroidStudyViewModel(
                         (current as? AndroidStudyState.Runtime)?.let(facade::next) ?: current
                     AndroidStudyEvent.PreviousVisited -> previousVisited(current)
                     AndroidStudyEvent.NextVisited -> nextVisited(current)
+                    AndroidStudyEvent.QuickReviewUnratedAdvance -> nextVisited(current)
+                    AndroidStudyEvent.DifficultPracticeAdvance -> nextVisited(current)
                     AndroidStudyEvent.PauseTyping -> (current as? AndroidStudyState.Typing)?.let(facade::pauseTyping) ?: current
                     AndroidStudyEvent.ResumeTyping -> (current as? AndroidStudyState.Typing)?.let(facade::resumeTyping) ?: current
                     AndroidStudyEvent.CheckTypingTimeout -> {
@@ -189,6 +196,7 @@ class AndroidStudyViewModel(
                         AndroidStudyState.Failed("Study action failed.")
                     }
                 }
+                recordQuickReviewCompletion(event, current, updated)
                 publish(updated)
                 if ((event is AndroidStudyEvent.Start || event is AndroidStudyEvent.RateIntroduction) &&
                     updated is AndroidStudyState.Runtime
@@ -243,6 +251,29 @@ class AndroidStudyViewModel(
         }
     }
 
+    private fun recordQuickReviewCompletion(
+        event: AndroidStudyEvent,
+        before: AndroidStudyState,
+        after: AndroidStudyState
+    ) {
+        val exposure = before as? AndroidStudyState.Introduction ?: return
+        if (exposure.focusedPracticeKind != vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW ||
+            exposure.historyPreview
+        ) return
+        if (event is AndroidStudyEvent.RateIntroduction && !exposure.revealed) return
+        val visitId = exposure.presentationVisitId ?: return
+        val next = after as? AndroidStudyState.Runtime ?: return
+        if (next.reviewSessionId() != exposure.sessionId || next.reviewItemKey() == visitId) return
+        val updated = when (event) {
+            AndroidStudyEvent.QuickReviewUnratedAdvance ->
+                quickReviewInsights.recordSkip(exposure.sessionId, visitId)
+            is AndroidStudyEvent.RateIntroduction ->
+                quickReviewInsights.recordRating(exposure.sessionId, visitId, event.rating)
+            else -> return
+        } ?: return
+        mutableQuickReviewSummary.value = updated
+    }
+
     private fun finalizeTypingIfReady(state: AndroidStudyState.Typing?): AndroidStudyState? {
         state ?: return null
         val key = state.plan.planId.value
@@ -295,6 +326,12 @@ class AndroidStudyViewModel(
     private fun publish(state:AndroidStudyState){
         if (state is AndroidStudyState.Runtime) {
             val sessionId = state.reviewSessionId()
+            if (state is AndroidStudyState.Introduction &&
+                state.focusedPracticeKind == vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW &&
+                quickReviewInsights.summary?.sessionId != sessionId
+            ) {
+                quickReviewInsights.begin(sessionId)
+            }
             if (reviewHistorySessionId != sessionId) {
                 reviewHistory.clear()
                 reviewHistoryCursor = -1

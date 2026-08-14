@@ -59,7 +59,8 @@ class AndroidMockupFoundationTest {
         assertTrue(library.contains("TextField("))
         assertTrue(study.contains("shape = LearningEngineShapes.extraSmall"))
         assertTrue(study.contains("color = androidx.compose.ui.graphics.Color.Transparent"))
-        assertFalse(study.contains("targetState = state.revealed"))
+        assertTrue(study.contains("targetState = state.revealed"))
+        assertTrue(study.contains("label = \"Introduction coordinated reveal\""))
     }
 
     @Test

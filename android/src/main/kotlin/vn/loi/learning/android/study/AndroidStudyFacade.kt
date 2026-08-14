@@ -174,6 +174,8 @@ sealed interface AndroidStudyState {
         val packagePosition: Int? = null,
         val packageTotal: Int? = null,
         val presentationVisitId: String? = null,
+        val quickReviewPassPosition: Int? = null,
+        val quickReviewPoolSize: Int? = null,
         val latestEffectiveRating: ReviewRating? = null,
         val historyPreview: Boolean = false,
         val compactRatingExit: Boolean = false,
@@ -685,8 +687,7 @@ class AndroidStudyFacade(
         val coverageTarget = queue.effectiveNewWorkload + queue.effectiveReviewWorkload
         val focusedKind = session.policy.focusedPracticeKind
         val skimStatus = when (focusedKind) {
-            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW ->
-                "Quick Review · Pass ${queueSnapshot.practiceRound}"
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW -> "Quick Review"
             vn.loi.learning.domain.study.session.model.FocusedPracticeKind.LATEST_SESSION ->
                 "Ôn từ vừa học · Vòng ${queueSnapshot.practiceRound}"
             vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT ->
@@ -822,11 +823,18 @@ class AndroidStudyFacade(
         val latestEffectiveRating = context.engine.getContentLearningState(learnerId, content.id).latestEffectiveRating
         val currentPos = next.progress?.currentPosition
         val totalCount = next.progress?.totalItemCount
-        val presentationVisitId = if (next.session.policy.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW) {
-            context.studyQueue.get(next.session.id)?.let {
-                "${next.session.id.value}:${it.practiceRound}:${it.practiceExposureSequence}"
-            }
+        val focusedPracticeQueue = if (
+            next.session.policy.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW ||
+            next.session.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT
+        ) {
+            context.studyQueue.get(next.session.id)
         } else null
+        val presentationVisitId = focusedPracticeQueue?.let {
+            "${next.session.id.value}:${it.practiceRound}:${it.practiceExposureSequence}"
+        }
+        val quickReviewQueue = focusedPracticeQueue.takeIf {
+            next.session.policy.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW
+        }
         val packagePosition = AndroidStartupTrace.measured("study_introduction_package_position") {
             resolvePackagePosition(packageContentIds, content.id)
         }
@@ -858,6 +866,8 @@ class AndroidStudyFacade(
             packagePosition = packagePosition?.position,
             packageTotal = packagePosition?.total,
             presentationVisitId = presentationVisitId,
+            quickReviewPassPosition = quickReviewQueue?.practiceProgress?.position,
+            quickReviewPoolSize = quickReviewQueue?.practiceProgress?.membershipSize,
             latestEffectiveRating = latestEffectiveRating,
             focusedPracticeKind = next.session.policy.focusedPracticeKind,
             contextTitle = title
@@ -1047,12 +1057,12 @@ class AndroidStudyFacade(
     fun next(state: AndroidStudyState.Runtime): AndroidStudyState {
         val plan = state.plan
         return if (state is AndroidStudyState.Introduction &&
-            state.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW && state.revealed
+            state.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW
         ) {
             context.engine.advanceQuickReviewWithoutEvaluation(SessionId(state.sessionId))
             load(state.sessionId)
         } else if (state is AndroidStudyState.Introduction &&
-            state.focusedPracticeKind == FocusedPracticeKind.DIFFICULT && state.revealed
+            state.focusedPracticeKind == FocusedPracticeKind.DIFFICULT
         ) {
             context.engine.completePracticeItem(
                 CompletePracticeItemCommand(

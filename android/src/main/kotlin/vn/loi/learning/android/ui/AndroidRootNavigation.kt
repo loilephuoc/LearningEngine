@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -236,6 +237,7 @@ fun StudyHub(
 @Composable
 fun ReviewHub(
     home: AndroidStudyState.Home,
+    quickReviewSummary: QuickReviewSessionInsights? = null,
     onEvent: (AndroidStudyEvent) -> Unit
 ) {
     LearningEngineScreenShell("Review", "Strengthen memory across active content",
@@ -271,6 +273,13 @@ fun ReviewHub(
                 home.availability.canStartLearnedReview
             )
         )
+        quickReviewSummary?.takeIf { it.totalExposures > 0 }?.let { summary ->
+            QuickReviewInsightsCard(
+                summary = summary,
+                difficultAvailable = home.availability.canStartDifficultPractice,
+                onReviewDifficult = { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.DIFFICULT)) }
+            )
+        }
         actions.forEach { action ->
             LearningEngineCompactCard(
                 Modifier.fillMaxWidth().defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
@@ -303,6 +312,40 @@ fun ReviewHub(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun QuickReviewInsightsCard(
+    summary: QuickReviewSessionInsights,
+    difficultAvailable: Boolean,
+    onReviewDifficult: () -> Unit
+) {
+    val semanticSummary = "Quick Review vừa rồi. ${summary.totalExposures} lượt. " +
+        "Lướt ${summary.skipped}. Again ${summary.again}. Hard ${summary.hard}. " +
+        "Good ${summary.good}. Easy ${summary.easy}."
+    LearningEngineCompactCard(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.weight(1f).clearAndSetSemantics { contentDescription = semanticSummary },
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text("Quick Review vừa rồi", style = LearningTextRole.cardTitle)
+            Text(
+                "${summary.totalExposures} lượt · Lướt ${summary.skipped}",
+                style = LearningTextRole.metadata,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "Again ${summary.again} · Hard ${summary.hard} · Good ${summary.good} · Easy ${summary.easy}",
+                style = LearningTextRole.metadata,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        LearningEngineSecondaryButton(
+            label = "Ôn Again / Hard",
+            onClick = onReviewDifficult,
+            enabled = difficultAvailable
+        )
     }
 }
 

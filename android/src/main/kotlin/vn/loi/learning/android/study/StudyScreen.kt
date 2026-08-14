@@ -450,13 +450,23 @@ private fun Modifier.introductionStageGestures(
     ratingEnabled: Boolean,
     navigationEnabled: Boolean,
     gatedUpwardNavigation: Boolean,
+    revealed: Boolean,
+    historyPreview: Boolean,
     onDragOffset: (Float) -> Unit,
     onHorizontalDragOffset: (Float) -> Unit,
     onGestureEnd: (IntroductionStageGesture) -> Unit,
     onSwipeGood: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit
-) = pointerInput(itemKey, alreadySubmitted, ratingEnabled, navigationEnabled, gatedUpwardNavigation) {
+) = pointerInput(
+    itemKey,
+    alreadySubmitted,
+    ratingEnabled,
+    navigationEnabled,
+    gatedUpwardNavigation,
+    revealed,
+    historyPreview
+) {
     val swipeThresholdPx = 72.dp.toPx()
     val tapSlopPx = 12.dp.toPx()
     awaitEachGesture {
@@ -539,8 +549,14 @@ private fun StudyRuntimeScreen(
 ) {
     val quickReview = state is AndroidStudyState.Introduction && state.focusedPracticeKind ==
         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
+    val focusedSkimUx = state is AndroidStudyState.Introduction && usesFocusedSkimUx(state.focusedPracticeKind)
     val modeLabel = when (state) {
-        is AndroidStudyState.Introduction -> if (quickReview) "Quick Review" else "NEW"
+        is AndroidStudyState.Introduction -> when {
+            quickReview -> "Quick Review"
+            state.focusedPracticeKind ==
+                vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT -> "Again / Hard"
+            else -> "NEW"
+        }
         is AndroidStudyState.Typing -> "Typing"
         is AndroidStudyState.MultipleChoice -> "MCQ"
         is AndroidStudyState.Listening -> "Listening"
@@ -673,9 +689,9 @@ private fun StudyRuntimeScreen(
             onIntroductionRatingWithFeedback(state, rating, introductionPlaybackFocus, origin)
         }
     }
-    val startQuickReviewQuestionGate: () -> Unit = {
+    val startFocusedPracticeQuestionGate: (AndroidStudyEvent) -> Unit = { terminalEvent ->
         val introduction = state as? AndroidStudyState.Introduction
-        if (introduction != null && quickReview && introduction.revealed && !introduction.historyPreview &&
+        if (introduction != null && focusedSkimUx && introduction.revealed && !introduction.historyPreview &&
             !quickReviewTransitionPending
         ) {
             quickReviewTransitionPending = true
@@ -690,7 +706,7 @@ private fun StudyRuntimeScreen(
                 finished = true
                 quickReviewTransitionPending = false
                 quickReviewQuestionPlaying = false
-                onEvent(AndroidStudyEvent.NextVisited)
+                onEvent(terminalEvent)
             }
             val initial = audioController.replay(
                 path = introduction.resolvedPromptAudio,
@@ -878,9 +894,9 @@ private fun StudyRuntimeScreen(
     StudyRuntimeShell(
         title = state.contextTitle ?: "Study",
         modeLabel = modeLabel,
-        currentPosition = if (quickReview) null else
+        currentPosition = if (focusedSkimUx) null else
             (state as? AndroidStudyState.Introduction)?.packagePosition ?: state.currentPosition,
-        totalItems = if (quickReview) null else
+        totalItems = if (focusedSkimUx) null else
             (state as? AndroidStudyState.Introduction)?.packageTotal ?: state.totalItems,
         onBack = { stopAudioAndDispatch(AndroidStudyEvent.Home) },
         header = {
@@ -890,7 +906,7 @@ private fun StudyRuntimeScreen(
                         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT ->
                             DifficultPracticeHud(hud)
                         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW ->
-                            QuickReviewProgressHeader(hud)
+                            QuickReviewProgressHeader(state, hud)
                         else -> LearnNewProgressHeader(state, hud, pendingIntroductionHudRating)
                     }
                 }
@@ -934,14 +950,30 @@ private fun StudyRuntimeScreen(
                 }
             },
             onIntroductionSwipeGood = {
-                if (quickReview) startQuickReviewQuestionGate()
+                if (focusedSkimUx && state is AndroidStudyState.Introduction) {
+                    when {
+                        state.historyPreview -> stopAudioAndDispatch(AndroidStudyEvent.NextVisited)
+                        state.revealed -> startFocusedPracticeQuestionGate(
+                            if (quickReview) AndroidStudyEvent.QuickReviewUnratedAdvance
+                            else AndroidStudyEvent.DifficultPracticeAdvance
+                        )
+                        else -> stopAudioAndDispatch(
+                            if (quickReview) AndroidStudyEvent.QuickReviewUnratedAdvance
+                            else AndroidStudyEvent.DifficultPracticeAdvance
+                        )
+                    }
+                }
                 else submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)
             },
             onIntroductionPrevious = {
-                if (!quickReviewTransitionPending) stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited)
+                if (!quickReviewTransitionPending && state.navigation.canPrevious) {
+                    stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited)
+                }
             },
             onIntroductionNext = {
-                if (!quickReviewTransitionPending) stopAudioAndDispatch(AndroidStudyEvent.NextVisited)
+                if (!quickReviewTransitionPending && state.navigation.canNext) {
+                    stopAudioAndDispatch(AndroidStudyEvent.NextVisited)
+                }
             },
             onIntroductionRating = { submitIntroductionRating(it, IntroductionRatingFeedbackOrigin.MANUAL_BUTTON) },
             onEvent = stopAudioAndDispatch,
@@ -1047,21 +1079,24 @@ private fun LearnNewProgressHeader(
 }
 
 @Composable
-private fun QuickReviewProgressHeader(hud: AndroidStudySessionHud) {
+private fun QuickReviewProgressHeader(state: AndroidStudyState.Introduction, hud: AndroidStudySessionHud) {
+    val position = state.quickReviewPassPosition ?: 1
+    val poolSize = state.quickReviewPoolSize ?: hud.totalLearned
     Surface(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
-            contentDescription = "Quick Review. Endless learned vocabulary review."
+            contentDescription = "Quick Review. Exposure $position from a pool of $poolSize learned items " +
+                "in the current review pass. Endless learned vocabulary review."
         },
         color = Color.Transparent
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                hud.skimStatus ?: "Quick Review",
+                "Quick Review · $position / $poolSize",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                "${hud.totalLearned} learned",
+                "$poolSize learned",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1284,6 +1319,7 @@ private fun IntroductionLearningStage(
         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
     val quickReview = state.focusedPracticeKind ==
         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
+    val focusedSkimUx = usesFocusedSkimUx(state.focusedPracticeKind)
     val isPlayingExpected = activeRole == AudioRole.EXPECTED_ANSWER
     val isPlayingMeaning = activeRole == AudioRole.MEANING
     val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
@@ -1296,10 +1332,11 @@ private fun IntroductionLearningStage(
         ReviewRating.EASY -> StudyFeedbackVisualState.RATING_EASY
         null -> StudyFeedbackVisualState.NEUTRAL
     }
-    var swipeOffsetTarget by remember(state.learningItemId) { mutableFloatStateOf(0f) }
-    var horizontalOffsetTarget by remember(state.learningItemId) { mutableFloatStateOf(0f) }
-    var swipeCommitPending by remember(state.learningItemId) { mutableStateOf(false) }
-    val backgroundInteraction = remember(state.learningItemId) { MutableInteractionSource() }
+    val presentationKey = state.presentationVisitId ?: state.learningItemId
+    var swipeOffsetTarget by remember(presentationKey) { mutableFloatStateOf(0f) }
+    var horizontalOffsetTarget by remember(presentationKey) { mutableFloatStateOf(0f) }
+    var swipeCommitPending by remember(presentationKey) { mutableStateOf(false) }
+    val backgroundInteraction = remember(presentationKey) { MutableInteractionSource() }
     val stagePressed by backgroundInteraction.collectIsPressedAsState()
     val swipeOffset by animateFloatAsState(
         targetValue = swipeOffsetTarget,
@@ -1351,11 +1388,13 @@ private fun IntroductionLearningStage(
                 scaleX = stageScale
                 scaleY = stageScale
             }.introductionStageGestures(
-                itemKey = state.learningItemId,
+                itemKey = presentationKey,
                 alreadySubmitted = swipeRatingSubmitted || swipeCommitPending || quickReviewTransitionPending,
-                ratingEnabled = !difficultSkim && !quickReview && state.revealed,
-                navigationEnabled = state.revealed && !quickReviewTransitionPending,
-                gatedUpwardNavigation = quickReview && state.revealed,
+                ratingEnabled = !focusedSkimUx && state.revealed,
+                navigationEnabled = (state.revealed || focusedSkimUx) && !quickReviewTransitionPending,
+                gatedUpwardNavigation = focusedSkimUx,
+                revealed = state.revealed,
+                historyPreview = state.historyPreview,
                 onDragOffset = { swipeOffsetTarget = it },
                 onHorizontalDragOffset = { horizontalOffsetTarget = it },
                 onGestureEnd = {
@@ -1384,6 +1423,7 @@ private fun IntroductionLearningStage(
                     }.clickable(
                         interactionSource = backgroundInteraction,
                         indication = null,
+                        onClickLabel = if (focusedSkimUx && !state.revealed) "Reveal answer" else null,
                         onClick = onGenericStageTap
                     ),
                     contentPadding = PaddingValues(horizontal = LearningSpacing.medium, vertical = LearningSpacing.extraSmall),
@@ -1399,25 +1439,35 @@ private fun IntroductionLearningStage(
                             if (!state.revealed && difficultSkim) {
                                 partOfSpeechPresentation(state.partOfSpeech)?.let { PartOfSpeechBadge(it) }
                             }
-                            if (!state.revealed) state.resolvedImage?.let { imageUri ->
-                                LearningEngineImage(
-                                    imagePath = imageUri,
-                                    imageUnavailable = false,
-                                    onOpenFullscreen = { onEvent(AndroidStudyEvent.RevealIntroduction) },
-                                    fillCanvas = true,
-                                    adaptiveFitBounds = LearningImageFitBounds(120, imageMaxHeight.value.toInt()),
-                                    interactionDescription = "Learning image, tap to discover",
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
+                            IntroductionHeroMedia(
+                                state = state,
+                                focusedSkimUx = focusedSkimUx,
+                                imageExpanded = imageExpanded,
+                                imageMaxHeight = imageMaxHeight,
+                                imageScale = imageFeedbackScale * quickReviewPulseScale,
+                                interactionEnabled = !quickReviewTransitionPending,
+                                onReveal = onGenericStageTap,
+                                onImageExpandedChange = onImageExpandedChange,
+                                onOpenFullscreenImage = onOpenFullscreenImage,
+                                onPrevious = onPrevious,
+                                onNext = onNext
+                            )
 
                             // FRONT hierarchy:
                             // IMAGE -> reveal hint -> 20dp -> VI meaning -> 10dp -> POS
-                            AnimatedVisibility(
-                                visible = !state.revealed,
-                                enter = fadeIn(tween(studyMotionDurationMillis(StudyMotionRole.REVEAL, reducedMotion))),
-                                exit = fadeOut(tween(studyMotionDurationMillis(StudyMotionRole.CARD_EXIT, reducedMotion)))
-                            ) {
+                            AnimatedContent(
+                                targetState = state.revealed,
+                                transitionSpec = {
+                                    val duration = studyMotionDurationMillis(StudyMotionRole.REVEAL, reducedMotion)
+                                    val enter = fadeIn(tween(duration, easing = FastOutSlowInEasing)) +
+                                        if (reducedMotion) EnterTransition.None else slideInVertically(
+                                            tween(duration, easing = FastOutSlowInEasing)
+                                        ) { it / 18 }
+                                    enter togetherWith fadeOut(tween(duration, easing = FastOutSlowInEasing))
+                                },
+                                label = "Introduction coordinated reveal"
+                            ) { revealed ->
+                                if (!revealed) {
                                 Column(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalAlignment = Alignment.CenterHorizontally
@@ -1442,7 +1492,8 @@ private fun IntroductionLearningStage(
                                         onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
                                         centered = true,
                                         maxLines = 3,
-                                        headingSemantics = true
+                                        headingSemantics = true,
+                                        interactionEnabled = !(focusedSkimUx && !state.revealed)
                                     )
 
                                     Spacer(modifier = Modifier.height(10.dp))
@@ -1453,53 +1504,7 @@ private fun IntroductionLearningStage(
                                         }
                                     }
                                 }
-                            }
-
-                            if (state.revealed) state.resolvedImage?.let { imageUri ->
-                                ReviewImageNavigationOverlay(
-                                    canPrevious = state.navigation.canPrevious,
-                                    canNext = state.navigation.canNext,
-                                    onPrevious = onPrevious,
-                                    onNext = onNext,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    LearningEngineImage(
-                                        imagePath = imageUri,
-                                        imageUnavailable = false,
-                                        onOpenFullscreen = {
-                                            if (!quickReviewTransitionPending) {
-                                                onImageExpandedChange(!imageExpanded)
-                                                onGenericStageTap()
-                                            }
-                                        },
-                                        onOpenFullscreenSecondary = { image ->
-                                            if (!quickReviewTransitionPending) onOpenFullscreenImage(image)
-                                        },
-                                        fillCanvas = true,
-                                        adaptiveFitBounds = LearningImageFitBounds(
-                                            minHeightDp = 120,
-                                            maxHeightDp = imageMaxHeight.value.toInt()
-                                        ),
-                                        interactionDescription = if (imageExpanded) {
-                                            "Learning image expanded, tap to reduce"
-                                        } else "Learning image, tap to expand",
-                                        modifier = Modifier.fillMaxWidth().graphicsLayer {
-                                            scaleX = imageFeedbackScale * quickReviewPulseScale
-                                            scaleY = imageFeedbackScale * quickReviewPulseScale
-                                        }
-                                    )
-                                }
-                            } ?: Box(
-                                Modifier.fillMaxWidth().heightIn(min = 120.dp, max = imageMaxHeight)
-                                    .semantics { contentDescription = "Learning canvas, tap to discover the English word" }
-                            )
-
-                            AnimatedVisibility(
-                                visible = state.revealed,
-                                enter = fadeIn(tween(studyMotionDurationMillis(StudyMotionRole.REVEAL, reducedMotion))) +
-                                        slideInVertically(tween(studyMotionDurationMillis(StudyMotionRole.REVEAL, reducedMotion))) { it / 14 },
-                                exit = fadeOut(tween(studyMotionDurationMillis(StudyMotionRole.CARD_EXIT, reducedMotion)))
-                            ) {
+                                } else {
                                 StudyAnswerSection(
                                     englishAnswer = state.answer,
                                     pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
@@ -1527,30 +1532,21 @@ private fun IntroductionLearningStage(
                                     },
                                     modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.imageToAnswer),
                                     answerHero = true,
-                                    swipeSuccessGlowActive = quickReviewHeadwordGlowActive(
-                                        quickReview = quickReview,
+                                    swipeSuccessGlowActive = focusedPracticeHeadwordGlowActive(
+                                        focusedSkimUx = focusedSkimUx,
                                         revealed = state.revealed,
                                         transitionPending = quickReviewTransitionPending,
                                         historyPreview = state.historyPreview
                                     ),
                                     interactionEnabled = !quickReviewTransitionPending
                                 )
+                                }
                             }
 
                         }
                     }
                 }
-                if (difficultSkim) {
-                    if (state.revealed) {
-                        Button(
-                            onClick = { onEvent(AndroidStudyEvent.NextVisited) },
-                            modifier = Modifier.fillMaxWidth().padding(
-                                horizontal = LearningSpacing.medium,
-                                vertical = LearningSpacing.small
-                            )
-                        ) { Text("Next") }
-                    }
-                } else {
+                if (!difficultSkim) {
                     if (!quickReview || state.revealed) {
                         StudyRatingBar(
                             onRating = onRating,
@@ -1602,6 +1598,69 @@ private fun IntroductionLearningStage(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun IntroductionHeroMedia(
+    state: AndroidStudyState.Introduction,
+    focusedSkimUx: Boolean,
+    imageExpanded: Boolean,
+    imageMaxHeight: androidx.compose.ui.unit.Dp,
+    imageScale: Float,
+    interactionEnabled: Boolean,
+    onReveal: () -> Unit,
+    onImageExpandedChange: (Boolean) -> Unit,
+    onOpenFullscreenImage: (String) -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
+) {
+    val media: @Composable BoxScope.() -> Unit = {
+        state.resolvedImage?.let { imageUri ->
+            LearningEngineImage(
+                imagePath = imageUri,
+                imageUnavailable = false,
+                onOpenFullscreen = {
+                    if (!state.revealed) onReveal()
+                    else if (interactionEnabled) {
+                        onImageExpandedChange(!imageExpanded)
+                        onReveal()
+                    }
+                },
+                onOpenFullscreenSecondary = { image ->
+                    if (!state.revealed) onReveal()
+                    else if (interactionEnabled) onOpenFullscreenImage(image)
+                },
+                fillCanvas = true,
+                adaptiveFitBounds = LearningImageFitBounds(120, imageMaxHeight.value.toInt()),
+                interactionDescription = if (!state.revealed) {
+                    "Learning image, reveal answer"
+                } else if (imageExpanded) {
+                    "Learning image expanded, tap to reduce"
+                } else "Learning image, tap to expand",
+                modifier = Modifier.fillMaxWidth().graphicsLayer {
+                    scaleX = imageScale
+                    scaleY = imageScale
+                }
+            )
+        } ?: Box(
+            Modifier.fillMaxWidth().heightIn(min = 120.dp, max = imageMaxHeight).semantics {
+                contentDescription = if (state.revealed) "Learning canvas"
+                else "Learning canvas, reveal the English word"
+            }
+        )
+    }
+    if (focusedSkimUx || state.revealed) {
+        ReviewImageNavigationOverlay(
+            canPrevious = state.navigation.canPrevious,
+            canNext = state.navigation.canNext,
+            onPrevious = onPrevious,
+            onNext = onNext,
+            modifier = Modifier.fillMaxWidth(),
+            imageContent = media
+        )
+    } else {
+        Box(Modifier.fillMaxWidth(), content = media)
     }
 }
 

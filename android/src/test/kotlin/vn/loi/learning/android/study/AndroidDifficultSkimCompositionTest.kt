@@ -12,14 +12,17 @@ class AndroidDifficultSkimCompositionTest {
     )
 
     @Test
-    fun `difficult focused practice renders skim reveal and Next without rating dock`() {
+    fun `difficult focused practice renders reveal first skim navigation without rating dock`() {
         val introduction = screen.substringAfter("private fun IntroductionLearningStage(")
             .substringBefore("private fun IntroductionInteractionHint(")
         assertTrue(introduction.contains("val difficultSkim = state.focusedPracticeKind"))
-        assertTrue(introduction.contains("ratingEnabled = !difficultSkim && !quickReview && state.revealed"))
+        assertTrue(introduction.contains("ratingEnabled = !focusedSkimUx && state.revealed"))
         assertTrue(introduction.contains("if (difficultSkim) \"Xem đáp án\""))
-        assertTrue(introduction.contains("if (difficultSkim)"))
-        assertTrue(introduction.contains("onClick = { onEvent(AndroidStudyEvent.NextVisited) }"))
+        assertTrue(introduction.contains("focusedSkimUx = focusedSkimUx"))
+        assertTrue(introduction.contains("gatedUpwardNavigation = focusedSkimUx"))
+        assertTrue(introduction.contains("interactionEnabled = !(focusedSkimUx && !state.revealed)"))
+        assertFalse(introduction.contains("Text(\"Next\")"))
+        assertTrue(screen.contains("FocusedPracticeKind.DIFFICULT -> \"Again / Hard\""))
         assertTrue(introduction.contains("StudyAnswerSection("))
         assertFalse(introduction.contains("if (difficultSkim) {\n                    StudyRatingBar("))
     }

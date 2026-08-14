@@ -87,6 +87,7 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 val state = studyViewModel.state.collectAsStateWithLifecycle().value
+                val quickReviewSummary = studyViewModel.quickReviewSummary.collectAsStateWithLifecycle().value
                 val contentViewModel = viewModel<AndroidContentViewModel> {
                     AndroidContentViewModel(AndroidContentOperations(graph), createSavedStateHandle())
                 }
@@ -279,7 +280,7 @@ class MainActivity : ComponentActivity() {
                                     if (state.retryable) ({ studyViewModel.onEvent(AndroidStudyEvent.Retry) }) else null)
                                 else -> AndroidFeatureLoading("Opening Study")
                             }
-                        } else ReviewHub(home, openStudyFromExplicitEvent)
+                        } else ReviewHub(home, quickReviewSummary, openStudyFromExplicitEvent)
                     }
                     composable("settings", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
                         SettingsScreen(

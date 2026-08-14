@@ -87,30 +87,32 @@ class AndroidFocusedPracticeCompositionTest {
         val facade = Files.readString(
             Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidStudyFacade.kt")
         )
-        assertTrue(screen.contains("if (quickReview) \"Quick Review\" else \"NEW\""))
-        assertTrue(screen.contains("FocusedPracticeKind.QUICK_REVIEW ->\n                            QuickReviewProgressHeader(hud)"))
-        assertTrue(screen.contains("contentDescription = \"Quick Review. Endless learned vocabulary review.\""))
-        assertTrue(screen.contains("currentPosition = if (quickReview) null"))
-        assertTrue(screen.contains("totalItems = if (quickReview) null"))
+        assertTrue(screen.contains("quickReview -> \"Quick Review\""))
+        assertTrue(screen.contains("FocusedPracticeKind.DIFFICULT -> \"Again / Hard\""))
+        assertTrue(screen.contains("else -> \"NEW\""))
+        assertTrue(screen.contains("FocusedPracticeKind.QUICK_REVIEW ->\n                            QuickReviewProgressHeader(state, hud)"))
+        assertTrue(screen.contains("Endless learned vocabulary review."))
+        assertTrue(screen.contains("currentPosition = if (focusedSkimUx) null"))
+        assertTrue(screen.contains("totalItems = if (focusedSkimUx) null"))
         assertTrue(screen.contains("else -> LearnNewProgressHeader(state, hud, pendingIntroductionHudRating)"))
-        assertTrue(facade.contains("\"Quick Review · Pass ${'$'}{queueSnapshot.practiceRound}\""))
+        assertTrue(facade.contains("FocusedPracticeKind.QUICK_REVIEW -> \"Quick Review\""))
     }
 
     @Test
-    fun `quick review reveal offers canonical ratings without a visible Next while difficult stays Next only`() {
+    fun `quick review keeps canonical ratings while difficult uses accessible skim navigation without large Next`() {
         val screen = Files.readString(
             Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt")
         )
         val introduction = screen.substringAfter("private fun IntroductionLearningStage(")
             .substringBefore("private fun IntroductionAnswerSection(")
-        assertTrue(introduction.contains("if (difficultSkim) {"))
+        assertTrue(introduction.contains("if (!difficultSkim) {"))
         assertFalse(introduction.contains("if (difficultSkim || quickReview)"))
         assertTrue(introduction.contains("if (!quickReview || state.revealed) {\n                        StudyRatingBar("))
         assertTrue(introduction.contains("onRating = onRating"))
         assertTrue(introduction.contains("underlinedRating = if (quickReview) state.latestEffectiveRating else null"))
         assertTrue(introduction.contains("enabled = !state.historyPreview && !quickReviewTransitionPending"))
         assertFalse(introduction.contains("if (quickReview && state.revealed)"))
-        assertTrue(introduction.windowed("Text(\"Next\")".length).count { it == "Text(\"Next\")" } == 1)
+        assertFalse(introduction.contains("Text(\"Next\")"))
     }
 
     @Test
@@ -118,7 +120,7 @@ class AndroidFocusedPracticeCompositionTest {
         val screen = Files.readString(
             Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt")
         )
-        val gate = screen.substringAfter("val startQuickReviewQuestionGate:")
+        val gate = screen.substringAfter("val startFocusedPracticeQuestionGate:")
             .substringBefore("LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen)")
         assertTrue(gate.contains("audioController.stop()"))
         assertTrue(gate.contains("path = introduction.resolvedPromptAudio"))
@@ -129,11 +131,16 @@ class AndroidFocusedPracticeCompositionTest {
         assertTrue(gate.contains("quickReviewTransitionPending = true"))
         assertTrue(gate.contains("generation != quickReviewTransitionGeneration"))
         assertTrue(gate.contains("itemKey != acceptedItemKey"))
-        assertTrue(gate.contains("onEvent(AndroidStudyEvent.NextVisited)"))
-        assertTrue(screen.contains("if (quickReview) startQuickReviewQuestionGate()"))
-        assertTrue(screen.contains("gatedUpwardNavigation = quickReview && state.revealed"))
-        assertTrue(screen.contains("!quickReviewTransitionPending) stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited)"))
-        assertTrue(screen.contains("scaleX = imageFeedbackScale * quickReviewPulseScale"))
+        assertTrue(gate.contains("onEvent(terminalEvent)"))
+        assertTrue(screen.contains("state.revealed -> startFocusedPracticeQuestionGate("))
+        assertTrue(screen.contains("gatedUpwardNavigation = focusedSkimUx"))
+        assertTrue(screen.contains("revealed = state.revealed"))
+        assertTrue(screen.contains("historyPreview = state.historyPreview"))
+        val gestureKeys = screen.substringAfter(") = pointerInput(").substringBefore(") {")
+        assertTrue(gestureKeys.contains("revealed"))
+        assertTrue(gestureKeys.contains("historyPreview"))
+        assertTrue(screen.contains("stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited)"))
+        assertTrue(screen.contains("imageScale = imageFeedbackScale * quickReviewPulseScale"))
         assertTrue(screen.contains("targetValue = if (quickReviewQuestionPlaying && !reducedMotion) 1.04f else 1f"))
         assertTrue(screen.contains("durationMillis = 900"))
     }
@@ -173,21 +180,53 @@ class AndroidFocusedPracticeCompositionTest {
         assertTrue(controls.contains("IconButton(onClick = onReplay, enabled = enabled"))
         assertTrue(controls.contains("IconButton(onClick = onExampleAudio, enabled = enabled"))
         assertTrue(controls.contains("IconButton(onClick = onFullscreenImage, enabled = enabled"))
-        assertTrue(screen.contains("if (!quickReviewTransitionPending) onOpenFullscreenImage(image)"))
+        assertTrue(screen.contains("else if (interactionEnabled) onOpenFullscreenImage(image)"))
     }
 
     @Test
     fun `every non-cancelled gate terminal clears pending before exactly one Next`() {
         val screen = Files.readString(Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt"))
-        val gate = screen.substringAfter("val startQuickReviewQuestionGate:")
+        val gate = screen.substringAfter("val startFocusedPracticeQuestionGate:")
             .substringBefore("LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen)")
         val finish = gate.substringAfter("val finish: () -> Unit").substringBefore("val initial =")
         assertTrue(finish.contains("if (finished || generation != quickReviewTransitionGeneration"))
         assertTrue(finish.contains("finished = true"))
         assertTrue(finish.indexOf("quickReviewTransitionPending = false") <
-            finish.indexOf("onEvent(AndroidStudyEvent.NextVisited)"))
+            finish.indexOf("onEvent(terminalEvent)"))
         assertTrue(gate.contains("AndroidAudioPlaybackEvent.Completed) finish()"))
         assertTrue(gate.contains("AndroidAudioState.Failed, AndroidAudioState.Unavailable -> finish()"))
         assertTrue(gate.contains("if (initial is AndroidAudioState.Failed || initial is AndroidAudioState.Unavailable) finish()"))
+    }
+
+    @Test
+    fun `Quick Review front history reveal priority progress and coordinated motion share existing authorities`() {
+        val screen = Files.readString(Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt"))
+        val facade = Files.readString(Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidStudyFacade.kt"))
+        val introduction = screen.substringAfter("private fun IntroductionLearningStage(")
+            .substringBefore("private fun IntroductionInteractionHint(")
+        val swipeRoute = screen.substringAfter("onIntroductionSwipeGood = {")
+            .substringBefore("onIntroductionPrevious =")
+
+        assertTrue(introduction.contains("IntroductionHeroMedia("))
+        assertTrue(introduction.contains("if (focusedSkimUx || state.revealed)"))
+        assertTrue(introduction.contains("canPrevious = state.navigation.canPrevious"))
+        assertTrue(introduction.contains("canNext = state.navigation.canNext"))
+        assertTrue(introduction.contains("onClickLabel = if (focusedSkimUx && !state.revealed) \"Reveal answer\" else null"))
+        assertTrue(introduction.contains("interactionEnabled = !(focusedSkimUx && !state.revealed)"))
+        assertTrue(introduction.contains("if (!state.revealed) onReveal()"))
+        assertTrue(introduction.contains("AnimatedContent("))
+        assertTrue(introduction.contains("label = \"Introduction coordinated reveal\""))
+        assertTrue(introduction.contains("if (reducedMotion) EnterTransition.None"))
+        assertFalse(introduction.contains("visible = !state.revealed"))
+        assertFalse(introduction.contains("visible = state.revealed"))
+
+        assertTrue(swipeRoute.contains("state.historyPreview -> stopAudioAndDispatch(AndroidStudyEvent.NextVisited)"))
+        assertTrue(swipeRoute.contains("state.revealed -> startFocusedPracticeQuestionGate("))
+        assertTrue(swipeRoute.contains("AndroidStudyEvent.DifficultPracticeAdvance"))
+        assertTrue(swipeRoute.contains("AndroidStudyEvent.QuickReviewUnratedAdvance"))
+        assertTrue(screen.contains("val focusedSkimUx = state is AndroidStudyState.Introduction && usesFocusedSkimUx"))
+        assertTrue(facade.contains("quickReviewPassPosition = quickReviewQueue?.practiceProgress?.position"))
+        assertTrue(facade.contains("quickReviewPoolSize = quickReviewQueue?.practiceProgress?.membershipSize"))
+        assertFalse(facade.contains("Quick Review · Pass"))
     }
 }

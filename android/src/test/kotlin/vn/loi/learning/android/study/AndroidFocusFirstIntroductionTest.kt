@@ -201,7 +201,14 @@ class AndroidFocusFirstIntroductionTest {
         val gestures = screen.substringAfter("private fun Modifier.introductionStageGestures(")
             .substringBefore("@Composable\nprivate fun StudyRuntimeScreen(")
 
-        assertTrue(gestures.contains("pointerInput(itemKey, alreadySubmitted, ratingEnabled, navigationEnabled, gatedUpwardNavigation)"))
+        val keys = gestures.substringAfter(") = pointerInput(").substringBefore(") {")
+        assertTrue(keys.contains("itemKey"))
+        assertTrue(keys.contains("alreadySubmitted"))
+        assertTrue(keys.contains("ratingEnabled"))
+        assertTrue(keys.contains("navigationEnabled"))
+        assertTrue(keys.contains("gatedUpwardNavigation"))
+        assertTrue(keys.contains("revealed"))
+        assertTrue(keys.contains("historyPreview"))
     }
 
     @Test
@@ -289,12 +296,12 @@ class AndroidFocusFirstIntroductionTest {
         assertTrue(screen.contains("submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)"))
         assertTrue(screen.contains("IntroductionRatingFeedbackOrigin.MANUAL_BUTTON"))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted && !quickReviewTransitionPending)"))
-        assertTrue(screen.contains("ratingEnabled = !difficultSkim && !quickReview && state.revealed"))
-        assertTrue(screen.contains("gatedUpwardNavigation = quickReview && state.revealed"))
-        assertTrue(screen.contains("navigationEnabled = state.revealed && !quickReviewTransitionPending"))
+        assertTrue(screen.contains("ratingEnabled = !focusedSkimUx && state.revealed"))
+        assertTrue(screen.contains("gatedUpwardNavigation = focusedSkimUx"))
+        assertTrue(screen.contains("navigationEnabled = (state.revealed || focusedSkimUx) && !quickReviewTransitionPending"))
         assertFalse(screen.contains("state.revealed && !swipeRatingSubmitted"))
         assertTrue(screen.contains("audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.EXPECTED_ANSWER)"))
-        assertTrue(screen.contains("if (!quickReviewTransitionPending) onOpenFullscreenImage(image)"))
+        assertTrue(screen.contains("else if (interactionEnabled) onOpenFullscreenImage(image)"))
     }
 
     @Test

@@ -292,6 +292,30 @@ class AndroidStudyFacadeTest {
         )
     }
 
+    @Test fun `focused difficult front advance remains practice only and keeps dynamic membership`() {
+        val f = fixture(
+            practiceLoopPolicy = PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP,
+            focusedPracticeKind = vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
+        )
+        val initial = assertIs<AndroidStudyState.Introduction>(f.facade.load())
+        val sessionId = SessionId(initial.sessionId)
+        val reviewBefore = f.context.engine.getReviewHistory(f.learner, f.itemId)
+        val memoryBefore = f.context.memoryStateRepository!!.find(f.learner, f.itemId)
+        val queueBefore = requireNotNull(f.context.studyQueue.get(sessionId))
+        val visitBefore = requireNotNull(initial.presentationVisitId)
+
+        val advanced = assertIs<AndroidStudyState.Introduction>(f.facade.next(initial))
+        val queueAfter = requireNotNull(f.context.studyQueue.get(sessionId))
+
+        assertFalse(advanced.revealed)
+        assertTrue(requireNotNull(advanced.presentationVisitId) != visitBefore)
+        assertTrue(queueAfter.practiceExposureSequence > queueBefore.practiceExposureSequence)
+        assertEquals(reviewBefore, f.context.engine.getReviewHistory(f.learner, f.itemId))
+        assertEquals(memoryBefore, f.context.memoryStateRepository!!.find(f.learner, f.itemId))
+        assertEquals(queueBefore.fixedPracticeMembership, queueAfter.fixedPracticeMembership)
+        assertEquals(PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP, queueAfter.practiceLoopPolicy)
+    }
+
     @Test fun `evaluative learned review uses Product Brain and commits one canonical event`() {
         val f = fixture()
         val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())
@@ -312,7 +336,7 @@ class AndroidStudyFacadeTest {
         )
         val initial = assertIs<AndroidStudyState.Introduction>(f.facade.load())
         assertEquals(ReviewRating.GOOD, initial.latestEffectiveRating)
-        assertEquals("Quick Review · Pass 1", initial.hud?.skimStatus)
+        assertEquals("Quick Review", initial.hud?.skimStatus)
         val historyBefore = f.context.engine.getReviewHistory(f.learner, f.itemId)
         val memoryBefore = f.context.memoryStateRepository!!.find(f.learner, f.itemId)
         val revealed = assertIs<AndroidStudyState.Introduction>(f.facade.revealIntroduction(initial))
@@ -348,6 +372,60 @@ class AndroidStudyFacadeTest {
             assertEquals(rating, history.last().rating)
             assertNotEquals(memoryBefore, f.context.memoryStateRepository!!.find(f.learner, f.itemId))
         }
+    }
+
+    @Test fun `quick review progress follows canonical queue position pool and round reset`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val learner = LearnerId("default-learner")
+        val sessionId = SessionId("quick-progress-session")
+        val contentIds = listOf(ContentId("quick-progress-a"), ContentId("quick-progress-b"))
+        val itemIds = listOf(LearningItemId("quick-progress-item-a"), LearningItemId("quick-progress-item-b"))
+        itemIds.indices.forEach { index ->
+            context.contentRepository!!.save(Content(
+                contentIds[index], ContentType.WORD, ContentText("word-$index", "meaning-$index")
+            ))
+            context.learningItemRepository!!.save(LearningItem(
+                itemIds[index], contentIds[index], LearningMode.MEANING_RECOGNITION
+            ))
+            context.engine.review(ReviewCommand(
+                ReviewEventId("quick-progress-seed-$index"), learner, itemIds[index],
+                ReviewRating.GOOD, Moment(1_000L + index)
+            ))
+        }
+        context.studySessionRepository!!.save(StudySession.start(
+            sessionId, learner, Moment(2_000), SessionPolicy(
+                newItemLimit = 0, reviewItemLimit = 2, allowRepeatInSameSession = true,
+                evaluationPolicy = SessionEvaluationPolicy.EVALUATIVE,
+                practiceLoopPolicy = PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW,
+                focusedPracticeKind = FocusedPracticeKind.QUICK_REVIEW
+            ), contentIds.toSet()
+        ))
+        context.studyQueue.create(
+            sessionId, Moment(2_000), itemIds, itemIds.associateWith { SessionItemOrigin.REVIEW },
+            itemIds.indices.associate { itemIds[it] to contentIds[it] }, configuredReviewTarget = 2,
+            effectiveReviewWorkload = 2, practiceSeed = 7,
+            practiceLoopPolicy = PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW
+        )
+        val facade = AndroidStudyFacade(context, learner, now = { 3_000 })
+
+        val first = assertIs<AndroidStudyState.Introduction>(facade.load(sessionId.value))
+        assertEquals(1, first.quickReviewPassPosition)
+        assertEquals(2, first.quickReviewPoolSize)
+        val second = assertIs<AndroidStudyState.Introduction>(facade.next(first))
+        assertEquals(2, second.quickReviewPassPosition)
+        assertEquals(2, second.quickReviewPoolSize)
+        val nextRound = assertIs<AndroidStudyState.Introduction>(facade.next(second))
+        assertEquals(1, nextRound.quickReviewPassPosition)
+        assertEquals(2, nextRound.quickReviewPoolSize)
+
+        val revealed = assertIs<AndroidStudyState.Introduction>(facade.revealIntroduction(nextRound))
+        val reinforced = assertIs<AndroidStudyState.Introduction>(
+            facade.rateIntroduction(revealed, ReviewRating.AGAIN)
+        )
+        val queue = context.studyQueue.get(sessionId)!!
+        assertEquals(queue.practiceProgress?.position, reinforced.quickReviewPassPosition)
+        assertEquals(queue.practiceProgress?.membershipSize, reinforced.quickReviewPoolSize)
+        assertTrue(requireNotNull(reinforced.quickReviewPassPosition) <= requireNotNull(reinforced.quickReviewPoolSize))
     }
 
     private fun fixture(

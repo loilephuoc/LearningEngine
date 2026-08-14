@@ -1,6 +1,7 @@
 package vn.loi.learning.android.study
 
 import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.domain.study.session.model.FocusedPracticeKind
 
 /** Presentation-only sizing and interaction policy for the Android Study canvas. */
 internal data class IntroductionImageBounds(
@@ -107,12 +108,15 @@ internal fun nextIntroductionPlaybackFocus(
 
 internal enum class IntroductionStageGesture { NONE, TAP, SWIPE_GOOD, PREVIOUS, NEXT }
 
-internal fun quickReviewHeadwordGlowActive(
-    quickReview: Boolean,
+internal fun usesFocusedSkimUx(kind: FocusedPracticeKind): Boolean =
+    kind == FocusedPracticeKind.DIFFICULT || kind == FocusedPracticeKind.QUICK_REVIEW
+
+internal fun focusedPracticeHeadwordGlowActive(
+    focusedSkimUx: Boolean,
     revealed: Boolean,
     transitionPending: Boolean,
     historyPreview: Boolean
-): Boolean = quickReview && revealed && transitionPending && !historyPreview
+): Boolean = focusedSkimUx && revealed && transitionPending && !historyPreview
 
 internal fun resolveIntroductionStageGesture(
     deltaX: Float,

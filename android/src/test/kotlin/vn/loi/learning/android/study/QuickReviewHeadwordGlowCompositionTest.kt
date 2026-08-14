@@ -14,12 +14,12 @@ class QuickReviewHeadwordGlowCompositionTest {
     private val designTokens = source("vn/loi/learning/android/ui/LearningEngineDesignTokens.kt")
 
     @Test
-    fun `glow policy requires live revealed Quick Review accepted gate`() {
-        assertFalse(quickReviewHeadwordGlowActive(true, true, false, false))
-        assertTrue(quickReviewHeadwordGlowActive(true, true, true, false))
-        assertFalse(quickReviewHeadwordGlowActive(false, true, true, false))
-        assertFalse(quickReviewHeadwordGlowActive(true, false, true, false))
-        assertFalse(quickReviewHeadwordGlowActive(true, true, true, true))
+    fun `glow policy requires live revealed focused skim accepted gate`() {
+        assertFalse(focusedPracticeHeadwordGlowActive(true, true, false, false))
+        assertTrue(focusedPracticeHeadwordGlowActive(true, true, true, false))
+        assertFalse(focusedPracticeHeadwordGlowActive(false, true, true, false))
+        assertFalse(focusedPracticeHeadwordGlowActive(true, false, true, false))
+        assertFalse(focusedPracticeHeadwordGlowActive(true, true, true, true))
     }
 
     @Test
@@ -29,7 +29,7 @@ class QuickReviewHeadwordGlowCompositionTest {
         val answerCall = introduction.substringAfter("StudyAnswerSection(")
             .substringBefore("\n                                )")
         assertTrue(answerCall.contains("englishAnswer = state.answer"))
-        assertTrue(answerCall.contains("swipeSuccessGlowActive = quickReviewHeadwordGlowActive("))
+        assertTrue(answerCall.contains("swipeSuccessGlowActive = focusedPracticeHeadwordGlowActive("))
         assertTrue(answerCall.contains("transitionPending = quickReviewTransitionPending"))
         assertTrue(answerCall.contains("historyPreview = state.historyPreview"))
         assertFalse(answerCall.contains("quickReviewQuestionPlaying"))
@@ -81,12 +81,12 @@ class QuickReviewHeadwordGlowCompositionTest {
 
     @Test
     fun `approved image pulse and question gate remain independent`() {
-        assertTrue(screen.contains("scaleX = imageFeedbackScale * quickReviewPulseScale"))
+        assertTrue(screen.contains("imageScale = imageFeedbackScale * quickReviewPulseScale"))
         assertTrue(screen.contains("targetValue = if (quickReviewQuestionPlaying && !reducedMotion) 1.04f else 1f"))
-        val gate = screen.substringAfter("val startQuickReviewQuestionGate:")
+        val gate = screen.substringAfter("val startFocusedPracticeQuestionGate:")
             .substringBefore("LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen)")
         assertTrue(gate.contains("path = introduction.resolvedPromptAudio"))
-        assertTrue(gate.contains("onEvent(AndroidStudyEvent.NextVisited)"))
+        assertTrue(gate.contains("onEvent(terminalEvent)"))
         assertFalse(gate.contains("swipeSuccessGlowActive"))
     }
 
