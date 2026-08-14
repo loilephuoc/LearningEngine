@@ -778,6 +778,73 @@ class PackageContentBrowserEditStateTest {
     }
 
     @Test
+    fun `same filename media imports preserve existing bytes and receive distinct references`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (_, instId) = createViewModelWithPackageInContext(appContext, 2)
+        val mediaRoot = java.nio.file.Files.createTempDirectory("media-collision-test")
+        val storage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(mediaRoot)
+        val vm = ContentLibraryViewModel(
+            facade = ContentLibraryFacade(appContext),
+            lessonBrowserFacade = LessonBrowserFacade(appContext),
+            packageBrowserFacade = PackageContentBrowserFacade(
+                queryService = appContext.packageBrowserQuery,
+                editService = vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
+                    appContext.contentRepository!!
+                ),
+                learningItemRepository = appContext.learningItemRepository
+            ),
+            contentMediaStorage = storage
+        )
+        vm.browsePackageLessons(instId, "Persist Package")
+        vm.startNewItem()
+        val firstDir = java.nio.file.Files.createTempDirectory("media-source-old")
+        val secondDir = java.nio.file.Files.createTempDirectory("media-source-new")
+        val first = firstDir.resolve("shared.mp3").toFile().apply { writeBytes(byteArrayOf(1, 2, 3)) }
+        val second = secondDir.resolve("shared.mp3").toFile().apply { writeBytes(byteArrayOf(9, 8, 7)) }
+
+        vm.importDraftMediaFile(first, "question")
+        val firstRef = requireNotNull(vm.packageBrowserUiState!!.draftEdits!!.questionAudioRef)
+        vm.importDraftMediaFile(second, "question")
+        val secondRef = requireNotNull(vm.packageBrowserUiState!!.draftEdits!!.questionAudioRef)
+
+        assertTrue(firstRef != secondRef)
+        assertEquals(listOf<Byte>(1, 2, 3), storage.resolve(firstRef)!!.toFile().readBytes().toList())
+        assertEquals(listOf<Byte>(9, 8, 7), storage.resolve(secondRef)!!.toFile().readBytes().toList())
+    }
+
+    @Test
+    fun `unknown media slot performs zero physical write and zero draft mutation`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (_, instId) = createViewModelWithPackageInContext(appContext, 2)
+        val mediaRoot = java.nio.file.Files.createTempDirectory("media-unknown-slot-test")
+        val storage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(mediaRoot)
+        val vm = ContentLibraryViewModel(
+            facade = ContentLibraryFacade(appContext),
+            lessonBrowserFacade = LessonBrowserFacade(appContext),
+            packageBrowserFacade = PackageContentBrowserFacade(
+                queryService = appContext.packageBrowserQuery,
+                editService = vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
+                    appContext.contentRepository!!
+                ),
+                learningItemRepository = appContext.learningItemRepository
+            ),
+            contentMediaStorage = storage
+        )
+        vm.browsePackageLessons(instId, "Persist Package")
+        vm.startNewItem()
+        val before = vm.packageBrowserUiState!!.draftEdits
+        val source = java.io.File.createTempFile("unknown-slot", ".png").apply { writeBytes(byteArrayOf(4)) }
+
+        vm.importDraftMediaFile(source, "unsupported")
+
+        assertEquals(before, vm.packageBrowserUiState!!.draftEdits)
+        assertEquals(0L, java.nio.file.Files.walk(mediaRoot).use { paths ->
+            paths.filter { java.nio.file.Files.isRegularFile(it) }.count()
+        })
+        assertTrue(vm.uiState.importError?.contains("Unknown media slot") == true)
+    }
+
+    @Test
     fun `confirmDiscardAndProceed in Create Mode clears isCreatingNewItem`() {
         val (vm, _) = createViewModelWithPackage(contentCount = 2)
         vm.startNewItem()

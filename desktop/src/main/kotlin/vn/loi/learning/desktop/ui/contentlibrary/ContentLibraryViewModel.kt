@@ -893,7 +893,7 @@ class ContentLibraryViewModel(
         if (current.isDirty) {
             packageBrowserUiState = current.copy(
                 showUnsavedChangesDialog = true,
-                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.SelectRow("NEW_ITEM")
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.StartCreate
             )
             return
         }
@@ -916,6 +916,7 @@ class ContentLibraryViewModel(
 
     fun saveNewItem() {
         val current = packageBrowserUiState ?: return
+        if (current.isCreateSubmitting) return
         val draft = current.draftEdits ?: return
 
         if (draft.questionText.isBlank() || draft.answerText.isBlank()) {
@@ -925,6 +926,7 @@ class ContentLibraryViewModel(
             return
         }
 
+        packageBrowserUiState = current.copy(isCreateSubmitting = true)
         taskRunner.run(
             work = {
                 packageBrowserFacade.createContent(
@@ -947,19 +949,20 @@ class ContentLibraryViewModel(
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
-                    sortOption = current.sortOption
+                    sortOption = current.sortOption,
+                    isCreateSubmitting = false
                 )
                 onContentDataChanged?.invoke()
             },
             onFailure = { ex ->
-                packageBrowserUiState = current.copy(
-                    isCreatingNewItem = true,
-                    editingContentId = current.editingContentId,
-                    draftEdits = current.draftEdits
-                )
-                uiState = uiState.copy(
-                    importError = "Create item failed: ${ex.message}"
-                )
+                if (ex is vn.loi.learning.desktop.ui.browser.CanonicalMutationCommittedException) {
+                    packageBrowserUiState = current.copy(isCreatingNewItem = false, editingContentId = null, loadedBaselineDraft = null, draftEdits = null, isCreateSubmitting = false)
+                    uiState = uiState.copy(importMessage = ex.message, importError = null)
+                    onContentDataChanged?.invoke()
+                } else {
+                    packageBrowserUiState = current.copy(isCreatingNewItem = true, editingContentId = current.editingContentId, draftEdits = current.draftEdits, isCreateSubmitting = false)
+                    uiState = uiState.copy(importError = "Create item failed: ${ex.message}")
+                }
             }
         )
     }
@@ -1123,37 +1126,26 @@ class ContentLibraryViewModel(
     fun importDraftMediaFile(file: java.io.File, slotName: String) {
         val current = packageBrowserUiState ?: return
         val mediaStorage = contentMediaStorage ?: return
-        val bytes = try {
-            file.readBytes()
-        } catch (ex: Exception) {
-            uiState = uiState.copy(importError = "Failed to read media file: ${ex.message}")
+        val normalizedSlot = slotName.lowercase()
+        if (normalizedSlot !in setOf("image", "question", "answer", "example", "translation")) {
+            uiState = uiState.copy(importError = "Unknown media slot: $slotName")
             return
         }
-
-        val asset = try {
-            mediaStorage.store(
-                packageName = current.packageName,
-                fileName = file.name,
-                content = bytes
-            )
+        val ref = try {
+            packageBrowserFacade.importMediaAsset(current.packageName, file, mediaStorage)
         } catch (ex: Exception) {
-            uiState = uiState.copy(importError = "Failed to store media file: ${ex.message}")
+            uiState = uiState.copy(importError = "Failed to import media file: ${ex.message}")
             return
         }
-
-        val ref = asset.relativePath
         val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
         val existingDraft = current.draftEdits ?: baseline ?: return
-        val updatedDraft = when (slotName.lowercase()) {
+        val updatedDraft = when (normalizedSlot) {
             "image" -> existingDraft.copy(imageRef = ref)
             "question" -> existingDraft.copy(questionAudioRef = ref)
             "answer" -> existingDraft.copy(answerAudioRef = ref)
             "example" -> existingDraft.copy(exampleAudioRef = ref)
             "translation" -> existingDraft.copy(translationAudioRef = ref)
-            else -> {
-                uiState = uiState.copy(importError = "Unknown media slot: $slotName")
-                return
-            }
+            else -> error("Validated media slot became invalid: $normalizedSlot")
         }
 
         packageBrowserUiState = current.copy(
@@ -1199,25 +1191,25 @@ class ContentLibraryViewModel(
             },
             onSuccess = { reloaded ->
                 val selectedId = current.selectedContentId
-                val reloadedItem = reloaded.allItems.firstOrNull { it.contentId.value == selectedId } ?: reloaded.selectedItemInView
-                val reloadedDraft = reloadedItem?.toDraftEdits()
-                packageBrowserUiState = reloaded.copy(
-                    selectedContentId = reloadedItem?.contentId?.value ?: selectedId,
-                    editingContentId = reloadedItem?.contentId?.value ?: selectedId,
+                val projected = reloaded.copy(query = current.query, appliedQuery = current.appliedQuery, selectedLessonFilter = current.selectedLessonFilter, mediaFilter = current.mediaFilter, sortOption = current.sortOption)
+                val savedVisible = projected.filteredItems.firstOrNull { it.contentId.value == selectedId }
+                val selection = savedVisible ?: projected.filteredItems.firstOrNull()
+                val reloadedDraft = selection?.toDraftEdits()
+                packageBrowserUiState = projected.copy(
+                    selectedContentId = selection?.contentId?.value,
+                    editingContentId = selection?.contentId?.value,
                     isCreatingNewItem = false,
                     loadedBaselineDraft = reloadedDraft,
                     draftEdits = reloadedDraft,
-                    query = current.query,
-                    appliedQuery = current.appliedQuery,
-                    selectedLessonFilter = current.selectedLessonFilter,
-                    mediaFilter = current.mediaFilter,
-                    sortOption = current.sortOption
+                    query = current.query
                 )
+                if (savedVisible == null) uiState = uiState.copy(importMessage = "Content saved; it is hidden by the current filter.", importError = null)
             },
             onFailure = { ex ->
-                uiState = uiState.copy(
-                    importError = "Save failed: ${ex.message}"
-                )
+                if (ex is vn.loi.learning.desktop.ui.browser.CanonicalMutationCommittedException) {
+                    packageBrowserUiState = current.copy(loadedBaselineDraft = draft, draftEdits = draft)
+                    uiState = uiState.copy(importMessage = ex.message, importError = null)
+                } else uiState = uiState.copy(importError = "Save failed: ${ex.message}")
             }
         )
     }
@@ -1457,6 +1449,7 @@ class ContentLibraryViewModel(
         val action = current.pendingAction
 
         if (current.isCreatingNewItem) {
+            if (current.isCreateSubmitting) return
             if (draft.questionText.isBlank() || draft.answerText.isBlank()) {
                 uiState = uiState.copy(
                     importError = "Question and Answer must not be blank."
@@ -1464,6 +1457,7 @@ class ContentLibraryViewModel(
                 return
             }
 
+            packageBrowserUiState = current.copy(isCreateSubmitting = true)
             taskRunner.run(
                 work = {
                     packageBrowserFacade.createContent(
@@ -1486,18 +1480,21 @@ class ContentLibraryViewModel(
                         appliedQuery = current.appliedQuery,
                         selectedLessonFilter = current.selectedLessonFilter,
                         mediaFilter = current.mediaFilter,
-                        sortOption = current.sortOption
+                        sortOption = current.sortOption,
+                        isCreateSubmitting = false
                     )
                     onContentDataChanged?.invoke()
                     executePendingAction(action)
                 },
                 onFailure = { ex ->
-                    packageBrowserUiState = current.copy(
-                        showUnsavedChangesDialog = true
-                    )
-                    uiState = uiState.copy(
-                        importError = "Create item failed: ${ex.message}"
-                    )
+                    if (ex is vn.loi.learning.desktop.ui.browser.CanonicalMutationCommittedException) {
+                        packageBrowserUiState = current.copy(isCreatingNewItem = false, editingContentId = null, loadedBaselineDraft = null, draftEdits = null, showUnsavedChangesDialog = false, pendingAction = null, isCreateSubmitting = false)
+                        uiState = uiState.copy(importMessage = ex.message, importError = null)
+                        onContentDataChanged?.invoke()
+                    } else {
+                        packageBrowserUiState = current.copy(showUnsavedChangesDialog = true, isCreateSubmitting = false)
+                        uiState = uiState.copy(importError = "Create item failed: ${ex.message}")
+                    }
                 }
             )
         } else {
@@ -1529,12 +1526,13 @@ class ContentLibraryViewModel(
                     executePendingAction(action)
                 },
                 onFailure = { ex ->
-                    packageBrowserUiState = current.copy(
-                        showUnsavedChangesDialog = true
-                    )
-                    uiState = uiState.copy(
-                        importError = "Save failed: ${ex.message}"
-                    )
+                    if (ex is vn.loi.learning.desktop.ui.browser.CanonicalMutationCommittedException) {
+                        packageBrowserUiState = current.copy(loadedBaselineDraft = draft, draftEdits = draft, showUnsavedChangesDialog = false, pendingAction = null)
+                        uiState = uiState.copy(importMessage = ex.message, importError = null)
+                    } else {
+                        packageBrowserUiState = current.copy(showUnsavedChangesDialog = true)
+                        uiState = uiState.copy(importError = "Save failed: ${ex.message}")
+                    }
                 }
             )
         }
@@ -1601,6 +1599,7 @@ class ContentLibraryViewModel(
                     sortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER
                 )
             }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.StartCreate -> startNewItem()
             null -> {}
         }
     }

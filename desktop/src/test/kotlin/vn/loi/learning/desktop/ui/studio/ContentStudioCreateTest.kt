@@ -96,7 +96,8 @@ class ContentStudioCreateTest {
             contentRepository = appContext.contentRepository!!,
             contentLibraryRepository = appContext.contentLibraryRepository,
             installedPackageRepository = appContext.installedPackageRepository,
-            contentPackageRepository = appContext.contentPackageRepository
+            contentPackageRepository = appContext.contentPackageRepository,
+            transactionRunner = requireNotNull(appContext.transactionRunner)
         )
         val facade = ContentLibraryFacade(appContext)
         val lessonBrowserFacade = LessonBrowserFacade(appContext)

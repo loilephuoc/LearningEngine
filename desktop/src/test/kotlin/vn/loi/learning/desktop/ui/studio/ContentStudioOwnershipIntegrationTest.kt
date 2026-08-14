@@ -148,7 +148,8 @@ class ContentStudioOwnershipIntegrationTest {
             contentRepository          = contentRepo,
             contentLibraryRepository   = libRepo,
             installedPackageRepository = instRepo,
-            contentPackageRepository   = pkgRepo
+            contentPackageRepository   = pkgRepo,
+            transactionRunner          = vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner()
         )
 
         val queryService = PackageContentBrowserQueryService(
@@ -499,7 +500,8 @@ class ContentStudioOwnershipIntegrationTest {
             contentRepository          = f.contentRepo,
             contentLibraryRepository   = shadowLibRepo,  // writes to shadow, not real libRepo
             installedPackageRepository = f.instRepo,
-            contentPackageRepository   = f.pkgRepo
+            contentPackageRepository   = f.pkgRepo,
+            transactionRunner          = vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner()
         )
         val brokenFacade = PackageContentBrowserFacade(
             queryService           = f.queryService,    // reads from real libRepo
@@ -522,10 +524,10 @@ class ContentStudioOwnershipIntegrationTest {
     }
 
     // -----------------------------------------------------------------------
-    // TC-OWN14: ViewModel preserves Create Mode and draft on ownership failure
+    // TC-OWN14: A committed Create with a projection failure cannot be resubmitted
     // -----------------------------------------------------------------------
     @Test
-    fun `TC-OWN14 ViewModel stays in Create Mode and preserves draft when Facade throws`() {
+    fun `TC-OWN14 ViewModel recognizes committed Create when projection refresh fails`() {
         val appContext = LearningApplicationFactory.createInMemory()
 
         val instId = InstalledPackageId("inst-vm-own-fail")
@@ -570,7 +572,8 @@ class ContentStudioOwnershipIntegrationTest {
             contentRepository          = appContext.contentRepository!!,
             contentLibraryRepository   = shadowLibRepo,
             installedPackageRepository = appContext.installedPackageRepository,
-            contentPackageRepository   = appContext.contentPackageRepository
+            contentPackageRepository   = appContext.contentPackageRepository,
+            transactionRunner          = requireNotNull(appContext.transactionRunner)
         )
         val packageBrowserFacade = PackageContentBrowserFacade(
             queryService           = appContext.packageBrowserQuery,
@@ -591,12 +594,9 @@ class ContentStudioOwnershipIntegrationTest {
         vm.saveNewItem()
 
         val afterFailure = vm.packageBrowserUiState!!
-        assertTrue(
-            afterFailure.isCreatingNewItem,
-            "ViewModel must stay in isCreatingNewItem=true after ownership failure"
-        )
-        assertEquals("fail-draft-question", afterFailure.draftEdits?.questionText)
-        assertEquals("fail-draft-answer", afterFailure.draftEdits?.answerText)
+        assertFalse(afterFailure.isCreatingNewItem)
+        assertNull(afterFailure.draftEdits)
+        assertTrue(vm.uiState.importMessage?.contains("committed") == true)
     }
 
     // -----------------------------------------------------------------------

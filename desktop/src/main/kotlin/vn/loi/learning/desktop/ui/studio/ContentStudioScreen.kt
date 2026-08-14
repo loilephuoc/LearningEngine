@@ -94,12 +94,18 @@ fun ContentStudioScreen(
             .focusRequester(screenFocusRequester)
             .focusable()
             .onKeyEvent { event ->
-                if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.Z &&
-                    uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem
-                ) {
-                    onUndoDelete?.invoke()
-                    true
-                } else false
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                when {
+                    event.isCtrlPressed && event.key == Key.Z && uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem -> { onUndoDelete?.invoke(); true }
+                    event.key == Key.Delete && !uiState.isCreatingNewItem && uiState.selectedContentId != null -> { onRequestDelete?.invoke(); true }
+                    event.key == Key.DirectionUp && !event.isCtrlPressed -> { onNavigateUp?.invoke(); true }
+                    event.key == Key.DirectionDown && !event.isCtrlPressed -> { onNavigateDown?.invoke(); true }
+                    event.key == Key.MoveHome && !event.isCtrlPressed -> { onNavigateHome?.invoke(); true }
+                    event.key == Key.MoveEnd && !event.isCtrlPressed -> { onNavigateEnd?.invoke(); true }
+                    event.key == Key.PageUp -> { onNavigatePageUp?.invoke(); true }
+                    event.key == Key.PageDown -> { onNavigatePageDown?.invoke(); true }
+                    else -> false
+                }
             }
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
@@ -115,11 +121,8 @@ fun ContentStudioScreen(
                             } else false
                         }
                         event.key == Key.Escape -> {
-                            if (uiState.isCreatingNewItem) {
-                                onCancelNewItem?.invoke()
-                                true
-                            } else if (uiState.isDirty) {
-                                onDiscardEdit?.invoke()
+                            if (uiState.isDirty || uiState.isCreatingNewItem) {
+                                onClose()
                                 true
                             } else {
                                 onClose()
@@ -136,37 +139,6 @@ fun ContentStudioScreen(
                             try { searchFocusRequester.requestFocus() } catch (_: Exception) {}
                             true
                         }
-                        event.key == Key.Delete && !uiState.isCreatingNewItem && uiState.selectedContentId != null -> {
-                            onRequestDelete?.invoke()
-                            true
-                        }
-
-                        // --- PLE-020: Arrow key navigation ---
-                        event.key == Key.DirectionUp && !event.isCtrlPressed -> {
-                            onNavigateUp?.invoke()
-                            true
-                        }
-                        event.key == Key.DirectionDown && !event.isCtrlPressed -> {
-                            onNavigateDown?.invoke()
-                            true
-                        }
-                        event.key == Key.MoveHome && !event.isCtrlPressed -> {
-                            onNavigateHome?.invoke()
-                            true
-                        }
-                        event.key == Key.MoveEnd && !event.isCtrlPressed -> {
-                            onNavigateEnd?.invoke()
-                            true
-                        }
-                        event.key == Key.PageUp -> {
-                            onNavigatePageUp?.invoke()
-                            true
-                        }
-                        event.key == Key.PageDown -> {
-                            onNavigatePageDown?.invoke()
-                            true
-                        }
-
                         else -> false
                     }
                 } else false
@@ -186,7 +158,8 @@ fun ContentStudioScreen(
             onCancelNewItemClick = { onCancelNewItem?.invoke() },
             onDeleteClick = { onRequestDelete?.invoke() },
             onUndoDeleteClick = { onUndoDelete?.invoke() },
-            canUndoDelete = uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem
+            canUndoDelete = uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem,
+            isCreateSubmitting = uiState.isCreateSubmitting
         )
 
         HorizontalDivider(color = LEColors.borderSubtle)
@@ -364,7 +337,8 @@ private fun StudioTopBar(
     onCancelNewItemClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onUndoDeleteClick: () -> Unit,
-    canUndoDelete: Boolean
+    canUndoDelete: Boolean,
+    isCreateSubmitting: Boolean
 ) {
     Surface(
         color = LEColors.surface,
@@ -414,7 +388,8 @@ private fun StudioTopBar(
                         LEPrimaryButton(
                             text = "Save New Item",
                             onClick = onSaveNewItemClick,
-                            icon = LEIcons.Save
+                            icon = LEIcons.Save,
+                            enabled = !isCreateSubmitting
                         )
 
                         LESecondaryButton(

@@ -4,6 +4,7 @@ import vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditSe
 import vn.loi.learning.application.contentpackaging.browser.DeletedContentSnapshot
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserQueryService
 import vn.loi.learning.application.port.LearningItemRepository
+import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.InstalledPackageId
 
@@ -15,6 +16,10 @@ class PackageContentBrowserFacade(
     private val editService: ContentBrowserEditService? = null,
     private val learningItemRepository: LearningItemRepository? = null
 ) {
+    fun importMediaAsset(packageName: String, file: java.io.File, storage: ContentMediaStorage): String =
+        requireNotNull(editService) { "ContentBrowserEditService is not provided to PackageContentBrowserFacade." }
+            .importMediaAsset(packageName, file, storage)
+
     fun loadForPackage(
         installedPackageId: InstalledPackageId,
         packageName: String
@@ -73,23 +78,25 @@ class PackageContentBrowserFacade(
             learningItemRepository = learningItemRepository
         )
 
-        val reloaded = loadForPackage(installedPackageId, packageName)
+        val reloaded = try {
+            loadForPackage(installedPackageId, packageName)
+        } catch (failure: Exception) {
+            throw CanonicalMutationCommittedException(created.id.value, "Create", failure)
+        }
 
         // Post-condition: the created Content must appear in the reloaded package browser.
         // A failure here means the new item was persisted but not registered in package ownership.
         if (!reloaded.allItems.any { it.contentId == created.id }) {
-            throw IllegalStateException(
-                "Created Content '${created.id.value}' is not visible in package ownership after reload. " +
-                    "The item was persisted but not registered in the correct ContentLibrary."
-            )
+            throw CanonicalMutationCommittedException(created.id.value, "Create", IllegalStateException(
+                "Created Content is not visible in package ownership after refresh."
+            ))
         }
 
         val postCreateCount = reloaded.allItems.size
         if (postCreateCount != preCreateCount + 1) {
-            throw IllegalStateException(
-                "Expected package content count to increase by 1 after create " +
-                    "(was $preCreateCount, now $postCreateCount) for Content '${created.id.value}'."
-            )
+            throw CanonicalMutationCommittedException(created.id.value, "Create", IllegalStateException(
+                "Expected package projection count ${preCreateCount + 1}, but found $postCreateCount."
+            ))
         }
 
         val createdItem = reloaded.allItems.firstOrNull { it.contentId == created.id }
@@ -131,7 +138,11 @@ class PackageContentBrowserFacade(
             translationAudioRef = draft.translationAudioRef
         )
 
-        val reloaded = loadForPackage(installedPackageId, packageName)
+        val reloaded = try {
+            loadForPackage(installedPackageId, packageName)
+        } catch (failure: Exception) {
+            throw CanonicalMutationCommittedException(draft.contentId, "Save", failure)
+        }
         val updatedItem = reloaded.allItems.firstOrNull { it.contentId.value == draft.contentId }
             ?: reloaded.selectedItemInView
         val updatedDraft = updatedItem?.toDraftEdits()
@@ -197,3 +208,9 @@ data class DeletedContentBrowserResult(
     val state: PackageContentBrowserUiState,
     val snapshot: DeletedContentSnapshot
 )
+
+class CanonicalMutationCommittedException(
+    val contentId: String,
+    val operation: String,
+    cause: Throwable
+) : IllegalStateException("$operation committed, but Content Studio refresh failed: ${cause.message}", cause)

@@ -91,6 +91,7 @@ class ContentBrowserEditService(
 
         val resolvedLibraries = contentPackage.libraryIds
             .mapNotNull { libId -> libRepo.findById(libId) }
+            .sortedBy { library -> library.id.value }
 
         if (resolvedLibraries.isEmpty()) {
             throw IllegalStateException(
@@ -106,6 +107,8 @@ class ContentBrowserEditService(
         // The first libraryId in the set is used as the primary/default writable library.
         // Document: if domain ownership contracts change to designate a specific primary library,
         // update this selection logic accordingly.
+        // Package data has no primary-library field. Sorting above makes this
+        // single-membership choice stable instead of depending on Set iteration.
         return resolvedLibraries.first()
     }
 
@@ -182,46 +185,38 @@ class ContentBrowserEditService(
             customFields = customFields
         )
 
-        // --- Phase 3: Persist in correct order ---
-
-        // 3a. Persist Content
-        contentRepository.save(newContent)
-
-        // 3b. Persist LearningItem
-        var createdItemCount = 0
-        if (learningItemRepository != null) {
-            val itemId = LearningItemId("item_" + UUID.randomUUID().toString().replace("-", "").take(12))
-            val learningItem = LearningItem(
-                id = itemId,
+        val learningItems = if (learningItemRepository != null) {
+            listOf(LearningItem(
+                id = LearningItemId("item_" + UUID.randomUUID().toString().replace("-", "").take(12)),
                 contentId = newContentId,
                 mode = LearningMode.MEANING_RECOGNITION
-            )
-            learningItemRepository.save(learningItem)
-            createdItemCount = 1
+            ))
+        } else emptyList()
+
+        requireNotNull(transactionRunner) {
+            "Atomic transaction support is required for Content create."
+        }.runInTransaction {
+            contentRepository.save(newContent)
+            learningItemRepository?.saveAll(learningItems)
+            contentLibraryRepository!!.save(writableLibrary.register(newContentId))
+
+            val currentPackage = requireNotNull(instPkgRepo.findById(installedPackageId)) {
+                "InstalledPackage disappeared during Content create: ${installedPackageId.value}"
+            }
+            instPkgRepo.save(InstalledPackage.reconstitute(
+                id = currentPackage.id,
+                libraryId = currentPackage.libraryId,
+                packageId = currentPackage.packageId,
+                topicId = currentPackage.topicId,
+                name = currentPackage.name,
+                version = currentPackage.version,
+                state = currentPackage.state,
+                installedAt = currentPackage.installedAt,
+                contentCount = currentPackage.contentCount + 1,
+                learningItemCount = currentPackage.learningItemCount + learningItems.size,
+                contentChecksum = currentPackage.contentChecksum
+            ))
         }
-
-        // 3c. Register new ContentId in the canonical writable ContentLibrary.
-        //     Use the updatedLibrary instance (not the original pre-register instance).
-        val updatedLibrary = writableLibrary.register(newContentId)
-        contentLibraryRepository!!.save(updatedLibrary)
-
-        // 3d. Update InstalledPackage counts.
-        //     Re-load instPkg in case it was modified (defensive); use updated instance for save.
-        val freshInstPkg = instPkgRepo.findById(installedPackageId) ?: instPkg
-        val updatedPkg = InstalledPackage.reconstitute(
-            id = freshInstPkg.id,
-            libraryId = freshInstPkg.libraryId,
-            packageId = freshInstPkg.packageId,
-            topicId = freshInstPkg.topicId,
-            name = freshInstPkg.name,
-            version = freshInstPkg.version,
-            state = freshInstPkg.state,
-            installedAt = freshInstPkg.installedAt,
-            contentCount = freshInstPkg.contentCount + 1,
-            learningItemCount = freshInstPkg.learningItemCount + createdItemCount,
-            contentChecksum = freshInstPkg.contentChecksum
-        )
-        instPkgRepo.save(updatedPkg)
 
         return newContent
     }

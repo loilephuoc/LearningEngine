@@ -43,6 +43,8 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
  */
 class ContentBrowserEditServiceTest {
 
+    private enum class CreateFailureBoundary { CONTENT, LEARNING_ITEM, LIBRARY, INSTALLED_PACKAGE }
+
     // ---------------------------------------------------------------------------
     // TC01 — updateTextFields persists mutable text fields
     // ---------------------------------------------------------------------------
@@ -327,6 +329,113 @@ class ContentBrowserEditServiceTest {
         assertFails { service.restoreDeletedContent(snapshot, appContext.learningItemRepository!!) }
         assertEquals(conflicting, appContext.contentRepository!!.findById(conflicting.id))
         assertTrue(appContext.learningItemRepository!!.findByContentId(conflicting.id).isEmpty())
+    }
+
+    @Test
+    fun `create rolls back every canonical write boundary and retry commits exactly once`() {
+        CreateFailureBoundary.entries.forEach { boundary ->
+            val persistence = java.nio.file.Files.createTempDirectory("create-rollback-${boundary.name.lowercase()}")
+            val context = LearningApplicationFactory.createPersisted(persistence)
+            val installedId = InstalledPackageId("installed-${boundary.name.lowercase()}")
+            val packageId = PackageId("package-${boundary.name.lowercase()}")
+            val contentLibraryId = ContentLibraryId("library-${boundary.name.lowercase()}")
+            context.installedPackageRepository!!.save(
+                InstalledPackage.reconstitute(
+                    id = installedId,
+                    libraryId = context.defaultLibraryId!!,
+                    packageId = packageId,
+                    topicId = TopicId.deriveForLegacyPackage("Rollback Package", "OPD3"),
+                    name = PackageName("Rollback Package"),
+                    version = PackageVersion("1.0.0"),
+                    state = PackageState.ACTIVE,
+                    installedAt = java.time.Instant.EPOCH,
+                    contentCount = 0,
+                    learningItemCount = 0
+                )
+            )
+            context.contentPackageRepository!!.save(
+                ContentPackage(
+                    id = packageId,
+                    descriptor = PackageDescriptor("Rollback Package", "1.0.0", "OPD3"),
+                    libraryIds = setOf(contentLibraryId)
+                )
+            )
+            context.contentLibraryRepository!!.save(
+                ContentLibrary(contentLibraryId, LibraryDescriptor("Rollback Library"), emptySet())
+            )
+
+            val contentRepo = context.contentRepository!!
+            val itemRepo = context.learningItemRepository!!
+            val libraryRepo = context.contentLibraryRepository!!
+            val installedRepo = context.installedPackageRepository!!
+            val failingContent = object : vn.loi.learning.application.port.ContentRepository by contentRepo {
+                override fun save(content: Content) {
+                    if (boundary == CreateFailureBoundary.CONTENT) error("injected content failure")
+                    contentRepo.save(content)
+                }
+            }
+            val failingItems = object : vn.loi.learning.application.port.LearningItemRepository by itemRepo {
+                override fun saveAll(learningItems: List<LearningItem>) {
+                    if (boundary == CreateFailureBoundary.LEARNING_ITEM) error("injected item failure")
+                    itemRepo.saveAll(learningItems)
+                }
+            }
+            val failingLibrary = object : vn.loi.learning.application.port.ContentLibraryRepository by libraryRepo {
+                override fun save(library: ContentLibrary) {
+                    if (boundary == CreateFailureBoundary.LIBRARY) error("injected library failure")
+                    libraryRepo.save(library)
+                }
+            }
+            val failingInstalled = object : vn.loi.learning.domain.library.repository.InstalledPackageRepository by installedRepo {
+                override fun save(installedPackage: InstalledPackage) {
+                    if (boundary == CreateFailureBoundary.INSTALLED_PACKAGE) error("injected package failure")
+                    installedRepo.save(installedPackage)
+                }
+            }
+            val failingService = ContentBrowserEditService(
+                contentRepository = failingContent,
+                contentLibraryRepository = failingLibrary,
+                installedPackageRepository = failingInstalled,
+                contentPackageRepository = context.contentPackageRepository,
+                transactionRunner = requireNotNull(context.transactionRunner)
+            )
+
+            assertFails {
+                failingService.createContent(
+                    installedPackageId = installedId,
+                    questionText = "Question",
+                    answerText = "Answer",
+                    learningItemRepository = failingItems
+                )
+            }
+
+            val afterFailure = LearningApplicationFactory.createPersisted(persistence)
+            assertTrue(afterFailure.contentRepository!!.findAll().isEmpty(), boundary.name)
+            assertTrue(afterFailure.learningItemRepository!!.findAllEnabled().isEmpty(), boundary.name)
+            assertEquals(0, afterFailure.contentLibraryRepository!!.findById(contentLibraryId)!!.contentCount, boundary.name)
+            assertEquals(0, afterFailure.installedPackageRepository!!.findById(installedId)!!.contentCount, boundary.name)
+            assertEquals(0, afterFailure.installedPackageRepository!!.findById(installedId)!!.learningItemCount, boundary.name)
+
+            val retryService = ContentBrowserEditService(
+                contentRepository = afterFailure.contentRepository!!,
+                contentLibraryRepository = afterFailure.contentLibraryRepository,
+                installedPackageRepository = afterFailure.installedPackageRepository,
+                contentPackageRepository = afterFailure.contentPackageRepository,
+                transactionRunner = requireNotNull(afterFailure.transactionRunner)
+            )
+            retryService.createContent(
+                installedPackageId = installedId,
+                questionText = "Question",
+                answerText = "Answer",
+                learningItemRepository = afterFailure.learningItemRepository
+            )
+            val afterRetry = LearningApplicationFactory.createPersisted(persistence)
+            assertEquals(1, afterRetry.contentRepository!!.findAll().size, boundary.name)
+            assertEquals(1, afterRetry.learningItemRepository!!.findAllEnabled().size, boundary.name)
+            assertEquals(1, afterRetry.contentLibraryRepository!!.findById(contentLibraryId)!!.contentCount, boundary.name)
+            assertEquals(1, afterRetry.installedPackageRepository!!.findById(installedId)!!.contentCount, boundary.name)
+            assertEquals(1, afterRetry.installedPackageRepository!!.findById(installedId)!!.learningItemCount, boundary.name)
+        }
     }
 
     // ---------------------------------------------------------------------------
