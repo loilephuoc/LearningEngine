@@ -190,7 +190,9 @@ fun LearningShell(
                                 contentRepository = contentRepo,
                                 contentLibraryRepository = applicationContext.contentLibraryRepository,
                                 installedPackageRepository = applicationContext.installedPackageRepository,
-                                contentPackageRepository = applicationContext.contentPackageRepository
+                                contentPackageRepository = applicationContext.contentPackageRepository,
+                                transactionRunner = requireNotNull(applicationContext.transactionRunner),
+                                studySessionRepository = applicationContext.studySessionRepository
                             )
                         },
                         learningItemRepository = applicationContext.learningItemRepository

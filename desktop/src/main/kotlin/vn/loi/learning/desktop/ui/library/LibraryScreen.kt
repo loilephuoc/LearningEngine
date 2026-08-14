@@ -230,6 +230,7 @@ fun LibraryScreen(
                     onRequestDelete = contentLibraryViewModel::showDeleteConfirmation,
                     onConfirmDelete = contentLibraryViewModel::confirmDeleteContent,
                     onDismissDelete = contentLibraryViewModel::dismissDeleteConfirmation,
+                    onUndoDelete = contentLibraryViewModel::undoDeleteContent,
                     // Unsaved changes dialog callbacks
                     onConfirmSaveAndProceed = contentLibraryViewModel::confirmSaveAndProceed,
                     onConfirmDiscardAndProceed = contentLibraryViewModel::confirmDiscardAndProceed,

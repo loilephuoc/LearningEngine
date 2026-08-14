@@ -83,6 +83,7 @@ data class LearningApplicationContext(
     val exportContentPackage: vn.loi.learning.application.contentpackaging.export.ExportContentPackageUseCase? = null,
     val packageBrowserQuery: vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserQueryService? = null,
     val contentBrowserEdit: vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService? = null,
+    val transactionRunner: vn.loi.learning.application.port.TransactionRunner? = null,
     val lessonBrowser: vn.loi.learning.application.contentpackaging.browser.LessonBrowserQueryService? = null,
     val scopedStudy: vn.loi.learning.application.session.ScopedStudySessionService? = null,
     val packageVerifier: vn.loi.learning.application.contentpackaging.Opd3PackageVerifier? = null,

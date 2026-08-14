@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.browser
 
 import vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService
+import vn.loi.learning.application.contentpackaging.browser.DeletedContentSnapshot
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserQueryService
 import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.domain.content.model.ContentId
@@ -151,13 +152,13 @@ class PackageContentBrowserFacade(
         contentId: ContentId,
         installedPackageId: InstalledPackageId,
         packageName: String
-    ): PackageContentBrowserUiState {
+    ): DeletedContentBrowserResult {
         val service = editService
             ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
         val itemRepo = learningItemRepository
             ?: throw IllegalStateException("LearningItemRepository is not provided to PackageContentBrowserFacade.")
 
-        service.deleteContent(
+        val snapshot = service.deleteContent(
             contentId = contentId,
             learningItemRepository = itemRepo,
             installedPackageId = installedPackageId
@@ -167,11 +168,32 @@ class PackageContentBrowserFacade(
         val selectedItem = reloaded.selectedItemInView ?: reloaded.allItems.firstOrNull()
         val selectedDraft = selectedItem?.toDraftEdits()
 
-        return reloaded.copy(
+        return DeletedContentBrowserResult(reloaded.copy(
             selectedContentId = selectedItem?.contentId?.value,
             editingContentId = selectedItem?.contentId?.value,
             loadedBaselineDraft = selectedDraft,
             draftEdits = selectedDraft
-        )
+        ), snapshot)
+    }
+
+    fun undoDelete(
+        snapshot: DeletedContentSnapshot,
+        installedPackageId: InstalledPackageId,
+        packageName: String
+    ): PackageContentBrowserUiState {
+        require(snapshot.installedPackageId == installedPackageId) {
+            "Cannot undo delete outside its original package."
+        }
+        val service = editService
+            ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
+        val itemRepo = learningItemRepository
+            ?: throw IllegalStateException("LearningItemRepository is not provided to PackageContentBrowserFacade.")
+        service.restoreDeletedContent(snapshot, itemRepo)
+        return loadForPackage(installedPackageId, packageName)
     }
 }
+
+data class DeletedContentBrowserResult(
+    val state: PackageContentBrowserUiState,
+    val snapshot: DeletedContentSnapshot
+)

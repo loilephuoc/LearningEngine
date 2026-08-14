@@ -414,6 +414,42 @@ class PackageContentBrowserEditStateTest {
         assertNull(state.selectedItemInView)
     }
 
+    @Test
+    fun `delete exposes one-level undo and undo restores exact item then consumes snapshot`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+        vm.selectPackageBrowserRow("cnt-2")
+        val before = vm.packageBrowserUiState!!.allItems.first { it.contentId.value == "cnt-2" }
+
+        vm.showDeleteConfirmation()
+        vm.confirmDeleteContent()
+        assertTrue(vm.packageBrowserUiState!!.canUndoDelete)
+        assertEquals("Question 2", vm.packageBrowserUiState!!.undoDeleteLabel)
+
+        vm.undoDeleteContent()
+        val restored = vm.packageBrowserUiState!!
+        assertFalse(restored.canUndoDelete)
+        assertEquals("cnt-2", restored.selectedContentId)
+        assertEquals(before, restored.allItems.first { it.contentId.value == "cnt-2" })
+    }
+
+    @Test
+    fun `second successful delete replaces first undo snapshot`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+        vm.selectPackageBrowserRow("cnt-1")
+        vm.showDeleteConfirmation()
+        vm.confirmDeleteContent()
+        vm.selectPackageBrowserRow("cnt-2")
+        vm.showDeleteConfirmation()
+        vm.confirmDeleteContent()
+
+        vm.undoDeleteContent()
+        val ids = vm.packageBrowserUiState!!.allItems.map { it.contentId.value }
+        assertFalse("cnt-1" in ids)
+        assertTrue("cnt-2" in ids)
+    }
+
     // ---------------------------------------------------------------------------
     // TC17 — Dirty draft blocks delete and does not silently discard edits
     // ---------------------------------------------------------------------------
@@ -907,7 +943,12 @@ class PackageContentBrowserEditStateTest {
         }
 
         val editService = vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
-            contentRepository = appContext.contentRepository!!
+            contentRepository = appContext.contentRepository!!,
+            contentLibraryRepository = appContext.contentLibraryRepository,
+            installedPackageRepository = appContext.installedPackageRepository,
+            contentPackageRepository = appContext.contentPackageRepository,
+            transactionRunner = requireNotNull(appContext.transactionRunner),
+            studySessionRepository = appContext.studySessionRepository
         )
         val facade = ContentLibraryFacade(appContext)
         val lessonBrowserFacade = LessonBrowserFacade(appContext)

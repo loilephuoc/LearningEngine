@@ -31,7 +31,9 @@ data class PackageContentBrowserUiState(
     /** Hiển thị dialog cảnh báo thay đổi chưa lưu (row/package/back). */
     val showUnsavedChangesDialog: Boolean = false,
     /** Typed pending action để thực thi sau khi resolve unsaved dialog. */
-    val pendingAction: PackageBrowserPendingAction? = null
+    val pendingAction: PackageBrowserPendingAction? = null,
+    val canUndoDelete: Boolean = false,
+    val undoDeleteLabel: String? = null
 ) {
     val totalCount: Int get() = allItems.size
 

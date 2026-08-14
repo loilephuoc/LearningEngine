@@ -38,6 +38,8 @@ class ContentLibraryViewModel(
     var packageBrowserUiState by mutableStateOf<vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState?>(null)
         private set
 
+    private var deletedContentSnapshot: vn.loi.learning.application.contentpackaging.browser.DeletedContentSnapshot? = null
+
     var createCollectionDialogState by mutableStateOf(
         CreateCollectionDialogState()
     )
@@ -611,6 +613,9 @@ class ContentLibraryViewModel(
         packageName: String
     ) {
         val current = packageBrowserUiState
+        if (current != null && current.installedPackageId != installedPackageId) {
+            deletedContentSnapshot = null
+        }
         if (current != null && current.isDirty) {
             if (current.installedPackageId == installedPackageId) return
             packageBrowserUiState = current.copy(
@@ -1306,7 +1311,9 @@ class ContentLibraryViewModel(
                     packageName = current.packageName
                 )
             },
-            onSuccess = { reloaded ->
+            onSuccess = { result ->
+                val reloaded = result.state
+                deletedContentSnapshot = result.snapshot
                 val selectedItem = reloaded.allItems.firstOrNull { it.contentId.value == nextSelection } ?: reloaded.selectedItemInView
                 val selectedDraft = selectedItem?.toDraftEdits()
                 packageBrowserUiState = reloaded.copy(
@@ -1319,7 +1326,9 @@ class ContentLibraryViewModel(
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
-                    sortOption = current.sortOption
+                    sortOption = current.sortOption,
+                    canUndoDelete = true,
+                    undoDeleteLabel = result.snapshot.displayLabel
                 )
                 onContentDataChanged?.invoke()
             },
@@ -1330,6 +1339,54 @@ class ContentLibraryViewModel(
                 uiState = uiState.copy(
                     importError = "Delete failed: ${ex.message}"
                 )
+            }
+        )
+    }
+
+    fun undoDeleteContent() {
+        val current = packageBrowserUiState ?: return
+        val snapshot = deletedContentSnapshot ?: return
+        if (current.isDirty || current.isCreatingNewItem) return
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.undoDelete(
+                    snapshot = snapshot,
+                    installedPackageId = current.installedPackageId,
+                    packageName = current.packageName
+                )
+            },
+            onSuccess = { reloaded ->
+                val restoredId = snapshot.content.id.value
+                val projected = reloaded.copy(
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    sortOption = current.sortOption
+                )
+                val restored = projected.filteredItems.firstOrNull { it.contentId.value == restoredId }
+                val retained = projected.filteredItems.firstOrNull { it.contentId.value == current.selectedContentId }
+                    ?: projected.filteredItems.firstOrNull()
+                val selection = restored ?: retained
+                val draft = selection?.toDraftEdits()
+                deletedContentSnapshot = null
+                packageBrowserUiState = projected.copy(
+                    selectedContentId = selection?.contentId?.value,
+                    editingContentId = selection?.contentId?.value,
+                    loadedBaselineDraft = draft,
+                    draftEdits = draft,
+                    canUndoDelete = false,
+                    undoDeleteLabel = null
+                )
+                uiState = uiState.copy(
+                    importMessage = if (restored == null) "Undo Delete succeeded; the restored item is hidden by the current filter." else null,
+                    importError = null
+                )
+                onContentDataChanged?.invoke()
+            },
+            onFailure = { ex ->
+                packageBrowserUiState = current.copy(canUndoDelete = true, undoDeleteLabel = snapshot.displayLabel)
+                uiState = uiState.copy(importError = "Undo Delete failed: ${ex.message}")
             }
         )
     }
@@ -1499,10 +1556,12 @@ class ContentLibraryViewModel(
             }
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.CloseBrowser,
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BackToLibrary -> {
+                deletedContentSnapshot = null
                 packageBrowserUiState = null
                 lessonBrowserUiState = null
             }
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BrowsePackage -> {
+                deletedContentSnapshot = null
                 packageBrowserUiState = null
                 browsePackageLessons(action.installedPackageId, action.packageName)
             }
@@ -1563,11 +1622,13 @@ class ContentLibraryViewModel(
             )
             return
         }
+        deletedContentSnapshot = null
         packageBrowserUiState = null
         lessonBrowserUiState = null
     }
 
     fun resetLibraryNavigationState() {
+        deletedContentSnapshot = null
         learningWorkspaceUiState = null
         lessonBrowserUiState = null
         packageBrowserUiState = null

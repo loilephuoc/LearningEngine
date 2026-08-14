@@ -177,7 +177,8 @@ class ContentBrowserEditServiceTest {
         val service = ContentBrowserEditService(
             contentRepository = appContext.contentRepository!!,
             contentLibraryRepository = appContext.contentLibraryRepository!!,
-            installedPackageRepository = appContext.installedPackageRepository!!
+            installedPackageRepository = appContext.installedPackageRepository!!,
+            transactionRunner = requireNotNull(appContext.transactionRunner)
         )
 
         val targetId = ContentId("cnt-2")
@@ -215,7 +216,8 @@ class ContentBrowserEditServiceTest {
         val service = ContentBrowserEditService(
             contentRepository = appContext.contentRepository!!,
             contentLibraryRepository = appContext.contentLibraryRepository!!,
-            installedPackageRepository = appContext.installedPackageRepository!!
+            installedPackageRepository = appContext.installedPackageRepository!!,
+            transactionRunner = requireNotNull(appContext.transactionRunner)
         )
 
         val targetId = ContentId("cnt-1")
@@ -251,6 +253,80 @@ class ContentBrowserEditServiceTest {
                 installedPackageId = instId
             )
         }
+    }
+
+    @Test
+    fun `delete then undo restores exact aggregate identities memberships media and truthful counts`() {
+        val (appContext, instId) = createFixture(contentCount = 2)
+        val contentId = ContentId("cnt-1")
+        val disabled = LearningItem(
+            id = LearningItemId("item-1-disabled"),
+            contentId = contentId,
+            mode = LearningMode.entries.last(),
+            isEnabled = false
+        )
+        appContext.learningItemRepository!!.save(disabled)
+        val secondLibraryId = ContentLibraryId("lib-edit-svc-secondary")
+        appContext.contentLibraryRepository!!.save(
+            ContentLibrary(secondLibraryId, LibraryDescriptor(name = "Secondary"), setOf(contentId))
+        )
+        val packageBefore = appContext.installedPackageRepository!!.findById(instId)!!
+        appContext.installedPackageRepository!!.save(
+            InstalledPackage.reconstitute(
+                packageBefore.id, packageBefore.libraryId, packageBefore.packageId, packageBefore.topicId,
+                packageBefore.name, packageBefore.version, packageBefore.state, packageBefore.installedAt,
+                packageBefore.contentCount, packageBefore.learningItemCount + 1, packageBefore.contentChecksum
+            )
+        )
+        val originalContent = appContext.contentRepository!!.findById(contentId)!!
+        val originalItems = appContext.learningItemRepository!!.findByContentId(contentId).toSet()
+        val service = ContentBrowserEditService(
+            contentRepository = appContext.contentRepository!!,
+            contentLibraryRepository = appContext.contentLibraryRepository!!,
+            installedPackageRepository = appContext.installedPackageRepository!!,
+            transactionRunner = requireNotNull(appContext.transactionRunner)
+        )
+
+        val snapshot = service.deleteContent(contentId, appContext.learningItemRepository!!, instId)
+        assertEquals(originalItems.size, snapshot.learningItems.size)
+        assertEquals(setOf(ContentLibraryId("lib-edit-svc"), secondLibraryId), snapshot.libraryIds)
+        assertEquals(2, appContext.installedPackageRepository!!.findById(instId)!!.learningItemCount)
+
+        val afterDelete = appContext.installedPackageRepository!!.findById(instId)!!
+        appContext.installedPackageRepository!!.save(
+            InstalledPackage.reconstitute(
+                afterDelete.id, afterDelete.libraryId, afterDelete.packageId, afterDelete.topicId,
+                afterDelete.name, afterDelete.version, afterDelete.state, afterDelete.installedAt,
+                afterDelete.contentCount, afterDelete.learningItemCount + 4, "later-change"
+            )
+        )
+        service.restoreDeletedContent(snapshot, appContext.learningItemRepository!!)
+
+        assertEquals(originalContent, appContext.contentRepository!!.findById(contentId))
+        assertEquals(originalItems, appContext.learningItemRepository!!.findByContentId(contentId).toSet())
+        assertTrue(appContext.contentLibraryRepository!!.findById(ContentLibraryId("lib-edit-svc"))!!.contains(contentId))
+        assertTrue(appContext.contentLibraryRepository!!.findById(secondLibraryId)!!.contains(contentId))
+        val restoredPackage = appContext.installedPackageRepository!!.findById(instId)!!
+        assertEquals(9, restoredPackage.learningItemCount)
+        assertEquals("later-change", restoredPackage.contentChecksum)
+    }
+
+    @Test
+    fun `undo refuses conflicting exact content identity without overwriting it`() {
+        val (appContext, instId) = createFixture(contentCount = 1)
+        val service = ContentBrowserEditService(
+            contentRepository = appContext.contentRepository!!,
+            contentLibraryRepository = appContext.contentLibraryRepository!!,
+            installedPackageRepository = appContext.installedPackageRepository!!,
+            transactionRunner = requireNotNull(appContext.transactionRunner)
+        )
+        val snapshot = service.deleteContent(ContentId("cnt-1"), appContext.learningItemRepository!!, instId)
+        val conflicting = snapshot.content.copy(text = ContentText(primaryText = "Conflict"))
+        appContext.contentRepository!!.save(conflicting)
+
+        assertFails { service.restoreDeletedContent(snapshot, appContext.learningItemRepository!!) }
+        assertEquals(conflicting, appContext.contentRepository!!.findById(conflicting.id))
+        assertTrue(appContext.learningItemRepository!!.findByContentId(conflicting.id).isEmpty())
     }
 
     // ---------------------------------------------------------------------------

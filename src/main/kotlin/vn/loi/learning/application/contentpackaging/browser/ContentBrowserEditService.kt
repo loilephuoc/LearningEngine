@@ -7,6 +7,8 @@ import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.application.port.ContentPackageRepository
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
+import vn.loi.learning.application.port.TransactionRunner
+import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.model.Content
@@ -32,7 +34,9 @@ class ContentBrowserEditService(
     private val contentRepository: ContentRepository,
     private val contentLibraryRepository: ContentLibraryRepository? = null,
     private val installedPackageRepository: InstalledPackageRepository? = null,
-    private val contentPackageRepository: ContentPackageRepository? = null
+    private val contentPackageRepository: ContentPackageRepository? = null,
+    private val transactionRunner: TransactionRunner? = null,
+    private val studySessionRepository: StudySessionRepository? = null
 ) {
 
     /**
@@ -305,42 +309,124 @@ class ContentBrowserEditService(
         contentId: ContentId,
         learningItemRepository: LearningItemRepository,
         installedPackageId: InstalledPackageId? = null
-    ) {
-        contentRepository.findById(contentId)
+    ): DeletedContentSnapshot {
+        val content = contentRepository.findById(contentId)
             ?: throw IllegalArgumentException("Content not found: ${contentId.value}")
+        val ownedItems = learningItemRepository.findByContentId(contentId)
+        val ownedItemIds = ownedItems.mapTo(mutableSetOf()) { it.id }
+        val blockingSession = studySessionRepository?.findAll()?.firstOrNull { session ->
+            session.currentLearningItemId in ownedItemIds ||
+                session.pendingReview?.learningItemId in ownedItemIds ||
+                session.undoableReview?.learningItemId in ownedItemIds
+        }
+        check(blockingSession == null) {
+            "Content cannot be deleted while one of its learning items is referenced by Study session ${blockingSession?.id?.value}."
+        }
+        val libraryIds = contentLibraryRepository
+            ?.findAll()
+            ?.filter { it.contains(contentId) }
+            ?.map { it.id }
+            ?.toSet()
+            .orEmpty()
+        val snapshot = DeletedContentSnapshot(
+            content = content,
+            learningItems = ownedItems.toList(),
+            libraryIds = libraryIds,
+            installedPackageId = installedPackageId,
+            displayLabel = content.displayName
+        )
 
-        val ownedItems = learningItemRepository.findAllEnabled().filter { it.contentId == contentId }
-        val deletedItemCount = ownedItems.size
+        requireNotNull(transactionRunner) {
+            "Atomic transaction support is required for Content delete."
+        }.runInTransaction {
+            learningItemRepository.deleteByContentIds(setOf(contentId))
+            contentRepository.deleteById(contentId)
+            contentLibraryRepository?.let { repository ->
+                libraryIds.forEach { libraryId ->
+                    val library = requireNotNull(repository.findById(libraryId)) {
+                        "ContentLibrary ${libraryId.value} disappeared during delete."
+                    }
+                    repository.save(library.remove(contentId))
+                }
+            }
+            reconcileInstalledPackageCounts(
+                installedPackageId = installedPackageId,
+                contentDelta = -1,
+                learningItemDelta = -ownedItems.size
+            )
+        }
+        return snapshot
+    }
 
-        learningItemRepository.deleteByContentIds(setOf(contentId))
-        contentRepository.deleteById(contentId)
-
-        contentLibraryRepository?.let { libRepo ->
-            val libraries = libRepo.findAll().filter { it.contains(contentId) }
-            for (lib in libraries) {
-                libRepo.save(lib.remove(contentId))
+    fun restoreDeletedContent(
+        snapshot: DeletedContentSnapshot,
+        learningItemRepository: LearningItemRepository
+    ) {
+        val contentId = snapshot.content.id
+        check(contentRepository.findById(contentId) == null) {
+            "Cannot undo delete: Content ${contentId.value} already exists."
+        }
+        snapshot.learningItems.forEach { original ->
+            val existing = learningItemRepository.findById(original.id)
+            check(existing == null) {
+                "Cannot undo delete: LearningItem ${original.id.value} already exists."
+            }
+        }
+        val libraryRepository = contentLibraryRepository
+        if (snapshot.libraryIds.isNotEmpty()) {
+            checkNotNull(libraryRepository) { "Cannot undo delete: ContentLibraryRepository is unavailable." }
+            snapshot.libraryIds.forEach { libraryId ->
+                checkNotNull(libraryRepository.findById(libraryId)) {
+                    "Cannot undo delete: ContentLibrary ${libraryId.value} is unavailable."
+                }
+            }
+        }
+        snapshot.installedPackageId?.let { packageId ->
+            checkNotNull(installedPackageRepository?.findById(packageId)) {
+                "Cannot undo delete: InstalledPackage ${packageId.value} is unavailable."
             }
         }
 
-        if (installedPackageRepository != null && installedPackageId != null) {
-            val instPkg = installedPackageRepository.findById(installedPackageId)
-            if (instPkg != null) {
-                val updated = InstalledPackage.reconstitute(
-                    id = instPkg.id,
-                    libraryId = instPkg.libraryId,
-                    packageId = instPkg.packageId,
-                    topicId = instPkg.topicId,
-                    name = instPkg.name,
-                    version = instPkg.version,
-                    state = instPkg.state,
-                    installedAt = instPkg.installedAt,
-                    contentCount = (instPkg.contentCount - 1).coerceAtLeast(0),
-                    learningItemCount = (instPkg.learningItemCount - deletedItemCount).coerceAtLeast(0),
-                    contentChecksum = instPkg.contentChecksum
-                )
-                installedPackageRepository.save(updated)
+        requireNotNull(transactionRunner) {
+            "Atomic transaction support is required for Undo Delete."
+        }.runInTransaction {
+            contentRepository.save(snapshot.content)
+            learningItemRepository.saveAll(snapshot.learningItems)
+            snapshot.libraryIds.forEach { libraryId ->
+                val library = requireNotNull(libraryRepository?.findById(libraryId))
+                libraryRepository.save(library.register(contentId))
             }
+            reconcileInstalledPackageCounts(
+                installedPackageId = snapshot.installedPackageId,
+                contentDelta = 1,
+                learningItemDelta = snapshot.learningItems.size
+            )
         }
+    }
+
+    private fun reconcileInstalledPackageCounts(
+        installedPackageId: InstalledPackageId?,
+        contentDelta: Int,
+        learningItemDelta: Int
+    ) {
+        if (installedPackageId == null) return
+        val repository = installedPackageRepository ?: return
+        val current = repository.findById(installedPackageId) ?: return
+        repository.save(
+            InstalledPackage.reconstitute(
+                id = current.id,
+                libraryId = current.libraryId,
+                packageId = current.packageId,
+                topicId = current.topicId,
+                name = current.name,
+                version = current.version,
+                state = current.state,
+                installedAt = current.installedAt,
+                contentCount = (current.contentCount + contentDelta).coerceAtLeast(0),
+                learningItemCount = (current.learningItemCount + learningItemDelta).coerceAtLeast(0),
+                contentChecksum = current.contentChecksum
+            )
+        )
     }
 
     private fun updatePartOfSpeech(
@@ -359,3 +445,11 @@ class ContentBrowserEditService(
         }
     }
 }
+
+data class DeletedContentSnapshot(
+    val content: Content,
+    val learningItems: List<LearningItem>,
+    val libraryIds: Set<ContentLibraryId>,
+    val installedPackageId: InstalledPackageId?,
+    val displayLabel: String
+)

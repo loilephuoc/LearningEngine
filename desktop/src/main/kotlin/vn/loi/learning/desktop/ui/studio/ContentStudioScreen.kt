@@ -58,6 +58,7 @@ fun ContentStudioScreen(
     onRequestDelete: (() -> Unit)? = null,
     onConfirmDelete: (() -> Unit)? = null,
     onDismissDelete: (() -> Unit)? = null,
+    onUndoDelete: (() -> Unit)? = null,
     onConfirmSaveAndProceed: (() -> Unit)? = null,
     onConfirmDiscardAndProceed: (() -> Unit)? = null,
     onCancelUnsavedDialog: (() -> Unit)? = null,
@@ -92,6 +93,14 @@ fun ContentStudioScreen(
             .background(LEColors.background)
             .focusRequester(screenFocusRequester)
             .focusable()
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.Z &&
+                    uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem
+                ) {
+                    onUndoDelete?.invoke()
+                    true
+                } else false
+            }
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     when {
@@ -175,7 +184,9 @@ fun ContentStudioScreen(
             onDiscardClick = { onDiscardEdit?.invoke() },
             onSaveNewItemClick = { onSaveNewItem?.invoke() },
             onCancelNewItemClick = { onCancelNewItem?.invoke() },
-            onDeleteClick = { onRequestDelete?.invoke() }
+            onDeleteClick = { onRequestDelete?.invoke() },
+            onUndoDeleteClick = { onUndoDelete?.invoke() },
+            canUndoDelete = uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem
         )
 
         HorizontalDivider(color = LEColors.borderSubtle)
@@ -291,7 +302,7 @@ fun ContentStudioScreen(
                         style = LETypography.fieldValueEmphasized
                     )
                     Text(
-                        text = "This will permanently remove the content and all its associated learning items. This action cannot be undone.",
+                        text = "This removes the content and its learning items. You can undo the most recent deletion while this Content Studio session remains open.",
                         style = LETypography.secondaryMetadata
                     )
                 }
@@ -351,7 +362,9 @@ private fun StudioTopBar(
     onDiscardClick: () -> Unit,
     onSaveNewItemClick: () -> Unit,
     onCancelNewItemClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onUndoDeleteClick: () -> Unit,
+    canUndoDelete: Boolean
 ) {
     Surface(
         color = LEColors.surface,
@@ -391,6 +404,12 @@ private fun StudioTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = LESpacing.lg)
                 ) {
+                    LESecondaryButton(
+                        text = "Undo Delete",
+                        onClick = onUndoDeleteClick,
+                        icon = LEIcons.Undo,
+                        enabled = canUndoDelete
+                    )
                     if (isCreatingNewItem) {
                         LEPrimaryButton(
                             text = "Save New Item",

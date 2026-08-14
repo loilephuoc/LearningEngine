@@ -770,7 +770,9 @@ object LearningApplicationFactory {
                 contentRepository = contentRepository,
                 contentLibraryRepository = contentLibraryRepository,
                 installedPackageRepository = domainInstalledPackageRepository,
-                contentPackageRepository = contentPackageRepository
+                contentPackageRepository = contentPackageRepository,
+                transactionRunner = transactionRunner,
+                studySessionRepository = studySessionRepository
             )
         val lessonBrowser = vn.loi.learning.application.contentpackaging.browser.LessonBrowserQueryService(packageBrowserQuery)
         val scopedStudy = vn.loi.learning.application.session.ScopedStudySessionService(
@@ -866,6 +868,7 @@ object LearningApplicationFactory {
             exportContentPackage = exportContentPackageUseCase,
             packageBrowserQuery = packageBrowserQuery,
             contentBrowserEdit = contentBrowserEdit,
+            transactionRunner = transactionRunner,
             lessonBrowser = lessonBrowser,
             scopedStudy = scopedStudy,
             packageVerifier = packageVerifier,

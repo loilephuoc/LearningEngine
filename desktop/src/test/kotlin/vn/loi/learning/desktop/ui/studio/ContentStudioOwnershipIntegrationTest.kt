@@ -656,7 +656,8 @@ class ContentStudioOwnershipIntegrationTest {
             contentRepository          = appContext.contentRepository!!,
             contentLibraryRepository   = appContext.contentLibraryRepository,
             installedPackageRepository = appContext.installedPackageRepository,
-            contentPackageRepository   = appContext.contentPackageRepository
+            contentPackageRepository   = appContext.contentPackageRepository,
+            transactionRunner          = requireNotNull(appContext.transactionRunner)
         )
 
         // Update works
