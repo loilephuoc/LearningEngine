@@ -212,6 +212,47 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
+    fun `Learn New history routes upward gesture forward and never enables rating input`() {
+        assertEquals(
+            IntroductionStageGesture.NEXT,
+            gesture(
+                deltaX = 12f,
+                deltaY = -100f,
+                ratingEnabled = false,
+                navigationEnabled = true
+            )
+        )
+        assertFalse(introductionRatingInputEnabled(
+            revealed = true,
+            historyPreview = true,
+            interactionPending = false
+        ))
+        assertTrue(introductionRatingInputEnabled(
+            revealed = true,
+            historyPreview = false,
+            interactionPending = false
+        ))
+        assertFalse(introductionRatingInputEnabled(
+            revealed = false,
+            historyPreview = false,
+            interactionPending = false
+        ))
+    }
+
+    @Test
+    fun `Learn New front meaning delegates tap to reveal and exposes one reveal action`() {
+        val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
+        val introduction = screen.substringAfter("private fun IntroductionLearningStage(")
+            .substringBefore("fun StudyAudioButton(")
+        val front = introduction.substringAfter("if (!revealed) {")
+            .substringBefore("} else {")
+
+        assertTrue(front.contains("StudyAudioTextTarget("))
+        assertTrue(front.contains("interactionEnabled = false"))
+        assertTrue(introduction.contains("onClickLabel = if (!state.revealed) \"Reveal answer\" else null"))
+    }
+
+    @Test
     fun `horizontal gesture ownership consumes after lock and is not vetoed by child consumption`() {
         val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
         val gestures = screen.substringAfter("private fun Modifier.introductionStageGestures(")
@@ -295,8 +336,8 @@ class AndroidFocusFirstIntroductionTest {
         assertTrue(screen.contains("var childConsumed = down.isConsumed"))
         assertTrue(screen.contains("submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)"))
         assertTrue(screen.contains("IntroductionRatingFeedbackOrigin.MANUAL_BUTTON"))
-        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted && !quickReviewTransitionPending)"))
-        assertTrue(screen.contains("ratingEnabled = !focusedSkimUx && state.revealed"))
+        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && !state.historyPreview"))
+        assertTrue(screen.contains("ratingEnabled = !focusedSkimUx && introductionRatingInputEnabled("))
         assertTrue(screen.contains("gatedUpwardNavigation = focusedSkimUx"))
         assertTrue(screen.contains("navigationEnabled = (state.revealed || focusedSkimUx) && !quickReviewTransitionPending"))
         assertFalse(screen.contains("state.revealed && !swipeRatingSubmitted"))

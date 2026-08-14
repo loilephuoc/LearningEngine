@@ -121,7 +121,7 @@ class AndroidStudyViewModel(
                     AndroidStudyEvent.RevealIntroduction ->
                         (current as? AndroidStudyState.Introduction)?.let(facade::revealIntroduction) ?: current
                     is AndroidStudyEvent.RateIntroduction ->
-                        (current as? AndroidStudyState.Introduction)?.let {
+                        (current as? AndroidStudyState.Introduction)?.takeIf { !it.historyPreview }?.let {
                             facade.rateIntroduction(it, event.rating, deferHud = true)
                         } ?: current
                     AndroidStudyEvent.Retry -> when (current) {

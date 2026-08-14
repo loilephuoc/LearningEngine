@@ -494,7 +494,9 @@ private fun Modifier.introductionStageGestures(
             if (ownsHorizontalDrag) {
                 change.consume()
                 onHorizontalDragOffset(deltaX)
-            } else if ((ratingEnabled || gatedUpwardNavigation) && deltaY < -swipeThresholdPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX) * 1.35f) {
+            } else if ((ratingEnabled || gatedUpwardNavigation || (historyPreview && navigationEnabled)) &&
+                deltaY < -swipeThresholdPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX) * 1.35f
+            ) {
                 ownsUpwardDrag = true
                 change.consume()
                 onDragOffset(deltaY.coerceAtMost(0f))
@@ -682,7 +684,9 @@ private fun StudyRuntimeScreen(
         onEvent(event)
     }
     val submitIntroductionRating: (ReviewRating, IntroductionRatingFeedbackOrigin) -> Unit = { rating, origin ->
-        if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted && !quickReviewTransitionPending) {
+        if (state is AndroidStudyState.Introduction && !state.historyPreview &&
+            !swipeRatingSubmitted && !quickReviewTransitionPending
+        ) {
             swipeRatingSubmitted = true
             audioController.stop()
             activeRole = null
@@ -963,7 +967,9 @@ private fun StudyRuntimeScreen(
                         )
                     }
                 }
-                else submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)
+                else if (state is AndroidStudyState.Introduction && state.historyPreview) {
+                    if (state.navigation.canNext) stopAudioAndDispatch(AndroidStudyEvent.NextVisited)
+                } else submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)
             },
             onIntroductionPrevious = {
                 if (!quickReviewTransitionPending && state.navigation.canPrevious) {
@@ -975,7 +981,11 @@ private fun StudyRuntimeScreen(
                     stopAudioAndDispatch(AndroidStudyEvent.NextVisited)
                 }
             },
-            onIntroductionRating = { submitIntroductionRating(it, IntroductionRatingFeedbackOrigin.MANUAL_BUTTON) },
+            onIntroductionRating = {
+                if (state is AndroidStudyState.Introduction && !state.historyPreview) {
+                    submitIntroductionRating(it, IntroductionRatingFeedbackOrigin.MANUAL_BUTTON)
+                }
+            },
             onEvent = stopAudioAndDispatch,
             onOpenFullscreenImage = onOpenFullscreenImage
         )
@@ -1390,7 +1400,11 @@ private fun IntroductionLearningStage(
             }.introductionStageGestures(
                 itemKey = presentationKey,
                 alreadySubmitted = swipeRatingSubmitted || swipeCommitPending || quickReviewTransitionPending,
-                ratingEnabled = !focusedSkimUx && state.revealed,
+                ratingEnabled = !focusedSkimUx && introductionRatingInputEnabled(
+                    revealed = state.revealed,
+                    historyPreview = state.historyPreview,
+                    interactionPending = quickReviewTransitionPending
+                ),
                 navigationEnabled = (state.revealed || focusedSkimUx) && !quickReviewTransitionPending,
                 gatedUpwardNavigation = focusedSkimUx,
                 revealed = state.revealed,
@@ -1423,7 +1437,7 @@ private fun IntroductionLearningStage(
                     }.clickable(
                         interactionSource = backgroundInteraction,
                         indication = null,
-                        onClickLabel = if (focusedSkimUx && !state.revealed) "Reveal answer" else null,
+                        onClickLabel = if (!state.revealed) "Reveal answer" else null,
                         onClick = onGenericStageTap
                     ),
                     contentPadding = PaddingValues(horizontal = LearningSpacing.medium, vertical = LearningSpacing.extraSmall),
@@ -1493,7 +1507,7 @@ private fun IntroductionLearningStage(
                                         centered = true,
                                         maxLines = 3,
                                         headingSemantics = true,
-                                        interactionEnabled = !(focusedSkimUx && !state.revealed)
+                                        interactionEnabled = false
                                     )
 
                                     Spacer(modifier = Modifier.height(10.dp))
@@ -1552,7 +1566,11 @@ private fun IntroductionLearningStage(
                             onRating = onRating,
                             selectedRating = feedbackRating,
                             underlinedRating = if (quickReview) state.latestEffectiveRating else null,
-                            enabled = !state.historyPreview && !quickReviewTransitionPending,
+                            enabled = introductionRatingInputEnabled(
+                                revealed = state.revealed,
+                                historyPreview = state.historyPreview,
+                                interactionPending = quickReviewTransitionPending
+                            ),
                             modifier = Modifier.fillMaxWidth().padding(
                                 start = LearningSpacing.medium,
                                 end = LearningSpacing.medium,

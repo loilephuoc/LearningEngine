@@ -255,6 +255,71 @@ class AndroidReviewNavigationHistoryTest {
         }
 
     @Test
+    fun `Learn New historical Introduction rejects stale rating and preserves repositories`() =
+        runTest(dispatcher) {
+            val context = LearningApplicationFactory.createInMemory()
+            val learner = LearnerId("default-learner")
+            val sessionId = SessionId("learn-new-history-session")
+            val contentIds = listOf(ContentId("learn-new-a"), ContentId("learn-new-b"))
+            val itemIds = listOf(LearningItemId("learn-new-item-a"), LearningItemId("learn-new-item-b"))
+            contentIds.indices.forEach { index ->
+                context.contentRepository!!.save(Content(
+                    contentIds[index], ContentType.WORD, ContentText("answer-$index", "meaning-$index")
+                ))
+                context.learningItemRepository!!.save(LearningItem(
+                    itemIds[index], contentIds[index], LearningMode.MEANING_RECOGNITION
+                ))
+            }
+            context.studySessionRepository!!.save(StudySession.start(
+                sessionId, learner, Moment(2_000),
+                SessionPolicy(newItemLimit = 2, reviewItemLimit = 0),
+                contentIds.toSet(), studyMode = StudyMode.LEARN_NEW
+            ))
+            context.studyQueue.create(
+                sessionId, Moment(2_000), itemIds,
+                itemIds.associateWith { SessionItemOrigin.NEW },
+                itemIds.indices.associate { itemIds[it] to contentIds[it] },
+                configuredNewTarget = 2, effectiveNewWorkload = 2
+            )
+            val viewModel = AndroidStudyViewModel(
+                AndroidStudyFacade(context, learner, now = { 3_000 }),
+                SavedStateHandle(mapOf("study.sessionId" to sessionId.value)), dispatcher
+            )
+            advanceUntilIdle()
+            viewModel.onEvent(AndroidStudyEvent.OpenSession(sessionId.value))
+            advanceUntilIdle()
+            viewModel.onEvent(AndroidStudyEvent.RevealIntroduction)
+            advanceUntilIdle()
+            viewModel.onEvent(AndroidStudyEvent.RateIntroduction(ReviewRating.GOOD))
+            advanceUntilIdle()
+            val liveTail = assertIs<AndroidStudyState.Introduction>(viewModel.state.value)
+            assertEquals(itemIds[1].value, liveTail.learningItemId)
+
+            viewModel.onEvent(AndroidStudyEvent.PreviousVisited)
+            advanceUntilIdle()
+            val history = assertIs<AndroidStudyState.Introduction>(viewModel.state.value)
+            assertTrue(history.historyPreview)
+            val eventsBefore = context.reviewEventRepository!!.findAll(learner)
+            val firstMemoryBefore = context.memoryStateRepository!!.find(learner, itemIds[0])
+            val secondMemoryBefore = context.memoryStateRepository!!.find(learner, itemIds[1])
+
+            viewModel.onEvent(AndroidStudyEvent.RateIntroduction(ReviewRating.EASY))
+            advanceUntilIdle()
+
+            val unchangedHistory = assertIs<AndroidStudyState.Introduction>(viewModel.state.value)
+            assertTrue(unchangedHistory.historyPreview)
+            assertEquals(eventsBefore, context.reviewEventRepository!!.findAll(learner))
+            assertEquals(firstMemoryBefore, context.memoryStateRepository!!.find(learner, itemIds[0]))
+            assertEquals(secondMemoryBefore, context.memoryStateRepository!!.find(learner, itemIds[1]))
+
+            viewModel.onEvent(AndroidStudyEvent.NextVisited)
+            advanceUntilIdle()
+            val restored = assertIs<AndroidStudyState.Introduction>(viewModel.state.value)
+            assertFalse(restored.historyPreview)
+            assertEquals(liveTail.learningItemId, restored.learningItemId)
+        }
+
+    @Test
     fun `swipe vocabulary uses deliberate dominant threshold`() {
         assertEquals(ReviewNavigationGesture.NEXT, resolveReviewNavigationGesture(Offset(-100f, 12f), 72f))
         assertEquals(ReviewNavigationGesture.PREVIOUS, resolveReviewNavigationGesture(Offset(100f, 12f), 72f))

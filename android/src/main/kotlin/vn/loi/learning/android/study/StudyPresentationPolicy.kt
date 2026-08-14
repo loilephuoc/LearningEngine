@@ -118,6 +118,12 @@ internal fun focusedPracticeHeadwordGlowActive(
     historyPreview: Boolean
 ): Boolean = focusedSkimUx && revealed && transitionPending && !historyPreview
 
+internal fun introductionRatingInputEnabled(
+    revealed: Boolean,
+    historyPreview: Boolean,
+    interactionPending: Boolean
+): Boolean = revealed && !historyPreview && !interactionPending
+
 internal fun resolveIntroductionStageGesture(
     deltaX: Float,
     deltaY: Float,
