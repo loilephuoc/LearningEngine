@@ -15,6 +15,7 @@ data class ImportedPackageContent(
     val libraries: List<ContentLibrary> = emptyList(),
     val report: PackageImportReport = PackageImportReport(),
     val warnings: List<String> = emptyList(),
+    val onCommit: (() -> Unit)? = null,
     val onRollback: (() -> Unit)? = null
 ) {
 

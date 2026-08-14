@@ -3,6 +3,8 @@ package vn.loi.learning.infrastructure.persistence
 import java.nio.file.Path
 import vn.loi.learning.application.contentpackaging.PackageContentImporter
 import vn.loi.learning.application.contentpackaging.PackageImportService
+import vn.loi.learning.application.contentpackaging.PackageImportResult
+import vn.loi.learning.application.contentpackaging.PackageImportOutcome
 import vn.loi.learning.application.contentpackaging.PackageInstaller
 import vn.loi.learning.application.contentpackaging.PackageRegistrationOperation
 import vn.loi.learning.application.contentpackaging.PackageScanner
@@ -253,7 +255,8 @@ object PersistedLearningPlatformFactory {
         reviewEventRepository: ReviewEventRepository? = null,
         studySessionRepository: StudySessionRepository? = null,
         studyQueueRepository: vn.loi.learning.application.port.StudyQueueRepository? = null,
-        partOfSpeechRegistry: vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry? = null
+        partOfSpeechRegistry: vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry? = null,
+        packageLifecycleCompletion: ((PackageImportResult) -> PackageImportOutcome)? = null
     ): PackageImportService {
         val packageRegistrationOperation =
             PackageRegistrationOperation(
@@ -281,6 +284,7 @@ object PersistedLearningPlatformFactory {
             progressListener = progressListener,
             installedPackageRepository = installedPackageRepository,
             contentPackageRepository = contentPackageRepository,
+            packageLifecycleCompletion = packageLifecycleCompletion,
             orphanPackageLearningStateReconciler =
                 vn.loi.learning.application.contentpackaging.OrphanPackageLearningStateReconciler(
                     installedPackageRepository = installedPackageRepository,

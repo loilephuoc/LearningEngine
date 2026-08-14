@@ -17,6 +17,55 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryPackageCatalogR
 class PackageImportServiceCommitFailureProgressTest {
 
     @Test
+    fun `lifecycle completes before media publish and failure rolls back prepared media`() {
+        val events = mutableListOf<String>()
+        val contentPackage = ContentPackage(
+            PackageId("package-lifecycle-failure"),
+            PackageDescriptor("Lifecycle Failure", "1.0.0", "OPD3")
+        )
+        val service = PackageImportService(
+            packageScanner = PackageScanner { emptyList() },
+            packageInstaller = PackageInstaller { contentPackage },
+            packageContentImporter = PackageContentImporter {
+                ImportedPackageContent(
+                    contents = emptyList(),
+                    learningItems = emptyList(),
+                    onCommit = { events += "media-commit" },
+                    onRollback = { events += "media-rollback" }
+                )
+            },
+            contentRepository = InMemoryContentRepository(),
+            learningItemRepository = InMemoryLearningItemRepository(),
+            packageRegistrationOperation = PackageRegistrationOperation(
+                InMemoryContentPackageRepository(),
+                InMemoryPackageCatalogRepository()
+            ),
+            transactionRunner = object : TransactionRunner {
+                override fun <T> runInTransaction(block: () -> T): T {
+                    events += "transaction-start"
+                    return block().also { events += "transaction-complete" }
+                }
+            },
+            packageLifecycleCompletion = {
+                events += "lifecycle"
+                error("injected lifecycle failure")
+            }
+        )
+
+        assertFailsWith<IllegalStateException> {
+            service.importCandidate(
+                PackageCatalogId("lifecycle-failure-catalog"),
+                PackageScanCandidate("C:/packages/lifecycle-failure.opd3")
+            )
+        }
+
+        assertEquals(
+            listOf("transaction-start", "lifecycle", "media-rollback"),
+            events
+        )
+    }
+
+    @Test
     fun `completed is not reported when transaction fails after executing block`() {
         val candidate =
             PackageScanCandidate(

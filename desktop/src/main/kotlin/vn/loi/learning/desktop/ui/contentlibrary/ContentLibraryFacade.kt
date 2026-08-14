@@ -12,6 +12,7 @@ import vn.loi.learning.domain.content.library.model.LibraryCollectionId
 import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
 import vn.loi.learning.domain.content.packaging.model.PackageId
 import vn.loi.learning.application.contentpackaging.PackageImportProgressListener
+import vn.loi.learning.application.contentpackaging.PackageImportOutcome
 import vn.loi.learning.infrastructure.LearningApplicationContext
 
 /**
@@ -243,10 +244,10 @@ class ContentLibraryFacade(
             cancellationSignal = cancellationSignal
         )
 
-        val results =
-            batchResult.successfulImports
-
-        if (results.isNotEmpty()) applicationContext.completePackageImportLifecycle?.execute(results)
+        val alreadyInstalled = batchResult.successfulImports.filter { result ->
+            result.lifecycleOutcome is PackageImportOutcome.AlreadyInstalledIdentical
+        }
+        val results = batchResult.successfulImports - alreadyInstalled.toSet()
 
         return ContentLibraryImportResult(
             discoveredPackageCount =
@@ -269,6 +270,11 @@ class ContentLibraryFacade(
                     ContentLibraryImportFailure(
                         source = failure.source,
                         message = failure.message
+                    )
+                } + alreadyInstalled.map { result ->
+                    ContentLibraryImportFailure(
+                        source = result.source ?: result.contentPackage.descriptor.name,
+                        message = "CONTENT_ID_ALREADY_INSTALLED: Package identity is already installed."
                     )
                 }
         )

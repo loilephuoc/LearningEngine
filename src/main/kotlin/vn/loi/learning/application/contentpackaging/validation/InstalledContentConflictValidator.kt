@@ -17,6 +17,7 @@ import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentPackageRepository
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.repository.InstalledPackageRepository
+import vn.loi.learning.domain.content.packaging.model.ContentPackage
 
 class InstalledContentConflictValidator(
     private val contentRepository: ContentRepository,
@@ -34,7 +35,8 @@ class InstalledContentConflictValidator(
 ) {
 
     fun validate(
-        importedContent: ImportedPackageContent
+        importedContent: ImportedPackageContent,
+        candidatePackage: ContentPackage? = null
     ): PackageValidationReport {
         val installedPackages = installedPackageRepository?.findAll().orEmpty()
         val activeOrArchivedInstalledPackages = installedPackages.filter {
@@ -96,16 +98,31 @@ class InstalledContentConflictValidator(
         val installedLearningItemsByContentId = installedLearningItems.groupBy { it.contentId }
 
         val importedContentsById = importedContent.contents.associateBy { it.id }
+        val importedLearningItemsById = importedContent.learningItems.associateBy { it.id }
 
         val samePackageContentIds = HashSet<vn.loi.learning.domain.content.model.ContentId>()
-        val isSamePackageRepair = importedContent.libraries.any { lib ->
+        val existingCandidatePackage = candidatePackage?.let { candidate ->
+            contentPackageRepository?.findById(candidate.id)
+        }
+        val exactCandidateOwner = existingCandidatePackage != null || candidatePackage?.let { candidate ->
+            activeOrArchivedInstalledPackages.any { installed ->
+                installed.packageId == candidate.id ||
+                    installed.name.value == candidate.name ||
+                    installed.topicId == candidate.topicId
+            }
+        } == true
+        val isSamePackageRepair = exactCandidateOwner || importedContent.libraries.any { lib ->
             canonicalLivePackageKeys.contains(lib.id.value) ||
             activeOrArchivedInstalledPackages.any { pkg ->
                 lib.id.value.contains(pkg.packageId.value) || lib.id.value.contains(pkg.name.value)
             }
         }
         if (isSamePackageRepair && contentLibraryRepository != null) {
-            val matchingLibIds = importedContent.libraries.map { it.id.value }.toSet()
+            val matchingLibIds = (
+                importedContent.libraries.map { it.id.value } +
+                    candidatePackage?.libraryIds.orEmpty().map { it.value } +
+                    existingCandidatePackage?.libraryIds.orEmpty().map { it.value }
+                ).toSet()
             contentLibraryRepository.findAll()
                 .filter { lib -> lib.id.value in matchingLibIds || matchingLibIds.any { m -> lib.id.value.contains(m) } }
                 .forEach { lib -> samePackageContentIds.addAll(lib.contentIds) }
@@ -129,7 +146,10 @@ class InstalledContentConflictValidator(
             importedContent.learningItems
                 .map { it.id }
                 .distinct()
-                .filter { learningItemId -> learningItemId in installedLearningItemIds && importedContentsById[learningItemId.value.let { vn.loi.learning.domain.content.model.ContentId(it) }]?.id !in samePackageContentIds }
+                .filter { learningItemId ->
+                    learningItemId in installedLearningItemIds &&
+                        importedLearningItemsById[learningItemId]?.contentId !in samePackageContentIds
+                }
                 .forEach { learningItemId ->
                     add(
                         PackageValidationIssue(
@@ -144,9 +164,13 @@ class InstalledContentConflictValidator(
                 .groupBy(contentFingerprintFactory::create)
                 .forEach { (fingerprint, importedMatches) ->
                     val importedIds = importedMatches.map { it.id }.toSet()
-                    val installedMatches = installedContentsByFingerprint[fingerprint]
-                        .orEmpty()
-                        .filter { installedContent -> installedContent.id !in importedIds }
+                    val installedMatches = if (candidatePackage != null) {
+                        emptyList()
+                    } else {
+                        installedContentsByFingerprint[fingerprint]
+                            .orEmpty()
+                            .filter { installedContent -> installedContent.id !in importedIds }
+                    }
 
                     if (installedMatches.isNotEmpty()) {
                         add(
@@ -173,20 +197,24 @@ class InstalledContentConflictValidator(
                     content = importedContentValue
                 )
 
-                val installedMatches = installedContentsByFingerprint[contentFingerprint]
-                    .orEmpty()
-                    .flatMap { installedContent ->
-                        installedLearningItemsByContentId[installedContent.id]
-                            .orEmpty()
-                            .map { installedLearningItem -> installedLearningItem to installedContent }
-                    }
-                    .filter { (installedLearningItem, installedContent) ->
-                        installedLearningItem.id != importedLearningItem.id &&
+                val installedMatches = if (candidatePackage != null) {
+                    emptyList()
+                } else {
+                    installedContentsByFingerprint[contentFingerprint]
+                        .orEmpty()
+                        .flatMap { installedContent ->
+                            installedLearningItemsByContentId[installedContent.id]
+                                .orEmpty()
+                                .map { installedLearningItem -> installedLearningItem to installedContent }
+                        }
+                        .filter { (installedLearningItem, installedContent) ->
+                            installedLearningItem.id != importedLearningItem.id &&
                                 learningItemFingerprintFactory.create(
                                     learningItem = installedLearningItem,
                                     content = installedContent
                                 ) == importedFingerprint
-                    }
+                        }
+                }
 
                 if (installedMatches.isNotEmpty()) {
                     add(

@@ -15,7 +15,9 @@ data class PackageImportResult(
     val importedContentCount: Int,
     val importedLearningItemCount: Int,
     val report: PackageImportReport = PackageImportReport(),
-    val warnings: List<String> = emptyList()
+    val warnings: List<String> = emptyList(),
+    val lifecycleOutcome: PackageImportOutcome? = null,
+    val source: String? = null
 )
 
 

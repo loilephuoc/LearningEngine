@@ -31,7 +31,7 @@ class PackageBundleImporter(
         val defaultName = path.fileName?.toString()?.removeSuffix(".opd3")?.removeSuffix(".zip") ?: candidate.source
         val packageName = manifest?.name?.ifBlank { defaultName } ?: defaultName
 
-        val extracted = mediaExtractor?.extract(
+        val preparedMedia = mediaExtractor?.prepare(
             packagePath = path,
             packageName = packageName,
             manifestHashes = manifest?.fileHashes.orEmpty(),
@@ -46,12 +46,15 @@ class PackageBundleImporter(
                 )
             },
             cancellationSignal = cancellationSignal
-        ).orEmpty()
+        )
 
         val imported = bundleContentImporter.importContent(bundle)
         return imported.copy(
+            onCommit = {
+                preparedMedia?.commit()
+            },
             onRollback = {
-                mediaExtractor?.rollback(extracted)
+                preparedMedia?.rollback()
             }
         )
     }

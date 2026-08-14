@@ -575,6 +575,9 @@ object LearningApplicationFactory {
                     transactionRunner
             )
 
+        lateinit var completePackageImportLifecycle:
+            vn.loi.learning.application.contentpackaging.CompletePackageImportLifecycleUseCase
+
         val packageImporter:
                     (Path) -> PackageImportService =
             { packageDirectory ->
@@ -593,7 +596,8 @@ object LearningApplicationFactory {
                     reviewEventRepository = reviewEventRepository,
                     studySessionRepository = studySessionRepository,
                     studyQueueRepository = studyQueueRepository,
-                    partOfSpeechRegistry = partOfSpeechRegistry
+                    partOfSpeechRegistry = partOfSpeechRegistry,
+                    packageLifecycleCompletion = { result -> completePackageImportLifecycle.execute(listOf(result)).single() }
                 )
             }
 
@@ -615,7 +619,8 @@ object LearningApplicationFactory {
                     reviewEventRepository = reviewEventRepository,
                     studySessionRepository = studySessionRepository,
                     studyQueueRepository = studyQueueRepository,
-                    partOfSpeechRegistry = partOfSpeechRegistry
+                    partOfSpeechRegistry = partOfSpeechRegistry,
+                    packageLifecycleCompletion = { result -> completePackageImportLifecycle.execute(listOf(result)).single() }
                 )
             }
 
@@ -799,10 +804,10 @@ object LearningApplicationFactory {
             clock = learningInsightClock
         )
 
-        val completePackageImportLifecycle =
+        completePackageImportLifecycle =
             vn.loi.learning.application.contentpackaging.CompletePackageImportLifecycleUseCase(
                 conflictAwareImporter, domainLibRepo, defaultLibraryId, domainInstalledPackageRepository,
-                libraryCommand
+                libraryCommand, contentLibraryRepository, contentRepository, learningItemRepository
             )
         val activeStudySessionScopeReconciler =
             vn.loi.learning.application.session.ActiveStudySessionScopeReconciler(
@@ -898,7 +903,8 @@ object LearningApplicationFactory {
         reviewEventRepository: ReviewEventRepository? = null,
         studySessionRepository: StudySessionRepository? = null,
         studyQueueRepository: StudyQueueRepository? = null,
-        partOfSpeechRegistry: vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry? = null
+        partOfSpeechRegistry: vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry? = null,
+        packageLifecycleCompletion: ((vn.loi.learning.application.contentpackaging.PackageImportResult) -> vn.loi.learning.application.contentpackaging.PackageImportOutcome)? = null
     ): PackageImportService =
                 PersistedLearningPlatformFactory.create(
                     packageScanner =
@@ -931,7 +937,8 @@ object LearningApplicationFactory {
                     reviewEventRepository = reviewEventRepository,
                     studySessionRepository = studySessionRepository,
                     studyQueueRepository = studyQueueRepository,
-                    partOfSpeechRegistry = partOfSpeechRegistry
+                    partOfSpeechRegistry = partOfSpeechRegistry,
+                    packageLifecycleCompletion = packageLifecycleCompletion
                 )
 
     private const val INSTALLED_PACKAGES_FILE_NAME =

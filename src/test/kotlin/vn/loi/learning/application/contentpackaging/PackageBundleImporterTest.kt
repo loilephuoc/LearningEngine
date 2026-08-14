@@ -237,6 +237,8 @@ class PackageBundleImporterTest {
 
             val result = bundleImporter.importContent(PackageScanCandidate(packageFile.toString()))
             assertNotNull(result)
+            assertEquals(null, mediaStorage.resolve("TestPackage/sample.mp3"))
+            result.onCommit?.invoke()
 
             val resolvedAudio = mediaStorage.resolve("TestPackage/sample.mp3")
             assertNotNull(resolvedAudio)

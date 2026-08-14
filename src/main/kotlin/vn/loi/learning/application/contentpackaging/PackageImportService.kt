@@ -32,6 +32,7 @@ class PackageImportService(
         PackageValidator(),
     private val installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null,
     private val contentPackageRepository: vn.loi.learning.application.port.ContentPackageRepository? = null,
+    private val packageLifecycleCompletion: ((PackageImportResult) -> PackageImportOutcome)? = null,
     private val orphanPackageLearningStateReconciler: OrphanPackageLearningStateReconciler? = null,
     private val partOfSpeechRegistry: PartOfSpeechSemanticRegistry? = null,
     private val installedContentConflictValidator:
@@ -151,7 +152,10 @@ class PackageImportService(
                 importedContent = importedContent
             )
 
-            val installedConflictReport = installedContentConflictValidator.validate(importedContent)
+            val installedConflictReport = installedContentConflictValidator.validate(
+                importedContent,
+                contentPackage
+            )
 
             val validationReport = PackageValidationReport(
                 issues = packageValidationReport.issues + installedConflictReport.issues
@@ -205,17 +209,25 @@ class PackageImportService(
                 reportProgress(PackageImportProgressStage.REGISTERING_PACKAGE, message = "Registering package")
                 packageRegistrationOperation.execute(registrationCommand)
 
-                PackageImportResult(
+                val importResult = PackageImportResult(
                     contentPackage = registeredPackage,
                     importedLibraryCount = importedContent.importedLibraryCount,
                     importedContentCount = importedContent.contents.size,
                     importedLearningItemCount = importedContent.learningItems.size,
                     report = importedContent.report,
-                    warnings = importedContent.warnings
+                    warnings = importedContent.warnings,
+                    source = candidate.source
                 )
+                val completedResult = importResult.copy(
+                    lifecycleOutcome = packageLifecycleCompletion?.invoke(importResult)
+                )
+                importedContent.onCommit?.invoke()
+                completedResult
             }
 
-            partOfSpeechRegistry?.register(importedContent.contents)
+            // The canonical install is already committed. Runtime semantic projection
+            // must not turn a successful install into a destructive retry outcome.
+            runCatching { partOfSpeechRegistry?.register(importedContent.contents) }
             return result
         } catch (exception: Exception) {
             importedContent.onRollback?.invoke()
