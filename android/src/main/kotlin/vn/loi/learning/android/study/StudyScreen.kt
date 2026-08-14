@@ -557,7 +557,7 @@ private fun StudyRuntimeScreen(
             quickReview -> "Quick Review"
             state.focusedPracticeKind ==
                 vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT -> "Again / Hard"
-            else -> "NEW"
+            else -> "NEW · PACKAGE"
         }
         is AndroidStudyState.Typing -> "Typing"
         is AndroidStudyState.MultipleChoice -> "MCQ"
@@ -911,7 +911,7 @@ private fun StudyRuntimeScreen(
                             DifficultPracticeHud(hud)
                         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW ->
                             QuickReviewProgressHeader(state, hud)
-                        else -> LearnNewProgressHeader(state, hud, pendingIntroductionHudRating)
+                        else -> LearnNewProgressHeader(hud, pendingIntroductionHudRating)
                     }
                 }
                 else LearningEngineCompactHud(hud)
@@ -1052,17 +1052,13 @@ private fun DifficultPracticeHud(hud: AndroidStudySessionHud) {
 
 @Composable
 private fun LearnNewProgressHeader(
-    state: AndroidStudyState.Introduction,
     hud: AndroidStudySessionHud,
     pendingRating: PendingIntroductionHudRating?
 ) {
-    val position = state.currentPosition?.coerceAtLeast(1)
-    val total = state.totalItems?.coerceAtLeast(position ?: 1)
-    val progress = if (position != null && total != null && total > 0) position.toFloat() / total else 0f
     Surface(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
-            contentDescription = "Learn new. Item ${position ?: 1} of ${total ?: hud.newTarget}. " +
-                    "Today ${hud.newCompleted} of ${hud.newConfiguredTarget}. Due ${hud.dueCount}."
+            contentDescription = "Learn new. Daily new ${hud.newCompleted} of ${hud.newConfiguredTarget}. " +
+                    "Due ${hud.dueCount}."
         },
         color = Color.Transparent
     ) {
@@ -1079,11 +1075,6 @@ private fun LearnNewProgressHeader(
                 CompactLearnMetric("Good", displayedIntroductionRatingCount(hud, ReviewRating.GOOD, pendingRating).toString(), LearningEngineThemeTokens.semanticColors.success, pendingRating?.takeIf { it.rating == ReviewRating.GOOD }?.feedbackId)
                 CompactLearnMetric("Easy", displayedIntroductionRatingCount(hud, ReviewRating.EASY, pendingRating).toString(), MaterialTheme.colorScheme.tertiary, pendingRating?.takeIf { it.rating == ReviewRating.EASY }?.feedbackId)
             }
-            LinearProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().height(3.dp),
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-            )
         }
     }
 }
@@ -1916,6 +1907,12 @@ private fun Completion(state: AndroidStudyState.Completion, onEvent: (AndroidStu
     ) {
         LearningEngineCompletionCard(
             title = "Session complete",
+            modeLabel = state.modeFamily,
+            summary = completionResultDescription(
+                state.totalCompleted,
+                state.newCompleted,
+                state.reviewCompleted
+            ),
             detail = state.dailyBudget?.let { daily ->
                 when {
                     daily.targetsComplete -> "Today's NEW and REVIEW targets are complete."

@@ -159,6 +159,17 @@ internal fun progressDescription(label: String, completed: Int, target: Int, con
     if (target == configuredTarget) "$label $completed of $target"
     else "$label $completed of $target available, configured target $configuredTarget"
 
+internal fun completionResultDescription(total: Int, newCompleted: Int, reviewCompleted: Int): String {
+    require(total >= 0 && newCompleted >= 0 && reviewCompleted >= 0)
+    require(newCompleted + reviewCompleted == total)
+    val itemLabel = if (total == 1) "item" else "items"
+    val split = buildList {
+        if (newCompleted > 0) add("$newCompleted new")
+        if (reviewCompleted > 0) add("$reviewCompleted review")
+    }
+    return "$total $itemLabel completed" + if (split.size > 1) " · ${split.joinToString(" · ")}" else ""
+}
+
 internal data class PackageStudyPosition(val position: Int, val total: Int)
 
 internal fun resolvePackageStudyPosition(

@@ -442,6 +442,11 @@ class AndroidActivePackageNavigationAcceptanceTest {
             facade.rateIntroduction(revealed, vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD)
         )
 
+        assertEquals("Learn New", completion.modeFamily)
+        assertEquals(1, completion.totalCompleted)
+        assertEquals(1, completion.newCompleted)
+        assertEquals(0, completion.reviewCompleted)
+
         assertEquals(vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED,
             context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(completion.sessionId))!!.status)
         assertEquals(target, context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)

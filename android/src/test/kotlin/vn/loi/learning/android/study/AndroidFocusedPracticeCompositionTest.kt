@@ -89,12 +89,12 @@ class AndroidFocusedPracticeCompositionTest {
         )
         assertTrue(screen.contains("quickReview -> \"Quick Review\""))
         assertTrue(screen.contains("FocusedPracticeKind.DIFFICULT -> \"Again / Hard\""))
-        assertTrue(screen.contains("else -> \"NEW\""))
+        assertTrue(screen.contains("else -> \"NEW · PACKAGE\""))
         assertTrue(screen.contains("FocusedPracticeKind.QUICK_REVIEW ->\n                            QuickReviewProgressHeader(state, hud)"))
         assertTrue(screen.contains("Endless learned vocabulary review."))
         assertTrue(screen.contains("currentPosition = if (focusedSkimUx) null"))
         assertTrue(screen.contains("totalItems = if (focusedSkimUx) null"))
-        assertTrue(screen.contains("else -> LearnNewProgressHeader(state, hud, pendingIntroductionHudRating)"))
+        assertTrue(screen.contains("else -> LearnNewProgressHeader(hud, pendingIntroductionHudRating)"))
         assertTrue(facade.contains("FocusedPracticeKind.QUICK_REVIEW -> \"Quick Review\""))
     }
 

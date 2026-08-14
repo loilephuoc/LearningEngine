@@ -325,8 +325,17 @@ sealed interface AndroidStudyState {
     data class Completion(
         val sessionId: String,
         val canUndo: Boolean,
-        val dailyBudget: DailyStudyBudgetSnapshot? = null
-    ) : AndroidStudyState
+        val dailyBudget: DailyStudyBudgetSnapshot? = null,
+        val modeFamily: String = "Study",
+        val totalCompleted: Int = 0,
+        val newCompleted: Int = 0,
+        val reviewCompleted: Int = 0
+    ) : AndroidStudyState {
+        init {
+            require(totalCompleted >= 0 && newCompleted >= 0 && reviewCompleted >= 0)
+            require(newCompleted + reviewCompleted == totalCompleted)
+        }
+    }
     data class Failed(
         val message: String,
         val retrySessionId: String? = null,
@@ -1353,7 +1362,15 @@ class AndroidStudyFacade(
             }
         }
         val daily = currentScope()?.let { dailyBudget(it) }
-        return AndroidStudyState.Completion(completed.id.value, completed.undoableReview != null, daily)
+        return AndroidStudyState.Completion(
+            sessionId = completed.id.value,
+            canUndo = completed.undoableReview != null,
+            dailyBudget = daily,
+            modeFamily = androidCompletionModeFamily(completed),
+            totalCompleted = completed.totalReviews,
+            newCompleted = completed.newItemsReviewed,
+            reviewCompleted = completed.reviewItemsReviewed
+        )
     }
 
     private fun reconcileActiveSession(): StudySession? {
@@ -1372,4 +1389,15 @@ class AndroidStudyFacade(
     private fun strategyContext(session: StudySession) =
         if (session.policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY)
             RecallStrategyContext.PRACTICE_ONLY else RecallStrategyContext.EVALUATIVE
+}
+
+internal fun androidCompletionModeFamily(session: StudySession): String = when (session.policy.focusedPracticeKind) {
+    FocusedPracticeKind.QUICK_REVIEW -> "Quick Review"
+    FocusedPracticeKind.DIFFICULT -> "Again / Hard"
+    FocusedPracticeKind.LATEST_SESSION -> "Recent Review"
+    FocusedPracticeKind.NONE -> when (session.studyMode) {
+        StudyMode.LEARN_NEW -> "Learn New"
+        StudyMode.TYPING -> "Typing"
+        StudyMode.ADAPTIVE -> "Review"
+    }
 }

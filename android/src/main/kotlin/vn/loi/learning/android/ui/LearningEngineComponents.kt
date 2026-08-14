@@ -860,6 +860,8 @@ fun FullscreenLearningImage(
 @Composable
 fun LearningEngineCompletionCard(
     title: String = "Session complete",
+    modeLabel: String? = null,
+    summary: String? = null,
     detail: String = "Great work! You have completed all items in this study session.",
     canUndo: Boolean = false,
     onUndo: (() -> Unit)? = null,
@@ -875,17 +877,25 @@ fun LearningEngineCompletionCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(LearningSpacing.large)
         ) {
-            LearningEngineStatusBadge(label = "Complete", tone = LearningStatusTone.COMPLETED)
-            Text(
-                title,
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-            )
-            Text(
-                detail,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(LearningSpacing.small),
+                modifier = Modifier.semantics(mergeDescendants = true) {
+                    liveRegion = LiveRegionMode.Polite
+                }
+            ) {
+                LearningEngineStatusBadge(label = "Complete", tone = LearningStatusTone.COMPLETED)
+                Text(title, style = MaterialTheme.typography.headlineMedium)
+                modeLabel?.let {
+                    Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                summary?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+                Text(
+                    detail,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small),
                 modifier = Modifier.fillMaxWidth()
