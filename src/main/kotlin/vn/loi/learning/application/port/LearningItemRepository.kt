@@ -6,6 +6,8 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
 
 interface LearningItemRepository {
 
+    fun findAll(): List<LearningItem> = findAllEnabled()
+
     fun findById(
         learningItemId: LearningItemId
     ): LearningItem?

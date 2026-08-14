@@ -1,5 +1,14 @@
 # Roadmap
 
+## Library / Package read-only integrity diagnostics
+
+- **Implementation and automated verification complete; Windows UAT pending:** Desktop Library can
+  scan one selected package through a shared Application checker and display typed count, graph,
+  media, lifecycle and session/queue findings. Single-package reports exclude unrelated global
+  lifecycle/orphan observations, while deterministic provenance can identify package-related orphan
+  Content and explain matching count drift without asserting causality. The scan is observational
+  only; it offers no repair path and does not participate in startup or package-import commits.
+
 ## ANDROID-STUDY-3.0V — Android Study Final Product Polish
 
 - **Complete, representative device UAT pending:** Phase 10 closes the six-mode presentation pass

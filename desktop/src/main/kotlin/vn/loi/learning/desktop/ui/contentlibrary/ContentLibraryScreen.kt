@@ -11,11 +11,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.nio.file.Path
 import javax.swing.JFileChooser
+import vn.loi.learning.application.integrity.IntegritySeverity
 import vn.loi.learning.application.port.ContentMediaStorage
 
 @Composable
@@ -62,6 +65,7 @@ fun ContentLibraryScreen(
             viewModel.attachPackageDialogState,
         detachPackageDialogState =
             viewModel.detachPackageDialogState,
+        packageIntegrityDialogState = viewModel.packageIntegrityDialogState,
         onRefresh =
             viewModel::refresh,
         onImportDirectory =
@@ -117,6 +121,8 @@ fun ContentLibraryScreen(
         onStartLessonStudy =
             onStartLessonStudy,
         onExportPackage = viewModel::exportPackage,
+        onCheckPackageIntegrity = viewModel::checkPackageIntegrity,
+        onDismissPackageIntegrityReport = viewModel::dismissPackageIntegrityReport,
         thumbnailLoader = remember(contentMediaStorage) { LessonThumbnailLoader(contentMediaStorage) },
         modifier = modifier
     )
@@ -136,6 +142,7 @@ private fun ContentLibraryContent(
     AttachPackageDialogState,
     detachPackageDialogState:
     DetachPackageDialogState,
+    packageIntegrityDialogState: PackageIntegrityDialogState,
     onRefresh: () -> Unit,
     onImportDirectory: (Path) -> Unit,
     onOpenLibrary: (String) -> Unit,
@@ -166,6 +173,8 @@ private fun ContentLibraryContent(
     onLessonSortChanged: (LessonBrowserSort) -> Unit,
     onStartLessonStudy: (PackageLessonSelection) -> Unit,
     onExportPackage: (String, String, Path) -> Unit = { _, _, _ -> },
+    onCheckPackageIntegrity: (String) -> Unit = {},
+    onDismissPackageIntegrityReport: () -> Unit = {},
     thumbnailLoader: LessonThumbnailLoader,
     modifier: Modifier = Modifier
  ) {
@@ -179,7 +188,8 @@ private fun ContentLibraryContent(
             renameCollectionDialogState.visible ||
             deleteCollectionDialogState.visible ||
             attachPackageDialogState.visible ||
-            detachPackageDialogState.visible
+            detachPackageDialogState.visible ||
+            packageIntegrityDialogState.visible
 
     val keyboardContext =
         ContentLibraryKeyboardContext(
@@ -450,11 +460,17 @@ private fun ContentLibraryContent(
                 uiState.packages.forEach { packageItem ->
                     ContentPackageCard(
                         packageItem = packageItem,
-                        onExportPackage = onExportPackage
+                        onExportPackage = onExportPackage,
+                        onCheckIntegrity = onCheckPackageIntegrity,
+                        integrityBusy = packageIntegrityDialogState.scanning && packageIntegrityDialogState.packageId == packageItem.id
                     )
                 }
             }
         }
+    }
+
+    if (packageIntegrityDialogState.visible) {
+        PackageIntegrityDialog(packageIntegrityDialogState, onDismissPackageIntegrityReport)
     }
 }
 
@@ -1248,7 +1264,9 @@ private fun AttachedPackageCard(
 @Composable
 private fun ContentPackageCard(
     packageItem: ContentLibraryPackageItem,
-    onExportPackage: (String, String, Path) -> Unit = { _, _, _ -> }
+    onExportPackage: (String, String, Path) -> Unit = { _, _, _ -> },
+    onCheckIntegrity: (String) -> Unit = {},
+    integrityBusy: Boolean = false
 ) {
     val accessibility =
         resolveInstalledPackageCardAccessibility(
@@ -1305,8 +1323,78 @@ private fun ContentPackageCard(
                 label = "Package ID",
                 value = packageItem.id
             )
+
+            OutlinedButton(
+                onClick = { onCheckIntegrity(packageItem.id) },
+                enabled = !integrityBusy,
+                modifier = Modifier.semantics {
+                    contentDescription = if (integrityBusy) {
+                        "Checking integrity for ${packageItem.name}"
+                    } else {
+                        "Check integrity for ${packageItem.name}"
+                    }
+                }
+            ) {
+                Text(if (integrityBusy) "Checking…" else "Check Integrity")
+            }
         }
     }
+}
+
+@Composable
+internal fun PackageIntegrityDialog(
+    state: PackageIntegrityDialogState,
+    onDismiss: () -> Unit
+) {
+    val report = state.report
+    val presentation = report?.toPresentation()
+    val summaryDescription = presentation?.accessibilityDescription ?: "Checking integrity for ${state.packageName}"
+    AlertDialog(
+        onDismissRequest = { if (!state.scanning) onDismiss() },
+        title = { Text("Package Integrity", modifier = Modifier.semantics { heading() }) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = summaryDescription }
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(state.packageName, fontWeight = FontWeight.SemiBold)
+                when {
+                    state.scanning -> {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                        Text("Checking canonical package data and media references…")
+                    }
+                    state.error != null -> Text("Integrity check failed: ${state.error}")
+                    report != null -> {
+                        Text("Status: ${presentation?.statusText}", fontWeight = FontWeight.SemiBold)
+                        Text(requireNotNull(presentation).summaryText)
+                        if (report.findings.isEmpty()) Text("No integrity findings.")
+                        IntegritySeverity.entries.forEach { severity ->
+                            val sectionFindings = report.findings.filter { it.severity == severity }
+                            if (sectionFindings.isNotEmpty()) {
+                                Text("PACKAGE ${severity.name}S", fontWeight = FontWeight.Bold)
+                                sectionFindings.forEach { finding ->
+                                    Card(Modifier.fillMaxWidth()) {
+                                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text(finding.code, fontWeight = FontWeight.SemiBold)
+                                            Text(finding.message)
+                                            Text("${finding.entityType}: ${finding.entityId}", style = MaterialTheme.typography.bodySmall)
+                                            finding.details.forEach { (key, value) ->
+                                                Text("$key: $value", style = MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss, enabled = !state.scanning) { Text("Close") }
+        }
+    )
 }
 
 private fun choosePackageExportDestination(defaultPackageName: String): Path? {

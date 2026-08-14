@@ -5,6 +5,8 @@ import vn.loi.learning.domain.study.session.model.SessionId
 
 interface StudyQueueRepository {
 
+    fun findAll(): List<StudyQueueSnapshot> = emptyList()
+
     fun findBySessionId(
         sessionId: SessionId
     ): StudyQueueSnapshot?

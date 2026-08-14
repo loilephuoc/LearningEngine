@@ -1,3 +1,17 @@
+# Library / Package read-only integrity diagnostics
+
+- Added a single-package Application integrity checker with immutable severity/code findings,
+  canonical union-based counts, package/library/content/item/lifecycle diagnostics, cheap media
+  existence checks, and non-fatal retained learning-history observations.
+- Desktop Library now exposes a guarded Check Integrity action and accessible operational report
+  without repair controls or persisted report state. Persistent byte snapshots prove scans do not
+  mutate JSON stores or media. Automated verification is complete; Windows UAT remains pending.
+- Corrected single-package attribution so unrelated package lifecycle and generic local-orphan
+  observations are not mixed into the selected package report. Deterministic source/media/metadata
+  fingerprints retain package-related orphan warnings, and matching aggregate drift now includes
+  explicit stored/canonical/evidence details without claiming causality. The modal groups findings
+  as package errors, warnings and info and still exposes no repair action.
+
 # Android Continuous Skim
 
 - Android Review now presents exactly three learner-facing modes: latest-session New practice,

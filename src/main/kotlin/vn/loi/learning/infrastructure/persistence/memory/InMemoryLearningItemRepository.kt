@@ -6,6 +6,7 @@ import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 
 class InMemoryLearningItemRepository : LearningItemRepository {
+    override fun findAll(): List<LearningItem> = items.values.toList()
 
     private val items = linkedMapOf<LearningItemId, LearningItem>()
 

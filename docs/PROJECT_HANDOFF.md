@@ -1,5 +1,14 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+Library/package diagnostics now have one shared read-only Application authority. Desktop Library
+can check a selected package for canonical count drift, broken ownership/lifecycle links, missing
+media and dangling learning/session references, then show typed findings without repair actions.
+Single-package reports exclude unrelated global lifecycle and generic local-orphan observations;
+deterministic package provenance can retain a package-related orphan and explain matching aggregate
+drift without asserting causality. Reports remain runtime-only and the checker has no transaction,
+save, cleanup or startup role.
+Automated verification is green; Windows physical UAT is the remaining checkpoint gate.
+
 ANDROID-UI-003 redesigns Android Library Home around the canonical navigation tree. Package cards
 show only real title, version, content count, state and active-package identity; collections show
 name and package membership. Search/filter is cancellable and never loads package content or media,

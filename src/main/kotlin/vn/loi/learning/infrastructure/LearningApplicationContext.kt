@@ -92,5 +92,6 @@ data class LearningApplicationContext(
         vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry(),
     val completePackageImportLifecycle: vn.loi.learning.application.contentpackaging.CompletePackageImportLifecycleUseCase? = null,
     val activeStudySessionScopeReconciler: vn.loi.learning.application.session.ActiveStudySessionScopeReconciler? = null,
-    val dailyStudyBudget: vn.loi.learning.application.study.DailyStudyBudgetQueryService? = null
+    val dailyStudyBudget: vn.loi.learning.application.study.DailyStudyBudgetQueryService? = null,
+    val packageIntegrityChecker: vn.loi.learning.application.integrity.PackageIntegrityChecker? = null
 )

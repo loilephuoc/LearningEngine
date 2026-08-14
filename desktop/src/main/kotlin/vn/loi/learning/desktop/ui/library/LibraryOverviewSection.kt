@@ -21,6 +21,8 @@ fun LibraryOverviewSection(
     onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
     onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
+    onCheckPackageIntegrity: ((String) -> Unit)? = null,
+    integrityScanningPackageId: String? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -39,7 +41,9 @@ fun LibraryOverviewSection(
             onMoveDownPackage = onMoveDownPackage,
             onOpenLibrary = onOpenLibrary,
             onExportPackage = onExportPackage,
-            onRemovePackage = onRemovePackage
+            onRemovePackage = onRemovePackage,
+            onCheckPackageIntegrity = onCheckPackageIntegrity,
+            integrityScanningPackageId = integrityScanningPackageId
         )
 
         ActiveCollectionListSection(
@@ -59,7 +63,9 @@ fun LibraryOverviewSection(
                 onMoveDownPackage = onMoveDownPackage,
                 onOpenLibrary = onOpenLibrary,
                 onExportPackage = onExportPackage,
-                onRemovePackage = onRemovePackage
+                onRemovePackage = onRemovePackage,
+                onCheckPackageIntegrity = onCheckPackageIntegrity,
+                integrityScanningPackageId = integrityScanningPackageId
             )
         }
 

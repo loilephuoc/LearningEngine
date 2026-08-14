@@ -1,5 +1,18 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Current Library / Package continuation
+
+- Baseline is `04d95ebd73de2bca1139511f2cef78b966d831f2` on `develop`. The read-only
+  single-package integrity checker and Desktop report UI are implemented but intentionally
+  uncommitted pending Windows physical UAT. Package attribution excludes unrelated lifecycle and
+  generic local-orphan observations while retaining deterministic package-related orphan evidence.
+  Focused verification is 56 tests across 6 suites; final full XML results are Root 2,127,
+  Desktop 1,472 and Android 389,
+  all with zero failures/errors/skips. The persistent
+  zero-mutation test snapshots every JSON/media byte before and after a deliberately unhealthy scan.
+- Next gate: launch the rebuilt Desktop distributable, complete WINDOWS PACKAGE INTEGRITY UAT, then
+  rerun final regression/diff audit and checkpoint with `feat(library): add package integrity diagnostics`.
+
 ## Current Android Study continuation
 
 - ANDROID-STUDY-3.0V completes Phase 10 final product polish across all six modes: dead generic mode

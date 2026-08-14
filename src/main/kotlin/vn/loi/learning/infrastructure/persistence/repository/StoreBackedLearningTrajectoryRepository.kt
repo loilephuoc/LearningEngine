@@ -1,6 +1,7 @@
 package vn.loi.learning.infrastructure.persistence.repository
 
 import vn.loi.learning.application.port.LearningTrajectoryRepository
+import vn.loi.learning.application.port.LearningTrajectorySnapshot
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.evidence.LearningTrajectory
 import vn.loi.learning.domain.study.memory.model.LearnerId
@@ -8,6 +9,10 @@ import vn.loi.learning.infrastructure.persistence.mapper.LearningTrajectoryRecor
 import vn.loi.learning.infrastructure.persistence.store.LearningTrajectoryStore
 
 class StoreBackedLearningTrajectoryRepository(private val store: LearningTrajectoryStore) : LearningTrajectoryRepository {
+    override fun findAll(): List<LearningTrajectorySnapshot> = store.loadAll().map {
+        val (learnerId, trajectory) = LearningTrajectoryRecordMapper.toDomain(it)
+        LearningTrajectorySnapshot(learnerId, trajectory)
+    }
     override fun find(learnerId: LearnerId, contentId: ContentId): LearningTrajectory? = store.loadAll()
         .firstOrNull { it.learnerId == learnerId.value && it.contentId == contentId.value }
         ?.let { LearningTrajectoryRecordMapper.toDomain(it).second }

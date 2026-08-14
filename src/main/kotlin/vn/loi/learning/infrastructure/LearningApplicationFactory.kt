@@ -821,6 +821,20 @@ object LearningApplicationFactory {
         val dailyStudyBudget = vn.loi.learning.application.study.DailyStudyBudgetQueryService(
             reviewEventRepository, memoryStateRepository, learningItemRepository
         )
+        val packageIntegrityChecker = vn.loi.learning.application.integrity.PackageIntegrityChecker(
+            installedPackages = domainInstalledPackageRepository,
+            contentPackages = contentPackageRepository,
+            contentLibraries = contentLibraryRepository,
+            contents = contentRepository,
+            learningItems = learningItemRepository,
+            libraries = domainLibRepo,
+            mediaStorage = null,
+            studySessions = studySessionRepository,
+            studyQueues = studyQueueRepository,
+            memoryStates = memoryStateRepository,
+            reviewEvents = reviewEventRepository,
+            trajectories = learningTrajectoryRepository
+        )
 
         return LearningApplicationContext(
             engine = engine,
@@ -881,7 +895,8 @@ object LearningApplicationFactory {
             partOfSpeechRegistry = partOfSpeechRegistry,
             completePackageImportLifecycle = completePackageImportLifecycle,
             activeStudySessionScopeReconciler = activeStudySessionScopeReconciler,
-            dailyStudyBudget = dailyStudyBudget
+            dailyStudyBudget = dailyStudyBudget,
+            packageIntegrityChecker = packageIntegrityChecker
         )
 
     }

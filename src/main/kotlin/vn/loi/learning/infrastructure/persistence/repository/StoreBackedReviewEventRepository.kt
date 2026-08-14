@@ -20,6 +20,10 @@ class StoreBackedReviewEventRepository(
     private val store: ReviewEventStore
 ) : ReviewEventRepository {
 
+    override fun findAll(): List<ReviewEvent> =
+        store.loadAll().map(ReviewEventRecordMapper::toDomain)
+            .sortedBy { it.reviewedAt.epochMillis }
+
     override fun append(
         event: ReviewEvent
     ) {

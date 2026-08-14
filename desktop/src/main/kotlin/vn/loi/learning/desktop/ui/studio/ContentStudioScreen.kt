@@ -147,6 +147,7 @@ fun ContentStudioScreen(
         // TOP TOOLBAR BAR
         StudioTopBar(
             packageName = uiState.packageName,
+            onBack = onClose,
             isDirty = uiState.isDirty,
             isEditing = uiState.editingContentId != null || uiState.isCreatingNewItem,
             isCreatingNewItem = uiState.isCreatingNewItem,
@@ -259,7 +260,7 @@ fun ContentStudioScreen(
         HorizontalDivider(color = LEColors.borderSubtle)
 
         // BOTTOM BREADCRUMB BAR
-        StudioBreadcrumbBar(uiState = uiState, onClose = onClose)
+        StudioBreadcrumbBar(uiState = uiState)
     }
 
     // Delete confirmation dialog
@@ -323,9 +324,11 @@ fun ContentStudioScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StudioTopBar(
     packageName: String,
+    onBack: () -> Unit,
     isDirty: Boolean,
     isEditing: Boolean,
     isCreatingNewItem: Boolean,
@@ -357,6 +360,17 @@ private fun StudioTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
             ) {
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                    tooltip = { PlainTooltip { Text("Back to Library") } },
+                    state = rememberTooltipState()
+                ) {
+                    LEIconButton(
+                        icon = LEIcons.Back,
+                        onClick = onBack,
+                        contentDescription = "Back to Library"
+                    )
+                }
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
                         Text(
@@ -452,8 +466,7 @@ private fun StudioTopBar(
 
 @Composable
 private fun StudioBreadcrumbBar(
-    uiState: PackageContentBrowserUiState,
-    onClose: () -> Unit
+    uiState: PackageContentBrowserUiState
 ) {
     val selectedItem = uiState.selectedItemInView ?: uiState.selectedItemAnywhere
     val index = selectedItem?.index ?: 0
@@ -485,10 +498,6 @@ private fun StudioBreadcrumbBar(
                 }
             }
 
-            LESecondaryButton(
-                text = "Back to Library",
-                onClick = onClose
-            )
         }
     }
 }

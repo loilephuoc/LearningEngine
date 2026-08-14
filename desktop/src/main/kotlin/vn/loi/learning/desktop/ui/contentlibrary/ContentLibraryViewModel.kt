@@ -38,6 +38,33 @@ class ContentLibraryViewModel(
     var packageBrowserUiState by mutableStateOf<vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState?>(null)
         private set
 
+    var packageIntegrityDialogState by mutableStateOf(PackageIntegrityDialogState())
+        private set
+
+    fun checkPackageIntegrity(packageId: String) {
+        if (packageIntegrityDialogState.scanning) return
+        val item = uiState.packages.firstOrNull { it.id == packageId } ?: return
+        packageIntegrityDialogState = PackageIntegrityDialogState(
+            visible = true, packageId = item.id, packageName = item.name, scanning = true
+        )
+        taskRunner.run(
+            work = { facade.checkPackageIntegrity(item.id, contentMediaStorage) },
+            onSuccess = { report ->
+                packageIntegrityDialogState = packageIntegrityDialogState.copy(scanning = false, report = report)
+            },
+            onFailure = { exception ->
+                packageIntegrityDialogState = packageIntegrityDialogState.copy(
+                    scanning = false,
+                    error = DesktopFailureMessage.forPersistedData(exception)
+                )
+            }
+        )
+    }
+
+    fun dismissPackageIntegrityReport() {
+        if (!packageIntegrityDialogState.scanning) packageIntegrityDialogState = PackageIntegrityDialogState()
+    }
+
     private var deletedContentSnapshot: vn.loi.learning.application.contentpackaging.browser.DeletedContentSnapshot? = null
 
     var createCollectionDialogState by mutableStateOf(

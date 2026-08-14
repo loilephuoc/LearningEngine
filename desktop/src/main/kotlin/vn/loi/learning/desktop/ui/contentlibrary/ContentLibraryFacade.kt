@@ -13,6 +13,7 @@ import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
 import vn.loi.learning.domain.content.packaging.model.PackageId
 import vn.loi.learning.application.contentpackaging.PackageImportProgressListener
 import vn.loi.learning.application.contentpackaging.PackageImportOutcome
+import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.infrastructure.LearningApplicationContext
 
 /**
@@ -27,6 +28,17 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 class ContentLibraryFacade(
     private val applicationContext: LearningApplicationContext
 ) {
+
+    fun checkPackageIntegrity(packageId: String, mediaStorage: ContentMediaStorage?):
+        vn.loi.learning.application.integrity.PackageIntegrityReport {
+        val checker = requireNotNull(applicationContext.packageIntegrityChecker) {
+            "Package integrity checker is not configured."
+        }
+        val installed = requireNotNull(applicationContext.installedPackageRepository?.findByPackageId(PackageId(packageId))) {
+            "Installed package lifecycle is missing for PackageId $packageId."
+        }
+        return checker.check(installed.id, mediaStorage)
+    }
 
     fun load(): ContentLibraryUiState {
         val packages =

@@ -26,6 +26,7 @@ import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryOperation
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserCard
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
+import vn.loi.learning.desktop.ui.contentlibrary.PackageIntegrityDialog
 import vn.loi.learning.domain.library.model.CollectionId
 import vn.loi.learning.domain.library.model.InstalledPackageId
 
@@ -288,6 +289,9 @@ fun LibraryScreen(
                     onRemovePackage = { packageId, packageName ->
                         packagePendingRemoval = packageId to packageName
                     },
+                    onCheckPackageIntegrity = contentLibraryViewModel::checkPackageIntegrity,
+                    integrityScanningPackageId = contentLibraryViewModel.packageIntegrityDialogState
+                        .takeIf { it.scanning }?.packageId,
                     onCreateCollection = viewModel::openCreateCollectionDialog,
                     onRenameCollection = viewModel::openRenameCollectionDialog,
                     onDeleteCollection = viewModel::openDeleteCollectionDialog,
@@ -325,6 +329,13 @@ fun LibraryScreen(
                         Text("Hủy")
                     }
                 }
+            )
+        }
+
+        if (contentLibraryViewModel.packageIntegrityDialogState.visible) {
+            PackageIntegrityDialog(
+                contentLibraryViewModel.packageIntegrityDialogState,
+                contentLibraryViewModel::dismissPackageIntegrityReport
             )
         }
 
@@ -444,6 +455,8 @@ fun LibraryScreenContent(
     onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
     onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
+    onCheckPackageIntegrity: ((String) -> Unit)? = null,
+    integrityScanningPackageId: String? = null,
     onCreateCollection: () -> Unit = {},
     onRenameCollection: (CollectionId, String) -> Unit = { _, _ -> },
     onDeleteCollection: (CollectionId, String) -> Unit = { _, _ -> },
@@ -544,7 +557,9 @@ fun LibraryScreenContent(
                             onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
                             onExportPackage = onExportPackage,
-                            onRemovePackage = onRemovePackage
+                            onRemovePackage = onRemovePackage,
+                            onCheckPackageIntegrity = onCheckPackageIntegrity,
+                            integrityScanningPackageId = integrityScanningPackageId
                         )
 
                     LibrarySection.INSTALLED ->
@@ -560,7 +575,9 @@ fun LibraryScreenContent(
                             onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
                             onExportPackage = onExportPackage,
-                            onRemovePackage = onRemovePackage
+                            onRemovePackage = onRemovePackage,
+                            onCheckPackageIntegrity = onCheckPackageIntegrity,
+                            integrityScanningPackageId = integrityScanningPackageId
                         )
 
                     LibrarySection.ACTIVE ->
@@ -576,7 +593,9 @@ fun LibraryScreenContent(
                             onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
                             onExportPackage = onExportPackage,
-                            onRemovePackage = onRemovePackage
+                            onRemovePackage = onRemovePackage,
+                            onCheckPackageIntegrity = onCheckPackageIntegrity,
+                            integrityScanningPackageId = integrityScanningPackageId
                         )
 
                     LibrarySection.ARCHIVED ->
@@ -592,7 +611,9 @@ fun LibraryScreenContent(
                             onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
                             onExportPackage = onExportPackage,
-                            onRemovePackage = onRemovePackage
+                            onRemovePackage = onRemovePackage,
+                            onCheckPackageIntegrity = onCheckPackageIntegrity,
+                            integrityScanningPackageId = integrityScanningPackageId
                         )
 
                     LibrarySection.COLLECTIONS ->

@@ -6,6 +6,9 @@ import vn.loi.learning.domain.study.memory.model.MemoryState
 
 interface MemoryStateRepository {
 
+    /** Read-only diagnostic snapshot; repositories without enumeration may return an empty list. */
+    fun findAll(): List<MemoryState> = emptyList()
+
     fun find(
         learnerId: LearnerId,
         learningItemId: LearningItemId

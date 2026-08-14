@@ -76,6 +76,15 @@ data class ContentLibraryImportFailure(
     val message: String
 )
 
+data class PackageIntegrityDialogState(
+    val visible: Boolean = false,
+    val packageId: String = "",
+    val packageName: String = "",
+    val scanning: Boolean = false,
+    val report: vn.loi.learning.application.integrity.PackageIntegrityReport? = null,
+    val error: String? = null
+)
+
 /**
  * Trạng thái hiển thị của Content Library.
  */

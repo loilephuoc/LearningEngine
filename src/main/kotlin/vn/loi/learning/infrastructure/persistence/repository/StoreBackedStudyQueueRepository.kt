@@ -16,6 +16,9 @@ class StoreBackedStudyQueueRepository(
     private val store: StudyQueueStore
 ) : StudyQueueRepository {
 
+    override fun findAll(): List<StudyQueueSnapshot> =
+        store.loadAll().map(StudyQueueRecordMapper::toDomain)
+
     override fun findBySessionId(
         sessionId: SessionId
     ): StudyQueueSnapshot? =

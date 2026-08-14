@@ -12,6 +12,9 @@ class StoreBackedLearningItemRepository(
     private val store: LearningItemStore
 ) : LearningItemRepository {
 
+    override fun findAll(): List<LearningItem> =
+        store.loadAll().map(LearningItemRecordMapper::toDomain)
+
     override fun findById(
         learningItemId: LearningItemId
     ): LearningItem? =

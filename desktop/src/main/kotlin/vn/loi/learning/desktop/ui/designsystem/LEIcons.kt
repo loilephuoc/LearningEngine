@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 
 object LEIcons {
+    val Back: ImageVector = Icons.Default.ArrowBack
     val New: ImageVector = Icons.Default.Add
     val Save: ImageVector = Icons.Default.Save
     val Discard: ImageVector = Icons.Default.Refresh

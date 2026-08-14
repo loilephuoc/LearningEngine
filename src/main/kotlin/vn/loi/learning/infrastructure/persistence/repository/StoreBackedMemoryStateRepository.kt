@@ -12,6 +12,9 @@ class StoreBackedMemoryStateRepository(
     private val store: MemoryStateStore
 ) : MemoryStateRepository, MemoryStateQuery {
 
+    override fun findAll(): List<MemoryState> =
+        store.load().map(MemoryStateRecordMapper::toDomain)
+
     override fun find(
         learnerId: LearnerId,
         learningItemId: LearningItemId

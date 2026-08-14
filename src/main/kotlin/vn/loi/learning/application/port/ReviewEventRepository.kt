@@ -14,6 +14,9 @@ import vn.loi.learning.domain.study.memory.model.ReviewEvent
  */
 interface ReviewEventRepository {
 
+    /** Read-only diagnostic snapshot across learners. */
+    fun findAll(): List<ReviewEvent> = emptyList()
+
     /**
      * Thêm một ReviewEvent mới vào lịch sử.
      */

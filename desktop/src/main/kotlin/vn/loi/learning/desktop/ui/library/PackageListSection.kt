@@ -45,6 +45,8 @@ fun PackageListSection(
     onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     onResetPackageProgress: ((InstalledPackageId, String) -> Unit)? = null,
+    onCheckPackageIntegrity: ((String) -> Unit)? = null,
+    integrityScanningPackageId: String? = null,
     packageExportChooser: (String) -> Path? = ::choosePackageExportDestination,
     modifier: Modifier = Modifier
 ) {
@@ -106,6 +108,8 @@ fun PackageListSection(
                         onExportPackage = onExportPackage,
                         onRemovePackage = onRemovePackage,
                         onResetProgress = { onResetPackageProgress?.invoke(pkg.id, pkg.name) },
+                        onCheckIntegrity = { onCheckPackageIntegrity?.invoke(pkg.packageId.value) },
+                        integrityBusy = integrityScanningPackageId == pkg.packageId.value,
                         packageExportChooser = packageExportChooser
                     )
                 } else {
@@ -320,6 +324,8 @@ fun PackageCard(
     onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     onResetProgress: (() -> Unit)? = null,
+    onCheckIntegrity: (() -> Unit)? = null,
+    integrityBusy: Boolean = false,
     packageExportChooser: (String) -> Path? = ::choosePackageExportDestination,
     modifier: Modifier = Modifier
 ) {
@@ -354,7 +360,8 @@ fun PackageCard(
             PackageActionBar(
                 pkg, isActivePackage, canMoveUp, canMoveDown, onArchive, onRestore,
                 onSetActive, onMoveUp, onMoveDown, onOpenLibrary, onExportPackage,
-                onRemovePackage, onResetProgress, packageExportChooser
+                onRemovePackage, onResetProgress, packageExportChooser,
+                onCheckIntegrity, integrityBusy
             )
         }
     }
@@ -564,7 +571,9 @@ private fun PackageActionBar(
     onExportPackage: ((InstalledPackageId, String, Path) -> Unit)?,
     onRemovePackage: ((String, String) -> Unit)?,
     onResetProgress: (() -> Unit)?,
-    packageExportChooser: (String) -> Path?
+    packageExportChooser: (String) -> Path?,
+    onCheckIntegrity: (() -> Unit)?,
+    integrityBusy: Boolean
 ) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
@@ -588,6 +597,14 @@ private fun PackageActionBar(
             PackageSecondaryAction(Icons.Default.FileDownload, "Export OPD3", onClick = {
                 packageExportChooser(pkg.name)?.let { onExportPackage(pkg.id, pkg.name, it) }
             })
+        }
+        if (onCheckIntegrity != null && pkg.state != PackageState.REMOVED) {
+            PackageSecondaryAction(
+                Icons.Default.CheckCircleOutline,
+                if (integrityBusy) "Checking…" else "Check Integrity",
+                onClick = onCheckIntegrity,
+                enabled = !integrityBusy
+            )
         }
         if (pkg.state == PackageState.ACTIVE && onSetActive != null && !isActivePackage) {
             PackageSetActiveAction(onClick = onSetActive)
@@ -621,9 +638,10 @@ private fun PackageActionBar(
 }
 
 @Composable
-private fun PackageSecondaryAction(icon: ImageVector, label: String, onClick: () -> Unit) {
+private fun PackageSecondaryAction(icon: ImageVector, label: String, onClick: () -> Unit, enabled: Boolean = true) {
     TextButton(
         onClick = onClick,
+        enabled = enabled,
         colors = ButtonDefaults.textButtonColors(
             contentColor = LEColors.textPrimary,
             containerColor = LEColors.surfaceElevated.copy(alpha = 0.65f)
