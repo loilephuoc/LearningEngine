@@ -553,7 +553,7 @@ private fun StudyRuntimeScreen(
     val quickReview = state is AndroidStudyState.Introduction && state.focusedPracticeKind ==
         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
     val focusedSkimUx = state is AndroidStudyState.Introduction && usesFocusedSkimUx(state.focusedPracticeKind)
-    val modeLabel = when (state) {
+    val recallModeLabel = when (state) {
         is AndroidStudyState.Introduction -> when {
             quickReview -> "Quick Review"
             state.focusedPracticeKind ==
@@ -566,6 +566,7 @@ private fun StudyRuntimeScreen(
         is AndroidStudyState.ImageRecall -> "Image"
         is AndroidStudyState.ExampleCompletion -> "Cloze"
     }
+    val modeLabel = androidStudyRuntimeModeLabel(state, recallModeLabel)
 
     val context = LocalContext.current
     val audioController = remember(context) { AndroidAudioController(context) }
@@ -990,6 +991,22 @@ private fun StudyRuntimeScreen(
             onEvent = stopAudioAndDispatch,
             onOpenFullscreenImage = onOpenFullscreenImage
         )
+    }
+}
+
+internal fun androidStudyRuntimeModeLabel(
+    state: AndroidStudyState.Runtime,
+    recallModeLabel: String
+): String {
+    val identity = state.runtimeIdentity ?: return recallModeLabel
+    return when {
+        identity.focusedPracticeKind ==
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW -> "Quick Review"
+        identity.studyMode == StudyMode.ADAPTIVE && identity.practiceLoopPolicy ==
+            vn.loi.learning.domain.study.session.model.PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED ->
+            "Adaptive · Continuous practice"
+        identity.studyMode == StudyMode.ADAPTIVE -> "Adaptive"
+        else -> recallModeLabel
     }
 }
 

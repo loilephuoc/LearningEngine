@@ -10,15 +10,38 @@ import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.recall.StudyMode
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.FocusedPracticeKind
+import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
 
 class AndroidCompletionProjectionTest {
     @Test
     fun `completion mode family uses only canonical persisted session facts`() {
-        assertEquals("Learn New", androidCompletionModeFamily(session(StudyMode.LEARN_NEW)))
-        assertEquals("Typing", androidCompletionModeFamily(session(StudyMode.TYPING)))
-        assertEquals("Review", androidCompletionModeFamily(session(StudyMode.ADAPTIVE)))
+        val learnNew = session(StudyMode.LEARN_NEW)
+        val typing = session(StudyMode.TYPING)
+        val adaptive = session(StudyMode.ADAPTIVE)
+        val quickReview = session(
+            StudyMode.ADAPTIVE,
+            SessionPolicy(
+                newItemLimit = 0,
+                reviewItemLimit = 1,
+                allowRepeatInSameSession = true,
+                evaluationPolicy = SessionEvaluationPolicy.EVALUATIVE,
+                practiceLoopPolicy = PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW,
+                focusedPracticeKind = FocusedPracticeKind.QUICK_REVIEW
+            )
+        )
+
+        assertEquals(StudyMode.ADAPTIVE, adaptive.studyMode)
+        assertEquals(SessionEvaluationPolicy.EVALUATIVE, adaptive.policy.evaluationPolicy)
+        assertEquals(PracticeLoopPolicy.NONE, adaptive.policy.practiceLoopPolicy)
+        assertEquals(FocusedPracticeKind.NONE, adaptive.policy.focusedPracticeKind)
+        assertEquals("Learn New", androidCompletionModeFamily(learnNew))
+        assertEquals("Typing", androidCompletionModeFamily(typing))
+        assertEquals("Adaptive", androidCompletionModeFamily(adaptive))
+        assertEquals("Quick Review", androidCompletionModeFamily(quickReview))
     }
 
     @Test
@@ -50,11 +73,14 @@ class AndroidCompletionProjectionTest {
             component.indexOf("LearningEngineSecondaryButton("))
     }
 
-    private fun session(mode: StudyMode): StudySession = StudySession.start(
+    private fun session(
+        mode: StudyMode,
+        policy: SessionPolicy = SessionPolicy(newItemLimit = 1, reviewItemLimit = 1)
+    ): StudySession = StudySession.start(
         id = SessionId("completion-${mode.name.lowercase()}"),
         learnerId = LearnerId("completion-learner"),
         startedAt = Moment(1_000),
-        policy = SessionPolicy(newItemLimit = 1, reviewItemLimit = 1),
+        policy = policy,
         studyMode = mode
     )
 }

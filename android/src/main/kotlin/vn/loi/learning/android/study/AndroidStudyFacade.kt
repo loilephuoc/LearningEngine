@@ -90,6 +90,22 @@ data class AndroidHomeUiModel(
 
 enum class AndroidSessionEntry { REVIEW, LATEST_SESSION, DIFFICULT, LEARNED, QUICK_REVIEW }
 
+data class AndroidStudyRuntimeIdentity(
+    val studyMode: StudyMode,
+    val evaluationPolicy: SessionEvaluationPolicy,
+    val practiceLoopPolicy: PracticeLoopPolicy,
+    val focusedPracticeKind: FocusedPracticeKind
+) {
+    companion object {
+        fun from(session: StudySession) = AndroidStudyRuntimeIdentity(
+            studyMode = session.studyMode,
+            evaluationPolicy = session.policy.evaluationPolicy,
+            practiceLoopPolicy = session.policy.practiceLoopPolicy,
+            focusedPracticeKind = session.policy.focusedPracticeKind
+        )
+    }
+}
+
 data class AndroidStudySessionHud(
     val newCompleted: Int,
     val newTarget: Int,
@@ -150,6 +166,7 @@ sealed interface AndroidStudyState {
         val currentPosition: Int? get() = null
         val totalItems: Int? get() = null
         val contextTitle: String? get() = null
+        val runtimeIdentity: AndroidStudyRuntimeIdentity? get() = null
     }
     data class Introduction(
         val sessionId: String,
@@ -182,6 +199,7 @@ sealed interface AndroidStudyState {
         val focusedPracticeKind: FocusedPracticeKind = FocusedPracticeKind.NONE,
         override val navigation: AndroidReviewNavigation = AndroidReviewNavigation(),
         override val contextTitle: String? = null,
+        override val runtimeIdentity: AndroidStudyRuntimeIdentity? = null,
         override val hud: AndroidStudySessionHud? = null,
         override val plan: RecallPlan? = null,
         override val completed: Boolean = false,
@@ -220,6 +238,7 @@ sealed interface AndroidStudyState {
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
+        override val runtimeIdentity: AndroidStudyRuntimeIdentity? = null,
         override val hud: AndroidStudySessionHud? = null
         , override val navigation: AndroidReviewNavigation = AndroidReviewNavigation()
     ) : Runtime
@@ -244,6 +263,7 @@ sealed interface AndroidStudyState {
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
+        override val runtimeIdentity: AndroidStudyRuntimeIdentity? = null,
         override val hud: AndroidStudySessionHud? = null
         , override val navigation: AndroidReviewNavigation = AndroidReviewNavigation()
     ) : Runtime
@@ -268,6 +288,7 @@ sealed interface AndroidStudyState {
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
+        override val runtimeIdentity: AndroidStudyRuntimeIdentity? = null,
         override val hud: AndroidStudySessionHud? = null
         , override val navigation: AndroidReviewNavigation = AndroidReviewNavigation()
     ) : Runtime
@@ -293,6 +314,7 @@ sealed interface AndroidStudyState {
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
+        override val runtimeIdentity: AndroidStudyRuntimeIdentity? = null,
         override val hud: AndroidStudySessionHud? = null
         , override val navigation: AndroidReviewNavigation = AndroidReviewNavigation()
     ) : Runtime
@@ -319,6 +341,7 @@ sealed interface AndroidStudyState {
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
+        override val runtimeIdentity: AndroidStudyRuntimeIdentity? = null,
         override val hud: AndroidStudySessionHud? = null
         , override val navigation: AndroidReviewNavigation = AndroidReviewNavigation()
     ) : Runtime
@@ -341,6 +364,19 @@ sealed interface AndroidStudyState {
         val retrySessionId: String? = null,
         val retryable: Boolean = true
     ) : AndroidStudyState
+}
+
+private fun AndroidStudyState.withRuntimeIdentity(session: StudySession?): AndroidStudyState {
+    val identity = session?.let(AndroidStudyRuntimeIdentity::from) ?: return this
+    return when (this) {
+        is AndroidStudyState.Introduction -> copy(runtimeIdentity = identity)
+        is AndroidStudyState.Typing -> copy(runtimeIdentity = identity)
+        is AndroidStudyState.MultipleChoice -> copy(runtimeIdentity = identity)
+        is AndroidStudyState.Listening -> copy(runtimeIdentity = identity)
+        is AndroidStudyState.ImageRecall -> copy(runtimeIdentity = identity)
+        is AndroidStudyState.ExampleCompletion -> copy(runtimeIdentity = identity)
+        else -> this
+    }
 }
 
 data class AndroidReviewNavigation(
@@ -500,7 +536,11 @@ class AndroidStudyFacade(
         // requested mode can actually start. Selecting the same mode still resumes the exact session.
         AndroidStartupTrace.measured("study_start_active_session") { reconcileActiveSession() }?.let { active ->
             if (active.installedPackageId == scope.installedPackageId) {
-                if (entry == AndroidSessionEntry.REVIEW && active.studyMode == mode) {
+                if (entry == AndroidSessionEntry.REVIEW &&
+                    active.studyMode == mode &&
+                    active.policy.focusedPracticeKind == FocusedPracticeKind.NONE &&
+                    active.policy.practiceLoopPolicy != PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW
+                ) {
                     return loadExact(active.id.value)
                 }
                 context.engine.finishSession(
@@ -701,7 +741,11 @@ class AndroidStudyFacade(
                 "Ôn từ vừa học · Vòng ${queueSnapshot.practiceRound}"
             vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT ->
                 "Again / Hard · còn ${queueSnapshot.fixedPracticeMembership.size} từ"
-            else -> if (queueSnapshot.practiceLoopPolicy != PracticeLoopPolicy.NONE) {
+            else -> if (session.studyMode == StudyMode.ADAPTIVE &&
+                queueSnapshot.practiceLoopPolicy == PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED
+            ) {
+                "Adaptive · Continuous practice · Round ${queueSnapshot.practiceRound + 1}"
+            } else if (queueSnapshot.practiceLoopPolicy != PracticeLoopPolicy.NONE) {
                 "Skim · Round ${queueSnapshot.practiceRound + 1}"
             } else null
         } ?: if (runtime !is AndroidStudyState.Introduction &&
@@ -879,7 +923,8 @@ class AndroidStudyFacade(
             quickReviewPoolSize = quickReviewQueue?.practiceProgress?.membershipSize,
             latestEffectiveRating = latestEffectiveRating,
             focusedPracticeKind = next.session.policy.focusedPracticeKind,
-            contextTitle = title
+            contextTitle = title,
+            runtimeIdentity = AndroidStudyRuntimeIdentity.from(next.session)
         )
     }
 
@@ -1183,7 +1228,7 @@ class AndroidStudyFacade(
             )
         }
 
-        return when (val prompt = plan.prompt) {
+        return (when (val prompt = plan.prompt) {
             is RecallPrompt.Typing -> typingPresentation(prompt.sourceText)
             is RecallPrompt.ReverseTranslation -> typingPresentation(prompt.targetText)
             is RecallPrompt.MultipleChoice -> AndroidStudyState.MultipleChoice(
@@ -1236,7 +1281,7 @@ class AndroidStudyFacade(
                 currentPosition = currentPos, totalItems = totalCount, contextTitle = title
             )
             else -> AndroidStudyState.Failed("${plan.mode.wireId} is not available on Android.")
-        }
+        }).withRuntimeIdentity(item?.session)
     }
 
     private fun execute(state: AndroidStudyState.Runtime, submission: RecallSubmission): AndroidStudyState {
@@ -1398,6 +1443,6 @@ internal fun androidCompletionModeFamily(session: StudySession): String = when (
     FocusedPracticeKind.NONE -> when (session.studyMode) {
         StudyMode.LEARN_NEW -> "Learn New"
         StudyMode.TYPING -> "Typing"
-        StudyMode.ADAPTIVE -> "Review"
+        StudyMode.ADAPTIVE -> "Adaptive"
     }
 }

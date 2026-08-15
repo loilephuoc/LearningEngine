@@ -26,6 +26,10 @@ import vn.loi.learning.domain.library.model.*
 import vn.loi.learning.domain.study.learning.model.*
 import vn.loi.learning.domain.study.memory.model.*
 import vn.loi.learning.domain.study.recall.StudyMode
+import vn.loi.learning.domain.study.session.model.FocusedPracticeKind
+import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
+import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -33,6 +37,89 @@ class AndroidActivePackageNavigationAcceptanceTest {
     private val dispatcher = StandardTestDispatcher()
     @Before fun setUp() = Dispatchers.setMain(dispatcher)
     @After fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun `Switch to Adaptive preserves adaptive identity through fallback resume and distinct Quick Review`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val learner = LearnerId("default-learner")
+        val installed = install(context, "adaptive-identity")
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, installed)
+        val itemId = LearningItemId("adaptive-identity-item")
+        context.engine.review(ReviewCommand(
+            ReviewEventId("adaptive-identity-seed"), learner, itemId, ReviewRating.GOOD, Moment(1_000)
+        ))
+        val historyBefore = context.engine.getReviewHistory(learner, itemId)
+        val memoryBefore = context.memoryStateRepository!!.find(learner, itemId)
+        val facade = AndroidStudyFacade(
+            context,
+            learner,
+            now = { 2_000 },
+            dailyLimits = { DailyStudyBudgetLimits(1, 1) },
+            continuousSkimEnabled = { true }
+        )
+
+        val adaptive = assertIs<AndroidStudyState.Runtime>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.ADAPTIVE)
+        )
+        val adaptiveSessionId = requireNotNull(adaptive.plan).sessionId
+        val adaptiveSession = requireNotNull(context.engine.getSession(adaptiveSessionId))
+        val adaptiveQueue = requireNotNull(context.studyQueue.get(adaptiveSessionId))
+        assertEquals(StudyMode.ADAPTIVE, adaptiveSession.studyMode)
+        assertEquals(SessionEvaluationPolicy.PRACTICE_ONLY, adaptiveSession.policy.evaluationPolicy)
+        assertEquals(PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED, adaptiveSession.policy.practiceLoopPolicy)
+        assertEquals(PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED, adaptiveQueue.practiceLoopPolicy)
+        assertEquals(FocusedPracticeKind.NONE, adaptiveSession.policy.focusedPracticeKind)
+        assertEquals(AndroidStudyRuntimeIdentity.from(adaptiveSession), adaptive.runtimeIdentity)
+        assertEquals("Adaptive · Continuous practice", androidStudyRuntimeModeLabel(adaptive, "Typing"))
+
+        val resumed = assertIs<AndroidStudyState.Runtime>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.ADAPTIVE)
+        )
+        assertEquals(adaptiveSessionId, requireNotNull(resumed.plan).sessionId)
+        assertEquals(adaptive.runtimeIdentity, resumed.runtimeIdentity)
+        assertEquals("Adaptive · Continuous practice", androidStudyRuntimeModeLabel(resumed, "Typing"))
+        assertEquals(historyBefore, context.engine.getReviewHistory(learner, itemId))
+        assertEquals(memoryBefore, context.memoryStateRepository!!.find(learner, itemId))
+
+        val quickReview = assertIs<AndroidStudyState.Introduction>(
+            facade.start(AndroidSessionEntry.QUICK_REVIEW)
+        )
+        val quickSession = requireNotNull(context.engine.getSession(SessionId(quickReview.sessionId)))
+        assertEquals(PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW, quickSession.policy.practiceLoopPolicy)
+        assertEquals(SessionEvaluationPolicy.EVALUATIVE, quickSession.policy.evaluationPolicy)
+        assertEquals(FocusedPracticeKind.QUICK_REVIEW, quickSession.policy.focusedPracticeKind)
+        assertEquals("Quick Review", androidStudyRuntimeModeLabel(quickReview, "NEW · PACKAGE"))
+        assertNotEquals(adaptive.runtimeIdentity, quickReview.runtimeIdentity)
+        assertEquals(historyBefore, context.engine.getReviewHistory(learner, itemId))
+        assertEquals(memoryBefore, context.memoryStateRepository!!.find(learner, itemId))
+
+        val quickReviewReselected = assertIs<AndroidStudyState.Introduction>(
+            facade.start(AndroidSessionEntry.QUICK_REVIEW)
+        )
+        val quickReviewReselectedSession = requireNotNull(
+            context.engine.getSession(SessionId(quickReviewReselected.sessionId))
+        )
+        assertEquals(StudyMode.ADAPTIVE, quickReviewReselectedSession.studyMode)
+        assertEquals(SessionEvaluationPolicy.EVALUATIVE, quickReviewReselectedSession.policy.evaluationPolicy)
+        assertEquals(PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW,
+            quickReviewReselectedSession.policy.practiceLoopPolicy)
+        assertEquals(FocusedPracticeKind.QUICK_REVIEW,
+            quickReviewReselectedSession.policy.focusedPracticeKind)
+        assertEquals("Quick Review", androidStudyRuntimeModeLabel(quickReviewReselected, "NEW · PACKAGE"))
+
+        val adaptiveAgain = assertIs<AndroidStudyState.Runtime>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.ADAPTIVE)
+        )
+        val adaptiveAgainSession = requireNotNull(context.engine.getSession(requireNotNull(adaptiveAgain.plan).sessionId))
+        assertEquals(StudyMode.ADAPTIVE, adaptiveAgainSession.studyMode)
+        assertEquals(FocusedPracticeKind.NONE, adaptiveAgainSession.policy.focusedPracticeKind)
+        assertEquals(PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED,
+            adaptiveAgainSession.policy.practiceLoopPolicy)
+        assertEquals("Adaptive · Continuous practice", androidStudyRuntimeModeLabel(adaptiveAgain, "Typing"))
+        assertNotEquals(quickReview.sessionId, adaptiveAgainSession.id.value)
+        assertEquals(historyBefore, context.engine.getReviewHistory(learner, itemId))
+        assertEquals(memoryBefore, context.memoryStateRepository!!.find(learner, itemId))
+    }
 
     @Test
     fun `multiple ACTIVE packages follow canonical Library selection`() {

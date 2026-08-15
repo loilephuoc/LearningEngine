@@ -94,10 +94,11 @@ class AndroidStudyFacadeTest {
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
         assertEquals(listOf(RecallMode.TYPING), f.context.engine.getSession(completed.plan.sessionId)!!
             .recallModeHistory.boundedEntries.map(RecallModeHistoryEntry::mode))
+        assertEquals(StudyMode.ADAPTIVE, f.context.engine.getSession(completed.plan.sessionId)!!.studyMode)
         f.facade.commitTypingRating(completed, ReviewRating.HARD)
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
         val completion = assertIs<AndroidStudyState.Completion>(f.facade.next(completed))
-        assertEquals("Review", completion.modeFamily)
+        assertEquals("Adaptive", completion.modeFamily)
         assertEquals(1, completion.totalCompleted)
         assertEquals(0, completion.newCompleted)
         assertEquals(1, completion.reviewCompleted)
@@ -107,6 +108,40 @@ class AndroidStudyFacadeTest {
         assertNull(f.context.engine.getActiveSession(f.learner))
         assertIs<AndroidStudyState.Typing>(f.facade.undo(completion))
         assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+    }
+
+    @Test fun `completion projection keeps Adaptive Typing and Quick Review identities distinct`() {
+        fun session(
+            id: String,
+            studyMode: StudyMode,
+            policy: SessionPolicy = SessionPolicy(newItemLimit = 0, reviewItemLimit = 1)
+        ) = StudySession.start(
+            SessionId(id), LearnerId("identity-learner"), Moment(1_000), policy,
+            includedContentIds = setOf(ContentId("identity-content")), studyMode = studyMode
+        )
+
+        val adaptive = session("identity-adaptive", StudyMode.ADAPTIVE)
+        val typing = session("identity-typing", StudyMode.TYPING)
+        val quickReview = session(
+            "identity-quick-review",
+            StudyMode.ADAPTIVE,
+            SessionPolicy(
+                newItemLimit = 0,
+                reviewItemLimit = 1,
+                allowRepeatInSameSession = true,
+                evaluationPolicy = SessionEvaluationPolicy.EVALUATIVE,
+                practiceLoopPolicy = PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW,
+                focusedPracticeKind = FocusedPracticeKind.QUICK_REVIEW
+            )
+        )
+
+        assertEquals("Adaptive", androidCompletionModeFamily(adaptive))
+        assertEquals("Typing", androidCompletionModeFamily(typing))
+        assertEquals("Quick Review", androidCompletionModeFamily(quickReview))
+        assertNotEquals(androidCompletionModeFamily(adaptive), androidCompletionModeFamily(quickReview))
+        assertEquals(StudyMode.ADAPTIVE, adaptive.studyMode)
+        assertEquals(PracticeLoopPolicy.NONE, adaptive.policy.practiceLoopPolicy)
+        assertEquals(FocusedPracticeKind.NONE, adaptive.policy.focusedPracticeKind)
     }
 
     @Test fun `reveal crosses shared lapse path and resume preserves current session`() {
@@ -248,7 +283,7 @@ class AndroidStudyFacadeTest {
             PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED,
             f.context.studyQueue.get(session.id)?.practiceLoopPolicy
         )
-        assertEquals("Skim · Round 2", practice.hud?.skimStatus)
+        assertEquals("Adaptive · Continuous practice · Round 2", practice.hud?.skimStatus)
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
 
         val practiceExact = assertIs<AndroidStudyState.Typing>(facade.updateAnswer(practice, "hello"))

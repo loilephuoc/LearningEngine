@@ -35,7 +35,7 @@ class AndroidFocusedPracticeCompositionTest {
     }
 
     @Test
-    fun `focused entries bypass adaptive due quota gate and no-due skim uses practice`() {
+    fun `focused entries bypass adaptive due quota gate and no-due skim uses intended policies`() {
         val source = Files.readString(
             Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidStudyFacade.kt")
         )
@@ -49,7 +49,6 @@ class AndroidFocusedPracticeCompositionTest {
         assertTrue(start.contains("!hasScheduledAdaptiveWork"))
         assertTrue(start.contains("PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED"))
         assertTrue(start.indexOf("if (!canStartRequestedMode)") < start.indexOf("finishSession("))
-        assertTrue(start.contains("entry == AndroidSessionEntry.REVIEW && active.studyMode == mode"))
     }
 
     @Test
