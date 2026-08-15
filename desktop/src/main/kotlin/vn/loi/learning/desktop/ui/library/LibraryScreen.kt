@@ -195,6 +195,8 @@ fun LibraryScreen(
                     onClose = contentLibraryViewModel::closePackageBrowser,
                     // PLE-020: single-click auto-edit
                     onSelectRow = contentLibraryViewModel::attemptSelectRowAutoEdit,
+                    onSubmitSearch = contentLibraryViewModel::selectPackageBrowserSearchResult,
+                    onToggleHighlight = contentLibraryViewModel::togglePackageBrowserHighlight,
                     onQueryChanged = contentLibraryViewModel::updatePackageBrowserQuery,
                     onClearQuery = contentLibraryViewModel::clearPackageBrowserQuery,
                     onLessonFilterChanged = contentLibraryViewModel::updatePackageBrowserLessonFilter,

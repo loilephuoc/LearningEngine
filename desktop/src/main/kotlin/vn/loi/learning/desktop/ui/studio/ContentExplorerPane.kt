@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,12 +29,16 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,6 +55,8 @@ fun ContentExplorerPane(
     uiState: PackageContentBrowserUiState,
     onClose: () -> Unit,
     onSelectRow: (String) -> Unit,
+    onSubmitSearch: (String) -> Unit,
+    onToggleHighlight: (String) -> Unit,
     onQueryChanged: (String) -> Unit,
     onClearQuery: () -> Unit,
     onLessonFilterChanged: (String) -> Unit,
@@ -57,7 +64,6 @@ fun ContentExplorerPane(
     onSortChanged: (BrowserSortOption) -> Unit,
     onResetFilters: () -> Unit,
     onDoubleClickRow: ((String) -> Unit)?,
-    onSelectImage: ((String) -> Unit)? = null,
     onPlayQuestionAudio: ((String, String) -> Unit)? = null,
     playbackCoordinator: PlaybackCoordinator? = null,
     // PLE-020: search field focus requester for Ctrl+F
@@ -71,10 +77,16 @@ fun ContentExplorerPane(
     val items = uiState.filteredItems
     val listState = rememberLazyListState()
     val listScrollScope = rememberCoroutineScope()
+    var handledCenterRequest by remember(uiState.installedPackageId) {
+        mutableLongStateOf(uiState.centerSelectedRowRequest)
+    }
 
     // Preserve the viewport when the selected row is already visible.
     // Scroll only when keyboard/search navigation selects an off-screen row.
     LaunchedEffect(uiState.selectedContentId, items) {
+        // Clearing search has its own centering authority below. Let that effect be the
+        // only scroll writer for this projection change so the two animations cannot race.
+        if (handledCenterRequest != uiState.centerSelectedRowRequest) return@LaunchedEffect
         val selectedIndex = items.indexOfFirst { it.contentId.value == uiState.selectedContentId }
         if (selectedIndex < 0) return@LaunchedEffect
 
@@ -97,6 +109,18 @@ fun ContentExplorerPane(
                 listState.animateScrollToItem(targetFirstIndex)
             }
         }
+    }
+
+    LaunchedEffect(uiState.centerSelectedRowRequest, items) {
+        if (handledCenterRequest == uiState.centerSelectedRowRequest) return@LaunchedEffect
+        handledCenterRequest = uiState.centerSelectedRowRequest
+        val selectedIndex = items.indexOfFirst { it.contentId.value == uiState.selectedContentId }
+        if (selectedIndex < 0) return@LaunchedEffect
+        val visibleCount = snapshotFlow {
+            listState.layoutInfo.totalItemsCount to listState.layoutInfo.visibleItemsInfo.size
+        }.first { (total, visible) -> total == items.size && visible > 0 }.second
+        val targetFirstIndex = centeredExplorerFirstIndex(selectedIndex, items.size, visibleCount)
+        listState.animateScrollToItem(targetFirstIndex)
     }
 
     Surface(
@@ -129,22 +153,24 @@ fun ContentExplorerPane(
 
             // Compact search only. The rarely-used quick media chips were removed so the
             // list gets substantially more vertical space.
-            val searchModifier = if (searchFocusRequester != null) {
-                Modifier
-                    .fillMaxWidth()
-                    .focusRequester(searchFocusRequester)
-                    .onKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown && event.key == Key.Escape && uiState.appliedQuery.isNotBlank()) {
-                            onClearQuery()
-                            true
-                        } else false
+            val searchKeyModifier = Modifier
+                .fillMaxWidth()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when {
+                        event.key == Key.Escape && uiState.appliedQuery.isNotBlank() -> { onClearQuery(); true }
+                        else -> false
                     }
-            } else Modifier.fillMaxWidth()
+                }
+            val searchModifier = if (searchFocusRequester != null) {
+                searchKeyModifier.focusRequester(searchFocusRequester)
+            } else searchKeyModifier
 
             CompactExplorerSearchField(
                 query = uiState.appliedQuery,
                 onQueryChanged = onQueryChanged,
                 onClearQuery = onClearQuery,
+                onSubmit = onSubmitSearch,
                 placeholderText = "Search content... (Ctrl+F)",
                 modifier = searchModifier
                     .padding(horizontal = LESpacing.sm, vertical = 5.dp)
@@ -197,9 +223,10 @@ fun ContentExplorerPane(
                             ExplorerRowItem(
                                 item = item,
                                 isSelected = item.contentId.value == uiState.selectedContentId,
+                                isHighlighted = item.contentId.value in uiState.highlightedContentIds,
                                 onSelect = { onSelectRow(item.contentId.value) },
                                 onDoubleClick = { onDoubleClickRow?.invoke(item.contentId.value) },
-                                onSelectImage = onSelectImage,
+                                onToggleHighlight = { onToggleHighlight(item.contentId.value) },
                                 onPlayQuestionAudio = onPlayQuestionAudio,
                                 playbackCoordinator = playbackCoordinator,
                                 onDuplicateItem = onDuplicateItem,
@@ -248,11 +275,22 @@ fun ContentExplorerPane(
     }
 }
 
+internal fun centeredExplorerFirstIndex(
+    selectedIndex: Int,
+    itemCount: Int,
+    visibleItemCount: Int
+): Int {
+    val capacity = visibleItemCount.coerceAtLeast(1)
+    val maxFirstIndex = (itemCount - capacity).coerceAtLeast(0)
+    return (selectedIndex - capacity / 2).coerceIn(0, maxFirstIndex)
+}
+
 @Composable
 private fun CompactExplorerSearchField(
     query: String,
     onQueryChanged: (String) -> Unit,
     onClearQuery: () -> Unit,
+    onSubmit: (String) -> Unit,
     placeholderText: String,
     modifier: Modifier = Modifier
 ) {
@@ -264,7 +302,24 @@ private fun CompactExplorerSearchField(
         border = androidx.compose.foundation.BorderStroke(1.dp, LEColors.primary.copy(alpha = 0.45f)),
         tonalElevation = LEElevation.flat,
         shadowElevation = 1.dp,
-        modifier = modifier.height(38.dp)
+        modifier = modifier
+            .height(38.dp)
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.key) {
+                    Key.Enter -> {
+                        onSubmit(rawText)
+                        true
+                    }
+                    Key.Escape -> {
+                        if (rawText.isBlank()) return@onPreviewKeyEvent false
+                        rawText = ""
+                        onClearQuery()
+                        true
+                    }
+                    else -> false
+                }
+            }
     ) {
         Row(
             modifier = Modifier
@@ -288,7 +343,9 @@ private fun CompactExplorerSearchField(
                 },
                 singleLine = true,
                 textStyle = LETypography.fieldValue.copy(color = LEColors.textPrimary, fontWeight = FontWeight.Medium),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("explorer-search-input"),
                 decorationBox = { innerTextField ->
                     Box(contentAlignment = Alignment.CenterStart) {
                         if (rawText.isEmpty()) {
@@ -311,6 +368,7 @@ private fun CompactExplorerSearchField(
                     style = LETypography.fieldValue,
                     color = LEColors.textMuted,
                     modifier = Modifier
+                        .testTag("explorer-clear-search")
                         .clip(LERadius.xs)
                         .clickable {
                             rawText = ""
@@ -356,9 +414,10 @@ private fun ExplorerPageButton(
 private fun ExplorerRowItem(
     item: PackageContentBrowserItem,
     isSelected: Boolean,
+    isHighlighted: Boolean,
     onSelect: () -> Unit,
     onDoubleClick: (() -> Unit)?,
-    onSelectImage: ((String) -> Unit)?,
+    onToggleHighlight: () -> Unit,
     onPlayQuestionAudio: ((String, String) -> Unit)?,
     playbackCoordinator: PlaybackCoordinator?,
     onDuplicateItem: ((String) -> Unit)? = null,
@@ -373,6 +432,7 @@ private fun ExplorerRowItem(
     val bgColor by animateColorAsState(
         targetValue = when {
             isSelected -> LEColors.primarySoft
+            isHighlighted -> LEColors.warningContainer
             isHovered -> LEColors.surfaceElevated
             else -> LEColors.surface
         },
@@ -384,6 +444,7 @@ private fun ExplorerRowItem(
     ContextMenuArea(
         items = {
             listOf(
+                ContextMenuItem(if (isHighlighted) "Remove Highlight" else "Highlight Item") { onToggleHighlight() },
                 ContextMenuItem("Edit") { onSelect() },
                 ContextMenuItem("Duplicate") { onDuplicateItem?.invoke(item.contentId.value) },
                 ContextMenuItem("Delete") { /* handled by toolbar */ },
@@ -416,6 +477,11 @@ private fun ExplorerRowItem(
                     .padding(vertical = 0.dp)
                     .clip(LERadius.sm)
                     .background(bgColor)
+                    .semantics {
+                        contentDescription = "Row ${item.index}: ${item.questionText}"
+                        selected = isSelected
+                        if (isHighlighted) stateDescription = "Highlighted"
+                    }
                     // PLE-020: left accent border on selection
                     .drawBehind {
                         if (isSelected) {
@@ -424,6 +490,13 @@ private fun ExplorerRowItem(
                                 start = Offset(0f, 0f),
                                 end = Offset(0f, size.height),
                                 strokeWidth = 3.dp.toPx()
+                            )
+                        }
+                        if (isHighlighted) {
+                            drawCircle(
+                                color = LEColors.warning,
+                                radius = 3.dp.toPx(),
+                                center = Offset(6.dp.toPx(), size.height / 2f)
                             )
                         }
                     }
@@ -484,33 +557,6 @@ private fun ExplorerRowItem(
                         horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (item.hasImage) {
-                            TooltipArea(
-                                tooltip = {
-                                    Surface(color = LEColors.textPrimary, shape = LERadius.xs) {
-                                        Text(
-                                            text = "View image",
-                                            style = LETypography.caption,
-                                            color = LEColors.surface,
-                                            modifier = Modifier.padding(LESpacing.xs)
-                                        )
-                                    }
-                                }
-                            ) {
-                                IconButton(
-                                    onClick = { onSelectImage?.invoke(item.contentId.value) },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = LEIcons.Image,
-                                        contentDescription = "View image",
-                                        tint = Color(0xFF22C55E),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-
                         val audioRef = item.questionAudioRef
                         if (audioRef != null) {
                             val isPlaying = playbackCoordinator?.getButtonState(audioRef) is AudioButtonState.Playing

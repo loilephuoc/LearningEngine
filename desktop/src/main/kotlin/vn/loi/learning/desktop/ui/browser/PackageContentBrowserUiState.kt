@@ -17,6 +17,10 @@ data class PackageContentBrowserUiState(
     val mediaFilter: BrowserMediaFilter = BrowserMediaFilter.ALL,
     val sortOption: BrowserSortOption = BrowserSortOption.ORIGINAL_ORDER,
     val selectedContentId: String? = null,
+    /** Runtime-only Content Studio markers. Never persisted or copied into domain content. */
+    val highlightedContentIds: Set<String> = emptySet(),
+    /** Changes only when clearing search should center the current editor row. */
+    val centerSelectedRowRequest: Long = 0L,
     val activePlayingAudioRef: String? = null,
     /** ID của Content đang ở chế độ edit (null = view mode). */
     val editingContentId: String? = null,

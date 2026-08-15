@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
@@ -26,6 +27,8 @@ fun ContentStudioScreen(
     uiState: PackageContentBrowserUiState,
     onClose: () -> Unit,
     onSelectRow: (String) -> Unit,
+    onSubmitSearch: (String) -> Unit = {},
+    onToggleHighlight: (String) -> Unit = {},
     onQueryChanged: (String) -> Unit,
     onClearQuery: () -> Unit,
     onLessonFilterChanged: (String) -> Unit,
@@ -174,6 +177,8 @@ fun ContentStudioScreen(
                     uiState = uiState,
                     onClose = onClose,
                     onSelectRow = { id -> onSelectRow(id) },
+                    onSubmitSearch = onSubmitSearch,
+                    onToggleHighlight = onToggleHighlight,
                     onQueryChanged = onQueryChanged,
                     onClearQuery = onClearQuery,
                     onLessonFilterChanged = onLessonFilterChanged,
@@ -181,7 +186,6 @@ fun ContentStudioScreen(
                     onSortChanged = onSortChanged,
                     onResetFilters = onResetFilters,
                     onDoubleClickRow = onDoubleClickRow,
-                    onSelectImage = { id -> onSelectRow(id) },
                     onPlayQuestionAudio = { id, ref ->
                         onSelectRow(id)
                         playbackCoordinator?.play(ref) ?: onPlayAudio?.invoke(ref)
@@ -266,7 +270,24 @@ fun ContentStudioScreen(
     // Delete confirmation dialog
     if (uiState.showDeleteConfirm) {
         val itemToDelete = uiState.selectedItemAnywhere
+        val deleteFocusRequester = remember { FocusRequester() }
+        var deleteDispatched by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { deleteFocusRequester.requestFocus() }
         AlertDialog(
+            modifier = Modifier.testTag("delete-confirm-dialog").onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.key) {
+                    Key.Enter -> {
+                        if (!deleteDispatched) {
+                            deleteDispatched = true
+                            onConfirmDelete?.invoke()
+                        }
+                        true
+                    }
+                    Key.Escape -> { onDismissDelete?.invoke(); true }
+                    else -> false
+                }
+            },
             onDismissRequest = { onDismissDelete?.invoke() },
             title = { Text("Delete Content?", style = LETypography.paneTitle) },
             text = {
@@ -282,7 +303,16 @@ fun ContentStudioScreen(
                 }
             },
             confirmButton = {
-                LEDangerButton(text = "Delete", onClick = { onConfirmDelete?.invoke() })
+                LEDangerButton(
+                    text = "Delete",
+                    onClick = {
+                        if (!deleteDispatched) {
+                            deleteDispatched = true
+                            onConfirmDelete?.invoke()
+                        }
+                    },
+                    modifier = Modifier.focusRequester(deleteFocusRequester)
+                )
             },
             dismissButton = {
                 LESecondaryButton(text = "Cancel", onClick = { onDismissDelete?.invoke() })

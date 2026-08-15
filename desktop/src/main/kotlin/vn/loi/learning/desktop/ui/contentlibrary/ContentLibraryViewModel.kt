@@ -725,12 +725,45 @@ class ContentLibraryViewModel(
         packageBrowserUiState = current.copy(query = query)
         searchDebouncer.submit {
             val latest = packageBrowserUiState ?: return@submit
-            packageBrowserUiState = latest.copy(appliedQuery = query.trim())
+            if (latest.query == query) {
+                packageBrowserUiState = latest.copy(appliedQuery = query.trim())
+            }
         }
     }
 
     fun clearPackageBrowserQuery() {
-        updatePackageBrowserQuery("")
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            query = "",
+            appliedQuery = "",
+            centerSelectedRowRequest = current.centerSelectedRowRequest + 1L
+        )
+    }
+
+    fun selectPackageBrowserSearchResult(query: String) {
+        val current = packageBrowserUiState ?: return
+        if (current.showUnsavedChangesDialog) return
+        val submitted = current.copy(query = query, appliedQuery = query.trim())
+        packageBrowserUiState = submitted
+        val normalizedQuery = submitted.appliedQuery
+        val exactMatches = submitted.filteredItems.filter {
+            it.questionText.trim().equals(normalizedQuery, ignoreCase = true)
+        }
+        val target = when {
+            exactMatches.size == 1 -> exactMatches.single()
+            exactMatches.isEmpty() && submitted.filteredItems.size == 1 -> submitted.filteredItems.single()
+            else -> null
+        } ?: return
+        attemptSelectRowAutoEdit(target.contentId.value)
+    }
+
+    fun togglePackageBrowserHighlight(contentId: String) {
+        val current = packageBrowserUiState ?: return
+        if (current.allItems.none { it.contentId.value == contentId }) return
+        val updated = current.highlightedContentIds.toMutableSet().apply {
+            if (!add(contentId)) remove(contentId)
+        }
+        packageBrowserUiState = current.copy(highlightedContentIds = updated)
     }
 
     fun updatePackageBrowserLessonFilter(lesson: String) {
@@ -977,6 +1010,8 @@ class ContentLibraryViewModel(
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
                     sortOption = current.sortOption,
+                    highlightedContentIds = current.highlightedContentIds,
+                    centerSelectedRowRequest = current.centerSelectedRowRequest,
                     isCreateSubmitting = false
                 )
                 onContentDataChanged?.invoke()
@@ -1228,6 +1263,8 @@ class ContentLibraryViewModel(
                     isCreatingNewItem = false,
                     loadedBaselineDraft = reloadedDraft,
                     draftEdits = reloadedDraft,
+                    highlightedContentIds = current.highlightedContentIds,
+                    centerSelectedRowRequest = current.centerSelectedRowRequest,
                     query = current.query
                 )
                 if (savedVisible == null) uiState = uiState.copy(importMessage = "Content saved; it is hidden by the current filter.", importError = null)
@@ -1347,7 +1384,9 @@ class ContentLibraryViewModel(
                     mediaFilter = current.mediaFilter,
                     sortOption = current.sortOption,
                     canUndoDelete = true,
-                    undoDeleteLabel = result.snapshot.displayLabel
+                    undoDeleteLabel = result.snapshot.displayLabel,
+                    highlightedContentIds = current.highlightedContentIds - deleteId,
+                    centerSelectedRowRequest = current.centerSelectedRowRequest
                 )
                 onContentDataChanged?.invoke()
             },
@@ -1395,7 +1434,9 @@ class ContentLibraryViewModel(
                     loadedBaselineDraft = draft,
                     draftEdits = draft,
                     canUndoDelete = false,
-                    undoDeleteLabel = null
+                    undoDeleteLabel = null,
+                    highlightedContentIds = current.highlightedContentIds - restoredId,
+                    centerSelectedRowRequest = current.centerSelectedRowRequest
                 )
                 uiState = uiState.copy(
                     importMessage = if (restored == null) "Undo Delete succeeded; the restored item is hidden by the current filter." else null,
@@ -1436,7 +1477,8 @@ class ContentLibraryViewModel(
             editingContentId = nextSelection,
             loadedBaselineDraft = selectedDraft,
             draftEdits = selectedDraft,
-            showDeleteConfirm = false
+            showDeleteConfirm = false,
+            highlightedContentIds = current.highlightedContentIds - deleteId
         )
     }
 
@@ -1508,6 +1550,8 @@ class ContentLibraryViewModel(
                         selectedLessonFilter = current.selectedLessonFilter,
                         mediaFilter = current.mediaFilter,
                         sortOption = current.sortOption,
+                        highlightedContentIds = current.highlightedContentIds,
+                        centerSelectedRowRequest = current.centerSelectedRowRequest,
                         isCreateSubmitting = false
                     )
                     onContentDataChanged?.invoke()
@@ -1547,7 +1591,9 @@ class ContentLibraryViewModel(
                         appliedQuery = current.appliedQuery,
                         selectedLessonFilter = current.selectedLessonFilter,
                         mediaFilter = current.mediaFilter,
-                        sortOption = current.sortOption
+                        sortOption = current.sortOption,
+                        highlightedContentIds = current.highlightedContentIds,
+                        centerSelectedRowRequest = current.centerSelectedRowRequest
                     )
                     onContentDataChanged?.invoke()
                     executePendingAction(action)

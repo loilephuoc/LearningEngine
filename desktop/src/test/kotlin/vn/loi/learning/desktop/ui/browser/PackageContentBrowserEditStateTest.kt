@@ -862,6 +862,99 @@ class PackageContentBrowserEditStateTest {
         assertEquals("cnt-2", state.selectedContentId)
     }
 
+    @Test
+    fun `highlight toggles multiple identities and survives selection search and sort`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 4)
+
+        vm.togglePackageBrowserHighlight("cnt-1")
+        vm.togglePackageBrowserHighlight("cnt-3")
+        vm.attemptSelectRowAutoEdit("cnt-2")
+        vm.updatePackageBrowserQuery("Question 2")
+        vm.updatePackageBrowserSort(vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.QUESTION_ASC)
+
+        assertEquals(setOf("cnt-1", "cnt-3"), vm.packageBrowserUiState!!.highlightedContentIds)
+        vm.togglePackageBrowserHighlight("cnt-1")
+        assertEquals(setOf("cnt-3"), vm.packageBrowserUiState!!.highlightedContentIds)
+    }
+
+    @Test
+    fun `highlight state clears when Content Studio session closes`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 2)
+        vm.togglePackageBrowserHighlight("cnt-1")
+
+        vm.closePackageBrowser()
+
+        assertNull(vm.packageBrowserUiState)
+    }
+
+    @Test
+    fun `search Enter selects one exact question before partial matches`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 4)
+        vm.updatePackageBrowserQuery("  question 2  ")
+
+        vm.selectPackageBrowserSearchResult("  question 2  ")
+
+        assertEquals("cnt-2", vm.packageBrowserUiState!!.selectedContentId)
+        assertEquals("cnt-2", vm.packageBrowserUiState!!.editingContentId)
+    }
+
+    @Test
+    fun `search Enter selects a single result and ignores ambiguous partial results`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 4)
+        vm.updatePackageBrowserQuery("4")
+        vm.selectPackageBrowserSearchResult("4")
+        assertEquals("cnt-4", vm.packageBrowserUiState!!.selectedContentId)
+
+        vm.updatePackageBrowserQuery("Question")
+        vm.selectPackageBrowserSearchResult("Question")
+        assertEquals("cnt-4", vm.packageBrowserUiState!!.selectedContentId)
+    }
+
+    @Test
+    fun `search Enter preserves dirty navigation protection`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 3)
+        vm.attemptSelectRowAutoEdit("cnt-1")
+        vm.updateDraftQuestion("Dirty")
+        vm.updatePackageBrowserQuery("Question 2")
+
+        vm.selectPackageBrowserSearchResult("Question 2")
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals("cnt-1", state.selectedContentId)
+        assertTrue(state.showUnsavedChangesDialog)
+    }
+
+    @Test
+    fun `clear search preserves editor and requests one center scroll`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 4)
+        vm.attemptSelectRowAutoEdit("cnt-3")
+        vm.updatePackageBrowserQuery("Question 3")
+        val before = vm.packageBrowserUiState!!.centerSelectedRowRequest
+
+        vm.clearPackageBrowserQuery()
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals("", state.appliedQuery)
+        assertEquals("cnt-3", state.selectedContentId)
+        assertEquals("cnt-3", state.editingContentId)
+        assertEquals(before + 1L, state.centerSelectedRowRequest)
+    }
+
+    @Test
+    fun `successful delete removes highlight and undo does not restore it`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(context, contentCount = 3)
+        vm.attemptSelectRowAutoEdit("cnt-2")
+        vm.togglePackageBrowserHighlight("cnt-2")
+        vm.showDeleteConfirmation()
+
+        vm.confirmDeleteContent()
+
+        assertFalse("cnt-2" in vm.packageBrowserUiState!!.highlightedContentIds)
+        vm.undoDeleteContent()
+        assertFalse("cnt-2" in vm.packageBrowserUiState!!.highlightedContentIds)
+    }
+
     private fun createViewModelWithPackage(contentCount: Int): Pair<ContentLibraryViewModel, InstalledPackageId> {
         val appContext = LearningApplicationFactory.createInMemory()
         val instId = InstalledPackageId("inst-edit-test")
