@@ -69,6 +69,7 @@ import vn.loi.learning.android.study.components.reviewNavigationGestures
 import vn.loi.learning.android.study.components.PartOfSpeechBadge
 import vn.loi.learning.android.study.components.StudyAnswerSection
 import vn.loi.learning.android.study.components.StudyAudioTextTarget
+import vn.loi.learning.android.study.components.StudyTextInteraction
 import vn.loi.learning.android.study.components.StudyRuntimeShell
 import vn.loi.learning.android.study.components.StudyStageCard
 import vn.loi.learning.android.study.components.StudyMedia
@@ -1491,14 +1492,15 @@ private fun IntroductionLearningStage(
                                             fontSize = introductionClueTextSizeSp(meaning.length).sp,
                                             lineHeight = (introductionClueTextSizeSp(meaning.length) + 6).sp
                                         ),
-                                        audioPath = state.resolvedMeaningAudio,
+                                        audioPath = null,
                                         isPlaying = isPlayingMeaning,
                                         isLooping = false,
-                                        onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
+                                        onToggleAudio = null,
                                         centered = true,
                                         maxLines = 3,
                                         headingSemantics = true,
-                                        interactionEnabled = false
+                                        interactionEnabled = false,
+                                        interaction = StudyTextInteraction.PASSIVE
                                     )
 
                                     Spacer(modifier = Modifier.height(10.dp))
@@ -1518,9 +1520,7 @@ private fun IntroductionLearningStage(
                                     englishExample = if (state.compactRatingExit) null else state.example,
                                     vietnameseExample = if (state.compactRatingExit) null else state.translation,
                                     answerAudioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                    vietnameseAudioPath = state.resolvedMeaningAudio,
                                     englishExampleAudioPath = state.resolvedExampleEnglishAudio,
-                                    vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio,
                                     isPlayingAnswer = isPlayingExpected,
                                     isPlayingVietnamese = isPlayingMeaning,
                                     isPlayingEnglishExample = isPlayingExampleEng,
@@ -1528,12 +1528,8 @@ private fun IntroductionLearningStage(
                                     onAnswerAudio = {
                                         onGenericStageTap()
                                     },
-                                    onVietnameseAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
                                     onEnglishExampleAudio = {
                                         restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
-                                    },
-                                    onVietnameseExampleAudio = {
-                                        playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)
                                     },
                                     modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.imageToAnswer),
                                     answerHero = true,
@@ -1812,17 +1808,13 @@ private fun StudyRevealAndFeedbackContent(
                 englishExample = answerExample,
                 vietnameseExample = answerExampleTranslation,
                 answerAudioPath = state.resolvedExpectedAnswerAudio,
-                vietnameseAudioPath = state.resolvedMeaningAudio,
                 englishExampleAudioPath = state.resolvedExampleEnglishAudio,
-                vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio,
                 isPlayingAnswer = activeRole == AudioRole.EXPECTED_ANSWER,
                 isPlayingVietnamese = activeRole == AudioRole.MEANING,
                 isPlayingEnglishExample = activeRole == AudioRole.EXAMPLE_ENGLISH,
                 isPlayingVietnameseExample = activeRole == AudioRole.EXAMPLE_VIETNAMESE,
                 onAnswerAudio = { playAudio(AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true) },
-                onVietnameseAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
                 onEnglishExampleAudio = { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) },
-                onVietnameseExampleAudio = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) },
                 answerHero = state is AndroidStudyState.Typing,
                 allowStandaloneVietnameseExample = forcedTypingReveal
             )

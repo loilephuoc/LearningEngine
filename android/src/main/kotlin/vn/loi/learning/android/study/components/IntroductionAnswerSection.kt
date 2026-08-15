@@ -49,6 +49,11 @@ import vn.loi.learning.android.ui.StudyExampleColors
 import vn.loi.learning.android.ui.StudySwipeFeedbackColors
 import vn.loi.learning.android.ui.isReducedMotionEnabled
 
+internal enum class StudyTextInteraction {
+    AUDIO,
+    PASSIVE
+}
+
 @Composable
 internal fun StudyAnswerSection(
     englishAnswer: String,
@@ -58,17 +63,13 @@ internal fun StudyAnswerSection(
     englishExample: String?,
     vietnameseExample: String?,
     answerAudioPath: String?,
-    vietnameseAudioPath: String?,
     englishExampleAudioPath: String?,
-    vietnameseExampleAudioPath: String?,
     isPlayingAnswer: Boolean,
     isPlayingVietnamese: Boolean,
     isPlayingEnglishExample: Boolean,
     isPlayingVietnameseExample: Boolean,
     onAnswerAudio: () -> Unit,
-    onVietnameseAudio: () -> Unit,
     onEnglishExampleAudio: () -> Unit,
-    onVietnameseExampleAudio: () -> Unit,
     modifier: Modifier = Modifier,
     answerHero: Boolean = false,
     allowStandaloneVietnameseExample: Boolean = false,
@@ -120,16 +121,15 @@ internal fun StudyAnswerSection(
                 StudyAudioTextTarget(
                     it,
                     LearningContentTypography.meaning.copy(fontWeight = FontWeight.SemiBold),
-                    vietnameseAudioPath,
+                    null,
                     isPlayingVietnamese,
                     false,
-                    onVietnameseAudio,
+                    null,
                     centered = true,
                     maxLines = 3,
                     contentColor = MaterialTheme.colorScheme.secondary,
-                    accessibilityLabel = "Vietnamese meaning",
-                    boundedAudioTarget = true,
-                    interactionEnabled = interactionEnabled
+                    headingSemantics = false,
+                    interaction = StudyTextInteraction.PASSIVE
                 )
             }
         }
@@ -163,12 +163,12 @@ internal fun StudyAnswerSection(
                         StudyExampleColors.vietnamese.background,
                         StudyExampleColors.vietnamese.border,
                         StudyExampleColors.vietnamese.content,
-                        vietnameseExampleAudioPath,
+                        null,
                         isPlayingVietnameseExample,
                         false,
-                        onVietnameseExampleAudio,
-                        "Vietnamese example",
-                        interactionEnabled
+                        null,
+                        null,
+                        interactionEnabled = false
                     )
                 }
             }
@@ -186,8 +186,8 @@ private fun StudyExampleSurface(
     audioPath: String?,
     isPlaying: Boolean,
     isLooping: Boolean,
-    onAudio: () -> Unit,
-    accessibilityLabel: String,
+    onAudio: (() -> Unit)?,
+    accessibilityLabel: String?,
     interactionEnabled: Boolean
 ) {
     Surface(
@@ -200,7 +200,8 @@ private fun StudyExampleSurface(
             text, style, audioPath, isPlaying, isLooping, onAudio, centered = false,
             contentColor = content, accessibilityLabel = accessibilityLabel,
             boundedAudioTarget = !isLooping,
-            interactionEnabled = interactionEnabled
+            interactionEnabled = interactionEnabled,
+            interaction = if (onAudio == null) StudyTextInteraction.PASSIVE else StudyTextInteraction.AUDIO
         )
     }
 }
@@ -212,7 +213,7 @@ internal fun StudyAudioTextTarget(
     audioPath: String?,
     isPlaying: Boolean,
     isLooping: Boolean,
-    onToggleAudio: () -> Unit,
+    onToggleAudio: (() -> Unit)?,
     centered: Boolean,
     maxLines: Int = Int.MAX_VALUE,
     strongEmphasis: Boolean = false,
@@ -221,7 +222,8 @@ internal fun StudyAudioTextTarget(
     accessibilityLabel: String? = null,
     boundedAudioTarget: Boolean = false,
     swipeSuccessGlowActive: Boolean = false,
-    interactionEnabled: Boolean = true
+    interactionEnabled: Boolean = true,
+    interaction: StudyTextInteraction = StudyTextInteraction.AUDIO
 ) {
     val reducedMotion = isReducedMotionEnabled()
     val swipeGlowAlpha = if (swipeSuccessGlowActive && !reducedMotion) {
@@ -292,7 +294,7 @@ internal fun StudyAudioTextTarget(
         }
     }
     Box(Modifier.fillMaxWidth(), contentAlignment = if (centered) Alignment.Center else Alignment.CenterStart) {
-        if (!audioPath.isNullOrBlank()) {
+        if (interaction == StudyTextInteraction.AUDIO && !audioPath.isNullOrBlank() && onToggleAudio != null) {
             Surface(
                 onClick = onToggleAudio,
                 enabled = interactionEnabled,

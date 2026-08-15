@@ -249,6 +249,8 @@ class AndroidFocusFirstIntroductionTest {
 
         assertTrue(front.contains("StudyAudioTextTarget("))
         assertTrue(front.contains("interactionEnabled = false"))
+        assertTrue(front.contains("interaction = StudyTextInteraction.PASSIVE"))
+        assertTrue(front.contains("onToggleAudio = null"))
         assertTrue(introduction.contains("onClickLabel = if (!state.revealed) \"Reveal answer\" else null"))
     }
 
@@ -402,8 +404,8 @@ class AndroidFocusFirstIntroductionTest {
         assertFalse(gestures.contains("onTap()"))
         assertTrue(introduction.contains("onGenericStageTap()")) // image and English answer use the canonical toggle
         assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH"))
-        assertTrue(introduction.contains("playAudio(AudioRole.MEANING"))
-        assertTrue(introduction.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE"))
+        assertFalse(introduction.contains("playAudio(AudioRole.MEANING"))
+        assertFalse(introduction.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE"))
         assertFalse(introduction.contains("feedbackOrigin == IntroductionRatingFeedbackOrigin.MANUAL_BUTTON"))
         assertTrue(introduction.contains("ReviewRating.GOOD -> StudyFeedbackVisualState.RATING_GOOD"))
         assertTrue(introduction.contains("targetValue = if (feedbackRating != null && !reducedMotion) 1.02f else 1f"))

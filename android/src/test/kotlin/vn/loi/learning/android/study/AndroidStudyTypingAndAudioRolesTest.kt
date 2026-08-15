@@ -152,7 +152,7 @@ class AndroidStudyTypingAndAudioRolesTest {
     }
 
     @Test
-    fun `study audio micro-interactions use full row targets and correct loop contracts`() {
+    fun `study audio micro-interactions keep English targets while Vietnamese text stays passive`() {
         val componentsSource = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/ui/LearningEngineComponents.kt"))
         val screenSource = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt"))
 
@@ -166,10 +166,11 @@ class AndroidStudyTypingAndAudioRolesTest {
         // 2. StudyScreen delegates shared answer audio rows instead of duplicating them inline
         assertTrue(screenSource.contains("StudyAnswerSection("))
 
-        // 3. Loop configuration: English audio roles loop, Vietnamese audio roles single play
+        // 3. English text audio remains interactive. Meaning audio remains available for autoplay,
+        // while Vietnamese meaning/example text no longer dispatches those roles on tap.
         assertTrue(screenSource.contains("AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true"))
         assertTrue(screenSource.contains("AudioRole.MEANING, state.resolvedMeaningAudio, false"))
         assertTrue(screenSource.contains("AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true"))
-        assertTrue(screenSource.contains("AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false"))
+        assertFalse(screenSource.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE"))
     }
 }

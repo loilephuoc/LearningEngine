@@ -171,7 +171,7 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(reveal.contains("forcedTypingReveal -> state.example"))
         assertTrue(reveal.contains("forcedTypingReveal -> state.translation"))
         assertTrue(reveal.contains("englishExampleAudioPath = state.resolvedExampleEnglishAudio"))
-        assertTrue(reveal.contains("vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio"))
+        assertFalse(reveal.contains("vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio"))
         assertTrue(reveal.contains("allowStandaloneVietnameseExample = forcedTypingReveal"))
         assertTrue(reveal.contains("normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation)"))
         assertTrue(compactSuccess.contains("englishExample = null"))

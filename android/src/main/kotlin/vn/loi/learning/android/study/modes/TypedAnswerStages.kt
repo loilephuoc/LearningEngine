@@ -117,17 +117,13 @@ internal fun TypingStudyStage(
                 englishExample = null,
                 vietnameseExample = null,
                 answerAudioPath = null,
-                vietnameseAudioPath = null,
                 englishExampleAudioPath = null,
-                vietnameseExampleAudioPath = null,
                 isPlayingAnswer = false,
                 isPlayingVietnamese = false,
                 isPlayingEnglishExample = false,
                 isPlayingVietnameseExample = false,
                 onAnswerAudio = {},
-                onVietnameseAudio = {},
                 onEnglishExampleAudio = {},
-                onVietnameseExampleAudio = {},
                 answerHero = true
             )
             typingRatingTransitionPresentation(state)?.let { presentation ->

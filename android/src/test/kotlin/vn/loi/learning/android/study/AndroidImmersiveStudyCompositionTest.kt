@@ -198,11 +198,11 @@ class AndroidImmersiveStudyCompositionTest {
     }
 
     @Test
-    fun `Introduction examples are separate semantic language audio surfaces`() {
+    fun `Introduction examples keep language styling while Vietnamese presentation is passive`() {
         assertFalse(answerSection.contains("languageLabel = \"EN\""))
         assertTrue(answerSection.contains("\"English example\""))
         assertFalse(answerSection.contains("languageLabel = \"VI\""))
-        assertTrue(answerSection.contains("\"Vietnamese example\""))
+        assertFalse(answerSection.contains("\"Vietnamese example\""))
         assertTrue(answerSection.contains("StudyExampleColors.english"))
         assertTrue(answerSection.contains("StudyExampleColors.vietnamese"))
     }
@@ -243,7 +243,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("resumeLoopAfterTemporary"))
         assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)"))
         assertTrue(answerSection.contains("onEnglishExampleAudio"))
-        assertTrue(answerSection.contains("onVietnameseExampleAudio"))
+        assertFalse(answerSection.contains("onVietnameseExampleAudio"))
         assertTrue(screen.contains("childConsumed = childConsumed || change.isConsumed"))
     }
 
@@ -256,9 +256,9 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(introduction.contains("onImageExpandedChange(!imageExpanded)"))
         assertTrue(introduction.contains("onGenericStageTap()"))
         assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)"))
-        assertTrue(introduction.contains("playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)"))
-        assertTrue(introduction.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)"))
-        assertTrue(answerSection.contains("boundedAudioTarget = true"))
+        assertFalse(introduction.contains("playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)"))
+        assertFalse(introduction.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)"))
+        assertTrue(answerSection.contains("interaction = StudyTextInteraction.PASSIVE"))
         assertTrue(answerSection.contains("boundedAudioTarget = !isLooping"))
     }
 
