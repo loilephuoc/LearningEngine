@@ -89,6 +89,27 @@ class AndroidContentOperationsTest {
         }
     }
 
+    @Test fun `Android recovery round trip prevalidates overlapping media aliases portably`() = runTest {
+        fixture().use { fixture ->
+            val media = fixture.directories.mediaDirectory.resolve("package/large.bin")
+            Files.createDirectories(media.parent)
+            val expected = ByteArray(64 * 1024 * 2 + 11) { index -> (index % 239).toByte() }
+            Files.write(media, expected)
+            val backup = ByteArrayOutputStream()
+            val operations = fixture.operations(StandardTestDispatcher(testScheduler))
+            assertIs<AndroidContentOperationState.Succeeded>(
+                operations.backup(operations.newOperation(AndroidOperationKind.BACKUP)) { backup }
+            )
+            Files.write(media, byteArrayOf(9))
+
+            val restore = fixture.operations(StandardTestDispatcher(testScheduler))
+            assertIs<AndroidContentOperationState.Succeeded>(
+                restore.restore(restore.newOperation(AndroidOperationKind.RESTORE)) { ByteArrayInputStream(backup.toByteArray()) }
+            )
+            assertContentEquals(expected, Files.readAllBytes(media))
+        }
+    }
+
     private fun fixture(): Fixture {
         val root = createTempDirectory("android-content-test")
         val directories = AndroidPlatformDirectories(root.resolve("data"), root.resolve("data/media"), root.resolve("imports")).also { it.create() }
