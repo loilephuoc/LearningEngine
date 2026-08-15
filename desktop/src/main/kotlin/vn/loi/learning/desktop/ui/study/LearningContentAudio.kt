@@ -144,7 +144,8 @@ class JavaSoundLearningContentAudioPlayer internal constructor(
                     val nextOutput = outputFactory.open(stream.format)
                     synchronized(lock) {
                         if (generation.get() != token) {
-                            nextOutput.close()
+                            nextOutput.runCatching { stop() }
+                            nextOutput.runCatching { close() }
                             return@use
                         }
                         output = nextOutput
