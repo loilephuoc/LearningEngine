@@ -107,6 +107,28 @@ class ContentStudioHeaderBackNavigationTest {
         assertEquals(1, dismissals)
     }
 
+    @Test
+    fun `Batch POS dialog states target and selected count and routes Apply`() {
+        var applies = 0
+        runComposeUiTest {
+            setContent {
+                ContentStudioScreen(
+                    uiState = emptyStudioState().copy(
+                        selectedContentIds = setOf("a", "b", "c"),
+                        pendingBatchPartOfSpeech = "Adjective"
+                    ),
+                    onClose = {}, onSelectRow = {}, onQueryChanged = {}, onClearQuery = {},
+                    onLessonFilterChanged = {}, onMediaFilterChanged = {}, onSortChanged = {},
+                    onResetFilters = {}, onConfirmBatchPartOfSpeech = { applies++ },
+                    thumbnailLoader = LessonThumbnailLoader(NoOpMediaStorage)
+                )
+            }
+            onNodeWithText("Set POS to Adjective for 3 selected items?").assertIsDisplayed()
+            onNodeWithText("Apply").performClick()
+        }
+        assertEquals(1, applies)
+    }
+
     private fun emptyStudioState(showDeleteConfirm: Boolean = false) =
         PackageContentBrowserUiState(
             installedPackageId = InstalledPackageId("installed-package"),

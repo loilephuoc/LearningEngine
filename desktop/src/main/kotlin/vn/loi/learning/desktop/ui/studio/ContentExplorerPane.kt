@@ -5,11 +5,15 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
@@ -33,7 +37,18 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.input.pointer.isCtrlPressed as isPointerCtrlPressed
+import androidx.compose.ui.input.pointer.isShiftPressed as isPointerShiftPressed
+import androidx.compose.ui.input.pointer.PointerButton
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -50,7 +65,7 @@ import vn.loi.learning.desktop.ui.browser.ContentProblemFilter
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun ContentExplorerPane(
     uiState: PackageContentBrowserUiState,
@@ -58,6 +73,13 @@ fun ContentExplorerPane(
     onSelectRow: (String) -> Unit,
     onSubmitSearch: (String) -> Unit,
     onToggleHighlight: (String) -> Unit,
+    onToggleMultiSelection: (String) -> Unit = {},
+    onSelectMultiRange: (String) -> Unit = {},
+    onSelectAllVisible: () -> Unit = {},
+    onClearMultiSelection: () -> Unit = {},
+    onHighlightSelected: () -> Unit = {},
+    onRemoveHighlightSelected: () -> Unit = {},
+    onCheckSelectedMedia: () -> Unit = {},
     onQueryChanged: (String) -> Unit,
     onClearQuery: () -> Unit,
     onLessonFilterChanged: (String) -> Unit,
@@ -81,6 +103,7 @@ fun ContentExplorerPane(
     val items = uiState.filteredItems
     val listState = rememberLazyListState()
     val listScrollScope = rememberCoroutineScope()
+    val listFocusRequester = remember { FocusRequester() }
     var handledCenterRequest by remember(uiState.installedPackageId) {
         mutableLongStateOf(uiState.centerSelectedRowRequest)
     }
@@ -171,7 +194,7 @@ fun ContentExplorerPane(
             } else searchKeyModifier
 
             CompactExplorerSearchField(
-                query = uiState.appliedQuery,
+                query = uiState.query,
                 onQueryChanged = onQueryChanged,
                 onClearQuery = onClearQuery,
                 onSubmit = onSubmitSearch,
@@ -187,10 +210,27 @@ fun ContentExplorerPane(
                 onNext = onNextProblem
             )
 
+            if (uiState.selectedContentIds.isNotEmpty()) {
+                MultiSelectionActions(
+                    selectedCount = uiState.selectedContentIds.size,
+                    visibleSelectedCount = items.count { it.contentId.value in uiState.selectedContentIds },
+                    onHighlightSelected = onHighlightSelected,
+                    onRemoveHighlightSelected = onRemoveHighlightSelected,
+                    onCheckSelectedMedia = onCheckSelectedMedia,
+                    onClearSelection = onClearMultiSelection
+                )
+            }
+
             HorizontalDivider(color = LEColors.borderSubtle)
 
             // Scrollable Items List
-            Box(modifier = Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .onPointerEvent(PointerEventType.Press) { event ->
+                        if (event.button == PointerButton.Primary) listFocusRequester.requestFocus()
+                    }
+            ) {
                 if (items.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -226,7 +266,20 @@ fun ContentExplorerPane(
                 } else {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .focusRequester(listFocusRequester)
+                            .focusable()
+                            .onKeyEvent { event ->
+                                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                                when {
+                                    event.isCtrlPressed && event.key == Key.A -> { onSelectAllVisible(); true }
+                                    event.key == Key.Escape && uiState.appliedQuery.isBlank() && uiState.selectedContentIds.isNotEmpty() -> {
+                                        onClearMultiSelection(); true
+                                    }
+                                    else -> false
+                                }
+                            },
                         // Compact padding so the explorer can show more rows at once.
                         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)
                     ) {
@@ -234,8 +287,20 @@ fun ContentExplorerPane(
                             ExplorerRowItem(
                                 item = item,
                                 isSelected = item.contentId.value == uiState.selectedContentId,
+                                isMultiSelected = item.contentId.value in uiState.selectedContentIds,
                                 isHighlighted = item.contentId.value in uiState.highlightedContentIds,
-                                onSelect = { onSelectRow(item.contentId.value) },
+                                problemCount = uiState.problemProjection.problemsFor(item.contentId.value).size,
+                                onSelect = {
+                                    listFocusRequester.requestFocus()
+                                    onSelectRow(item.contentId.value)
+                                },
+                                onModifiedSelect = { ctrl, shift ->
+                                    listFocusRequester.requestFocus()
+                                    when {
+                                        shift -> onSelectMultiRange(item.contentId.value)
+                                        ctrl -> onToggleMultiSelection(item.contentId.value)
+                                    }
+                                },
                                 onDoubleClick = { onDoubleClickRow?.invoke(item.contentId.value) },
                                 onToggleHighlight = { onToggleHighlight(item.contentId.value) },
                                 onPlayQuestionAudio = onPlayQuestionAudio,
@@ -282,6 +347,51 @@ fun ContentExplorerPane(
             }
 
 
+        }
+    }
+}
+
+@Composable
+private fun MultiSelectionActions(
+    selectedCount: Int,
+    visibleSelectedCount: Int,
+    onHighlightSelected: () -> Unit,
+    onRemoveHighlightSelected: () -> Unit,
+    onCheckSelectedMedia: () -> Unit,
+    onClearSelection: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LESpacing.sm, vertical = 3.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            if (visibleSelectedCount == selectedCount) "$selectedCount selected"
+            else "$selectedCount selected · $visibleSelectedCount visible",
+            style = LETypography.caption,
+            color = LEColors.primary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.semantics { contentDescription = "$selectedCount selected items" }
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            TextButton(
+                onClick = onHighlightSelected,
+                contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
+                modifier = Modifier.semantics { contentDescription = "Highlight $selectedCount selected items" }
+            ) { Text("Highlight Selected", style = LETypography.caption) }
+            TextButton(
+                onClick = onRemoveHighlightSelected,
+                contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
+                modifier = Modifier.semantics { contentDescription = "Remove highlight from $selectedCount selected items" }
+            ) { Text("Remove Highlight", style = LETypography.caption) }
+            TextButton(
+                onClick = onCheckSelectedMedia,
+                contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
+                modifier = Modifier.semantics { contentDescription = "Check media for $selectedCount selected items" }
+            ) { Text("Check Selected Media", style = LETypography.caption) }
+            TextButton(
+                onClick = onClearSelection,
+                contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)
+            ) { Text("Clear Selection", style = LETypography.caption) }
         }
     }
 }
@@ -374,8 +484,6 @@ private fun CompactExplorerSearchField(
     placeholderText: String,
     modifier: Modifier = Modifier
 ) {
-    var rawText by remember(query) { mutableStateOf(query) }
-
     Surface(
         shape = LERadius.sm,
         color = LEColors.primarySoft.copy(alpha = 0.42f),
@@ -388,12 +496,11 @@ private fun CompactExplorerSearchField(
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {
                     Key.Enter -> {
-                        onSubmit(rawText)
+                        onSubmit(query)
                         true
                     }
                     Key.Escape -> {
-                        if (rawText.isBlank()) return@onPreviewKeyEvent false
-                        rawText = ""
+                        if (query.isBlank()) return@onPreviewKeyEvent false
                         onClearQuery()
                         true
                     }
@@ -416,9 +523,8 @@ private fun CompactExplorerSearchField(
             Spacer(modifier = Modifier.width(8.dp))
 
             BasicTextField(
-                value = rawText,
+                value = query,
                 onValueChange = { newText ->
-                    rawText = newText
                     onQueryChanged(newText)
                 },
                 singleLine = true,
@@ -428,7 +534,7 @@ private fun CompactExplorerSearchField(
                     .testTag("explorer-search-input"),
                 decorationBox = { innerTextField ->
                     Box(contentAlignment = Alignment.CenterStart) {
-                        if (rawText.isEmpty()) {
+                        if (query.isEmpty()) {
                             Text(
                                 text = placeholderText,
                                 style = LETypography.fieldValue,
@@ -442,7 +548,7 @@ private fun CompactExplorerSearchField(
                 }
             )
 
-            if (rawText.isNotBlank()) {
+            if (query.isNotBlank()) {
                 Text(
                     text = "×",
                     style = LETypography.fieldValue,
@@ -451,7 +557,6 @@ private fun CompactExplorerSearchField(
                         .testTag("explorer-clear-search")
                         .clip(LERadius.xs)
                         .clickable {
-                            rawText = ""
                             onClearQuery()
                         }
                         .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -489,13 +594,16 @@ private fun ExplorerPageButton(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
 private fun ExplorerRowItem(
     item: PackageContentBrowserItem,
     isSelected: Boolean,
+    isMultiSelected: Boolean,
     isHighlighted: Boolean,
+    problemCount: Int,
     onSelect: () -> Unit,
+    onModifiedSelect: (ctrl: Boolean, shift: Boolean) -> Unit,
     onDoubleClick: (() -> Unit)?,
     onToggleHighlight: () -> Unit,
     onPlayQuestionAudio: ((String, String) -> Unit)?,
@@ -505,6 +613,7 @@ private fun ExplorerRowItem(
     onCopyAnswer: ((String) -> Unit)? = null
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
+    var lastModifiedClickTime by remember { mutableStateOf(0L) }
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
 
@@ -512,6 +621,7 @@ private fun ExplorerRowItem(
     val bgColor by animateColorAsState(
         targetValue = when {
             isSelected -> LEColors.primarySoft
+            isMultiSelected -> LEColors.primarySoft.copy(alpha = 0.55f)
             isHighlighted -> LEColors.warningContainer
             isHovered -> LEColors.surfaceElevated
             else -> LEColors.surface
@@ -557,10 +667,15 @@ private fun ExplorerRowItem(
                     .padding(vertical = 0.dp)
                     .clip(LERadius.sm)
                     .background(bgColor)
+                    .testTag("explorer-row-${item.contentId.value}")
                     .semantics {
                         contentDescription = "Row ${item.index}: ${item.questionText}"
-                        selected = isSelected
-                        if (isHighlighted) stateDescription = "Highlighted"
+                        selected = isMultiSelected
+                        stateDescription = buildList {
+                            if (isMultiSelected) add("Selected")
+                            if (isHighlighted) add("Highlighted")
+                            if (problemCount > 0) add("$problemCount problems")
+                        }.joinToString(", ")
                     }
                     // PLE-020: left accent border on selection
                     .drawBehind {
@@ -579,16 +694,42 @@ private fun ExplorerRowItem(
                                 center = Offset(6.dp.toPx(), size.height / 2f)
                             )
                         }
+                        if (isMultiSelected) {
+                            drawLine(
+                                color = LEColors.primary,
+                                start = Offset(size.width - 2.dp.toPx(), 2.dp.toPx()),
+                                end = Offset(size.width - 2.dp.toPx(), size.height - 2.dp.toPx()),
+                                strokeWidth = 2.dp.toPx()
+                            )
+                        }
                     }
                     .hoverable(interactionSource)
-                    .clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (onDoubleClick != null && currentTime - lastClickTime < 400L) {
-                            onDoubleClick()
-                        } else {
-                            onSelect()
+                    .pointerInput(item.contentId.value, onSelect, onModifiedSelect, onDoubleClick) {
+                        awaitEachGesture {
+                            val downEvent = awaitPointerEvent(PointerEventPass.Main)
+                            if (downEvent.button != PointerButton.Primary) return@awaitEachGesture
+                            val down = downEvent.changes.firstOrNull { it.changedToDownIgnoreConsumed() }
+                                ?: return@awaitEachGesture
+                            val ctrl = downEvent.keyboardModifiers.isPointerCtrlPressed
+                            val shift = downEvent.keyboardModifiers.isPointerShiftPressed
+                            down.consume()
+                            val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+                            up.consume()
+                            val now = System.currentTimeMillis()
+                            if (ctrl || shift) {
+                                if (now - lastModifiedClickTime >= 400L) {
+                                    onModifiedSelect(ctrl, shift)
+                                }
+                                lastModifiedClickTime = now
+                            } else {
+                                if (onDoubleClick != null && now - lastClickTime < 400L) {
+                                    onDoubleClick()
+                                } else {
+                                    onSelect()
+                                }
+                                lastClickTime = now
+                            }
                         }
-                        lastClickTime = currentTime
                     }
             ) {
                 Row(
@@ -597,6 +738,19 @@ private fun ExplorerRowItem(
                         .padding(start = LESpacing.sm + 2.dp, end = LESpacing.sm, top = 2.dp, bottom = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clip(LERadius.xs)
+                            .border(1.dp, if (isMultiSelected) LEColors.primary else LEColors.borderSubtle, LERadius.xs)
+                            .background(if (isMultiSelected) LEColors.primary else LEColors.surface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isMultiSelected) {
+                            Text("✓", style = LETypography.caption, color = LEColors.surface)
+                        }
+                    }
+                    Spacer(Modifier.width(4.dp))
                     // Row Index #
                     Text(
                         text = item.index.toString(),

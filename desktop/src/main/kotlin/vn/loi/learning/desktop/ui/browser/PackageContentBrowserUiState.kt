@@ -21,6 +21,14 @@ data class PackageContentBrowserUiState(
     val selectedContentId: String? = null,
     /** Runtime-only Content Studio markers. Never persisted or copied into domain content. */
     val highlightedContentIds: Set<String> = emptySet(),
+    /** Runtime-only work set, independent from the primary editor row and Highlight. */
+    val selectedContentIds: Set<String> = emptySet(),
+    /** Content identity used to resolve Shift ranges against the current visible ordering. */
+    val selectionAnchorContentId: String? = null,
+    val selectedMediaCheck: SelectedMediaCheckSummary? = null,
+    val pendingBatchPartOfSpeech: String? = null,
+    val isBatchPartOfSpeechSubmitting: Boolean = false,
+    val batchPartOfSpeechResult: String? = null,
     /** Changes only when clearing search should center the current editor row. */
     val centerSelectedRowRequest: Long = 0L,
     val activePlayingAudioRef: String? = null,

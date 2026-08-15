@@ -44,6 +44,21 @@ data class ContentProblemProjection(
     }
 }
 
+data class SelectedMediaCheckSummary(
+    val selectedItemCount: Int,
+    val counts: Map<ContentProblem, Int>
+) {
+    fun count(problem: ContentProblem): Int = counts[problem] ?: 0
+}
+
+fun ContentProblemProjection.summarize(contentIds: Set<String>): SelectedMediaCheckSummary =
+    SelectedMediaCheckSummary(
+        selectedItemCount = contentIds.size,
+        counts = ContentProblem.entries.associateWith { problem ->
+            contentIds.count { problem in problemsFor(it) }
+        }
+    )
+
 object ContentProblemDetector {
     fun detect(item: PackageContentBrowserItem, media: MediaReferenceAvailability): Set<ContentProblem> =
         buildSet {

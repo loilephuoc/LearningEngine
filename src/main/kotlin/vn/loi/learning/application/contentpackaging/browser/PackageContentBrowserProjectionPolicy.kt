@@ -21,7 +21,7 @@ object PackageContentBrowserProjectionPolicy {
         sortOption: BrowserSortOption
     ): List<PackageContentBrowserItem> {
         val trimmedQuery = query.trim()
-        val normalizedQuery = if (trimmedQuery.isNotEmpty()) normalizeText(trimmedQuery) else ""
+        val normalizedQuery = if (trimmedQuery.isNotEmpty()) normalizeSearchText(trimmedQuery) else ""
 
         val filteredSequence = items.asSequence().filter { item ->
             // 1. Search matching
@@ -97,11 +97,30 @@ object PackageContentBrowserProjectionPolicy {
             .append(tags.joinToString(" "))
             .toString()
 
-        return normalizeText(raw)
+        return normalizeSearchText(raw)
     }
 
-    private fun normalizeText(text: String): String {
+    fun normalizeSearchText(text: String): String {
         val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC)
         return normalized.lowercase(Locale.ROOT)
+    }
+}
+
+object PackageContentBrowserSearchEnterPolicy {
+    fun resolveTarget(
+        filteredItems: List<PackageContentBrowserItem>,
+        query: String
+    ): PackageContentBrowserItem? {
+        val normalizedQuery = PackageContentBrowserProjectionPolicy.normalizeSearchText(query.trim())
+        if (normalizedQuery.isEmpty()) return null
+        val exactQuestions = filteredItems.filter { item ->
+            PackageContentBrowserProjectionPolicy.normalizeSearchText(item.questionText.trim()) == normalizedQuery
+        }
+        return when {
+            exactQuestions.size == 1 -> exactQuestions.single()
+            exactQuestions.size > 1 -> null
+            filteredItems.size == 1 -> filteredItems.single()
+            else -> null
+        }
     }
 }

@@ -156,6 +156,23 @@ class PackageContentBrowserFacade(
         )
     }
 
+    fun updatePartOfSpeechBatch(
+        contentIds: Set<String>,
+        partOfSpeech: String,
+        installedPackageId: InstalledPackageId,
+        packageName: String
+    ): Pair<vn.loi.learning.application.contentpackaging.browser.BatchPartOfSpeechResult, PackageContentBrowserUiState> {
+        val service = editService
+            ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
+        val result = service.updatePartOfSpeechBatch(contentIds.map(::ContentId), partOfSpeech)
+        val reloaded = try {
+            loadForPackage(installedPackageId, packageName)
+        } catch (failure: Exception) {
+            throw CanonicalMutationCommittedException(contentIds.first(), "Batch POS", failure)
+        }
+        return result to reloaded
+    }
+
     /**
      * Xóa một Content và tất cả LearningItem liên quan.
      */

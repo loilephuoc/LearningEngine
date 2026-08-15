@@ -452,6 +452,11 @@ class PackageContentBrowserEditStateTest {
         vm.updatePackageBrowserProblemFilter(ContentProblemFilter.ALL_PROBLEMS)
         vm.navigatePackageBrowserProblem(1)
         vm.updatePackageBrowserProblemFilter(ContentProblemFilter.NONE)
+        vm.togglePackageBrowserMultiSelection("cnt-1")
+        vm.selectAllVisiblePackageBrowserItems()
+        vm.highlightSelectedPackageBrowserItems()
+        vm.removeHighlightFromSelectedPackageBrowserItems()
+        vm.checkSelectedPackageBrowserMedia()
 
         val after = listOf(
             context.contentRepository!!.findAll(),
@@ -465,6 +470,36 @@ class PackageContentBrowserEditStateTest {
             context.studyQueueRepository!!.findAll()
         )
         assertEquals(before, after)
+    }
+
+    @Test
+    fun `batch POS preserves learning history and every Content and LearningItem identity`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(context, contentCount = 3)
+        val contentIdsBefore = context.contentRepository!!.findAll().map { it.id }
+        val learningItemsBefore = context.learningItemRepository!!.findAll()
+        val learningBefore = listOf(
+            context.memoryStateRepository!!.findAll(),
+            context.reviewEventRepository!!.findAll(),
+            context.learningTrajectoryRepository!!.findAll(),
+            context.studySessionRepository!!.findAll(),
+            context.studyQueueRepository!!.findAll()
+        )
+
+        vm.selectAllVisiblePackageBrowserItems()
+        vm.updateDraftPartOfSpeech("Adjective")
+        vm.confirmBatchPartOfSpeech()
+
+        assertEquals(contentIdsBefore, context.contentRepository!!.findAll().map { it.id })
+        assertEquals(learningItemsBefore, context.learningItemRepository!!.findAll())
+        assertEquals(learningBefore, listOf(
+            context.memoryStateRepository!!.findAll(),
+            context.reviewEventRepository!!.findAll(),
+            context.learningTrajectoryRepository!!.findAll(),
+            context.studySessionRepository!!.findAll(),
+            context.studyQueueRepository!!.findAll()
+        ))
+        assertEquals(setOf("Adjective"), vm.packageBrowserUiState!!.allItems.map { it.partOfSpeech }.toSet())
     }
 
     @Test
@@ -956,6 +991,83 @@ class PackageContentBrowserEditStateTest {
         val state = vm.packageBrowserUiState!!
         assertEquals("cnt-1", state.selectedContentId)
         assertTrue(state.showUnsavedChangesDialog)
+    }
+
+    @Test
+    fun `search Enter dirty Save Discard and Cancel use canonical pending navigation`() {
+        run {
+            val (vm, _) = createViewModelWithPackageInContext(LearningApplicationFactory.createInMemory(), contentCount = 3)
+            vm.attemptSelectRowAutoEdit("cnt-1")
+            vm.updateDraftQuestion("Dirty saved")
+            vm.selectPackageBrowserSearchResult("Question 2")
+            assertTrue(vm.packageBrowserUiState!!.showUnsavedChangesDialog)
+            assertEquals(
+                vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DoubleClickRow("cnt-2"),
+                vm.packageBrowserUiState!!.pendingAction
+            )
+            vm.confirmSaveAndProceed()
+            assertEquals("cnt-2", vm.packageBrowserUiState!!.selectedContentId)
+        }
+        run {
+            val (vm, _) = createViewModelWithPackage(contentCount = 3)
+            vm.attemptSelectRowAutoEdit("cnt-1")
+            vm.updateDraftQuestion("Dirty discarded")
+            vm.selectPackageBrowserSearchResult("Question 2")
+            vm.confirmDiscardAndProceed()
+            assertEquals("cnt-2", vm.packageBrowserUiState!!.selectedContentId)
+        }
+        run {
+            val (vm, _) = createViewModelWithPackage(contentCount = 3)
+            vm.attemptSelectRowAutoEdit("cnt-1")
+            vm.updateDraftQuestion("Dirty kept")
+            vm.selectPackageBrowserSearchResult("Question 2")
+            vm.cancelUnsavedChangesDialog()
+            assertEquals("cnt-1", vm.packageBrowserUiState!!.selectedContentId)
+            assertEquals("Dirty kept", vm.packageBrowserUiState!!.draftEdits!!.questionText)
+        }
+    }
+
+    @Test
+    fun `ambiguous Search Enter while dirty is a no-op and unique target preserves multi-selection`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 3)
+        vm.attemptSelectRowAutoEdit("cnt-1")
+        vm.togglePackageBrowserMultiSelection("cnt-1")
+        vm.togglePackageBrowserMultiSelection("cnt-3")
+        vm.updateDraftQuestion("Dirty")
+        vm.selectPackageBrowserSearchResult("Question")
+        assertFalse(vm.packageBrowserUiState!!.showUnsavedChangesDialog)
+        assertEquals("cnt-1", vm.packageBrowserUiState!!.selectedContentId)
+
+        vm.discardEdits()
+        vm.selectPackageBrowserSearchResult("Question 2")
+        assertEquals("cnt-2", vm.packageBrowserUiState!!.selectedContentId)
+        assertEquals(setOf("cnt-1", "cnt-3"), vm.packageBrowserUiState!!.selectedContentIds)
+    }
+
+    @Test
+    fun `multiple identical exact questions keep unrelated editor and repositories unchanged`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val (vm, installedPackageId) = createViewModelWithPackageInContext(context, contentCount = 4)
+        listOf("cnt-1", "cnt-2", "cnt-3").forEachIndexed { index, id ->
+            val contentId = ContentId(id)
+            val original = context.contentRepository!!.findById(contentId)!!
+            context.contentRepository!!.save(
+                original.copy(text = original.text.copy(primaryText = "to make", translatedText = "Answer ${index + 1}"))
+            )
+        }
+        vm.closePackageBrowser()
+        vm.browsePackageLessons(installedPackageId, "Persist Package")
+        vm.attemptSelectRowAutoEdit("cnt-4")
+        val repositoryBefore = context.contentRepository!!.findAll()
+
+        vm.selectPackageBrowserSearchResult("to make")
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals("cnt-4", state.selectedContentId)
+        assertEquals("cnt-4", state.editingContentId)
+        assertEquals("Question 4", state.draftEdits!!.questionText)
+        assertFalse(state.showUnsavedChangesDialog)
+        assertEquals(repositoryBefore, context.contentRepository!!.findAll())
     }
 
     @Test

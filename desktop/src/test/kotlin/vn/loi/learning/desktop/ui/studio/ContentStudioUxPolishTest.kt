@@ -11,6 +11,7 @@ import kotlin.test.assertTrue
 import vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserFacade
 import vn.loi.learning.desktop.ui.browser.ContentProblemFilter
+import vn.loi.learning.desktop.ui.browser.ContentProblem
 import vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction
 import vn.loi.learning.desktop.ui.browser.toDraftEdits
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryFacade
@@ -126,7 +127,8 @@ class ContentStudioUxPolishTest {
             contentRepository = appContext.contentRepository!!,
             contentPackageRepository = appContext.contentPackageRepository,
             installedPackageRepository = appContext.installedPackageRepository,
-            contentLibraryRepository = appContext.contentLibraryRepository
+            contentLibraryRepository = appContext.contentLibraryRepository,
+            transactionRunner = appContext.transactionRunner
         )
         val facade = ContentLibraryFacade(appContext)
         val lessonBrowserFacade = LessonBrowserFacade(appContext)
@@ -409,6 +411,155 @@ class ContentStudioUxPolishTest {
         val state = vm.packageBrowserUiState!!
         assertTrue(state.showUnsavedChangesDialog)
         assertIs<PackageBrowserPendingAction.DoubleClickRow>(state.pendingAction)
+    }
+
+    @Test
+    fun `multi-selection toggle is independent from primary editor and dirty state`() {
+        val vm = createViewModelWithPackage(3)
+        val originalPrimary = vm.packageBrowserUiState!!.selectedContentId
+
+        vm.togglePackageBrowserMultiSelection("cnt-2")
+        vm.togglePackageBrowserMultiSelection("cnt-3")
+
+        assertEquals(setOf("cnt-2", "cnt-3"), vm.packageBrowserUiState!!.selectedContentIds)
+        assertEquals(originalPrimary, vm.packageBrowserUiState!!.selectedContentId)
+        assertFalse(vm.packageBrowserUiState!!.isDirty)
+        vm.togglePackageBrowserMultiSelection("cnt-2")
+        assertEquals(setOf("cnt-3"), vm.packageBrowserUiState!!.selectedContentIds)
+    }
+
+    @Test
+    fun `shift range uses current visible order and hidden anchor falls back safely`() {
+        val vm = createViewModelWithPackage(5)
+        vm.togglePackageBrowserMultiSelection("cnt-2")
+        vm.selectPackageBrowserVisibleRange("cnt-4")
+        assertEquals(setOf("cnt-2", "cnt-3", "cnt-4"), vm.packageBrowserUiState!!.selectedContentIds)
+
+        vm.clearPackageBrowserMultiSelection()
+        vm.togglePackageBrowserMultiSelection("cnt-5")
+        vm.updatePackageBrowserQuery("Question 2")
+        vm.selectPackageBrowserVisibleRange("cnt-2")
+
+        assertEquals(setOf("cnt-5", "cnt-2"), vm.packageBrowserUiState!!.selectedContentIds)
+        assertEquals("cnt-2", vm.packageBrowserUiState!!.selectionAnchorContentId)
+    }
+
+    @Test
+    fun `select all adds only visible identities and selection survives projection changes`() {
+        val vm = createViewModelWithPackage(4)
+        vm.updatePackageBrowserQuery("Question 2")
+        vm.selectAllVisiblePackageBrowserItems()
+        assertEquals(setOf("cnt-2"), vm.packageBrowserUiState!!.selectedContentIds)
+
+        vm.clearPackageBrowserQuery()
+        vm.updatePackageBrowserProblemFilter(ContentProblemFilter.ALL_PROBLEMS)
+        assertEquals(setOf("cnt-2"), vm.packageBrowserUiState!!.selectedContentIds)
+        vm.updatePackageBrowserSort(vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.QUESTION_ASC)
+        assertEquals(setOf("cnt-2"), vm.packageBrowserUiState!!.selectedContentIds)
+    }
+
+    @Test
+    fun `batch highlight commands preserve selection and selected media check uses cached projection`() {
+        val vm = createViewModelWithPackage(3, withOptionalFields = true)
+        vm.togglePackageBrowserMultiSelection("cnt-1")
+        vm.togglePackageBrowserMultiSelection("cnt-3")
+
+        vm.highlightSelectedPackageBrowserItems()
+        assertTrue(vm.packageBrowserUiState!!.highlightedContentIds.containsAll(setOf("cnt-1", "cnt-3")))
+        assertEquals(setOf("cnt-1", "cnt-3"), vm.packageBrowserUiState!!.selectedContentIds)
+
+        vm.checkSelectedPackageBrowserMedia()
+        val report = assertNotNull(vm.packageBrowserUiState!!.selectedMediaCheck)
+        assertEquals(2, report.selectedItemCount)
+        assertEquals(2, report.count(ContentProblem.MISSING_IMAGE))
+
+        vm.removeHighlightFromSelectedPackageBrowserItems()
+        assertTrue(vm.packageBrowserUiState!!.highlightedContentIds.intersect(setOf("cnt-1", "cnt-3")).isEmpty())
+        assertEquals(setOf("cnt-1", "cnt-3"), vm.packageBrowserUiState!!.selectedContentIds)
+    }
+
+    @Test
+    fun `single delete sanitizes only deleted multi-selection identity`() {
+        val vm = createViewModelWithPackage(3)
+        vm.togglePackageBrowserMultiSelection("cnt-1")
+        vm.togglePackageBrowserMultiSelection("cnt-2")
+        vm.confirmDeleteContentLocal()
+
+        assertEquals(setOf("cnt-2"), vm.packageBrowserUiState!!.selectedContentIds)
+        assertEquals(2, vm.packageBrowserUiState!!.allItems.size)
+    }
+
+    @Test
+    fun `multi-selection survives save and create does not add the new identity`() {
+        val vm = createViewModelWithPackage(3)
+        vm.togglePackageBrowserMultiSelection("cnt-2")
+        vm.updateDraftQuestion("Saved Question")
+        vm.saveEditLocal()
+        assertEquals(setOf("cnt-2"), vm.packageBrowserUiState!!.selectedContentIds)
+
+        vm.startNewItem()
+        vm.updateDraftQuestion("Created Question")
+        vm.updateDraftAnswer("Created Answer")
+        vm.saveNewItem()
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals(setOf("cnt-2"), state.selectedContentIds)
+        assertFalse(state.selectedContentId in state.selectedContentIds)
+    }
+
+    @Test
+    fun `closing and reopening Content Studio starts with an empty runtime selection`() {
+        val vm = createViewModelWithPackage(2)
+        vm.togglePackageBrowserMultiSelection("cnt-1")
+        vm.closePackageBrowser()
+        assertNull(vm.packageBrowserUiState)
+    }
+
+    @Test
+    fun `batch POS confirms all selected including hidden identities and preserves selection`() {
+        val vm = createViewModelWithPackage(3)
+        listOf("cnt-1", "cnt-2", "cnt-3").forEach(vm::togglePackageBrowserMultiSelection)
+        vm.updatePackageBrowserQuery("Question 1")
+
+        vm.updateDraftPartOfSpeech("Adjective")
+        assertEquals("Adjective", vm.packageBrowserUiState!!.pendingBatchPartOfSpeech)
+        assertEquals("WORD", vm.packageBrowserUiState!!.draftEdits!!.partOfSpeech)
+        vm.confirmBatchPartOfSpeech()
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals(setOf("cnt-1", "cnt-2", "cnt-3"), state.selectedContentIds)
+        assertEquals(setOf("Adjective"), state.allItems.map { it.partOfSpeech }.toSet())
+        assertEquals("Question 1", state.appliedQuery)
+        assertEquals(1, state.filteredItems.size)
+    }
+
+    @Test
+    fun `batch POS cancel and unrelated dirty draft cause zero batch mutation`() {
+        val vm = createViewModelWithPackage(3)
+        vm.togglePackageBrowserMultiSelection("cnt-1")
+        vm.togglePackageBrowserMultiSelection("cnt-2")
+        val before = vm.packageBrowserUiState!!.allItems.map { it.partOfSpeech }
+
+        vm.updateDraftPartOfSpeech("Adjective")
+        vm.cancelBatchPartOfSpeech()
+        assertNull(vm.packageBrowserUiState!!.pendingBatchPartOfSpeech)
+        assertEquals(before, vm.packageBrowserUiState!!.allItems.map { it.partOfSpeech })
+
+        vm.updateDraftQuestion("Unsaved unrelated question")
+        vm.updateDraftPartOfSpeech("Noun")
+        assertNull(vm.packageBrowserUiState!!.pendingBatchPartOfSpeech)
+        assertTrue(vm.packageBrowserUiState!!.isDirty)
+        assertEquals(before, vm.packageBrowserUiState!!.allItems.map { it.partOfSpeech })
+    }
+
+    @Test
+    fun `single identity POS edit retains canonical draft and save behavior`() {
+        val vm = createViewModelWithPackage(2)
+        vm.updateDraftPartOfSpeech("Adjective")
+        assertNull(vm.packageBrowserUiState!!.pendingBatchPartOfSpeech)
+        assertEquals("Adjective", vm.packageBrowserUiState!!.draftEdits!!.partOfSpeech)
+        vm.saveEditLocal()
+        assertEquals("Adjective", vm.packageBrowserUiState!!.selectedItemAnywhere!!.partOfSpeech)
     }
 
 }

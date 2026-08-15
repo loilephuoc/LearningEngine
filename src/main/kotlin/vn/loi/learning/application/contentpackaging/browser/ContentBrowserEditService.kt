@@ -297,6 +297,49 @@ class ContentBrowserEditService(
         )
     }
 
+    /** Atomically updates only the canonical partOfSpeech custom field for the requested contents. */
+    fun updatePartOfSpeechBatch(
+        contentIds: Collection<ContentId>,
+        partOfSpeech: String
+    ): BatchPartOfSpeechResult {
+        val requestedIds = contentIds.distinct()
+        require(requestedIds.isNotEmpty()) { "At least one ContentId is required for Batch POS." }
+        val existing = contentRepository.findByIds(requestedIds)
+        val existingById = existing.associateBy(Content::id)
+        val sanitized = requestedIds.mapNotNull(existingById::get)
+        require(sanitized.isNotEmpty()) { "No selected Content exists for Batch POS." }
+        val target = partOfSpeech.trim()
+        val changed = sanitized.filter { content ->
+            content.customFields[ContentFieldId("partOfSpeech")]?.value.orEmpty() != target
+        }
+        val updated = changed.map { content ->
+            content.copy(customFields = updatePartOfSpeech(content.customFields, target))
+        }
+        if (updated.isNotEmpty()) {
+            val transaction = requireNotNull(transactionRunner) {
+                "Atomic transaction support is required for Batch POS."
+            }
+            try {
+                transaction.runInTransaction { contentRepository.saveAll(updated) }
+            } catch (failure: Throwable) {
+                // File-backed runners roll back transaction members. This compensation preserves
+                // all-or-nothing behavior for lightweight/non-transactional repository adapters.
+                try {
+                    contentRepository.saveAll(changed)
+                } catch (rollbackFailure: Throwable) {
+                    failure.addSuppressed(rollbackFailure)
+                }
+                throw failure
+            }
+        }
+        return BatchPartOfSpeechResult(
+            selectedCount = sanitized.size,
+            changedCount = changed.size,
+            unchangedCount = sanitized.size - changed.size,
+            contentIds = sanitized.mapTo(linkedSetOf(), Content::id)
+        )
+    }
+
     /**
      * Xóa một Content và tất cả LearningItem liên quan.
      */
@@ -447,4 +490,11 @@ data class DeletedContentSnapshot(
     val libraryIds: Set<ContentLibraryId>,
     val installedPackageId: InstalledPackageId?,
     val displayLabel: String
+)
+
+data class BatchPartOfSpeechResult(
+    val selectedCount: Int,
+    val changedCount: Int,
+    val unchangedCount: Int,
+    val contentIds: Set<ContentId>
 )

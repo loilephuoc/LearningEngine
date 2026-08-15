@@ -30,6 +30,16 @@ fun ContentStudioScreen(
     onSelectRow: (String) -> Unit,
     onSubmitSearch: (String) -> Unit = {},
     onToggleHighlight: (String) -> Unit = {},
+    onToggleMultiSelection: (String) -> Unit = {},
+    onSelectMultiRange: (String) -> Unit = {},
+    onSelectAllVisible: () -> Unit = {},
+    onClearMultiSelection: () -> Unit = {},
+    onHighlightSelected: () -> Unit = {},
+    onRemoveHighlightSelected: () -> Unit = {},
+    onCheckSelectedMedia: () -> Unit = {},
+    onDismissSelectedMediaCheck: () -> Unit = {},
+    onConfirmBatchPartOfSpeech: () -> Unit = {},
+    onCancelBatchPartOfSpeech: () -> Unit = {},
     onQueryChanged: (String) -> Unit,
     onClearQuery: () -> Unit,
     onLessonFilterChanged: (String) -> Unit,
@@ -128,13 +138,12 @@ fun ContentStudioScreen(
                             } else false
                         }
                         event.key == Key.Escape -> {
-                            if (uiState.isDirty || uiState.isCreatingNewItem) {
-                                onClose()
-                                true
-                            } else {
-                                onClose()
-                                true
+                            when {
+                                uiState.appliedQuery.isNotBlank() -> onClearQuery()
+                                uiState.selectedContentIds.isNotEmpty() -> onClearMultiSelection()
+                                else -> onClose()
                             }
+                            true
                         }
 
                         // --- PLE-020 new shortcuts ---
@@ -183,6 +192,13 @@ fun ContentStudioScreen(
                     onSelectRow = { id -> onSelectRow(id) },
                     onSubmitSearch = onSubmitSearch,
                     onToggleHighlight = onToggleHighlight,
+                    onToggleMultiSelection = onToggleMultiSelection,
+                    onSelectMultiRange = onSelectMultiRange,
+                    onSelectAllVisible = onSelectAllVisible,
+                    onClearMultiSelection = onClearMultiSelection,
+                    onHighlightSelected = onHighlightSelected,
+                    onRemoveHighlightSelected = onRemoveHighlightSelected,
+                    onCheckSelectedMedia = onCheckSelectedMedia,
                     onQueryChanged = onQueryChanged,
                     onClearQuery = onClearQuery,
                     onLessonFilterChanged = onLessonFilterChanged,
@@ -356,6 +372,45 @@ fun ContentStudioScreen(
                     LEDangerButton(text = "Discard", onClick = { onConfirmDiscardAndProceed?.invoke() })
                     LESecondaryButton(text = "Cancel", onClick = { onCancelUnsavedDialog?.invoke() })
                 }
+            }
+        )
+    }
+
+    uiState.selectedMediaCheck?.let { summary ->
+        AlertDialog(
+            onDismissRequest = onDismissSelectedMediaCheck,
+            title = { Text("Selected Media Check", style = LETypography.paneTitle) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                    Text("${summary.selectedItemCount} items", style = LETypography.fieldValueEmphasized)
+                    vn.loi.learning.desktop.ui.browser.ContentProblem.entries.forEach { problem ->
+                        Text("${problem.label}: ${summary.count(problem)}", style = LETypography.secondaryMetadata)
+                    }
+                }
+            },
+            confirmButton = { LEPrimaryButton(text = "Close", onClick = onDismissSelectedMediaCheck) }
+        )
+    }
+
+    uiState.pendingBatchPartOfSpeech?.let { target ->
+        AlertDialog(
+            onDismissRequest = onCancelBatchPartOfSpeech,
+            title = { Text("Change POS", style = LETypography.paneTitle) },
+            text = {
+                Text(
+                    "Set POS to $target for ${uiState.selectedContentIds.size} selected items?",
+                    style = LETypography.fieldValue
+                )
+            },
+            confirmButton = {
+                LEPrimaryButton(
+                    text = "Apply",
+                    onClick = onConfirmBatchPartOfSpeech,
+                    enabled = !uiState.isBatchPartOfSpeechSubmitting
+                )
+            },
+            dismissButton = {
+                LESecondaryButton(text = "Cancel", onClick = onCancelBatchPartOfSpeech)
             }
         )
     }

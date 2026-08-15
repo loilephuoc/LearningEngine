@@ -9,6 +9,10 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.v2.runComposeUiTest
 import kotlin.test.Test
@@ -20,6 +24,24 @@ import vn.loi.learning.domain.library.model.InstalledPackageId
 
 @OptIn(ExperimentalTestApi::class)
 class ContentExplorerProductivityPresentationTest {
+    @Test
+    fun `real typed search Enter submits the latest controlled text snapshot`() = runComposeUiTest {
+        var submitted = ""
+        setContent {
+            var uiState by androidx.compose.runtime.remember { mutableStateOf(state(query = "", highlighted = false)) }
+            ContentExplorerPane(
+                uiState = uiState, onClose = {}, onSelectRow = {},
+                onSubmitSearch = { submitted = it }, onToggleHighlight = {},
+                onQueryChanged = { uiState = uiState.copy(query = it, appliedQuery = it) },
+                onClearQuery = {}, onLessonFilterChanged = {}, onMediaFilterChanged = {},
+                onSortChanged = {}, onResetFilters = {}, onDoubleClickRow = null
+            )
+        }
+        onNodeWithTag("explorer-search-input").performClick().performTextInput("to lean")
+        onNodeWithTag("explorer-search-input").performKeyInput { pressKey(Key.Enter) }
+        assertEquals("to lean", submitted)
+    }
+
     @Test
     fun `highlighted selected row exposes highlight and keeps audio action without image indicator`() =
         runComposeUiTest {

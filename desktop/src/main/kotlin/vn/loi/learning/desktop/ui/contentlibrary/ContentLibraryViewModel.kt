@@ -10,6 +10,7 @@ import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.application.contentpackaging.PackageImportProgressEvent
 import vn.loi.learning.application.contentpackaging.PackageImportProgressStage
 import vn.loi.learning.desktop.ui.browser.toDraftEdits
+import vn.loi.learning.desktop.ui.browser.summarize
 import vn.loi.learning.desktop.ui.state.DesktopTaskRunner
 import vn.loi.learning.desktop.ui.state.ImmediateDesktopTaskRunner
 import vn.loi.learning.desktop.ui.state.DesktopDebouncer
@@ -811,15 +812,8 @@ class ContentLibraryViewModel(
         if (current.showUnsavedChangesDialog) return
         val submitted = current.copy(query = query, appliedQuery = query.trim())
         packageBrowserUiState = submitted
-        val normalizedQuery = submitted.appliedQuery
-        val exactMatches = submitted.filteredItems.filter {
-            it.questionText.trim().equals(normalizedQuery, ignoreCase = true)
-        }
-        val target = when {
-            exactMatches.size == 1 -> exactMatches.single()
-            exactMatches.isEmpty() && submitted.filteredItems.size == 1 -> submitted.filteredItems.single()
-            else -> null
-        } ?: return
+        val target = vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserSearchEnterPolicy
+            .resolveTarget(submitted.filteredItems, submitted.appliedQuery) ?: return
         attemptSelectRowAutoEdit(target.contentId.value)
     }
 
@@ -830,6 +824,86 @@ class ContentLibraryViewModel(
             if (!add(contentId)) remove(contentId)
         }
         packageBrowserUiState = current.copy(highlightedContentIds = updated)
+    }
+
+    fun togglePackageBrowserMultiSelection(contentId: String) {
+        val current = packageBrowserUiState ?: return
+        if (current.allItems.none { it.contentId.value == contentId }) return
+        val selected = current.selectedContentIds.toMutableSet().apply {
+            if (!add(contentId)) remove(contentId)
+        }
+        packageBrowserUiState = current.copy(
+            selectedContentIds = selected,
+            selectionAnchorContentId = contentId,
+            selectedMediaCheck = null
+        )
+    }
+
+    fun selectPackageBrowserVisibleRange(contentId: String) {
+        val current = packageBrowserUiState ?: return
+        val visibleIds = current.filteredItems.map { it.contentId.value }
+        val targetIndex = visibleIds.indexOf(contentId)
+        if (targetIndex < 0) return
+        val anchorIndex = current.selectionAnchorContentId?.let(visibleIds::indexOf)?.takeIf { it >= 0 }
+            ?: current.selectedContentId?.let(visibleIds::indexOf)?.takeIf { it >= 0 }
+        val range = if (anchorIndex == null) setOf(contentId) else {
+            val bounds = minOf(anchorIndex, targetIndex)..maxOf(anchorIndex, targetIndex)
+            bounds.mapTo(linkedSetOf()) { visibleIds[it] }
+        }
+        packageBrowserUiState = current.copy(
+            selectedContentIds = current.selectedContentIds + range,
+            selectionAnchorContentId = contentId,
+            selectedMediaCheck = null
+        )
+    }
+
+    fun selectAllVisiblePackageBrowserItems() {
+        val current = packageBrowserUiState ?: return
+        val visible = current.filteredItems.mapTo(linkedSetOf()) { it.contentId.value }
+        packageBrowserUiState = current.copy(
+            selectedContentIds = current.selectedContentIds + visible,
+            selectionAnchorContentId = visible.lastOrNull() ?: current.selectionAnchorContentId,
+            selectedMediaCheck = null
+        )
+    }
+
+    fun clearPackageBrowserMultiSelection() {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            selectedContentIds = emptySet(),
+            selectionAnchorContentId = null,
+            selectedMediaCheck = null
+        )
+    }
+
+    fun highlightSelectedPackageBrowserItems() {
+        val current = packageBrowserUiState ?: return
+        val existingIds = current.allItems.mapTo(hashSetOf()) { it.contentId.value }
+        packageBrowserUiState = current.copy(
+            highlightedContentIds = current.highlightedContentIds + (current.selectedContentIds intersect existingIds)
+        )
+    }
+
+    fun removeHighlightFromSelectedPackageBrowserItems() {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            highlightedContentIds = current.highlightedContentIds - current.selectedContentIds
+        )
+    }
+
+    fun checkSelectedPackageBrowserMedia() {
+        val current = packageBrowserUiState ?: return
+        val existingIds = current.allItems.mapTo(hashSetOf()) { it.contentId.value }
+        val sanitized = current.selectedContentIds intersect existingIds
+        packageBrowserUiState = current.copy(
+            selectedContentIds = sanitized,
+            selectionAnchorContentId = current.selectionAnchorContentId?.takeIf { it in existingIds },
+            selectedMediaCheck = current.problemProjection.summarize(sanitized)
+        )
+    }
+
+    fun dismissSelectedPackageBrowserMediaCheck() {
+        packageBrowserUiState = packageBrowserUiState?.copy(selectedMediaCheck = null)
     }
 
     fun updatePackageBrowserLessonFilter(lesson: String) {
@@ -1111,6 +1185,8 @@ class ContentLibraryViewModel(
                     loadedBaselineDraft = reloadedDraft,
                     draftEdits = reloadedDraft,
                     highlightedContentIds = current.highlightedContentIds,
+                    selectedContentIds = current.selectedContentIds,
+                    selectionAnchorContentId = current.selectionAnchorContentId,
                     centerSelectedRowRequest = current.centerSelectedRowRequest,
                     isCreateSubmitting = false
                 )
@@ -1191,6 +1267,22 @@ class ContentLibraryViewModel(
 
     fun updateDraftPartOfSpeech(value: String) {
         val current = packageBrowserUiState ?: return
+        val existingIds = current.allItems.mapTo(hashSetOf()) { it.contentId.value }
+        val selectedIds = current.selectedContentIds intersect existingIds
+        if (selectedIds.size > 1) {
+            if (current.isDirty) {
+                uiState = uiState.copy(
+                    importError = "Save or discard the current draft before changing POS for selected items."
+                )
+                return
+            }
+            packageBrowserUiState = current.copy(
+                selectedContentIds = selectedIds,
+                pendingBatchPartOfSpeech = value.trim(),
+                batchPartOfSpeechResult = null
+            )
+            return
+        }
         val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
         val existingDraft = current.draftEdits ?: baseline ?: return
         val updatedDraft = existingDraft.copy(partOfSpeech = value)
@@ -1198,6 +1290,68 @@ class ContentLibraryViewModel(
             editingContentId = current.editingContentId ?: current.selectedContentId,
             loadedBaselineDraft = baseline,
             draftEdits = updatedDraft
+        )
+    }
+
+    fun cancelBatchPartOfSpeech() {
+        packageBrowserUiState = packageBrowserUiState?.copy(pendingBatchPartOfSpeech = null)
+    }
+
+    fun confirmBatchPartOfSpeech() {
+        val current = packageBrowserUiState ?: return
+        val target = current.pendingBatchPartOfSpeech ?: return
+        if (current.isBatchPartOfSpeechSubmitting || current.isDirty) return
+        val existingIds = current.allItems.mapTo(hashSetOf()) { it.contentId.value }
+        val selectedIds = current.selectedContentIds intersect existingIds
+        if (selectedIds.size <= 1) {
+            packageBrowserUiState = current.copy(pendingBatchPartOfSpeech = null)
+            return
+        }
+        packageBrowserUiState = current.copy(isBatchPartOfSpeechSubmitting = true)
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.updatePartOfSpeechBatch(
+                    contentIds = selectedIds,
+                    partOfSpeech = target,
+                    installedPackageId = current.installedPackageId,
+                    packageName = current.packageName
+                )
+            },
+            onSuccess = { (result, reloaded) ->
+                val projected = withProblemProjection(reloaded).copy(
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    sortOption = current.sortOption,
+                    problemFilter = current.problemFilter,
+                    selectedContentIds = result.contentIds.mapTo(linkedSetOf()) { it.value },
+                    selectionAnchorContentId = current.selectionAnchorContentId?.takeIf { it in selectedIds },
+                    highlightedContentIds = current.highlightedContentIds,
+                    centerSelectedRowRequest = current.centerSelectedRowRequest
+                )
+                val primary = projected.allItems.firstOrNull { it.contentId.value == current.selectedContentId }
+                    ?: projected.filteredItems.firstOrNull()
+                val draft = primary?.toDraftEdits()
+                packageBrowserUiState = projected.copy(
+                    selectedContentId = primary?.contentId?.value,
+                    editingContentId = primary?.contentId?.value,
+                    loadedBaselineDraft = draft,
+                    draftEdits = draft,
+                    pendingBatchPartOfSpeech = null,
+                    isBatchPartOfSpeechSubmitting = false,
+                    batchPartOfSpeechResult = "${result.selectedCount} selected · ${result.changedCount} changed · ${result.unchangedCount} already $target"
+                )
+                uiState = uiState.copy(importError = null)
+                onContentDataChanged?.invoke()
+            },
+            onFailure = { failure ->
+                packageBrowserUiState = current.copy(
+                    isBatchPartOfSpeechSubmitting = false,
+                    pendingBatchPartOfSpeech = target
+                )
+                uiState = uiState.copy(importError = "Batch POS failed: ${failure.message}")
+            }
         )
     }
 
@@ -1364,6 +1518,8 @@ class ContentLibraryViewModel(
                     loadedBaselineDraft = reloadedDraft,
                     draftEdits = reloadedDraft,
                     highlightedContentIds = current.highlightedContentIds,
+                    selectedContentIds = current.selectedContentIds,
+                    selectionAnchorContentId = current.selectionAnchorContentId,
                     centerSelectedRowRequest = current.centerSelectedRowRequest,
                     query = current.query
                 )
@@ -1487,6 +1643,8 @@ class ContentLibraryViewModel(
                     canUndoDelete = true,
                     undoDeleteLabel = result.snapshot.displayLabel,
                     highlightedContentIds = current.highlightedContentIds - deleteId,
+                    selectedContentIds = current.selectedContentIds - deleteId,
+                    selectionAnchorContentId = current.selectionAnchorContentId?.takeUnless { it == deleteId },
                     centerSelectedRowRequest = current.centerSelectedRowRequest
                 )
                 onContentDataChanged?.invoke()
@@ -1538,6 +1696,8 @@ class ContentLibraryViewModel(
                     canUndoDelete = false,
                     undoDeleteLabel = null,
                     highlightedContentIds = current.highlightedContentIds - restoredId,
+                    selectedContentIds = current.selectedContentIds - restoredId,
+                    selectionAnchorContentId = current.selectionAnchorContentId?.takeUnless { it == restoredId },
                     centerSelectedRowRequest = current.centerSelectedRowRequest
                 )
                 uiState = uiState.copy(
@@ -1583,7 +1743,9 @@ class ContentLibraryViewModel(
             loadedBaselineDraft = selectedDraft,
             draftEdits = selectedDraft,
             showDeleteConfirm = false,
-            highlightedContentIds = current.highlightedContentIds - deleteId
+            highlightedContentIds = current.highlightedContentIds - deleteId,
+            selectedContentIds = current.selectedContentIds - deleteId,
+            selectionAnchorContentId = current.selectionAnchorContentId?.takeUnless { it == deleteId }
         )
     }
 
@@ -1661,6 +1823,8 @@ class ContentLibraryViewModel(
                         showUnsavedChangesDialog = false,
                         pendingAction = null,
                         highlightedContentIds = current.highlightedContentIds,
+                        selectedContentIds = current.selectedContentIds,
+                        selectionAnchorContentId = current.selectionAnchorContentId,
                         centerSelectedRowRequest = current.centerSelectedRowRequest,
                         isCreateSubmitting = false
                     )
@@ -1707,6 +1871,8 @@ class ContentLibraryViewModel(
                         showUnsavedChangesDialog = false,
                         pendingAction = null,
                         highlightedContentIds = current.highlightedContentIds,
+                        selectedContentIds = current.selectedContentIds,
+                        selectionAnchorContentId = current.selectionAnchorContentId,
                         centerSelectedRowRequest = current.centerSelectedRowRequest
                     )
                     onContentDataChanged?.invoke()
