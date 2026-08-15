@@ -130,6 +130,7 @@ class ContentLibraryViewModel(
     }
 
     private var deletedContentSnapshot: vn.loi.learning.application.contentpackaging.browser.DeletedContentSnapshot? = null
+    private var batchDeletedContentSnapshot: vn.loi.learning.application.contentpackaging.browser.BatchDeletedContentSnapshot? = null
 
     var createCollectionDialogState by mutableStateOf(
         CreateCollectionDialogState()
@@ -706,6 +707,7 @@ class ContentLibraryViewModel(
         val current = packageBrowserUiState
         if (current != null && current.installedPackageId != installedPackageId) {
             deletedContentSnapshot = null
+            batchDeletedContentSnapshot = null
         }
         if (current != null && current.isDirty) {
             if (current.installedPackageId == installedPackageId) return
@@ -1572,22 +1574,143 @@ class ContentLibraryViewModel(
     }
 
     /** Hiển thị dialog xác nhận xóa Content. */
-    fun showDeleteConfirmation() {
+    fun showBatchDeleteConfirmation() {
         val current = packageBrowserUiState ?: return
-        val selId = current.selectedContentId ?: return
-        if (current.isDirty) {
-            packageBrowserUiState = current.copy(
-                showUnsavedChangesDialog = true,
-                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DeleteContent(selId)
+        if (current.selectedContentIds.size < 2) return
+        val preflight = try {
+            packageBrowserFacade.preflightBatchDelete(current.selectedContentIds, current.installedPackageId)
+        } catch (failure: Throwable) {
+            uiState = uiState.copy(importError = "Batch Delete preflight failed: ${failure.message}")
+            return
+        }
+        val resolvable = preflight.resolvableContentIds.mapTo(linkedSetOf()) { it.value }
+        val sanitizedState = current.copy(
+            selectedContentIds = current.selectedContentIds intersect resolvable,
+            selectionAnchorContentId = current.selectionAnchorContentId?.takeIf { it in resolvable }
+        )
+        if (preflight.blockers.isNotEmpty()) {
+            packageBrowserUiState = sanitizedState.copy(
+                pendingBatchDeleteContentIds = emptySet(),
+                batchDeleteBlockerMessage = "Cannot delete selected items: ${preflight.blockers.joinToString { it.reason }}"
             )
             return
         }
-        packageBrowserUiState = current.copy(showDeleteConfirm = true)
+        if (resolvable.size < 2) {
+            packageBrowserUiState = sanitizedState
+            return
+        }
+        if (current.isDirty && current.selectedContentId in resolvable) {
+            packageBrowserUiState = sanitizedState.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BatchDelete(resolvable)
+            )
+            return
+        }
+        packageBrowserUiState = sanitizedState.copy(
+            pendingBatchDeleteContentIds = resolvable,
+            batchDeleteBlockerMessage = null
+        )
+    }
+
+    fun dismissBatchDeleteConfirmation() {
+        packageBrowserUiState = packageBrowserUiState?.copy(pendingBatchDeleteContentIds = emptySet())
+    }
+
+    fun dismissBatchDeleteBlocker() {
+        packageBrowserUiState = packageBrowserUiState?.copy(batchDeleteBlockerMessage = null)
+    }
+
+    fun confirmBatchDelete() {
+        val current = packageBrowserUiState ?: return
+        val deleteIds = current.pendingBatchDeleteContentIds
+        if (deleteIds.size < 2 || current.isBatchDeleteSubmitting) return
+        if (current.isDirty && current.selectedContentId in deleteIds) return
+        val primaryDeleted = current.selectedContentId in deleteIds
+        val currentIndex = current.filteredItems.indexOfFirst { it.contentId.value == current.selectedContentId }
+        val remainingVisible = current.filteredItems.filterNot { it.contentId.value in deleteIds }
+        val replacement = if (primaryDeleted) {
+            remainingVisible.getOrNull(currentIndex.coerceAtLeast(0)) ?: remainingVisible.lastOrNull()
+        } else null
+        val preflight = try {
+            packageBrowserFacade.preflightBatchDelete(deleteIds, current.installedPackageId)
+        } catch (failure: Throwable) {
+            packageBrowserUiState = current.copy(pendingBatchDeleteContentIds = emptySet())
+            uiState = uiState.copy(importError = "Batch Delete preflight failed: ${failure.message}")
+            return
+        }
+        if (preflight.blockers.isNotEmpty() || preflight.resolvableContentIds.size != deleteIds.size) {
+            packageBrowserUiState = current.copy(
+                pendingBatchDeleteContentIds = emptySet(),
+                batchDeleteBlockerMessage = "Cannot delete selected items because their canonical state changed."
+            )
+            return
+        }
+        packageBrowserUiState = current.copy(isBatchDeleteSubmitting = true)
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.deleteContents(preflight, current.installedPackageId, current.packageName)
+                    .let { it.copy(state = withProblemProjection(it.state)) }
+            },
+            onSuccess = { result ->
+                batchDeletedContentSnapshot = result.snapshot
+                deletedContentSnapshot = null
+                val projected = result.state.copy(
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    sortOption = current.sortOption,
+                    problemFilter = current.problemFilter
+                )
+                val retainedPrimary = projected.allItems.firstOrNull { it.contentId.value == current.selectedContentId }
+                val selected = if (primaryDeleted) {
+                    replacement?.contentId?.value?.let { id -> projected.allItems.firstOrNull { it.contentId.value == id } }
+                } else retainedPrimary
+                val draft = if (!primaryDeleted && current.isDirty) current.draftEdits else selected?.toDraftEdits()
+                val baseline = if (!primaryDeleted && current.isDirty) current.loadedBaselineDraft else selected?.toDraftEdits()
+                packageBrowserUiState = projected.copy(
+                    selectedContentId = selected?.contentId?.value,
+                    editingContentId = selected?.contentId?.value,
+                    draftEdits = draft,
+                    loadedBaselineDraft = baseline,
+                    selectedContentIds = current.selectedContentIds - deleteIds,
+                    highlightedContentIds = current.highlightedContentIds - deleteIds,
+                    selectionAnchorContentId = current.selectionAnchorContentId?.takeUnless { it in deleteIds },
+                    pendingBatchDeleteContentIds = emptySet(),
+                    isBatchDeleteSubmitting = false,
+                    canUndoDelete = true,
+                    undoDeleteLabel = result.snapshot.displayLabel,
+                    centerSelectedRowRequest = current.centerSelectedRowRequest
+                )
+                onContentDataChanged?.invoke()
+            },
+            onFailure = { failure ->
+                packageBrowserUiState = current.copy(pendingBatchDeleteContentIds = emptySet(), isBatchDeleteSubmitting = false)
+                uiState = uiState.copy(importError = "Batch Delete failed: ${failure.message}")
+            }
+        )
+    }
+
+    fun showDeleteConfirmation() {
+        val current = packageBrowserUiState ?: return
+        if (current.selectedContentIds.size >= 2) {
+            showBatchDeleteConfirmation()
+            return
+        }
+        val targetId = current.selectedContentIds.singleOrNull() ?: current.selectedContentId ?: return
+        if (current.isDirty && current.selectedContentId == targetId) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DeleteContent(targetId)
+            )
+            return
+        }
+        packageBrowserUiState = current.copy(showDeleteConfirm = true, deleteTargetContentId = targetId)
     }
 
     /** Ẩn dialog xác nhận xóa. */
     fun dismissDeleteConfirmation() {
-        packageBrowserUiState = packageBrowserUiState?.copy(showDeleteConfirm = false)
+        packageBrowserUiState = packageBrowserUiState?.copy(showDeleteConfirm = false, deleteTargetContentId = null)
     }
 
     /**
@@ -1595,8 +1718,9 @@ class ContentLibraryViewModel(
      */
     fun confirmDeleteContent() {
         val current = packageBrowserUiState ?: return
-        val deleteId = current.selectedContentId ?: return
-        if (current.isDirty) {
+        val deleteId = current.deleteTargetContentId ?: current.selectedContentId ?: return
+        val primaryDeleted = current.selectedContentId == deleteId
+        if (current.isDirty && primaryDeleted) {
             dismissDeleteConfirmation()
             return
         }
@@ -1612,7 +1736,8 @@ class ContentLibraryViewModel(
         }
 
         packageBrowserUiState = current.copy(
-            showDeleteConfirm = false
+            showDeleteConfirm = false,
+            deleteTargetContentId = null
         )
 
         taskRunner.run(
@@ -1626,14 +1751,21 @@ class ContentLibraryViewModel(
             onSuccess = { result ->
                 val reloaded = result.state
                 deletedContentSnapshot = result.snapshot
-                val selectedItem = reloaded.allItems.firstOrNull { it.contentId.value == nextSelection } ?: reloaded.selectedItemInView
-                val selectedDraft = selectedItem?.toDraftEdits()
+                batchDeletedContentSnapshot = null
+                val selectedItem = if (primaryDeleted) {
+                    reloaded.allItems.firstOrNull { it.contentId.value == nextSelection } ?: reloaded.selectedItemInView
+                } else {
+                    reloaded.allItems.firstOrNull { it.contentId.value == current.selectedContentId }
+                }
+                val selectedDraft = if (!primaryDeleted && current.isDirty) current.draftEdits else selectedItem?.toDraftEdits()
+                val selectedBaseline = if (!primaryDeleted && current.isDirty) current.loadedBaselineDraft else selectedItem?.toDraftEdits()
                 packageBrowserUiState = reloaded.copy(
-                    selectedContentId = nextSelection,
-                    editingContentId = nextSelection,
-                    loadedBaselineDraft = selectedDraft,
+                    selectedContentId = selectedItem?.contentId?.value,
+                    editingContentId = selectedItem?.contentId?.value,
+                    loadedBaselineDraft = selectedBaseline,
                     draftEdits = selectedDraft,
                     showDeleteConfirm = false,
+                    deleteTargetContentId = null,
                     query = current.query,
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
@@ -1651,7 +1783,8 @@ class ContentLibraryViewModel(
             },
             onFailure = { ex ->
                 packageBrowserUiState = current.copy(
-                    showDeleteConfirm = false
+                    showDeleteConfirm = false,
+                    deleteTargetContentId = null
                 )
                 uiState = uiState.copy(
                     importError = "Delete failed: ${ex.message}"
@@ -1662,6 +1795,51 @@ class ContentLibraryViewModel(
 
     fun undoDeleteContent() {
         val current = packageBrowserUiState ?: return
+        val batchSnapshot = batchDeletedContentSnapshot
+        if (batchSnapshot != null) {
+            if (current.isDirty || current.isCreatingNewItem) return
+            taskRunner.run(
+                work = {
+                    withProblemProjection(packageBrowserFacade.undoBatchDelete(
+                        snapshot = batchSnapshot,
+                        installedPackageId = current.installedPackageId,
+                        packageName = current.packageName
+                    ))
+                },
+                onSuccess = { reloaded ->
+                    val projected = reloaded.copy(
+                        query = current.query,
+                        appliedQuery = current.appliedQuery,
+                        selectedLessonFilter = current.selectedLessonFilter,
+                        mediaFilter = current.mediaFilter,
+                        sortOption = current.sortOption,
+                        problemFilter = current.problemFilter
+                    )
+                    val retained = projected.allItems.firstOrNull { it.contentId.value == current.selectedContentId }
+                        ?: projected.filteredItems.firstOrNull()
+                    val draft = retained?.toDraftEdits()
+                    batchDeletedContentSnapshot = null
+                    packageBrowserUiState = projected.copy(
+                        selectedContentId = retained?.contentId?.value,
+                        editingContentId = retained?.contentId?.value,
+                        loadedBaselineDraft = draft,
+                        draftEdits = draft,
+                        canUndoDelete = false,
+                        undoDeleteLabel = null,
+                        selectedContentIds = current.selectedContentIds - batchSnapshot.contentIds.map { it.value }.toSet(),
+                        highlightedContentIds = current.highlightedContentIds - batchSnapshot.contentIds.map { it.value }.toSet(),
+                        centerSelectedRowRequest = current.centerSelectedRowRequest
+                    )
+                    uiState = uiState.copy(importMessage = "Restored ${batchSnapshot.contents.size} deleted items.", importError = null)
+                    onContentDataChanged?.invoke()
+                },
+                onFailure = { failure ->
+                    packageBrowserUiState = current.copy(canUndoDelete = true, undoDeleteLabel = batchSnapshot.displayLabel)
+                    uiState = uiState.copy(importError = "Undo Delete failed: ${failure.message}")
+                }
+            )
+            return
+        }
         val snapshot = deletedContentSnapshot ?: return
         if (current.isDirty || current.isCreatingNewItem) return
         taskRunner.run(
@@ -1688,6 +1866,7 @@ class ContentLibraryViewModel(
                 val selection = restored ?: retained
                 val draft = selection?.toDraftEdits()
                 deletedContentSnapshot = null
+                batchDeletedContentSnapshot = null
                 packageBrowserUiState = projected.copy(
                     selectedContentId = selection?.contentId?.value,
                     editingContentId = selection?.contentId?.value,
@@ -1908,20 +2087,26 @@ class ContentLibraryViewModel(
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.CloseBrowser,
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BackToLibrary -> {
                 deletedContentSnapshot = null
+                batchDeletedContentSnapshot = null
                 packageBrowserUiState = null
                 lessonBrowserUiState = null
             }
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BrowsePackage -> {
                 deletedContentSnapshot = null
+                batchDeletedContentSnapshot = null
                 packageBrowserUiState = null
                 browsePackageLessons(action.installedPackageId, action.packageName)
             }
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DeleteContent -> {
                 val current = packageBrowserUiState ?: return
                 packageBrowserUiState = current.copy(
-                    selectedContentId = action.contentId,
-                    showDeleteConfirm = true
+                    showDeleteConfirm = true,
+                    deleteTargetContentId = action.contentId
                 )
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BatchDelete -> {
+                packageBrowserUiState = packageBrowserUiState?.copy(selectedContentIds = action.contentIds)
+                showBatchDeleteConfirmation()
             }
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyQuery -> {
                 val current = packageBrowserUiState ?: return
@@ -1985,12 +2170,14 @@ class ContentLibraryViewModel(
             return
         }
         deletedContentSnapshot = null
+        batchDeletedContentSnapshot = null
         packageBrowserUiState = null
         lessonBrowserUiState = null
     }
 
     fun resetLibraryNavigationState() {
         deletedContentSnapshot = null
+        batchDeletedContentSnapshot = null
         learningWorkspaceUiState = null
         lessonBrowserUiState = null
         packageBrowserUiState = null

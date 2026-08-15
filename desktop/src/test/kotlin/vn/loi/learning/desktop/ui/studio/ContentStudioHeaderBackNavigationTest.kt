@@ -7,6 +7,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -105,6 +106,72 @@ class ContentStudioHeaderBackNavigationTest {
         }
         assertEquals(0, confirmations)
         assertEquals(1, dismissals)
+    }
+
+    @Test
+    fun `Batch Delete dialog shows truthful count and Enter confirms exactly once`() {
+        var confirmations = 0
+        runComposeUiTest {
+            setContent {
+                ContentStudioScreen(
+                    uiState = emptyStudioState().copy(pendingBatchDeleteContentIds = setOf("a", "b", "c")),
+                    onClose = {}, onSelectRow = {}, onQueryChanged = {}, onClearQuery = {},
+                    onLessonFilterChanged = {}, onMediaFilterChanged = {}, onSortChanged = {},
+                    onResetFilters = {}, onConfirmBatchDelete = { confirmations++ },
+                    thumbnailLoader = LessonThumbnailLoader(NoOpMediaStorage)
+                )
+            }
+            onNodeWithText("Delete 3 selected items?").assertIsDisplayed()
+            onNodeWithTag("batch-delete-confirm-dialog").performKeyInput {
+                pressKey(Key.Enter)
+                pressKey(Key.Enter)
+            }
+        }
+        assertEquals(1, confirmations)
+    }
+
+    @Test
+    fun `Batch Delete dialog Escape cancels without confirmation`() {
+        var confirmations = 0
+        var dismissals = 0
+        runComposeUiTest {
+            setContent {
+                ContentStudioScreen(
+                    uiState = emptyStudioState().copy(pendingBatchDeleteContentIds = setOf("a", "b")),
+                    onClose = {}, onSelectRow = {}, onQueryChanged = {}, onClearQuery = {},
+                    onLessonFilterChanged = {}, onMediaFilterChanged = {}, onSortChanged = {},
+                    onResetFilters = {}, onConfirmBatchDelete = { confirmations++ },
+                    onDismissBatchDelete = { dismissals++ },
+                    thumbnailLoader = LessonThumbnailLoader(NoOpMediaStorage)
+                )
+            }
+            onNodeWithTag("batch-delete-confirm-dialog").performKeyInput { pressKey(Key.Escape) }
+        }
+        assertEquals(0, confirmations)
+        assertEquals(1, dismissals)
+    }
+
+    @Test
+    fun `keyboard and header Delete dispatch the same selection-first authority`() {
+        var deleteRequests = 0
+        runComposeUiTest {
+            setContent {
+                ContentStudioScreen(
+                    uiState = emptyStudioState().copy(
+                        selectedContentId = "a",
+                        selectedContentIds = setOf("a", "b", "c")
+                    ),
+                    onClose = {}, onSelectRow = {}, onQueryChanged = {}, onClearQuery = {},
+                    onLessonFilterChanged = {}, onMediaFilterChanged = {}, onSortChanged = {},
+                    onResetFilters = {}, onRequestDelete = { deleteRequests++ },
+                    thumbnailLoader = LessonThumbnailLoader(NoOpMediaStorage)
+                )
+            }
+            onRoot().performKeyInput { pressKey(Key.Delete) }
+            assertEquals(1, deleteRequests)
+            onNodeWithText("Delete Selected (3)").performClick()
+        }
+        assertEquals(2, deleteRequests)
     }
 
     @Test

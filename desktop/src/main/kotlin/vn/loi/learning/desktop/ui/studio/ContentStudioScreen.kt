@@ -37,6 +37,9 @@ fun ContentStudioScreen(
     onHighlightSelected: () -> Unit = {},
     onRemoveHighlightSelected: () -> Unit = {},
     onCheckSelectedMedia: () -> Unit = {},
+    onConfirmBatchDelete: () -> Unit = {},
+    onDismissBatchDelete: () -> Unit = {},
+    onDismissBatchDeleteBlocker: () -> Unit = {},
     onDismissSelectedMediaCheck: () -> Unit = {},
     onConfirmBatchPartOfSpeech: () -> Unit = {},
     onCancelBatchPartOfSpeech: () -> Unit = {},
@@ -176,7 +179,8 @@ fun ContentStudioScreen(
             onDeleteClick = { onRequestDelete?.invoke() },
             onUndoDeleteClick = { onUndoDelete?.invoke() },
             canUndoDelete = uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem,
-            isCreateSubmitting = uiState.isCreateSubmitting
+            isCreateSubmitting = uiState.isCreateSubmitting,
+            deleteTargetCount = uiState.selectedContentIds.size
         )
 
         HorizontalDivider(color = LEColors.borderSubtle)
@@ -292,7 +296,8 @@ fun ContentStudioScreen(
 
     // Delete confirmation dialog
     if (uiState.showDeleteConfirm) {
-        val itemToDelete = uiState.selectedItemAnywhere
+        val itemToDelete = uiState.allItems.firstOrNull { it.contentId.value == uiState.deleteTargetContentId }
+            ?: uiState.selectedItemAnywhere
         val deleteFocusRequester = remember { FocusRequester() }
         var deleteDispatched by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { deleteFocusRequester.requestFocus() }
@@ -340,6 +345,44 @@ fun ContentStudioScreen(
             dismissButton = {
                 LESecondaryButton(text = "Cancel", onClick = { onDismissDelete?.invoke() })
             }
+        )
+    }
+
+    if (uiState.pendingBatchDeleteContentIds.size >= 2) {
+        val count = uiState.pendingBatchDeleteContentIds.size
+        val focusRequester = remember { FocusRequester() }
+        var dispatched by remember(uiState.pendingBatchDeleteContentIds) { mutableStateOf(false) }
+        LaunchedEffect(uiState.pendingBatchDeleteContentIds) { focusRequester.requestFocus() }
+        AlertDialog(
+            modifier = Modifier.testTag("batch-delete-confirm-dialog").onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.key) {
+                    Key.Enter -> { if (!dispatched) { dispatched = true; onConfirmBatchDelete() }; true }
+                    Key.Escape -> { onDismissBatchDelete(); true }
+                    else -> false
+                }
+            },
+            onDismissRequest = onDismissBatchDelete,
+            title = { Text("Delete $count selected items?", style = LETypography.paneTitle) },
+            text = { Text("This action removes the selected Content and their LearningItems. You can undo this delete during the current Content Studio session.") },
+            confirmButton = {
+                LEDangerButton(
+                    text = "Delete $count Items",
+                    enabled = !uiState.isBatchDeleteSubmitting,
+                    modifier = Modifier.focusRequester(focusRequester),
+                    onClick = { if (!dispatched) { dispatched = true; onConfirmBatchDelete() } }
+                )
+            },
+            dismissButton = { LESecondaryButton(text = "Cancel", onClick = onDismissBatchDelete) }
+        )
+    }
+
+    uiState.batchDeleteBlockerMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = onDismissBatchDeleteBlocker,
+            title = { Text("Cannot delete selected items") },
+            text = { Text(message) },
+            confirmButton = { LEPrimaryButton(text = "OK", onClick = onDismissBatchDeleteBlocker) }
         )
     }
 
@@ -433,7 +476,8 @@ private fun StudioTopBar(
     onDeleteClick: () -> Unit,
     onUndoDeleteClick: () -> Unit,
     canUndoDelete: Boolean,
-    isCreateSubmitting: Boolean
+    isCreateSubmitting: Boolean,
+    deleteTargetCount: Int
 ) {
     Surface(
         color = LEColors.surface,
@@ -518,7 +562,7 @@ private fun StudioTopBar(
                         )
 
                         LEDangerButton(
-                            text = "Delete",
+                            text = if (deleteTargetCount >= 2) "Delete Selected ($deleteTargetCount)" else "Delete",
                             onClick = onDeleteClick,
                             icon = LEIcons.Delete
                         )
@@ -531,7 +575,7 @@ private fun StudioTopBar(
                         )
 
                         LEDangerButton(
-                            text = "Delete",
+                            text = if (deleteTargetCount >= 2) "Delete Selected ($deleteTargetCount)" else "Delete",
                             onClick = onDeleteClick,
                             icon = LEIcons.Delete
                         )

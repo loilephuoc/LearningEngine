@@ -29,6 +29,9 @@ data class PackageContentBrowserUiState(
     val pendingBatchPartOfSpeech: String? = null,
     val isBatchPartOfSpeechSubmitting: Boolean = false,
     val batchPartOfSpeechResult: String? = null,
+    val pendingBatchDeleteContentIds: Set<String> = emptySet(),
+    val batchDeleteBlockerMessage: String? = null,
+    val isBatchDeleteSubmitting: Boolean = false,
     /** Changes only when clearing search should center the current editor row. */
     val centerSelectedRowRequest: Long = 0L,
     val activePlayingAudioRef: String? = null,
@@ -42,6 +45,8 @@ data class PackageContentBrowserUiState(
     val draftEdits: ContentDraftEdits? = null,
     /** Hiển thị dialog xác nhận xóa. */
     val showDeleteConfirm: Boolean = false,
+    /** Canonical single-delete target resolved from explicit selection before primary fallback. */
+    val deleteTargetContentId: String? = null,
     /** Hiển thị dialog cảnh báo thay đổi chưa lưu (row/package/back). */
     val showUnsavedChangesDialog: Boolean = false,
     /** Typed pending action để thực thi sau khi resolve unsaved dialog. */

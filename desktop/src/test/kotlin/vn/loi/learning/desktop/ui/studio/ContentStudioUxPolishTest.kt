@@ -562,4 +562,109 @@ class ContentStudioUxPolishTest {
         assertEquals("Adjective", vm.packageBrowserUiState!!.selectedItemAnywhere!!.partOfSpeech)
     }
 
+    @Test
+    fun `batch delete includes hidden identities repairs selection and one undo restores exact batch`() {
+        val vm = createViewModelWithPackage(3)
+        vm.attemptSelectRowAutoEdit("cnt-2")
+        listOf("cnt-1", "cnt-2", "cnt-3").forEach(vm::togglePackageBrowserMultiSelection)
+        vm.updatePackageBrowserQuery("Question 1")
+
+        vm.showBatchDeleteConfirmation()
+        assertEquals(setOf("cnt-1", "cnt-2", "cnt-3"), vm.packageBrowserUiState!!.pendingBatchDeleteContentIds)
+        vm.confirmBatchDelete()
+
+        val deleted = vm.packageBrowserUiState!!
+        assertTrue(deleted.allItems.isEmpty())
+        assertTrue(deleted.selectedContentIds.isEmpty())
+        assertNull(deleted.selectedContentId)
+        assertEquals("Question 1", deleted.appliedQuery)
+        assertTrue(deleted.canUndoDelete)
+
+        vm.undoDeleteContent()
+        val restored = vm.packageBrowserUiState!!
+        assertEquals(setOf("cnt-1", "cnt-2", "cnt-3"), restored.allItems.map { it.contentId.value }.toSet())
+        assertTrue(restored.selectedContentIds.isEmpty())
+        assertEquals("Question 1", restored.appliedQuery)
+        assertEquals(1, restored.filteredItems.size)
+    }
+
+    @Test
+    fun `batch delete cancel is zero mutation and dirty excluded primary draft survives`() {
+        val vm = createViewModelWithPackage(3)
+        vm.attemptSelectRowAutoEdit("cnt-3")
+        vm.updateDraftQuestion("Unsaved primary")
+        vm.togglePackageBrowserMultiSelection("cnt-1")
+        vm.togglePackageBrowserMultiSelection("cnt-2")
+        val before = vm.packageBrowserUiState!!.allItems
+
+        vm.showBatchDeleteConfirmation()
+        vm.dismissBatchDeleteConfirmation()
+        assertEquals(before, vm.packageBrowserUiState!!.allItems)
+
+        vm.showBatchDeleteConfirmation()
+        vm.confirmBatchDelete()
+        val state = vm.packageBrowserUiState!!
+        assertEquals(listOf("cnt-3"), state.allItems.map { it.contentId.value })
+        assertEquals("cnt-3", state.selectedContentId)
+        assertEquals("Unsaved primary", state.draftEdits!!.questionText)
+        assertTrue(state.isDirty)
+    }
+
+    @Test
+    fun `dirty primary included uses unsaved authority before batch confirmation`() {
+        val vm = createViewModelWithPackage(3)
+        vm.attemptSelectRowAutoEdit("cnt-1")
+        vm.updateDraftQuestion("Dirty")
+        vm.togglePackageBrowserMultiSelection("cnt-1")
+        vm.togglePackageBrowserMultiSelection("cnt-2")
+
+        vm.showBatchDeleteConfirmation()
+        assertTrue(vm.packageBrowserUiState!!.showUnsavedChangesDialog)
+        assertTrue(vm.packageBrowserUiState!!.pendingBatchDeleteContentIds.isEmpty())
+        vm.cancelUnsavedChangesDialog()
+        assertEquals("Dirty", vm.packageBrowserUiState!!.draftEdits!!.questionText)
+        assertEquals(3, vm.packageBrowserUiState!!.allItems.size)
+
+        vm.showBatchDeleteConfirmation()
+        vm.confirmDiscardAndProceed()
+        assertEquals(setOf("cnt-1", "cnt-2"), vm.packageBrowserUiState!!.pendingBatchDeleteContentIds)
+    }
+
+    @Test
+    fun `explicit batch selection overrides unrelated primary for header delete`() {
+        val vm = createViewModelWithPackage(5)
+        listOf("cnt-1", "cnt-2", "cnt-3").forEach(vm::togglePackageBrowserMultiSelection)
+        vm.attemptSelectRowAutoEdit("cnt-5")
+
+        vm.showDeleteConfirmation()
+        assertEquals(setOf("cnt-1", "cnt-2", "cnt-3"), vm.packageBrowserUiState!!.pendingBatchDeleteContentIds)
+        assertFalse(vm.packageBrowserUiState!!.showDeleteConfirm)
+        vm.confirmBatchDelete()
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals(setOf("cnt-4", "cnt-5"), state.allItems.map { it.contentId.value }.toSet())
+        assertEquals("cnt-5", state.selectedContentId)
+        assertEquals("Question 5", state.draftEdits!!.questionText)
+    }
+
+    @Test
+    fun `one explicit selection overrides unrelated primary while empty selection falls back to primary`() {
+        run {
+            val vm = createViewModelWithPackage(3)
+            vm.attemptSelectRowAutoEdit("cnt-3")
+            vm.togglePackageBrowserMultiSelection("cnt-1")
+            vm.showDeleteConfirmation()
+            assertEquals("cnt-1", vm.packageBrowserUiState!!.deleteTargetContentId)
+            vm.confirmDeleteContent()
+            assertEquals(setOf("cnt-2", "cnt-3"), vm.packageBrowserUiState!!.allItems.map { it.contentId.value }.toSet())
+            assertEquals("cnt-3", vm.packageBrowserUiState!!.selectedContentId)
+        }
+        run {
+            val vm = createViewModelWithPackage(3)
+            vm.attemptSelectRowAutoEdit("cnt-3")
+            vm.showDeleteConfirmation()
+            assertEquals("cnt-3", vm.packageBrowserUiState!!.deleteTargetContentId)
+        }
+    }
+
 }

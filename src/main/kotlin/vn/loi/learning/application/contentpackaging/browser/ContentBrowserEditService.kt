@@ -396,6 +396,107 @@ class ContentBrowserEditService(
         return snapshot
     }
 
+    fun preflightDeleteContents(
+        contentIds: Collection<ContentId>,
+        learningItemRepository: LearningItemRepository,
+        installedPackageId: InstalledPackageId? = null
+    ): BatchDeletePreflight {
+        val requested = contentIds.toCollection(linkedSetOf())
+        val contents = contentRepository.findByIds(requested).associateBy(Content::id)
+        val sessions = studySessionRepository?.findAll().orEmpty()
+        val snapshots = requested.mapNotNull { contentId ->
+            val content = contents[contentId] ?: return@mapNotNull null
+            val items = learningItemRepository.findByContentId(contentId).toList()
+            val itemIds = items.mapTo(hashSetOf(), LearningItem::id)
+            val blocker = sessions.firstOrNull { session ->
+                session.currentLearningItemId in itemIds ||
+                    session.pendingReview?.learningItemId in itemIds ||
+                    session.undoableReview?.learningItemId in itemIds
+            }
+            BatchDeleteTarget(
+                snapshot = DeletedContentSnapshot(
+                    content = content,
+                    learningItems = items,
+                    libraryIds = contentLibraryRepository?.findAll()
+                        ?.filter { it.contains(contentId) }?.mapTo(linkedSetOf()) { it.id }.orEmpty(),
+                    installedPackageId = installedPackageId,
+                    displayLabel = content.displayName
+                ),
+                blocker = blocker?.let {
+                    BatchDeleteBlocker(contentId, "Referenced by active Study session ${it.id.value}.")
+                }
+            )
+        }
+        return BatchDeletePreflight(
+            requestedCount = requested.size,
+            staleContentIds = requested - contents.keys,
+            targets = snapshots
+        )
+    }
+
+    fun deleteContents(
+        preflight: BatchDeletePreflight,
+        learningItemRepository: LearningItemRepository
+    ): BatchDeletedContentSnapshot {
+        require(preflight.targets.isNotEmpty()) { "No existing Content is selected for deletion." }
+        check(preflight.blockers.isEmpty()) {
+            "Cannot delete selected items: ${preflight.blockers.joinToString { it.reason }}"
+        }
+        val snapshots = preflight.targets.map(BatchDeleteTarget::snapshot)
+        // Revalidate canonical identities immediately before entering the transaction.
+        snapshots.forEach { snapshot ->
+            check(contentRepository.findById(snapshot.content.id) == snapshot.content) {
+                "Content ${snapshot.content.id.value} changed after delete preflight."
+            }
+            snapshot.learningItems.forEach { item ->
+                check(learningItemRepository.findById(item.id) == item) {
+                    "LearningItem ${item.id.value} changed after delete preflight."
+                }
+            }
+        }
+        val transaction = requireNotNull(transactionRunner) {
+            "Atomic transaction support is required for Batch Content delete."
+        }
+        val libraryIds = snapshots.flatMapTo(linkedSetOf()) { it.libraryIds }
+        val librariesBefore = libraryIds.associateWith { contentLibraryRepository?.findById(it) }
+        val packageBefore = snapshots.first().installedPackageId?.let { installedPackageRepository?.findById(it) }
+        try {
+            transaction.runInTransaction {
+                val contentIds = snapshots.mapTo(linkedSetOf()) { it.content.id }
+                learningItemRepository.deleteByContentIds(contentIds)
+                contentRepository.deleteAllById(contentIds)
+                val membershipByLibrary = snapshots.flatMap { snapshot ->
+                    snapshot.libraryIds.map { it to snapshot.content.id }
+                }.groupBy({ it.first }, { it.second })
+                membershipByLibrary.forEach { (libraryId, removedIds) ->
+                    val repository = requireNotNull(contentLibraryRepository)
+                    val library = requireNotNull(repository.findById(libraryId)) {
+                        "ContentLibrary ${libraryId.value} disappeared during batch delete."
+                    }
+                    repository.save(removedIds.fold(library) { current, id -> current.remove(id) })
+                }
+                reconcileInstalledPackageCounts(
+                    installedPackageId = snapshots.first().installedPackageId,
+                    contentDelta = -snapshots.size,
+                    learningItemDelta = -snapshots.sumOf { it.learningItems.size }
+                )
+            }
+        } catch (failure: Throwable) {
+            try {
+                transaction.runInTransaction {
+                    contentRepository.saveAll(snapshots.map { it.content })
+                    learningItemRepository.saveAll(snapshots.flatMap { it.learningItems })
+                    librariesBefore.values.filterNotNull().forEach { contentLibraryRepository?.save(it) }
+                    packageBefore?.let { installedPackageRepository?.save(it) }
+                }
+            } catch (rollbackFailure: Throwable) {
+                failure.addSuppressed(rollbackFailure)
+            }
+            throw failure
+        }
+        return BatchDeletedContentSnapshot(snapshots)
+    }
+
     fun restoreDeletedContent(
         snapshot: DeletedContentSnapshot,
         learningItemRepository: LearningItemRepository
@@ -439,6 +540,71 @@ class ContentBrowserEditService(
                 contentDelta = 1,
                 learningItemDelta = snapshot.learningItems.size
             )
+        }
+    }
+
+    fun restoreDeletedContents(
+        snapshot: BatchDeletedContentSnapshot,
+        learningItemRepository: LearningItemRepository
+    ) {
+        require(snapshot.contents.isNotEmpty()) { "Batch Undo snapshot is empty." }
+        snapshot.contents.forEach { deleted ->
+            check(contentRepository.findById(deleted.content.id) == null) {
+                "Cannot undo delete: Content ${deleted.content.id.value} already exists."
+            }
+            deleted.learningItems.forEach { item ->
+                check(learningItemRepository.findById(item.id) == null) {
+                    "Cannot undo delete: LearningItem ${item.id.value} already exists."
+                }
+            }
+            deleted.libraryIds.forEach { libraryId ->
+                checkNotNull(contentLibraryRepository?.findById(libraryId)) {
+                    "Cannot undo delete: ContentLibrary ${libraryId.value} is unavailable."
+                }
+            }
+        }
+        snapshot.installedPackageId?.let { packageId ->
+            checkNotNull(installedPackageRepository?.findById(packageId)) {
+                "Cannot undo delete: InstalledPackage ${packageId.value} is unavailable."
+            }
+        }
+        val transaction = requireNotNull(transactionRunner) {
+            "Atomic transaction support is required for Batch Undo Delete."
+        }
+        val libraryIds = snapshot.contents.flatMapTo(linkedSetOf()) { it.libraryIds }
+        val librariesBefore = libraryIds.associateWith { contentLibraryRepository?.findById(it) }
+        val packageBefore = snapshot.installedPackageId?.let { installedPackageRepository?.findById(it) }
+        try {
+            transaction.runInTransaction {
+                contentRepository.saveAll(snapshot.contents.map { it.content })
+                learningItemRepository.saveAll(snapshot.contents.flatMap { it.learningItems })
+                val membershipByLibrary = snapshot.contents.flatMap { deleted ->
+                    deleted.libraryIds.map { it to deleted.content.id }
+                }.groupBy({ it.first }, { it.second })
+                membershipByLibrary.forEach { (libraryId, restoredIds) ->
+                    val repository = requireNotNull(contentLibraryRepository)
+                    val library = requireNotNull(repository.findById(libraryId))
+                    repository.save(restoredIds.fold(library) { current, id -> current.register(id) })
+                }
+                reconcileInstalledPackageCounts(
+                    installedPackageId = snapshot.installedPackageId,
+                    contentDelta = snapshot.contents.size,
+                    learningItemDelta = snapshot.contents.sumOf { it.learningItems.size }
+                )
+            }
+        } catch (failure: Throwable) {
+            try {
+                transaction.runInTransaction {
+                    val contentIds = snapshot.contentIds
+                    learningItemRepository.deleteByContentIds(contentIds)
+                    contentRepository.deleteAllById(contentIds)
+                    librariesBefore.values.filterNotNull().forEach { contentLibraryRepository?.save(it) }
+                    packageBefore?.let { installedPackageRepository?.save(it) }
+                }
+            } catch (rollbackFailure: Throwable) {
+                failure.addSuppressed(rollbackFailure)
+            }
+            throw failure
         }
     }
 
@@ -491,6 +657,28 @@ data class DeletedContentSnapshot(
     val installedPackageId: InstalledPackageId?,
     val displayLabel: String
 )
+
+data class BatchDeleteBlocker(val contentId: ContentId, val reason: String)
+
+data class BatchDeleteTarget(
+    val snapshot: DeletedContentSnapshot,
+    val blocker: BatchDeleteBlocker? = null
+)
+
+data class BatchDeletePreflight(
+    val requestedCount: Int,
+    val staleContentIds: Set<ContentId>,
+    val targets: List<BatchDeleteTarget>
+) {
+    val blockers: List<BatchDeleteBlocker> get() = targets.mapNotNull(BatchDeleteTarget::blocker)
+    val resolvableContentIds: Set<ContentId> get() = targets.mapTo(linkedSetOf()) { it.snapshot.content.id }
+}
+
+data class BatchDeletedContentSnapshot(val contents: List<DeletedContentSnapshot>) {
+    val installedPackageId: InstalledPackageId? = contents.firstOrNull()?.installedPackageId
+    val contentIds: Set<ContentId> = contents.mapTo(linkedSetOf()) { it.content.id }
+    val displayLabel: String = "${contents.size} items"
+}
 
 data class BatchPartOfSpeechResult(
     val selectedCount: Int,

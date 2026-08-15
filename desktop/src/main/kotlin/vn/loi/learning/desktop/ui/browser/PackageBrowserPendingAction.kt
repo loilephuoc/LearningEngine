@@ -17,6 +17,7 @@ sealed interface PackageBrowserPendingAction {
     object BackToLibrary : PackageBrowserPendingAction
     data class BrowsePackage(val installedPackageId: InstalledPackageId, val packageName: String) : PackageBrowserPendingAction
     data class DeleteContent(val contentId: String) : PackageBrowserPendingAction
+    data class BatchDelete(val contentIds: Set<String>) : PackageBrowserPendingAction
     data class ApplyQuery(val query: String) : PackageBrowserPendingAction
     data class ApplyLessonFilter(val lessonFilter: String) : PackageBrowserPendingAction
     data class ApplyMediaFilter(val mediaFilter: BrowserMediaFilter) : PackageBrowserPendingAction
