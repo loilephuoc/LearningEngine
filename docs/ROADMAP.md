@@ -1,5 +1,21 @@
 # Roadmap
 
+## Backup / Restore transaction safety
+
+- **Complete; Windows physical UAT passed:** recovery
+  now shares one fail-fast maintenance gate with canonical transactions. Backup copies one frozen
+  staging snapshot before hashing/archiving, verifies the temporary archive before publication,
+  and never overwrites an existing target. Restore validates and stages before mutation, opens all
+  persisted domain stores in isolation, creates and verifies a safety backup, verifies restored
+  bytes and domain loading, and byte-exactly rolls back on any post-mutation failure. A secondary
+  rollback failure is typed catastrophic and retains the verified safety archive. Successful
+  Desktop restore still exits the process so repositories and UI reload from restored state.
+  Deterministic completion coverage now includes the representative persisted domain, all five
+  media slots, corruption and first/middle/final failure matrices, exact pre-state rollback,
+  catastrophic retained-evidence paths, coordinator pairings, v1 compatibility and recursion.
+  Controlled physical UAT confirmed the published backup, truthful operation blocking, zero-mutation
+  corrupt rejection, successful restore/restart, full fixture state, and fresh UI/cache projection.
+
 ## Library / Package read-only integrity diagnostics
 
 - **Implementation and automated verification complete; Windows UAT pending:** Desktop Library can

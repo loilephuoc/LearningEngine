@@ -1,3 +1,14 @@
+## Backup / Restore maintenance boundary
+
+Backup/restore maintenance is coordinated at the Application transaction boundary. Persisted
+composition roots wrap the existing transaction runner with one `RecoveryOperationGate`; recovery
+uses the same instance exclusively. Ordinary canonical transactions fail truthfully while recovery
+is active, and recovery fails truthfully while any canonical transaction is active. Backup stages
+managed roots while holding that authority, then hashes and archives only the immutable staging
+copy. Restore validates and domain-loads isolated staging, verifies a safety archive, replaces and
+verifies canonical bytes, reloads persisted stores, and either succeeds fully or byte-exactly rolls
+back. Catastrophic rollback failure retains its safety archive as recovery evidence.
+
 ## Constitution & Strategic Foundation
 
 Android owns one visual system in `LearningEngineTheme`, `LearningEngineDesignTokens`, and

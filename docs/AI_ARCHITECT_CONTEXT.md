@@ -1,5 +1,27 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Current backup / restore continuation
+
+- Baseline is `f8de0de9a5f7b13f313cff74c188ca13b315119a` on `develop`. Backup/restore
+  transaction safety is implemented, Windows physical UAT passed, and the final automated
+  regression and artifact gates passed for this checkpoint.
+  Shared canonical transactions and both recovery composition roots use one maintenance gate;
+  backup staging, verified publication, isolated prevalidation, verified safety backup, post-copy
+  validation, exact rollback and typed catastrophic rollback failure are in place. The v1 `.lebak`
+  format remains readable and Desktop success retains its truthful process-exit/reload behavior.
+- Coverage completion adds a representative persisted full-domain TEMP fixture, exact JSON/config/
+  five-slot media round-trip hashes, deterministic backup/safety/restore/rollback boundary matrices,
+  23 corrupt archive/domain cases, all-operation coordinator exclusion, repository reload boundary
+  injection, v1 compatibility and recursion/destination proofs. Coverage exposed and fixed restore
+  staging deletion when a managed root contains the safety area, plus incomplete temp cleanup for
+  failure before staging creation. `clean test` is green with Root 407 suites / 2,148 tests, Desktop
+  256 / 1,473, and Android 53 / 389; all have zero failures, errors and skips. Desktop distributable
+  and Android debug APK build successfully. Controlled Windows UAT confirmed idle backup,
+  incompatible-operation blocking, corrupt-backup rejection before mutation, valid restore,
+  required Desktop exit/reload, exact restored package/media/history/session state after restart,
+  and no stale UI/cache or unrelated regression. The remaining gate is final regression, artifact
+  rebuild, audited commit and normal `develop` push.
+
 ## Current Library / Package continuation
 
 - Baseline is `04d95ebd73de2bca1139511f2cef78b966d831f2` on `develop`. The read-only

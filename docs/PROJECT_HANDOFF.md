@@ -1,5 +1,11 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+Backup/restore transaction safety now has one application-wide maintenance gate, immutable staged
+backup publication, isolated full-domain restore validation, a verified safety snapshot, exact
+rollback, and typed catastrophic evidence retention. Manifest v1 remains readable and successful
+Desktop restore requires process exit/reload. Deterministic failure-boundary coverage and Windows
+physical UAT both passed, including restored package, media, history, session and cache state.
+
 Library/package diagnostics now have one shared read-only Application authority. Desktop Library
 can check a selected package for canonical count drift, broken ownership/lifecycle links, missing
 media and dangling learning/session references, then show typed findings without repair actions.

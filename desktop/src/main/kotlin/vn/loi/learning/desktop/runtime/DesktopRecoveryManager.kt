@@ -11,6 +11,7 @@ import java.time.Instant
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+import vn.loi.learning.application.port.RecoveryOperationGate
 
 data class DesktopRecoveryFile(val path: String, val size: Long, val sha256: String)
 
@@ -20,18 +21,27 @@ data class DesktopRecoveryManifest(
     val files: List<DesktopRecoveryFile>
 )
 
-class DesktopRecoveryException(message: String, cause: Throwable? = null) :
+open class DesktopRecoveryException(message: String, cause: Throwable? = null) :
     IllegalStateException(message, cause)
+class DesktopCatastrophicRecoveryException(val safetyBackup: Path, cause: Throwable) :
+    DesktopRecoveryException(
+        "Restore failed and rollback could not restore the exact previous state. Safety backup retained at $safetyBackup",
+        cause
+    )
 
 class DesktopRecoveryManager(
     private val dataDirectory: Path,
     private val configDirectory: Path,
     private val clock: Clock = Clock.systemUTC(),
+    private val gate: RecoveryOperationGate = RecoveryOperationGate(),
+    private val stagedDomainValidator: (Path, Path) -> Unit = { _, _ -> },
     private val beforeRestoreWrite: (String) -> Unit = {}
 ) {
     val safetyBackupDirectory: Path = configDirectory.resolve("backups")
 
-    fun createBackup(target: Path): Path {
+    fun createBackup(target: Path): Path = gate.backup { createBackupLocked(target) }
+
+    private fun createBackupLocked(target: Path): Path {
         val normalized = target.toAbsolutePath().normalize()
         if (Files.exists(normalized, LinkOption.NOFOLLOW_LINKS)) {
             throw DesktopRecoveryException("Backup target already exists.")
@@ -42,12 +52,19 @@ class DesktopRecoveryManager(
             throw DesktopRecoveryException("Backup directory does not exist.")
         }
 
-        val sources = inventory()
-        val manifest = DesktopRecoveryManifest(FORMAT_VERSION, clock.instant(), sources.map {
-            DesktopRecoveryFile(it.first, Files.size(it.second), sha256(it.second))
-        })
         val temporary = Files.createTempFile(parent, ".learning-engine-backup-", ".tmp")
+        val staging = Files.createTempDirectory(parent, ".learning-engine-snapshot-")
         try {
+            val sources = inventory().map { (name, source) ->
+                val staged = staging.resolve(name).normalize()
+                require(staged.startsWith(staging))
+                Files.createDirectories(requireNotNull(staged.parent))
+                Files.copy(source, staged)
+                name to staged
+            }
+            val manifest = DesktopRecoveryManifest(FORMAT_VERSION, clock.instant(), sources.map {
+                DesktopRecoveryFile(it.first, Files.size(it.second), sha256(it.second))
+            })
             ZipOutputStream(Files.newOutputStream(temporary)).use { zip ->
                 zip.putNextEntry(ZipEntry(MANIFEST_ENTRY).apply { time = 0L })
                 zip.write(encode(manifest))
@@ -58,11 +75,13 @@ class DesktopRecoveryManager(
                     zip.closeEntry()
                 }
             }
+            validate(temporary)
             Files.move(temporary, normalized)
         } catch (failure: Exception) {
             throw DesktopRecoveryException("Could not create backup.", failure)
         } finally {
             Files.deleteIfExists(temporary)
+            deleteTree(staging)
         }
         return normalized
     }
@@ -110,37 +129,65 @@ class DesktopRecoveryManager(
         if (operationActive) {
             throw DesktopRecoveryException("Restore is unavailable during an active study or persistence operation.")
         }
+        return gate.restore { restoreLocked(source) }
+    }
+
+    private fun restoreLocked(source: Path): Path {
         val manifest = validate(source)
-        Files.createDirectories(safetyBackupDirectory)
-        val safety = safetyBackupDirectory.resolve("safety-${clock.instant().toEpochMilli()}.lebak")
-        createBackup(safety)
-        val before = inventory().associate { it.first to Files.readAllBytes(it.second) }
+        val staging = Files.createTempDirectory(configDirectory.parent ?: configDirectory, ".learning-engine-restore-")
         try {
-            clearManagedFiles()
-            ZipFile(source.toFile()).use { zip ->
+            ZipFile(source.toFile()).use { zip -> manifest.files.forEach { file ->
+                val target = staging.resolve(file.path).normalize()
+                require(target.startsWith(staging))
+                Files.createDirectories(requireNotNull(target.parent))
+                zip.getInputStream(zip.getEntry(file.path)).use { Files.copy(it, target) }
+            } }
+            stagedDomainValidator(staging.resolve("data"), staging.resolve("config"))
+            Files.createDirectories(safetyBackupDirectory)
+            val safety = safetyBackupDirectory.resolve("safety-${clock.instant().toEpochMilli()}.lebak")
+            createBackupLocked(safety)
+            validate(safety)
+            val before = inventory().associate { it.first to Files.readAllBytes(it.second) }
+            try {
+                clearManagedFiles()
                 manifest.files.forEach { file ->
                     beforeRestoreWrite(file.path)
                     val target = resolveManaged(file.path)
                     Files.createDirectories(target.parent)
-                    zip.getInputStream(zip.getEntry(file.path)).use { input ->
-                        Files.copy(input, target)
+                    Files.copy(staging.resolve(file.path), target)
+                }
+                verifyExact(manifest.files.associate { it.path to Files.readAllBytes(staging.resolve(it.path)) })
+                stagedDomainValidator(dataDirectory, configDirectory)
+            } catch (failure: Exception) {
+                val rollback = runCatching {
+                    clearManagedFiles()
+                    before.forEach { (name, bytes) ->
+                        val target = resolveManaged(name)
+                        Files.createDirectories(target.parent)
+                        Files.write(target, bytes)
                     }
+                    verifyExact(before)
+                }.exceptionOrNull()
+                if (rollback != null) {
+                    failure.addSuppressed(rollback)
+                    throw DesktopCatastrophicRecoveryException(safety, failure)
                 }
+                throw DesktopRecoveryException("Restore failed and the previous snapshot was restored.", failure)
             }
-        } catch (failure: Exception) {
-            try {
-                clearManagedFiles()
-                before.forEach { (name, bytes) ->
-                    val target = resolveManaged(name)
-                    Files.createDirectories(target.parent)
-                    Files.write(target, bytes)
-                }
-            } catch (rollback: Exception) {
-                failure.addSuppressed(rollback)
-            }
-            throw DesktopRecoveryException("Restore failed and the previous snapshot was restored.", failure)
+            return safety
+        } finally { deleteTree(staging) }
+    }
+
+    private fun verifyExact(expected: Map<String, ByteArray>) {
+        if (inventory().map { it.first } != expected.keys.sorted()) error("Canonical inventory verification failed.")
+        expected.forEach { (name, bytes) ->
+            if (!Files.readAllBytes(resolveManaged(name)).contentEquals(bytes)) error("Canonical checksum verification failed: $name")
         }
-        return safety
+    }
+
+    private fun deleteTree(root: Path) {
+        if (Files.notExists(root)) return
+        Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
     }
 
     private fun inventory(): List<Pair<String, Path>> =

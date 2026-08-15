@@ -1,3 +1,22 @@
+# Backup / Restore transaction safety
+
+- Added one application-wide recovery operation gate at the shared transaction composition root,
+  coordinating backup/restore with package, Content Studio, Study, session and queue mutations.
+- Backup now uses an immutable staging snapshot and verified temporary archive publication; restore
+  performs archive/path/hash validation, isolated persisted-store loading, verified safety backup,
+  verified replacement, post-restore domain loading and exact rollback.
+- Added deterministic concurrency and recovery failure-injection coverage, including catastrophic
+  rollback failure with retained safety evidence. The v1 `.lebak` manifest remains compatible.
+- Completed TEMP-only proof with two installed/content packages, shared multi-library content,
+  enabled/disabled items, memory/history/trajectory, active/finished sessions, queue, settings,
+  retained orphan and five media slots. Added exhaustive boundary/corruption/coordinator matrices.
+- Fixed two defects exposed by those matrices: restore staging can no longer be cleared when safety
+  is nested under a managed root, and backup failures before staging creation no longer retain temp
+  archives. Cross-store restore validation now rejects missing graph references and duplicate IDs.
+- Windows physical UAT passed for idle publication, incompatible-operation blocking, corrupt
+  pre-mutation rejection, controlled restore, mandatory Desktop exit/reload, restart equivalence,
+  package/media/history/session integrity, and absence of stale UI/cache or unrelated regression.
+
 # Library / Package read-only integrity diagnostics
 
 - Added a single-package Application integrity checker with immutable severity/code findings,

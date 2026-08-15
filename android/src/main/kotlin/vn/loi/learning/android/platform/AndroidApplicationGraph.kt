@@ -31,17 +31,22 @@ class AndroidApplicationGraph internal constructor(
                 importDirectory = root.resolve("imports")
             )
             directories.create()
+            val engine = AndroidStartupTrace.measured("learning_application_factory_create_persisted") {
+                LearningApplicationFactory.createPersisted(
+                    directories.dataDirectory,
+                    reconcilePartOfSpeechRegistryOnCreate = false
+                )
+            }
             AndroidApplicationGraph(
-                engine = AndroidStartupTrace.measured("learning_application_factory_create_persisted") {
-                    LearningApplicationFactory.createPersisted(
-                        directories.dataDirectory,
-                        reconcilePartOfSpeechRegistryOnCreate = false
-                    )
-                },
+                engine = engine,
                 media = JvmContentMediaStorage(directories.mediaDirectory),
                 recovery = JvmLearningDataRecoveryManager(
                     roots = mapOf("data" to directories.dataDirectory, "media" to directories.mediaDirectory),
-                    safetyDirectory = directories.backupDirectory
+                    safetyDirectory = directories.backupDirectory,
+                    gate = requireNotNull(engine.recoveryOperationGate),
+                    stagedDomainValidator = { roots ->
+                        LearningApplicationFactory.validatePersisted(requireNotNull(roots["data"]))
+                    }
                 ),
                 directories = directories
             )

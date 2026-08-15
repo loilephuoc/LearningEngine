@@ -27,6 +27,8 @@ import vn.loi.learning.application.port.ReviewEventRepository
 import vn.loi.learning.application.port.StudyQueueRepository
 import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.port.TransactionRunner
+import vn.loi.learning.application.port.RecoveryCoordinatedTransactionRunner
+import vn.loi.learning.application.port.RecoveryOperationGate
 import vn.loi.learning.application.reviewhistory.ReviewHistoryQueryService
 import vn.loi.learning.application.topic.TopicQueryService
 import vn.loi.learning.domain.study.analytics.service.StudyStatisticsCalculator
@@ -85,6 +87,60 @@ import vn.loi.learning.infrastructure.persistence.repository.StoreBackedLearning
 
 object LearningApplicationFactory {
 
+    /** Opens every canonical persisted store without mutation; any parse failure rejects recovery staging. */
+    fun validatePersisted(
+        persistenceDirectory: Path,
+        checkpoint: (String) -> Unit = {}
+    ) {
+        val context = createPersisted(persistenceDirectory, reconcilePartOfSpeechRegistryOnCreate = false)
+        checkpoint("content-libraries")
+        val libraries = context.contentLibraryRepository?.findAll().orEmpty()
+        checkpoint("content-packages")
+        val packages = context.contentPackageRepository?.findAll().orEmpty()
+        checkpoint("contents")
+        val contents = context.contentRepository?.findAll().orEmpty()
+        checkpoint("learning-items")
+        val items = context.learningItemRepository?.findAll().orEmpty()
+        checkpoint("memory-states")
+        val memoryStates = context.memoryStateRepository?.findAll().orEmpty()
+        checkpoint("review-events")
+        val reviewEvents = context.reviewEventRepository?.findAll().orEmpty()
+        checkpoint("learning-trajectories")
+        val trajectories = context.learningTrajectoryRepository?.findAll().orEmpty()
+        checkpoint("study-sessions")
+        val sessions = context.studySessionRepository?.findAll().orEmpty()
+        checkpoint("study-queues")
+        val queues = context.studyQueueRepository?.findAll().orEmpty()
+        checkpoint("package-catalogs")
+        context.packageCatalog?.findAll()
+        checkpoint("installed-packages")
+        val installedPackages = context.installedPackageRepository?.findAll().orEmpty()
+
+        val contentIds = contents.mapTo(hashSetOf()) { it.id }
+        val libraryIds = libraries.mapTo(hashSetOf()) { it.id }
+        require(items.all { it.contentId in contentIds }) { "LearningItem references missing Content." }
+        require(libraries.all { library -> library.contentIds.all { it in contentIds } }) {
+            "ContentLibrary references missing Content."
+        }
+        require(packages.all { contentPackage -> contentPackage.libraryIds.all { it in libraryIds } }) {
+            "ContentPackage references missing ContentLibrary."
+        }
+        require(contents.map { it.id }.distinct().size == contents.size) { "Duplicate Content IDs." }
+        require(items.map { it.id }.distinct().size == items.size) { "Duplicate LearningItem IDs." }
+        require(libraries.map { it.id }.distinct().size == libraries.size) { "Duplicate ContentLibrary IDs." }
+        require(packages.map { it.id }.distinct().size == packages.size) { "Duplicate ContentPackage IDs." }
+        require(installedPackages.map { it.id }.distinct().size == installedPackages.size) { "Duplicate InstalledPackage IDs." }
+        require(sessions.map { it.id }.distinct().size == sessions.size) { "Duplicate StudySession IDs." }
+        require(queues.map { it.sessionId }.distinct().size == queues.size) { "Duplicate StudyQueue session IDs." }
+        require(reviewEvents.map { it.id }.distinct().size == reviewEvents.size) { "Duplicate ReviewEvent IDs." }
+        require(memoryStates.map { it.learnerId to it.learningItemId }.distinct().size == memoryStates.size) {
+            "Duplicate MemoryState identities."
+        }
+        require(trajectories.map { it.learnerId to it.trajectory.contentId }.distinct().size == trajectories.size) {
+            "Duplicate LearningTrajectory identities."
+        }
+    }
+
     fun createInMemory(): LearningApplicationContext {
         val contentLibraryRepository =
             InMemoryContentLibraryRepository()
@@ -117,8 +173,12 @@ object LearningApplicationFactory {
         val packageCatalogRepository =
             InMemoryPackageCatalogRepository()
 
+        val recoveryOperationGate = RecoveryOperationGate()
         val transactionRunner =
-            InMemoryTransactionRunner()
+            RecoveryCoordinatedTransactionRunner(
+                InMemoryTransactionRunner(),
+                recoveryOperationGate
+            )
 
         val continuousReviewIntentRepository =
             InMemoryContinuousReviewIntentRepository()
@@ -148,7 +208,8 @@ object LearningApplicationFactory {
             transactionRunner = transactionRunner,
             continuousReviewIntentRepository = continuousReviewIntentRepository,
             learningTrajectoryRepository = learningTrajectoryRepository,
-            mediaDirectory = null
+            mediaDirectory = null,
+            recoveryOperationGate = recoveryOperationGate
         )
     }
 
@@ -317,7 +378,8 @@ object LearningApplicationFactory {
                 )
             )
 
-        val transactionRunner =
+        val recoveryOperationGate = RecoveryOperationGate()
+        val transactionRunner = RecoveryCoordinatedTransactionRunner(
             JsonFileTransactionRunner(
                 listOf(
                     installedPackagesPath,
@@ -335,7 +397,9 @@ object LearningApplicationFactory {
                     contentPackagesPath,
                     packageCatalogsPath
                 )
-            )
+            ),
+            recoveryOperationGate
+        )
 
         return createContext(
             contentLibraryRepository =
@@ -378,7 +442,8 @@ object LearningApplicationFactory {
                 ),
             domainLibraryRepository = canonicalLibraryRepository,
             domainCollectionRepository = canonicalCollectionRepository,
-            reconcilePartOfSpeechRegistryOnCreate = reconcilePartOfSpeechRegistryOnCreate
+            reconcilePartOfSpeechRegistryOnCreate = reconcilePartOfSpeechRegistryOnCreate,
+            recoveryOperationGate = recoveryOperationGate
         )
     }
 
@@ -418,7 +483,8 @@ object LearningApplicationFactory {
         vn.loi.learning.domain.library.repository.LibraryRepository? = null,
         domainCollectionRepository:
         vn.loi.learning.domain.library.repository.CollectionRepository? = null,
-        reconcilePartOfSpeechRegistryOnCreate: Boolean = true
+        reconcilePartOfSpeechRegistryOnCreate: Boolean = true,
+        recoveryOperationGate: RecoveryOperationGate? = null
     ): LearningApplicationContext {
         val partOfSpeechRegistry =
             vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry()
@@ -890,6 +956,7 @@ object LearningApplicationFactory {
             studySessionRepository = studySessionRepository,
             studyQueueRepository = studyQueueRepository,
             reviewEventRepository = reviewEventRepository,
+            learningTrajectoryRepository = learningTrajectoryRepository,
             learningInsights = learningInsights,
             exportContentPackage = exportContentPackageUseCase,
             packageBrowserQuery = packageBrowserQuery,
@@ -904,7 +971,8 @@ object LearningApplicationFactory {
             activeStudySessionScopeReconciler = activeStudySessionScopeReconciler,
             dailyStudyBudget = dailyStudyBudget,
             packageIntegrityChecker = packageIntegrityChecker,
-            intermediatePublicTransportRepair = intermediatePublicTransportRepair
+            intermediatePublicTransportRepair = intermediatePublicTransportRepair,
+            recoveryOperationGate = recoveryOperationGate
         )
 
     }

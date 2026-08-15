@@ -24,7 +24,12 @@ class DesktopRuntimeSession internal constructor(
     private val logger: DesktopRuntimeLogger
 ) : AutoCloseable {
     val recovery: DesktopRecoveryManager =
-        DesktopRecoveryManager(directories.data, directories.config)
+        DesktopRecoveryManager(
+            directories.data,
+            directories.config,
+            gate = requireNotNull(applicationContext.recoveryOperationGate),
+            stagedDomainValidator = { data, _ -> LearningApplicationFactory.validatePersisted(data) }
+        )
     val onboarding: DesktopOnboardingSession =
         DesktopOnboardingSession.open(directories.data, directories.config)
 
