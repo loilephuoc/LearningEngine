@@ -85,6 +85,28 @@ data class PackageIntegrityDialogState(
     val error: String? = null
 )
 
+data class LibraryHealthPackageResult(
+    val packageId: String,
+    val packageName: String,
+    val report: vn.loi.learning.application.integrity.PackageIntegrityReport? = null,
+    val failure: String? = null
+)
+
+data class LibraryHealthPackageTarget(val packageId: String, val packageName: String)
+
+data class LibraryHealthOverviewState(
+    val scanning: Boolean = false,
+    val scannedAt: java.time.Instant? = null,
+    val results: List<LibraryHealthPackageResult> = emptyList(),
+    val failure: String? = null
+) {
+    val hasResult: Boolean get() = scannedAt != null
+    val healthyPackages: Int get() = results.count { it.report?.status == vn.loi.learning.application.integrity.IntegrityStatus.HEALTHY }
+    val warningPackages: Int get() = results.count { it.report?.status == vn.loi.learning.application.integrity.IntegrityStatus.WARNINGS }
+    val errorPackages: Int get() = results.count { it.report?.status == vn.loi.learning.application.integrity.IntegrityStatus.ERRORS }
+    val failedPackages: Int get() = results.count { it.failure != null }
+}
+
 /**
  * Trạng thái hiển thị của Content Library.
  */

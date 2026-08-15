@@ -47,6 +47,7 @@ fun PackageListSection(
     onResetPackageProgress: ((InstalledPackageId, String) -> Unit)? = null,
     onCheckPackageIntegrity: ((String) -> Unit)? = null,
     integrityScanningPackageId: String? = null,
+    integrityScanBusy: Boolean = false,
     packageExportChooser: (String) -> Path? = ::choosePackageExportDestination,
     modifier: Modifier = Modifier
 ) {
@@ -109,7 +110,7 @@ fun PackageListSection(
                         onRemovePackage = onRemovePackage,
                         onResetProgress = { onResetPackageProgress?.invoke(pkg.id, pkg.name) },
                         onCheckIntegrity = { onCheckPackageIntegrity?.invoke(pkg.packageId.value) },
-                        integrityBusy = integrityScanningPackageId == pkg.packageId.value,
+                        integrityBusy = integrityScanBusy || integrityScanningPackageId == pkg.packageId.value,
                         packageExportChooser = packageExportChooser
                     )
                 } else {

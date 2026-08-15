@@ -27,6 +27,8 @@ import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserCard
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
 import vn.loi.learning.desktop.ui.contentlibrary.PackageIntegrityDialog
+import vn.loi.learning.desktop.ui.contentlibrary.LibraryHealthOverviewState
+import vn.loi.learning.desktop.ui.contentlibrary.LibraryHealthPackageTarget
 import vn.loi.learning.domain.library.model.CollectionId
 import vn.loi.learning.domain.library.model.InstalledPackageId
 
@@ -294,6 +296,16 @@ fun LibraryScreen(
                     onCheckPackageIntegrity = contentLibraryViewModel::checkPackageIntegrity,
                     integrityScanningPackageId = contentLibraryViewModel.packageIntegrityDialogState
                         .takeIf { it.scanning }?.packageId,
+                    integrityScanBusy = contentLibraryViewModel.libraryHealthOverviewState.scanning ||
+                        contentLibraryViewModel.packageIntegrityDialogState.scanning,
+                    libraryHealthOverviewState = contentLibraryViewModel.libraryHealthOverviewState,
+                    onCheckLibraryHealth = {
+                        val packages = (viewModel.uiState as? LibraryUiState.Content)
+                            ?.installedPackages.orEmpty()
+                            .map { LibraryHealthPackageTarget(it.packageId.value, it.name) }
+                        contentLibraryViewModel.checkLibraryHealth(packages)
+                    },
+                    onOpenLibraryHealthReport = contentLibraryViewModel::showLibraryHealthReport,
                     onCreateCollection = viewModel::openCreateCollectionDialog,
                     onRenameCollection = viewModel::openRenameCollectionDialog,
                     onDeleteCollection = viewModel::openDeleteCollectionDialog,
@@ -459,6 +471,10 @@ fun LibraryScreenContent(
     onRemovePackage: ((String, String) -> Unit)? = null,
     onCheckPackageIntegrity: ((String) -> Unit)? = null,
     integrityScanningPackageId: String? = null,
+    integrityScanBusy: Boolean = false,
+    libraryHealthOverviewState: LibraryHealthOverviewState = LibraryHealthOverviewState(),
+    onCheckLibraryHealth: (() -> Unit)? = null,
+    onOpenLibraryHealthReport: (String) -> Unit = {},
     onCreateCollection: () -> Unit = {},
     onRenameCollection: (CollectionId, String) -> Unit = { _, _ -> },
     onDeleteCollection: (CollectionId, String) -> Unit = { _, _ -> },
@@ -476,13 +492,22 @@ fun LibraryScreenContent(
             LibraryLoadingView(modifier = modifier)
         }
         is LibraryUiState.Empty -> {
-            LibraryEmptyView(
-                message = uiState.message,
-                onRefresh = onRefresh,
-                onImport = onImport,
-                isImporting = isImporting,
-                modifier = modifier
-            )
+            Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                onCheckLibraryHealth?.let { checkLibraryHealth ->
+                    LibraryHealthOverview(
+                        state = libraryHealthOverviewState,
+                        onCheck = checkLibraryHealth,
+                        onOpenReport = onOpenLibraryHealthReport
+                    )
+                }
+                LibraryEmptyView(
+                    message = uiState.message,
+                    onRefresh = onRefresh,
+                    onImport = onImport,
+                    isImporting = isImporting,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
         is LibraryUiState.Error -> {
             LibraryErrorView(
@@ -542,6 +567,14 @@ fun LibraryScreenContent(
                     isImporting = isImporting
                 )
 
+                onCheckLibraryHealth?.let { checkLibraryHealth ->
+                    LibraryHealthOverview(
+                        state = libraryHealthOverviewState,
+                        onCheck = checkLibraryHealth,
+                        onOpenReport = onOpenLibraryHealthReport
+                    )
+                }
+
                 LibrarySectionTabs(
                     selectedSection = uiState.selectedSection,
                     onSelectSection = onSelectSection,
@@ -561,7 +594,8 @@ fun LibraryScreenContent(
                             onExportPackage = onExportPackage,
                             onRemovePackage = onRemovePackage,
                             onCheckPackageIntegrity = onCheckPackageIntegrity,
-                            integrityScanningPackageId = integrityScanningPackageId
+                            integrityScanningPackageId = integrityScanningPackageId,
+                            integrityScanBusy = integrityScanBusy
                         )
 
                     LibrarySection.INSTALLED ->
@@ -579,7 +613,8 @@ fun LibraryScreenContent(
                             onExportPackage = onExportPackage,
                             onRemovePackage = onRemovePackage,
                             onCheckPackageIntegrity = onCheckPackageIntegrity,
-                            integrityScanningPackageId = integrityScanningPackageId
+                            integrityScanningPackageId = integrityScanningPackageId,
+                            integrityScanBusy = integrityScanBusy
                         )
 
                     LibrarySection.ACTIVE ->
@@ -597,7 +632,8 @@ fun LibraryScreenContent(
                             onExportPackage = onExportPackage,
                             onRemovePackage = onRemovePackage,
                             onCheckPackageIntegrity = onCheckPackageIntegrity,
-                            integrityScanningPackageId = integrityScanningPackageId
+                            integrityScanningPackageId = integrityScanningPackageId,
+                            integrityScanBusy = integrityScanBusy
                         )
 
                     LibrarySection.ARCHIVED ->
@@ -615,7 +651,8 @@ fun LibraryScreenContent(
                             onExportPackage = onExportPackage,
                             onRemovePackage = onRemovePackage,
                             onCheckPackageIntegrity = onCheckPackageIntegrity,
-                            integrityScanningPackageId = integrityScanningPackageId
+                            integrityScanningPackageId = integrityScanningPackageId,
+                            integrityScanBusy = integrityScanBusy
                         )
 
                     LibrarySection.COLLECTIONS ->

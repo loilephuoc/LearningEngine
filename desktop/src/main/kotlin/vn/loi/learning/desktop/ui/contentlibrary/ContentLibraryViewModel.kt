@@ -4,6 +4,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import java.nio.file.Path
+import java.time.Clock
+import vn.loi.learning.application.integrity.PackageIntegrityReport
+import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.application.contentpackaging.PackageImportProgressEvent
 import vn.loi.learning.application.contentpackaging.PackageImportProgressStage
 import vn.loi.learning.desktop.ui.browser.toDraftEdits
@@ -24,6 +27,8 @@ class ContentLibraryViewModel(
     (() -> Unit)? = null,
     private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner,
     private val searchDebouncer: DesktopDebouncer = ImmediateDesktopDebouncer,
+    private val clock: Clock = Clock.systemUTC(),
+    private val integrityCheck: (String, ContentMediaStorage?) -> PackageIntegrityReport = facade::checkPackageIntegrity,
     loadImmediately: Boolean = true
 ) {
 
@@ -41,14 +46,17 @@ class ContentLibraryViewModel(
     var packageIntegrityDialogState by mutableStateOf(PackageIntegrityDialogState())
         private set
 
+    var libraryHealthOverviewState by mutableStateOf(LibraryHealthOverviewState())
+        private set
+
     fun checkPackageIntegrity(packageId: String) {
-        if (packageIntegrityDialogState.scanning) return
+        if (packageIntegrityDialogState.scanning || libraryHealthOverviewState.scanning) return
         val item = uiState.packages.firstOrNull { it.id == packageId } ?: return
         packageIntegrityDialogState = PackageIntegrityDialogState(
             visible = true, packageId = item.id, packageName = item.name, scanning = true
         )
         taskRunner.run(
-            work = { facade.checkPackageIntegrity(item.id, contentMediaStorage) },
+            work = { integrityCheck(item.id, contentMediaStorage) },
             onSuccess = { report ->
                 packageIntegrityDialogState = packageIntegrityDialogState.copy(scanning = false, report = report)
             },
@@ -58,6 +66,61 @@ class ContentLibraryViewModel(
                     error = DesktopFailureMessage.forPersistedData(exception)
                 )
             }
+        )
+    }
+
+    fun checkLibraryHealth(
+        targets: List<LibraryHealthPackageTarget> = uiState.packages.map {
+            LibraryHealthPackageTarget(it.id, it.name)
+        }
+    ) {
+        if (libraryHealthOverviewState.scanning || packageIntegrityDialogState.scanning) return
+        val snapshot = targets.toList()
+        libraryHealthOverviewState = libraryHealthOverviewState.copy(scanning = true, failure = null)
+        taskRunner.run(
+            work = {
+                snapshot.map { (packageId, packageName) ->
+                    try {
+                        LibraryHealthPackageResult(
+                            packageId = packageId,
+                            packageName = packageName,
+                            report = integrityCheck(packageId, contentMediaStorage)
+                        )
+                    } catch (exception: Exception) {
+                        LibraryHealthPackageResult(
+                            packageId = packageId,
+                            packageName = packageName,
+                            failure = DesktopFailureMessage.forPersistedData(exception)
+                        )
+                    }
+                }
+            },
+            onSuccess = { results ->
+                libraryHealthOverviewState = LibraryHealthOverviewState(
+                    scanning = false,
+                    scannedAt = clock.instant(),
+                    results = results
+                )
+            },
+            onFailure = { exception ->
+                libraryHealthOverviewState = libraryHealthOverviewState.copy(
+                    scanning = false,
+                    failure = DesktopFailureMessage.forPersistedData(exception)
+                )
+            }
+        )
+    }
+
+    fun showLibraryHealthReport(packageId: String) {
+        if (libraryHealthOverviewState.scanning || packageIntegrityDialogState.scanning) return
+        val result = libraryHealthOverviewState.results.firstOrNull { it.packageId == packageId }
+            ?: return
+        val report = result.report ?: return
+        packageIntegrityDialogState = PackageIntegrityDialogState(
+            visible = true,
+            packageId = result.packageId,
+            packageName = result.packageName,
+            report = report
         )
     }
 
