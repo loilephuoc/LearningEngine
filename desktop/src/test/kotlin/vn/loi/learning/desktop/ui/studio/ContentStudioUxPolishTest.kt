@@ -5,10 +5,13 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserFacade
+import vn.loi.learning.desktop.ui.browser.ContentProblemFilter
+import vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction
 import vn.loi.learning.desktop.ui.browser.toDraftEdits
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryFacade
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
@@ -391,4 +394,21 @@ class ContentStudioUxPolishTest {
         assertEquals("media/img_2.png", itemA.imageRef)
         assertEquals("media/q_audio_2.mp3", itemA.questionAudioRef)
     }
+
+    @Test
+    fun `problem navigation uses canonical auto-edit dirty guard and has no wrap`() {
+        val vm = createViewModelWithPackage(3, withOptionalFields = true)
+        vm.updatePackageBrowserProblemFilter(ContentProblemFilter.ALL_PROBLEMS)
+        val first = vm.packageBrowserUiState!!.selectedContentId
+        vm.navigatePackageBrowserProblem(-1)
+        assertEquals(first, vm.packageBrowserUiState!!.selectedContentId)
+
+        vm.updateDraftQuestion("Dirty question")
+        vm.navigatePackageBrowserProblem(1)
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.showUnsavedChangesDialog)
+        assertIs<PackageBrowserPendingAction.DoubleClickRow>(state.pendingAction)
+    }
+
 }

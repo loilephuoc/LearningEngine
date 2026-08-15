@@ -46,6 +46,7 @@ import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
 import vn.loi.learning.application.contentpackaging.browser.BrowserSortOption
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
+import vn.loi.learning.desktop.ui.browser.ContentProblemFilter
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
 
@@ -62,6 +63,9 @@ fun ContentExplorerPane(
     onLessonFilterChanged: (String) -> Unit,
     onMediaFilterChanged: (BrowserMediaFilter) -> Unit,
     onSortChanged: (BrowserSortOption) -> Unit,
+    onProblemFilterChanged: (ContentProblemFilter) -> Unit = {},
+    onPreviousProblem: () -> Unit = {},
+    onNextProblem: () -> Unit = {},
     onResetFilters: () -> Unit,
     onDoubleClickRow: ((String) -> Unit)?,
     onPlayQuestionAudio: ((String, String) -> Unit)? = null,
@@ -176,6 +180,13 @@ fun ContentExplorerPane(
                     .padding(horizontal = LESpacing.sm, vertical = 5.dp)
             )
 
+            ProblemNavigationControls(
+                uiState = uiState,
+                onFilterChanged = onProblemFilterChanged,
+                onPrevious = onPreviousProblem,
+                onNext = onNextProblem
+            )
+
             HorizontalDivider(color = LEColors.borderSubtle)
 
             // Scrollable Items List
@@ -271,6 +282,75 @@ fun ContentExplorerPane(
             }
 
 
+        }
+    }
+}
+
+@Composable
+private fun ProblemNavigationControls(
+    uiState: PackageContentBrowserUiState,
+    onFilterChanged: (ContentProblemFilter) -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val items = uiState.filteredItems
+    val selectedIndex = items.indexOfFirst { it.contentId.value == uiState.selectedContentId }
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LESpacing.sm, vertical = 3.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Problems: ${uiState.problemProjection.problematicContentCount}",
+                style = LETypography.caption,
+                color = LEColors.textSecondary
+            )
+            Box {
+                TextButton(
+                    onClick = { expanded = true },
+                    modifier = Modifier.semantics {
+                        contentDescription = "Problem filter. Selected ${uiState.problemFilter.label}"
+                    }
+                ) { Text(uiState.problemFilter.label, style = LETypography.caption) }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    ContentProblemFilter.entries.forEach { filter ->
+                        DropdownMenuItem(
+                            text = {
+                                val count = filter.problem?.let(uiState.problemProjection::count)
+                                Text(if (count == null) filter.label else "${filter.label} ($count)")
+                            },
+                            onClick = { expanded = false; onFilterChanged(filter) }
+                        )
+                    }
+                }
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            OutlinedButton(
+                onClick = onPrevious,
+                enabled = uiState.problemFilter != ContentProblemFilter.NONE && selectedIndex > 0,
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 30.dp)
+            ) { Text("← Previous Problem", style = LETypography.caption, maxLines = 1) }
+            OutlinedButton(
+                onClick = onNext,
+                enabled = uiState.problemFilter != ContentProblemFilter.NONE && selectedIndex >= 0 && selectedIndex < items.lastIndex,
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 30.dp)
+            ) { Text("Next Problem →", style = LETypography.caption, maxLines = 1) }
+        }
+        if (uiState.problemFilter != ContentProblemFilter.NONE && items.isEmpty()) {
+            Text(
+                if (uiState.problemProjection.problematicContentCount == 0) "No problems found"
+                else "No items with ${uiState.problemFilter.label}",
+                style = LETypography.caption,
+                color = LEColors.textMuted
+            )
         }
     }
 }

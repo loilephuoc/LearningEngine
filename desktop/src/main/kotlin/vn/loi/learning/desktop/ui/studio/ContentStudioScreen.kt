@@ -17,6 +17,7 @@ import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
 import vn.loi.learning.application.contentpackaging.browser.BrowserSortOption
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
+import vn.loi.learning.desktop.ui.browser.ContentProblemFilter
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
 import vn.loi.learning.desktop.platform.DesktopFileActions
 import vn.loi.learning.desktop.ui.designsystem.*
@@ -34,6 +35,9 @@ fun ContentStudioScreen(
     onLessonFilterChanged: (String) -> Unit,
     onMediaFilterChanged: (BrowserMediaFilter) -> Unit,
     onSortChanged: (BrowserSortOption) -> Unit,
+    onProblemFilterChanged: (ContentProblemFilter) -> Unit = {},
+    onPreviousProblem: () -> Unit = {},
+    onNextProblem: () -> Unit = {},
     onResetFilters: () -> Unit,
     onPlayAudio: ((String) -> Unit)? = null,
     onStopAudio: (() -> Unit)? = null,
@@ -184,6 +188,9 @@ fun ContentStudioScreen(
                     onLessonFilterChanged = onLessonFilterChanged,
                     onMediaFilterChanged = onMediaFilterChanged,
                     onSortChanged = onSortChanged,
+                    onProblemFilterChanged = onProblemFilterChanged,
+                    onPreviousProblem = onPreviousProblem,
+                    onNextProblem = onNextProblem,
                     onResetFilters = onResetFilters,
                     onDoubleClickRow = onDoubleClickRow,
                     onPlayQuestionAudio = { id, ref ->

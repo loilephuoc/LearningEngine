@@ -722,10 +722,10 @@ class ContentLibraryViewModel(
         taskRunner.run(
             work = {
                 val loadedBrowser = try {
-                    packageBrowserFacade.loadForPackage(
+                    withProblemProjection(packageBrowserFacade.loadForPackage(
                         installedPackageId = installedPackageId,
                         packageName = packageName
-                    )
+                    ))
                 } catch (ex: Exception) {
                     null
                 }
@@ -763,7 +763,8 @@ class ContentLibraryViewModel(
         candidateQuery: String = current.appliedQuery,
         candidateLessonFilter: String = current.selectedLessonFilter,
         candidateMediaFilter: vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter = current.mediaFilter,
-        candidateSortOption: vn.loi.learning.application.contentpackaging.browser.BrowserSortOption = current.sortOption
+        candidateSortOption: vn.loi.learning.application.contentpackaging.browser.BrowserSortOption = current.sortOption,
+        candidateProblemFilter: vn.loi.learning.desktop.ui.browser.ContentProblemFilter = current.problemFilter
     ): Boolean {
         val editingId = current.editingContentId ?: return true
         val candidateFiltered = vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserProjectionPolicy.filterAndSort(
@@ -773,7 +774,9 @@ class ContentLibraryViewModel(
             mediaFilter = candidateMediaFilter,
             sortOption = candidateSortOption
         )
-        return candidateFiltered.any { it.contentId.value == editingId }
+        return candidateFiltered.any {
+            it.contentId.value == editingId && current.problemProjection.matches(it.contentId.value, candidateProblemFilter)
+        }
     }
 
     fun updatePackageBrowserQuery(query: String) {
@@ -865,6 +868,36 @@ class ContentLibraryViewModel(
         packageBrowserUiState = current.copy(sortOption = sort)
     }
 
+    fun updatePackageBrowserProblemFilter(filter: vn.loi.learning.desktop.ui.browser.ContentProblemFilter) {
+        val current = packageBrowserUiState ?: return
+        if (current.isDirty && !isEditedRowStillVisible(current, candidateProblemFilter = filter)) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyProblemFilter(filter)
+            )
+            return
+        }
+        val projected = current.copy(problemFilter = filter)
+        val selection = projected.filteredItems.firstOrNull { it.contentId.value == current.selectedContentId }
+            ?: projected.filteredItems.firstOrNull()
+        val draft = selection?.toDraftEdits()
+        packageBrowserUiState = projected.copy(
+            selectedContentId = selection?.contentId?.value,
+            editingContentId = selection?.contentId?.value,
+            loadedBaselineDraft = draft,
+            draftEdits = draft
+        )
+    }
+
+    fun navigatePackageBrowserProblem(delta: Int) {
+        val current = packageBrowserUiState ?: return
+        val items = current.filteredItems
+        val currentIndex = items.indexOfFirst { it.contentId.value == current.selectedContentId }
+        val targetIndex = currentIndex + delta
+        if (currentIndex < 0 || targetIndex !in items.indices) return
+        attemptSelectRowAutoEdit(items[targetIndex].contentId.value)
+    }
+
     fun resetPackageBrowserFilters() {
         val current = packageBrowserUiState ?: return
         if (current.isDirty && !isEditedRowStillVisible(current, candidateQuery = "", candidateLessonFilter = "ALL", candidateMediaFilter = vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL, candidateSortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER)) {
@@ -879,7 +912,8 @@ class ContentLibraryViewModel(
             appliedQuery = "",
             selectedLessonFilter = "ALL",
             mediaFilter = vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL,
-            sortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER
+            sortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER,
+            problemFilter = vn.loi.learning.desktop.ui.browser.ContentProblemFilter.NONE
         )
     }
 
@@ -1052,27 +1086,30 @@ class ContentLibraryViewModel(
         packageBrowserUiState = current.copy(isCreateSubmitting = true)
         taskRunner.run(
             work = {
-                packageBrowserFacade.createContent(
+                withProblemProjection(packageBrowserFacade.createContent(
                     draft = draft,
                     installedPackageId = current.installedPackageId,
                     packageName = current.packageName
-                )
+                ))
             },
             onSuccess = { reloaded ->
-                val selectedId = reloaded.selectedContentId
-                val reloadedItem = reloaded.selectedItemInView ?: reloaded.selectedItemAnywhere
-                val reloadedDraft = reloadedItem?.toDraftEdits()
-                packageBrowserUiState = reloaded.copy(
-                    isCreatingNewItem = false,
-                    selectedContentId = selectedId,
-                    editingContentId = selectedId,
-                    loadedBaselineDraft = reloadedDraft,
-                    draftEdits = reloadedDraft,
+                val projected = reloaded.copy(
                     query = current.query,
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
                     sortOption = current.sortOption,
+                    problemFilter = current.problemFilter
+                )
+                val selection = projected.filteredItems.firstOrNull { it.contentId.value == reloaded.selectedContentId }
+                    ?: projected.filteredItems.firstOrNull()
+                val reloadedDraft = selection?.toDraftEdits()
+                packageBrowserUiState = projected.copy(
+                    isCreatingNewItem = false,
+                    selectedContentId = selection?.contentId?.value,
+                    editingContentId = selection?.contentId?.value,
+                    loadedBaselineDraft = reloadedDraft,
+                    draftEdits = reloadedDraft,
                     highlightedContentIds = current.highlightedContentIds,
                     centerSelectedRowRequest = current.centerSelectedRowRequest,
                     isCreateSubmitting = false
@@ -1308,15 +1345,15 @@ class ContentLibraryViewModel(
 
         taskRunner.run(
             work = {
-                packageBrowserFacade.persistEdit(
+                withProblemProjection(packageBrowserFacade.persistEdit(
                     draft = draft,
                     installedPackageId = current.installedPackageId,
                     packageName = current.packageName
-                )
+                ))
             },
             onSuccess = { reloaded ->
                 val selectedId = current.selectedContentId
-                val projected = reloaded.copy(query = current.query, appliedQuery = current.appliedQuery, selectedLessonFilter = current.selectedLessonFilter, mediaFilter = current.mediaFilter, sortOption = current.sortOption)
+                val projected = reloaded.copy(query = current.query, appliedQuery = current.appliedQuery, selectedLessonFilter = current.selectedLessonFilter, mediaFilter = current.mediaFilter, sortOption = current.sortOption, problemFilter = current.problemFilter)
                 val savedVisible = projected.filteredItems.firstOrNull { it.contentId.value == selectedId }
                 val selection = savedVisible ?: projected.filteredItems.firstOrNull()
                 val reloadedDraft = selection?.toDraftEdits()
@@ -1370,12 +1407,12 @@ class ContentLibraryViewModel(
             } else item
         }
 
-        packageBrowserUiState = current.copy(
+        packageBrowserUiState = withProblemProjection(current.copy(
             allItems = updatedItems,
             editingContentId = null,
             loadedBaselineDraft = null,
             draftEdits = null
-        )
+        ))
     }
 
     /** Hiển thị dialog xác nhận xóa Content. */
@@ -1428,7 +1465,7 @@ class ContentLibraryViewModel(
                     contentId = vn.loi.learning.domain.content.model.ContentId(deleteId),
                     installedPackageId = current.installedPackageId,
                     packageName = current.packageName
-                )
+                ).let { it.copy(state = withProblemProjection(it.state)) }
             },
             onSuccess = { result ->
                 val reloaded = result.state
@@ -1446,6 +1483,7 @@ class ContentLibraryViewModel(
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
                     sortOption = current.sortOption,
+                    problemFilter = current.problemFilter,
                     canUndoDelete = true,
                     undoDeleteLabel = result.snapshot.displayLabel,
                     highlightedContentIds = current.highlightedContentIds - deleteId,
@@ -1470,11 +1508,11 @@ class ContentLibraryViewModel(
         if (current.isDirty || current.isCreatingNewItem) return
         taskRunner.run(
             work = {
-                packageBrowserFacade.undoDelete(
+                withProblemProjection(packageBrowserFacade.undoDelete(
                     snapshot = snapshot,
                     installedPackageId = current.installedPackageId,
                     packageName = current.packageName
-                )
+                ))
             },
             onSuccess = { reloaded ->
                 val restoredId = snapshot.content.id.value
@@ -1483,7 +1521,8 @@ class ContentLibraryViewModel(
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
-                    sortOption = current.sortOption
+                    sortOption = current.sortOption,
+                    problemFilter = current.problemFilter
                 )
                 val restored = projected.filteredItems.firstOrNull { it.contentId.value == restoredId }
                 val retained = projected.filteredItems.firstOrNull { it.contentId.value == current.selectedContentId }
@@ -1536,6 +1575,9 @@ class ContentLibraryViewModel(
 
         packageBrowserUiState = current.copy(
             allItems = newItems,
+            problemProjection = current.problemProjection.copy(
+                byContentId = current.problemProjection.byContentId - deleteId
+            ),
             selectedContentId = nextSelection,
             editingContentId = nextSelection,
             loadedBaselineDraft = selectedDraft,
@@ -1592,27 +1634,32 @@ class ContentLibraryViewModel(
             packageBrowserUiState = current.copy(isCreateSubmitting = true)
             taskRunner.run(
                 work = {
-                    packageBrowserFacade.createContent(
+                    withProblemProjection(packageBrowserFacade.createContent(
                         draft = draft,
                         installedPackageId = current.installedPackageId,
                         packageName = current.packageName
-                    )
+                    ))
                 },
                 onSuccess = { reloaded ->
-                    val selectedItem = reloaded.selectedItemInView ?: reloaded.selectedItemAnywhere
-                    val selectedDraft = selectedItem?.toDraftEdits()
-                    packageBrowserUiState = reloaded.copy(
-                        isCreatingNewItem = false,
-                        editingContentId = selectedItem?.contentId?.value,
-                        loadedBaselineDraft = selectedDraft,
-                        draftEdits = selectedDraft,
-                        showUnsavedChangesDialog = false,
-                        pendingAction = null,
+                    val projected = reloaded.copy(
                         query = current.query,
                         appliedQuery = current.appliedQuery,
                         selectedLessonFilter = current.selectedLessonFilter,
                         mediaFilter = current.mediaFilter,
                         sortOption = current.sortOption,
+                        problemFilter = current.problemFilter
+                    )
+                    val selectedItem = projected.filteredItems.firstOrNull { it.contentId.value == reloaded.selectedContentId }
+                        ?: projected.filteredItems.firstOrNull()
+                    val selectedDraft = selectedItem?.toDraftEdits()
+                    packageBrowserUiState = projected.copy(
+                        isCreatingNewItem = false,
+                        selectedContentId = selectedItem?.contentId?.value,
+                        editingContentId = selectedItem?.contentId?.value,
+                        loadedBaselineDraft = selectedDraft,
+                        draftEdits = selectedDraft,
+                        showUnsavedChangesDialog = false,
+                        pendingAction = null,
                         highlightedContentIds = current.highlightedContentIds,
                         centerSelectedRowRequest = current.centerSelectedRowRequest,
                         isCreateSubmitting = false
@@ -1634,27 +1681,31 @@ class ContentLibraryViewModel(
         } else {
             taskRunner.run(
                 work = {
-                    packageBrowserFacade.persistEdit(
+                    withProblemProjection(packageBrowserFacade.persistEdit(
                         draft = draft,
                         installedPackageId = current.installedPackageId,
                         packageName = current.packageName
-                    )
+                    ))
                 },
                 onSuccess = { reloaded ->
-                    val selectedItem = reloaded.allItems.firstOrNull { it.contentId.value == draft.contentId } ?: reloaded.selectedItemInView
-                    val selectedDraft = selectedItem?.toDraftEdits()
-                    packageBrowserUiState = reloaded.copy(
-                        selectedContentId = selectedItem?.contentId?.value ?: current.selectedContentId,
-                        editingContentId = selectedItem?.contentId?.value ?: current.selectedContentId,
-                        loadedBaselineDraft = selectedDraft,
-                        draftEdits = selectedDraft,
-                        showUnsavedChangesDialog = false,
-                        pendingAction = null,
+                    val projected = reloaded.copy(
                         query = current.query,
                         appliedQuery = current.appliedQuery,
                         selectedLessonFilter = current.selectedLessonFilter,
                         mediaFilter = current.mediaFilter,
                         sortOption = current.sortOption,
+                        problemFilter = current.problemFilter
+                    )
+                    val selectedItem = projected.filteredItems.firstOrNull { it.contentId.value == draft.contentId }
+                        ?: projected.filteredItems.firstOrNull()
+                    val selectedDraft = selectedItem?.toDraftEdits()
+                    packageBrowserUiState = projected.copy(
+                        selectedContentId = selectedItem?.contentId?.value,
+                        editingContentId = selectedItem?.contentId?.value,
+                        loadedBaselineDraft = selectedDraft,
+                        draftEdits = selectedDraft,
+                        showUnsavedChangesDialog = false,
+                        pendingAction = null,
                         highlightedContentIds = current.highlightedContentIds,
                         centerSelectedRowRequest = current.centerSelectedRowRequest
                     )
@@ -1725,6 +1776,9 @@ class ContentLibraryViewModel(
                 val current = packageBrowserUiState ?: return
                 packageBrowserUiState = current.copy(sortOption = action.sortOption)
             }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyProblemFilter -> {
+                updatePackageBrowserProblemFilter(action.problemFilter)
+            }
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ResetFilters -> {
                 val current = packageBrowserUiState ?: return
                 packageBrowserUiState = current.copy(
@@ -1732,7 +1786,8 @@ class ContentLibraryViewModel(
                     appliedQuery = "",
                     selectedLessonFilter = "ALL",
                     mediaFilter = vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL,
-                    sortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER
+                    sortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER,
+                    problemFilter = vn.loi.learning.desktop.ui.browser.ContentProblemFilter.NONE
                 )
             }
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.StartCreate -> startNewItem()
@@ -1747,6 +1802,12 @@ class ContentLibraryViewModel(
     fun stopBrowserAudio() {
         packageBrowserUiState = packageBrowserUiState?.copy(activePlayingAudioRef = null)
     }
+
+    private fun withProblemProjection(
+        state: vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
+    ): vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState = state.copy(
+        problemProjection = vn.loi.learning.desktop.ui.browser.projectContentProblems(state.allItems, contentMediaStorage)
+    )
 
     fun closePackageBrowser() {
         val current = packageBrowserUiState

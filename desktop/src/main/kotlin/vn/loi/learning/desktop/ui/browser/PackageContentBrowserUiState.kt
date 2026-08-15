@@ -16,6 +16,8 @@ data class PackageContentBrowserUiState(
     val availableLessons: List<String> = emptyList(),
     val mediaFilter: BrowserMediaFilter = BrowserMediaFilter.ALL,
     val sortOption: BrowserSortOption = BrowserSortOption.ORIGINAL_ORDER,
+    val problemFilter: ContentProblemFilter = ContentProblemFilter.NONE,
+    val problemProjection: ContentProblemProjection = ContentProblemProjection(),
     val selectedContentId: String? = null,
     /** Runtime-only Content Studio markers. Never persisted or copied into domain content. */
     val highlightedContentIds: Set<String> = emptySet(),
@@ -60,7 +62,7 @@ data class PackageContentBrowserUiState(
             lessonFilter = selectedLessonFilter,
             mediaFilter = mediaFilter,
             sortOption = sortOption
-        )
+        ).filter { problemProjection.matches(it.contentId.value, problemFilter) }
     }
 
     val selectedItemInView: PackageContentBrowserItem? get() {
@@ -76,4 +78,5 @@ data class PackageContentBrowserUiState(
     val isFilterDefault: Boolean get() =
         query.isBlank() && appliedQuery.isBlank() && selectedLessonFilter == "ALL" &&
                 mediaFilter == BrowserMediaFilter.ALL && sortOption == BrowserSortOption.ORIGINAL_ORDER
+                && problemFilter == ContentProblemFilter.NONE
 }

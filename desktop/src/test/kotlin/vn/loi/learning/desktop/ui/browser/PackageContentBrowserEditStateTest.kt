@@ -434,6 +434,40 @@ class PackageContentBrowserEditStateTest {
     }
 
     @Test
+    fun `problem filtering and navigation are presentation-only and mutate no repositories`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(context, contentCount = 3)
+        val before = listOf(
+            context.contentRepository!!.findAll(),
+            context.learningItemRepository!!.findAll(),
+            context.contentLibraryRepository!!.findAll(),
+            context.installedPackageRepository!!.findAll(),
+            context.memoryStateRepository!!.findAll(),
+            context.reviewEventRepository!!.findAll(),
+            context.learningTrajectoryRepository!!.findAll(),
+            context.studySessionRepository!!.findAll(),
+            context.studyQueueRepository!!.findAll()
+        )
+
+        vm.updatePackageBrowserProblemFilter(ContentProblemFilter.ALL_PROBLEMS)
+        vm.navigatePackageBrowserProblem(1)
+        vm.updatePackageBrowserProblemFilter(ContentProblemFilter.NONE)
+
+        val after = listOf(
+            context.contentRepository!!.findAll(),
+            context.learningItemRepository!!.findAll(),
+            context.contentLibraryRepository!!.findAll(),
+            context.installedPackageRepository!!.findAll(),
+            context.memoryStateRepository!!.findAll(),
+            context.reviewEventRepository!!.findAll(),
+            context.learningTrajectoryRepository!!.findAll(),
+            context.studySessionRepository!!.findAll(),
+            context.studyQueueRepository!!.findAll()
+        )
+        assertEquals(before, after)
+    }
+
+    @Test
     fun `second successful delete replaces first undo snapshot`() {
         val appContext = LearningApplicationFactory.createInMemory()
         val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
