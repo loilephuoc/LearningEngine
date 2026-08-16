@@ -21,8 +21,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
-internal const val REVIEW_NAVIGATION_SWIPE_THRESHOLD_DP = 72
-internal const val REVIEW_NAVIGATION_INTENT_RATIO = 1.35f
+internal const val REVIEW_NAVIGATION_SWIPE_THRESHOLD_DP = 44
+internal const val REVIEW_NAVIGATION_INTENT_RATIO = 1.25f
 
 internal enum class ReviewNavigationGesture { NONE, PREVIOUS, NEXT }
 

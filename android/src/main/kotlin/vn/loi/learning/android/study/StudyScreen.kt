@@ -468,7 +468,7 @@ private fun Modifier.introductionStageGestures(
     revealed,
     historyPreview
 ) {
-    val swipeThresholdPx = 72.dp.toPx()
+    val swipeThresholdPx = 44.dp.toPx()
     val tapSlopPx = 12.dp.toPx()
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -487,16 +487,16 @@ private fun Modifier.introductionStageGestures(
             childConsumed = childConsumed || change.isConsumed
             val deltaX = end.x - down.position.x
             val deltaY = end.y - down.position.y
-            if (navigationEnabled && !ownsUpwardDrag && kotlin.math.abs(deltaX) > swipeThresholdPx &&
-                kotlin.math.abs(deltaX) > kotlin.math.abs(deltaY) * 1.35f
-            ) {
+            val absX = kotlin.math.abs(deltaX)
+            val absY = kotlin.math.abs(deltaY)
+            if (navigationEnabled && !ownsUpwardDrag && absX > tapSlopPx && absX > absY * 1.25f) {
                 ownsHorizontalDrag = true
             }
             if (ownsHorizontalDrag) {
                 change.consume()
                 onHorizontalDragOffset(deltaX)
-            } else if ((ratingEnabled || gatedUpwardNavigation || (historyPreview && navigationEnabled)) &&
-                deltaY < -swipeThresholdPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX) * 1.35f
+            } else if ((ratingEnabled || gatedUpwardNavigation || (historyPreview && navigationEnabled) || navigationEnabled) &&
+                !ownsHorizontalDrag && deltaY < -tapSlopPx && absY > absX * 1.25f
             ) {
                 ownsUpwardDrag = true
                 change.consume()

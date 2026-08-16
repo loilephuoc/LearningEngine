@@ -433,7 +433,7 @@ class AndroidFocusFirstIntroductionTest {
     ) = resolveIntroductionStageGesture(
         deltaX = deltaX,
         deltaY = deltaY,
-        swipeThresholdPx = 72f,
+        swipeThresholdPx = 44f,
         tapSlopPx = 12f,
         scrollRequired = scrollRequired,
         childConsumed = childConsumed,

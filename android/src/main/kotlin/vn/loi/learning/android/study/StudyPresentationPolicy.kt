@@ -141,11 +141,11 @@ internal fun resolveIntroductionStageGesture(
     val absX = kotlin.math.abs(deltaX)
     val absY = kotlin.math.abs(deltaY)
     if (absX <= tapSlopPx && absY <= tapSlopPx) return IntroductionStageGesture.TAP
-    if (navigationEnabled && absX >= swipeThresholdPx && absX > absY * 1.35f) {
+    if (navigationEnabled && absX >= swipeThresholdPx && absX > absY * 1.25f) {
         return if (deltaX > 0f) IntroductionStageGesture.PREVIOUS else IntroductionStageGesture.NEXT
     }
     return if (!scrollRequired && gestureDurationMillis <= 600L &&
-        deltaY <= -swipeThresholdPx && absX <= absY * 0.55f
+        deltaY <= -swipeThresholdPx && absY > absX * 1.25f
     ) {
         if (ratingEnabled || gatedUpwardNavigation) IntroductionStageGesture.SWIPE_GOOD
         else if (navigationEnabled) IntroductionStageGesture.NEXT

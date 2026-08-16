@@ -321,11 +321,11 @@ class AndroidReviewNavigationHistoryTest {
 
     @Test
     fun `swipe vocabulary uses deliberate dominant threshold`() {
-        assertEquals(ReviewNavigationGesture.NEXT, resolveReviewNavigationGesture(Offset(-100f, 12f), 72f))
-        assertEquals(ReviewNavigationGesture.PREVIOUS, resolveReviewNavigationGesture(Offset(100f, 12f), 72f))
-        assertEquals(ReviewNavigationGesture.NEXT, resolveReviewNavigationGesture(Offset(12f, -100f), 72f))
-        assertEquals(ReviewNavigationGesture.NONE, resolveReviewNavigationGesture(Offset(-20f, -8f), 72f))
-        assertEquals(ReviewNavigationGesture.NONE, resolveReviewNavigationGesture(Offset(-90f, -80f), 72f))
+        assertEquals(ReviewNavigationGesture.NEXT, resolveReviewNavigationGesture(Offset(-100f, 12f), 44f))
+        assertEquals(ReviewNavigationGesture.PREVIOUS, resolveReviewNavigationGesture(Offset(100f, 12f), 44f))
+        assertEquals(ReviewNavigationGesture.NEXT, resolveReviewNavigationGesture(Offset(12f, -100f), 44f))
+        assertEquals(ReviewNavigationGesture.NONE, resolveReviewNavigationGesture(Offset(-20f, -8f), 44f))
+        assertEquals(ReviewNavigationGesture.NONE, resolveReviewNavigationGesture(Offset(-90f, -80f), 44f))
     }
 
     @Test

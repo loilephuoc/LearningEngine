@@ -28,7 +28,7 @@ class AndroidPassiveVietnameseStudyTextTest {
             resolveIntroductionStageGesture(
                 deltaX = 2f,
                 deltaY = 3f,
-                swipeThresholdPx = 72f,
+                swipeThresholdPx = 44f,
                 tapSlopPx = 12f,
                 scrollRequired = false,
                 childConsumed = false,
@@ -112,7 +112,7 @@ class AndroidPassiveVietnameseStudyTextTest {
     ) = resolveIntroductionStageGesture(
         deltaX = deltaX,
         deltaY = deltaY,
-        swipeThresholdPx = 72f,
+        swipeThresholdPx = 44f,
         tapSlopPx = 12f,
         scrollRequired = false,
         childConsumed = false,
