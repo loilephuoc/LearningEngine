@@ -1,6 +1,7 @@
 package vn.loi.learning.android.study.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -17,10 +18,21 @@ import vn.loi.learning.android.ui.StudyPartOfSpeechColors
 internal fun PartOfSpeechBadge(
     presentation: PartOfSpeechPresentation,
     modifier: Modifier = Modifier,
-    compact: Boolean = false
+    compact: Boolean = false,
+    prominent: Boolean = false
 ) {
     val palette = StudyPartOfSpeechColors.palette
     val colors = palette[presentation.paletteIndex % palette.size]
+    val textStyle = when {
+        prominent -> MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+        compact -> MaterialTheme.typography.labelSmall
+        else -> MaterialTheme.typography.labelMedium
+    }
+    val paddingValues = when {
+        prominent -> PaddingValues(horizontal = 14.dp, vertical = 5.dp)
+        compact -> PaddingValues(horizontal = 7.dp, vertical = 2.dp)
+        else -> PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+    }
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(50),
@@ -30,12 +42,9 @@ internal fun PartOfSpeechBadge(
     ) {
         Text(
             presentation.canonicalLabel,
-            style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+            style = textStyle,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(
-                horizontal = if (compact) 7.dp else 10.dp,
-                vertical = if (compact) 2.dp else 4.dp
-            )
+            modifier = Modifier.padding(paddingValues)
         )
     }
 }

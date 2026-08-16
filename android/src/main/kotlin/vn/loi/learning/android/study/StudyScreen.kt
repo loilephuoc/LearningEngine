@@ -1459,9 +1459,6 @@ private fun IntroductionLearningStage(
                             verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
                         ) {
                             val meaning = state.meaning ?: "Nghĩa tiếng Việt"
-                            if (!state.revealed && difficultSkim) {
-                                partOfSpeechPresentation(state.partOfSpeech)?.let { PartOfSpeechBadge(it) }
-                            }
                             IntroductionHeroMedia(
                                 state = state,
                                 focusedSkimUx = focusedSkimUx,
@@ -1477,7 +1474,7 @@ private fun IntroductionLearningStage(
                             )
 
                             // FRONT hierarchy:
-                            // IMAGE -> reveal hint -> 20dp -> VI meaning -> 10dp -> POS
+                            // IMAGE -> 12dp -> POS (prominent) -> 14dp -> VI meaning -> 14dp -> reveal hint
                             AnimatedContent(
                                 targetState = state.revealed,
                                 transitionSpec = {
@@ -1495,13 +1492,12 @@ private fun IntroductionLearningStage(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    IntroductionInteractionHint(
-                                        primary = if (difficultSkim) "Xem đáp án" else "Tap to reveal",
-                                        secondary = if (difficultSkim) "Ôn nhanh từ khó" else "Recall the English word",
-                                        emphasized = true
-                                    )
+                                    partOfSpeechPresentation(state.partOfSpeech)?.let { pos ->
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        PartOfSpeechBadge(pos, prominent = true)
+                                    }
 
-                                    Spacer(modifier = Modifier.height(20.dp))
+                                    Spacer(modifier = Modifier.height(14.dp))
 
                                     StudyAudioTextTarget(
                                         text = meaning,
@@ -1520,13 +1516,13 @@ private fun IntroductionLearningStage(
                                         interaction = StudyTextInteraction.PASSIVE
                                     )
 
-                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Spacer(modifier = Modifier.height(14.dp))
 
-                                    if (!difficultSkim) {
-                                        partOfSpeechPresentation(state.partOfSpeech)?.let { pos ->
-                                            PartOfSpeechBadge(pos)
-                                        }
-                                    }
+                                    IntroductionInteractionHint(
+                                        primary = if (difficultSkim) "Xem đáp án" else "Tap to reveal",
+                                        secondary = if (difficultSkim) "Ôn nhanh từ khó" else "Recall the English word",
+                                        emphasized = false
+                                    )
                                 }
                                 } else {
                                 StudyAnswerSection(
@@ -1695,23 +1691,30 @@ private fun IntroductionInteractionHint(
     Surface(
         shape = LearningEngineShapes.large,
         color = if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f)
-        else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f),
+        else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.45f),
         contentColor = if (emphasized) MaterialTheme.colorScheme.onPrimaryContainer
-        else MaterialTheme.colorScheme.onSurfaceVariant,
+        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
         modifier = Modifier.semantics(mergeDescendants = true) {
             contentDescription = "$primary. $secondary"
         }
     ) {
         Column(
-            Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.extraSmall),
+            Modifier.padding(
+                horizontal = if (emphasized) LearningSpacing.medium else LearningSpacing.small + 4.dp,
+                vertical = if (emphasized) LearningSpacing.extraSmall else 3.dp
+            ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
-            Text(primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+            Text(
+                primary,
+                style = if (emphasized) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
             Text(
                 secondary,
                 style = MaterialTheme.typography.labelSmall,
-                color = LocalContentColor.current.copy(alpha = 0.78f),
+                color = LocalContentColor.current.copy(alpha = if (emphasized) 0.78f else 0.65f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )

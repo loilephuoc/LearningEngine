@@ -68,7 +68,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(screen.contains("is AndroidStudyState.Introduction,"))
         assertTrue(screen.contains("is AndroidStudyState.Typing -> Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("state = introductionScrollState"))
-        assertTrue(introduction.contains("Spacer(modifier = Modifier.height(20.dp))"))
+        assertTrue(introduction.contains("Spacer(modifier = Modifier.height(14.dp))"))
     }
 
     @Test
@@ -84,7 +84,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(introduction.contains("resolveIntroductionImageBounds(maxHeight.value.toInt())"))
         assertFalse(introduction.contains("Arrangement.SpaceEvenly"))
         assertFalse(introduction.contains("requiredHeight"))
-        assertTrue(introduction.contains("Spacer(modifier = Modifier.height(10.dp))"))
+        assertTrue(introduction.contains("Spacer(modifier = Modifier.height(14.dp))"))
         val scrollingContent = introduction.substringAfter("LazyColumn(").substringBefore("StudyRatingBar(")
         assertFalse(scrollingContent.contains("StudyRatingBar("))
         assertTrue(introduction.indexOf("StudyRatingBar(") > introduction.indexOf("LazyColumn("))
