@@ -34,6 +34,7 @@ import vn.loi.learning.android.ui.LearningEngineTheme
 import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.library.*
 import vn.loi.learning.android.packageexperience.*
+import vn.loi.learning.android.autoplay.*
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -146,21 +147,26 @@ class MainActivity : ComponentActivity() {
                         navController.navigate("study") { launchSingleTop = true }
                     }
                 }
-                val currentRoute=AndroidRootDestination.fromRoute(navController.currentBackStackEntryAsState().value?.destination?.route).route
+                val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+                val rootDestination = AndroidRootDestination.fromRoute(currentRoute)
                 LaunchedEffect(currentRoute) {
-                    AndroidStartupTrace.write(false,"phase=destination_changed destination=$currentRoute thread=${Thread.currentThread().name}")
-                    when (currentRoute) {
-                        "home" -> studyViewModel.onEvent(AndroidStudyEvent.EnsureHome)
-                        "review" -> studyViewModel.onEvent(AndroidStudyEvent.ProjectHome)
+                    if (currentRoute != null) {
+                        AndroidStartupTrace.write(false, "phase=destination_changed destination=$currentRoute thread=${Thread.currentThread().name}")
+                        when (currentRoute) {
+                            "home" -> studyViewModel.onEvent(AndroidStudyEvent.EnsureHome)
+                            "review" -> studyViewModel.onEvent(AndroidStudyEvent.ProjectHome)
+                        }
                     }
                 }
                 val showRootNavigation = when {
-                    currentRoute == "library" -> libraryState is AndroidLibraryState.Root
+                    currentRoute == "autoplay" -> false
                     currentRoute?.startsWith("package/") == true -> false
+                    currentRoute == "library" -> libraryState is AndroidLibraryState.Root
                     currentRoute == "study" -> state is AndroidStudyState.Home
-                    else -> true
+                    currentRoute in listOf("home", "library", "study", "review", "settings") -> true
+                    else -> false
                 }
-                Scaffold(bottomBar={if(showRootNavigation)AndroidRootNavigation(currentRoute){destination->navController.navigate(destination.route){popUpTo("home"){saveState=true};launchSingleTop=true;restoreState=true}}}) { innerPadding -> NavHost(
+                Scaffold(bottomBar={if(showRootNavigation)AndroidRootNavigation(rootDestination.route){destination->navController.navigate(destination.route){popUpTo("home"){saveState=true};launchSingleTop=true;restoreState=true}}}) { innerPadding -> NavHost(
                     navController,
                     startDestination = "home",
                     modifier = androidx.compose.ui.Modifier.padding(innerPadding).consumeWindowInsets(innerPadding)
@@ -182,6 +188,7 @@ class MainActivity : ComponentActivity() {
                         HomeScreen(home, contentState, onEvent = openStudyFromExplicitEvent,
                             onLibrary = { navController.navigate("library") }, onReview = { navController.navigate("review") },
                             onStudyLauncher = { navController.navigate("study") { launchSingleTop = true } },
+                            onAutoPlay = { navController.navigate("autoplay") { launchSingleTop = true } },
                             onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
                                 contentViewModel.begin(kind)
                                 when (kind) {
@@ -189,6 +196,25 @@ class MainActivity : ComponentActivity() {
                                     AndroidOperationKind.BACKUP -> backupLauncher.launch("learning-engine-backup.lebak")
                                     AndroidOperationKind.RESTORE -> restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
                                 }
+                            }
+                        )
+                    }
+                    composable("autoplay", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        val autoPlayViewModel = viewModel<AutoPlayViewModel> {
+                            val selector = AutoPlayContentSelector(
+                                context = graph.engine,
+                                resolveMedia = { reference -> graph.media.resolve(reference)?.toString() }
+                            )
+                            val prefStore = SharedPreferencesAutoPlayPreferenceStore(app)
+                            val prefController = AutoPlayPreferencesController(prefStore)
+                            val audioPlayer = AndroidAutoPlayAudioPlayer(app)
+                            AutoPlayViewModel(selector, prefController, audioPlayer)
+                        }
+                        AutoPlayScreen(
+                            viewModel = autoPlayViewModel,
+                            onBack = {
+                                autoPlayViewModel.stop()
+                                navController.popBackStack()
                             }
                         )
                     }

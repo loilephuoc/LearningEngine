@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.School
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -123,7 +124,8 @@ fun HomeScreen(
     onContentDismiss: () -> Unit = {},
     onLibrary: () -> Unit = {},
     onReview: () -> Unit = {},
-    onStudyLauncher: () -> Unit = {}
+    onStudyLauncher: () -> Unit = {},
+    onAutoPlay: () -> Unit = {}
 ) {
     val model = state.model
     val presentation = resolveLearningLandingPresentation(state)
@@ -153,6 +155,9 @@ fun HomeScreen(
         if (state.availability.canStartReview && presentation.dueCount > 0) {
             item("due-review") { DueReviewCard(model, onReview) }
         }
+        if (model.hasContent) {
+            item("autoplay") { AutoPlayCard(onAutoPlay) }
+        }
         if (presentation.totalMemoryCount > 0) item("progress") { HomeLearningProgress(presentation) }
         if (!model.hasContent) item("empty") {
             LearningEngineEmptyState(
@@ -163,6 +168,18 @@ fun HomeScreen(
             )
         }
     }
+}
+
+@Composable
+private fun AutoPlayCard(onAutoPlay: () -> Unit) {
+    LearningEngineActionCard(
+        icon = Icons.Default.PlayCircleOutline,
+        title = "Auto Play",
+        detail = "Passive listening and review without rating cards.",
+        actionLabel = "Open Auto Play",
+        onAction = onAutoPlay,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
