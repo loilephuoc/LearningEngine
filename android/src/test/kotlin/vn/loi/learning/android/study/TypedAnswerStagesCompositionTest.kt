@@ -71,6 +71,9 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(modes.contains("inputSessionActive = inputSessionActive"))
         assertTrue(modes.contains("availableMediaHeightDp"))
         assertTrue(modes.contains("BringIntoView") || screen.contains("bringIntoViewRequester"))
+        assertTrue(modes.contains("resolveTypingFrontMediaBounds"))
+        assertTrue(modes.contains("customBounds = typingFrontBounds"))
+        assertTrue(foundation.contains("customBounds: StudyMediaBounds? = null"))
     }
 
     @Test
@@ -186,7 +189,7 @@ class TypedAnswerStagesCompositionTest {
     }
 
     @Test
-    fun `forced Typing reveal owns one-shot answer autoplay without advancing`() {
+    fun `forced Typing reveal owns looping answer autoplay without advancing`() {
         val revealAutoplay = screen.substringAfter("LaunchedEffect(\n        itemKey,\n        (state as? AndroidStudyState.Typing)?.revealed")
             .substringBefore("LaunchedEffect(itemKey, (state as? AndroidStudyState.Typing)?.completionPending)")
 
@@ -196,7 +199,7 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(revealAutoplay.contains("activeRole = null"))
         assertTrue(revealAutoplay.contains("AudioRole.EXPECTED_ANSWER"))
         assertTrue(revealAutoplay.contains("typing.resolvedExpectedAnswerAudio"))
-        assertTrue(revealAutoplay.contains("false"))
+        assertTrue(revealAutoplay.contains("true"))
         assertFalse(revealAutoplay.contains("AndroidStudyEvent.Next"))
         assertFalse(revealAutoplay.contains("AudioRole.EXAMPLE_ENGLISH"))
         assertTrue(revealAutoplay.indexOf("revealAudioStarted = true") < revealAutoplay.indexOf("restartAudio("))

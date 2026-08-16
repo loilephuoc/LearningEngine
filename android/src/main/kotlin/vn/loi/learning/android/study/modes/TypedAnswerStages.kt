@@ -5,14 +5,18 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,6 +54,8 @@ internal fun TypingStudyStage(
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit,
     feedbackContent: @Composable () -> Unit,
+    onStageTap: (() -> Unit)? = null,
+    onSwipeNext: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var currentInput by remember(state.plan.planId.value) { mutableStateOf(state.answer) }
@@ -99,7 +105,14 @@ internal fun TypingStudyStage(
     val elapsedMillis = state.attempt?.activeTypingElapsedMillis(clockMillis) ?: 0L
     val projectedRating = state.automaticRating ?: state.attempt?.projectedMetrics(clockMillis)?.let(TypingAutomaticRatingResolver::decide)
     val stableActionsRequester = remember(state.plan.planId.value) { BringIntoViewRequester() }
-    TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density, fillViewport = true) {
+    TypedAnswerStageFrame(
+        modifier = modifier,
+        feedback = inputState.feedbackVisual(),
+        density = density,
+        fillViewport = true,
+        onStageTap = onStageTap,
+        onSwipeNext = onSwipeNext
+    ) {
         if (state.completionPending) {
             TypingImeContinuityAnchor(state.plan.planId.value)
             StudyMedia(
@@ -131,61 +144,82 @@ internal fun TypingStudyStage(
             }
         } else {
         if (!feedbackVisible) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                StudyPrompt(state.prompt, null, false, {}, modifier = Modifier.weight(1f))
-                IconButton(onClick = {
-                    if (activeRole == AudioRole.MEANING) playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
-                    onEvent(AndroidStudyEvent.ToggleTypingViAutoplayMute)
-                }) {
-                    Icon(
-                        if (state.viAutoplayMuted) Icons.Default.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                        if (state.viAutoplayMuted) "Unmute Vietnamese autoplay" else "Mute Vietnamese autoplay"
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f, fill = false),
+                        horizontalArrangement = Arrangement.spacedBy(StudySpacing.micro),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = state.prompt,
+                            style = StudyTypography.prompt,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.semantics { heading() }
+                        )
+                        state.partOfSpeech?.takeIf(String::isNotBlank)?.let(::partOfSpeechPresentation)?.let { pos ->
+                            PartOfSpeechBadge(pos)
+                        }
+                    }
+                    IconButton(onClick = {
+                        if (activeRole == AudioRole.MEANING) playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
+                        onEvent(AndroidStudyEvent.ToggleTypingViAutoplayMute)
+                    }) {
+                        Icon(
+                            if (state.viAutoplayMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                            if (state.viAutoplayMuted) "Unmute Vietnamese autoplay" else "Mute Vietnamese autoplay"
+                        )
+                    }
+                }
+            }
+            if (!state.revealed) {
+                val typingFrontBounds = resolveTypingFrontMediaBounds(
+                    density = density,
+                    availableHeightDp = availableMediaHeightDp,
+                    hasMedia = !state.resolvedImage.isNullOrBlank()
+                )
+                StudyMedia(
+                    state.resolvedImage, mediaRole, density, availableMediaHeightDp,
+                    onOpenFullscreenImage,
+                    customBounds = typingFrontBounds
+                )
+            }
+            if (state.attempt?.firstInputAtMillis != null && !state.revealed) {
+                Text(
+                    "⏱ ${formatTypingSeconds(elapsedMillis)}   ${if (state.completionPending) "AUTO: " else ""}${projectedRating?.rating?.name ?: "ACTIVE"}",
+                    style = StudyTypography.metadata,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            if (!feedbackVisible) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(StudySpacing.group),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    StudyAnswerInput(
+                        state.plan.planId.value, state.answer, true, state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
+                        label = "Type your answer", feedback = inputState.feedbackVisual(),
+                        onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
+                        onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
+                    )
+                    TypingInputActions(
+                        currentInput, inputState, showRetry = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
+                        onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
+                        onRetry = { onEvent(AndroidStudyEvent.Retry) },
+                        onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) },
+                        modifier = Modifier.bringIntoViewRequester(stableActionsRequester)
+                    )
+                    StudyRatingBar(
+                        onRating = { onEvent(AndroidStudyEvent.SelectTypingRatingOverride(it)) },
+                        selectedRating = state.manualRating
                     )
                 }
             }
-            state.partOfSpeech?.takeIf(String::isNotBlank)?.let(::partOfSpeechPresentation)?.let { PartOfSpeechBadge(it) }
-        }
-        if (!state.revealed) {
-            StudyMedia(
-                state.resolvedImage, mediaRole, density, availableMediaHeightDp,
-                onOpenFullscreenImage
-            )
-        }
-        if (state.attempt?.firstInputAtMillis != null && !state.revealed) {
-            Text(
-                "⏱ ${formatTypingSeconds(elapsedMillis)}   ${if (state.completionPending) "AUTO: " else ""}${projectedRating?.rating?.name ?: "ACTIVE"}",
-                style = StudyTypography.metadata,
-                color = MaterialTheme.colorScheme.primary
-            )
-        } else if (!feedbackVisible) {
-            Text("READY", style = StudyTypography.metadata, color = MaterialTheme.colorScheme.primary)
-        }
-        if (!feedbackVisible) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(StudySpacing.group),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                StudyAnswerInput(
-                    state.plan.planId.value, state.answer, true, state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
-                    label = "Type your answer", feedback = inputState.feedbackVisual(),
-                    onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
-                    onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
-                )
-                TypingInputActions(
-                    currentInput, inputState, showRetry = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
-                    onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
-                    onRetry = { onEvent(AndroidStudyEvent.Retry) },
-                    onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) },
-                    modifier = Modifier.bringIntoViewRequester(stableActionsRequester)
-                )
-                StudyRatingBar(
-                    onRating = { onEvent(AndroidStudyEvent.SelectTypingRatingOverride(it)) },
-                    selectedRating = state.manualRating
-                )
-            }
-        }
-        feedbackContent()
+            feedbackContent()
         }
     }
 }
@@ -441,6 +475,8 @@ private fun TypedAnswerStageFrame(
     feedback: StudyFeedbackVisualState,
     density: StudyContentDensity,
     fillViewport: Boolean = false,
+    onStageTap: (() -> Unit)? = null,
+    onSwipeNext: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val reducedMotion = isReducedMotionEnabled()
@@ -449,7 +485,13 @@ private fun TypedAnswerStageFrame(
         animationSpec = tween(studyMotionDurationMillis(StudyMotionRole.PRESS, reducedMotion)),
         label = "typed answer feedback"
     )
-    val stageModifier = if (fillViewport) modifier.fillMaxSize() else modifier.fillMaxWidth()
+    val gesturesActive = onStageTap != null && onSwipeNext != null
+    val stageModifier = (if (fillViewport) modifier.fillMaxSize() else modifier.fillMaxWidth())
+        .typingRevealedGestures(
+            enabled = gesturesActive,
+            onTap = { onStageTap?.invoke() },
+            onSwipeNext = { onSwipeNext?.invoke() }
+        )
     val contentModifier = if (fillViewport) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState())
     } else {
@@ -462,6 +504,48 @@ private fun TypedAnswerStageFrame(
             verticalArrangement = Arrangement.spacedBy(if (density == StudyContentDensity.DENSE) StudySpacing.micro else StudySpacing.group),
             content = content
         )
+    }
+}
+
+internal fun Modifier.typingRevealedGestures(
+    enabled: Boolean,
+    onTap: () -> Unit,
+    onSwipeNext: () -> Unit
+): Modifier = if (!enabled) this else pointerInput(Unit) {
+    val swipeThresholdPx = 44.dp.toPx()
+    val tapSlopPx = 12.dp.toPx()
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        var end = down.position
+        var childConsumed = down.isConsumed
+        var pressed = true
+        var ownsUpwardDrag = false
+        while (pressed) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+            end = change.position
+            childConsumed = childConsumed || change.isConsumed
+            val deltaX = end.x - down.position.x
+            val deltaY = end.y - down.position.y
+            val absX = kotlin.math.abs(deltaX)
+            val absY = kotlin.math.abs(deltaY)
+            if (!ownsUpwardDrag && deltaY < -tapSlopPx && absY > absX * 1.25f) {
+                ownsUpwardDrag = true
+                change.consume()
+            } else if (ownsUpwardDrag) {
+                change.consume()
+            }
+            pressed = change.pressed
+        }
+        val deltaX = end.x - down.position.x
+        val deltaY = end.y - down.position.y
+        val absX = kotlin.math.abs(deltaX)
+        val absY = kotlin.math.abs(deltaY)
+        if (deltaY <= -swipeThresholdPx && absY > absX * 1.25f) {
+            onSwipeNext()
+        } else if (!ownsUpwardDrag && !childConsumed && absX <= tapSlopPx && absY <= tapSlopPx) {
+            onTap()
+        }
     }
 }
 

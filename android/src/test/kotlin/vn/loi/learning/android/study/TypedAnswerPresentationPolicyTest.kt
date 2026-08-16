@@ -61,4 +61,41 @@ class TypedAnswerPresentationPolicyTest {
         assertTrue(typingSuccessReady(true, audioCompleted = true, dwellCompleted = true, backendPrepared = true))
         assertFalse(typingSuccessReady(false, audioCompleted = true, dwellCompleted = true, backendPrepared = true))
     }
+
+    @Test fun `Typing front media bounds authority yields materially larger image than old supporting dense cap`() {
+        val oldSupportingDenseMax = resolveStudyMediaBounds(
+            StudyMediaRole.SUPPORTING,
+            StudyContentDensity.DENSE,
+            availableHeightDp = 520,
+            hasMedia = true
+        )!!.maxHeightDp
+        assertEquals(136, oldSupportingDenseMax)
+
+        val newTypingFront = resolveTypingFrontMediaBounds(
+            density = StudyContentDensity.DENSE,
+            availableHeightDp = 520,
+            hasMedia = true
+        )!!
+        assertTrue(oldSupportingDenseMax < newTypingFront.maxHeightDp)
+        assertTrue(newTypingFront.maxHeightDp in 240..320)
+        assertEquals(272, newTypingFront.maxHeightDp)
+        assertEquals(128, newTypingFront.minHeightDp)
+
+        // Short viewport shrinks gracefully to keep input and actions on screen
+        val shortViewport = resolveTypingFrontMediaBounds(
+            density = StudyContentDensity.DENSE,
+            availableHeightDp = 300,
+            hasMedia = true
+        )!!
+        assertEquals(165, shortViewport.maxHeightDp)
+
+        // No image returns null and reserves zero space
+        kotlin.test.assertNull(
+            resolveTypingFrontMediaBounds(
+                density = StudyContentDensity.DENSE,
+                availableHeightDp = 520,
+                hasMedia = false
+            )
+        )
+    }
 }

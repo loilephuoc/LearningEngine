@@ -101,9 +101,10 @@ internal fun StudyMedia(
     availableHeightDp: Int,
     onOpenFullscreen: (String) -> Unit,
     modifier: Modifier = Modifier,
-    feedbackScale: Float = 1f
+    feedbackScale: Float = 1f,
+    customBounds: StudyMediaBounds? = null
 ) {
-    val bounds = resolveStudyMediaBounds(role, density, availableHeightDp, !imagePath.isNullOrBlank()) ?: return
+    val bounds = customBounds ?: resolveStudyMediaBounds(role, density, availableHeightDp, !imagePath.isNullOrBlank()) ?: return
     LearningEngineImage(
         imagePath = imagePath,
         imageUnavailable = false,

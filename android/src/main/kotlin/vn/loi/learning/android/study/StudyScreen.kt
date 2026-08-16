@@ -680,6 +680,28 @@ private fun StudyRuntimeScreen(
         }
     }
 
+    val toggleTypingRevealedAudioLoop: () -> Unit = {
+        val typing = state as? AndroidStudyState.Typing
+        if (typing != null && typing.revealed && !typing.completionPending) {
+            nextIntroductionPlaybackFocus(
+                introductionPlaybackFocus,
+                hasWordAudio = !typing.resolvedExpectedAnswerAudio.isNullOrBlank() ||
+                        !typing.resolvedPromptAudio.isNullOrBlank(),
+                hasExampleAudio = !typing.resolvedExampleEnglishAudio.isNullOrBlank()
+            )?.let { nextFocus ->
+                if (nextFocus == IntroductionPlaybackFocus.WORD) {
+                    restartAudio(
+                        AudioRole.EXPECTED_ANSWER,
+                        typing.resolvedExpectedAnswerAudio ?: typing.resolvedPromptAudio,
+                        true
+                    )
+                } else {
+                    restartAudio(AudioRole.EXAMPLE_ENGLISH, typing.resolvedExampleEnglishAudio, true)
+                }
+            }
+        }
+    }
+
     val stopAudioAndDispatch: (AndroidStudyEvent) -> Unit = { event ->
         audioController.stop()
         activeRole = null
@@ -800,8 +822,8 @@ private fun StudyRuntimeScreen(
         activeRole = null
         restartAudio(
             AudioRole.EXPECTED_ANSWER,
-            typing.resolvedExpectedAnswerAudio,
-            false
+            typing.resolvedExpectedAnswerAudio ?: typing.resolvedPromptAudio,
+            true
         )
     }
 
@@ -988,6 +1010,7 @@ private fun StudyRuntimeScreen(
                     submitIntroductionRating(it, IntroductionRatingFeedbackOrigin.MANUAL_BUTTON)
                 }
             },
+            onTypingStageTap = toggleTypingRevealedAudioLoop,
             onEvent = stopAudioAndDispatch,
             onOpenFullscreenImage = onOpenFullscreenImage
         )
@@ -1191,6 +1214,7 @@ private fun LearningEngineLearningStage(
     onIntroductionPrevious: () -> Unit,
     onIntroductionNext: () -> Unit,
     onIntroductionRating: (ReviewRating) -> Unit,
+    onTypingStageTap: () -> Unit = {},
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
@@ -1225,6 +1249,7 @@ private fun LearningEngineLearningStage(
                 activeRole,
                 playAudio,
                 onEvent,
+                onTypingStageTap = onTypingStageTap,
                 typingLeadContent = if (state is AndroidStudyState.Typing && state.revealed) {
                     {
                         if (state.answer.isNotBlank()) {
@@ -1256,6 +1281,10 @@ private fun LearningEngineLearningStage(
             onEvent = onEvent,
             onOpenFullscreenImage = onOpenFullscreenImage,
             feedbackContent = feedbackContent,
+            onStageTap = if (state.revealed && !state.completionPending) onTypingStageTap else null,
+            onSwipeNext = if (state.revealed && !state.completionPending) {
+                { onEvent(AndroidStudyEvent.NextVisited) }
+            } else null,
             modifier = modifier
         )
         return
@@ -1744,6 +1773,7 @@ private fun StudyRevealAndFeedbackContent(
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit,
+    onTypingStageTap: () -> Unit = {},
     typingLeadContent: (@Composable () -> Unit)? = null
 ) {
     if (state is AndroidStudyState.Introduction) return
@@ -1833,8 +1863,12 @@ private fun StudyRevealAndFeedbackContent(
                 isPlayingVietnamese = activeRole == AudioRole.MEANING,
                 isPlayingEnglishExample = activeRole == AudioRole.EXAMPLE_ENGLISH,
                 isPlayingVietnameseExample = activeRole == AudioRole.EXAMPLE_VIETNAMESE,
-                onAnswerAudio = { playAudio(AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true) },
-                onEnglishExampleAudio = { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) },
+                onAnswerAudio = if (forcedTypingReveal) onTypingStageTap else {
+                    { playAudio(AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true) }
+                },
+                onEnglishExampleAudio = if (forcedTypingReveal) onTypingStageTap else {
+                    { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) }
+                },
                 answerHero = state is AndroidStudyState.Typing,
                 allowStandaloneVietnameseExample = forcedTypingReveal
             )

@@ -48,3 +48,21 @@ internal fun typedModeMediaRole(
     feedbackVisible -> StudyMediaRole.STANDARD
     else -> StudyMediaRole.STANDARD
 }
+
+internal fun resolveTypingFrontMediaBounds(
+    density: StudyContentDensity,
+    availableHeightDp: Int,
+    hasMedia: Boolean = true
+): StudyMediaBounds? {
+    if (!hasMedia) return null
+    val targetMax = 320
+    val densityScale = when (density) {
+        StudyContentDensity.RELAXED -> 1f
+        StudyContentDensity.STANDARD -> 0.92f
+        StudyContentDensity.DENSE -> 0.85f
+    }
+    val minimum = 128
+    val viewportCap = (availableHeightDp * 0.55f).toInt().coerceAtLeast(minimum)
+    val computedMax = (targetMax * densityScale).toInt().coerceIn(minimum, viewportCap)
+    return StudyMediaBounds(minimum, computedMax)
+}
