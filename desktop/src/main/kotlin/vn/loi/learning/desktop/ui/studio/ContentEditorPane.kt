@@ -1,5 +1,6 @@
 package vn.loi.learning.desktop.ui.studio
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -828,6 +829,39 @@ fun ContentEditorPane(
                                 onStateChanged = { heroState = it },
                                 modifier = Modifier.fillMaxSize()
                             )
+
+                            if (isHeroDragOver) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(LEColors.primary.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Surface(
+                                        color = LEColors.surfaceElevated.copy(alpha = 0.92f),
+                                        shape = LERadius.sm,
+                                        border = BorderStroke(1.dp, LEColors.primary)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.sm),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                                        ) {
+                                            Icon(
+                                                imageVector = LEIcons.Image,
+                                                contentDescription = null,
+                                                tint = LEColors.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                text = "Drop to replace image",
+                                                style = LETypography.fieldValueEmphasized,
+                                                color = LEColors.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         // Image Controls Toolbar

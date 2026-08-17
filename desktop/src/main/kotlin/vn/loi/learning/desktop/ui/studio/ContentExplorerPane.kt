@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.VerticalScrollbar
@@ -18,14 +19,19 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +55,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -57,11 +64,19 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.ArrowDropDown
+import vn.loi.learning.application.contentmedia.MediaReferencePolicy
 import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
 import vn.loi.learning.application.contentpackaging.browser.BrowserSortOption
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem
+import vn.loi.learning.desktop.ui.browser.DuplicateImageGroup
+import vn.loi.learning.desktop.ui.browser.ImageStatusFilter
+import vn.loi.learning.desktop.ui.browser.ImageStatusProjectionPolicy
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.browser.ContentProblemFilter
+import vn.loi.learning.desktop.ui.browser.ContentProblemProjection
+import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
+import vn.loi.learning.desktop.ui.contentlibrary.ThumbnailResult
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
 
@@ -84,6 +99,7 @@ fun ContentExplorerPane(
     onClearQuery: () -> Unit,
     onLessonFilterChanged: (String) -> Unit,
     onMediaFilterChanged: (BrowserMediaFilter) -> Unit,
+    onImageStatusFilterChanged: (ImageStatusFilter) -> Unit = {},
     onSortChanged: (BrowserSortOption) -> Unit,
     onProblemFilterChanged: (ContentProblemFilter) -> Unit = {},
     onPreviousProblem: () -> Unit = {},
@@ -92,6 +108,7 @@ fun ContentExplorerPane(
     onDoubleClickRow: ((String) -> Unit)?,
     onPlayQuestionAudio: ((String, String) -> Unit)? = null,
     playbackCoordinator: PlaybackCoordinator? = null,
+    thumbnailLoader: LessonThumbnailLoader? = null,
     // PLE-020: search field focus requester for Ctrl+F
     searchFocusRequester: FocusRequester? = null,
     // PLE-020: context menu callbacks
@@ -114,7 +131,13 @@ fun ContentExplorerPane(
         // Clearing search has its own centering authority below. Let that effect be the
         // only scroll writer for this projection change so the two animations cannot race.
         if (handledCenterRequest != uiState.centerSelectedRowRequest) return@LaunchedEffect
-        val selectedIndex = items.indexOfFirst { it.contentId.value == uiState.selectedContentId }
+        val selectedIndex = if (uiState.imageStatusFilter == ImageStatusFilter.DUPLICATE_IMAGE) {
+            uiState.duplicateImageGroups.indexOfFirst { group ->
+                group.items.any { it.contentId.value == uiState.selectedContentId }
+            }
+        } else {
+            items.indexOfFirst { it.contentId.value == uiState.selectedContentId }
+        }
         if (selectedIndex < 0) return@LaunchedEffect
 
         val visibleItems = listState.layoutInfo.visibleItemsInfo
@@ -141,6 +164,15 @@ fun ContentExplorerPane(
     LaunchedEffect(uiState.centerSelectedRowRequest, items) {
         if (handledCenterRequest == uiState.centerSelectedRowRequest) return@LaunchedEffect
         handledCenterRequest = uiState.centerSelectedRowRequest
+        if (uiState.imageStatusFilter == ImageStatusFilter.DUPLICATE_IMAGE) {
+            val groupIndex = uiState.duplicateImageGroups.indexOfFirst { group ->
+                group.items.any { it.contentId.value == uiState.selectedContentId }
+            }
+            if (groupIndex >= 0) {
+                listState.animateScrollToItem(groupIndex)
+            }
+            return@LaunchedEffect
+        }
         val selectedIndex = items.indexOfFirst { it.contentId.value == uiState.selectedContentId }
         if (selectedIndex < 0) return@LaunchedEffect
         val visibleCount = snapshotFlow {
@@ -178,10 +210,8 @@ fun ContentExplorerPane(
 
             HorizontalDivider(color = LEColors.borderSubtle)
 
-            // Compact search only. The rarely-used quick media chips were removed so the
-            // list gets substantially more vertical space.
+            // Compact search and Image Status Filter row
             val searchKeyModifier = Modifier
-                .fillMaxWidth()
                 .onPreviewKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                     when {
@@ -193,15 +223,27 @@ fun ContentExplorerPane(
                 searchKeyModifier.focusRequester(searchFocusRequester)
             } else searchKeyModifier
 
-            CompactExplorerSearchField(
-                query = uiState.query,
-                onQueryChanged = onQueryChanged,
-                onClearQuery = onClearQuery,
-                onSubmit = onSubmitSearch,
-                placeholderText = "Search content... (Ctrl+F)",
-                modifier = searchModifier
-                    .padding(horizontal = LESpacing.sm, vertical = 5.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = LESpacing.sm, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CompactExplorerSearchField(
+                    query = uiState.query,
+                    onQueryChanged = onQueryChanged,
+                    onClearQuery = onClearQuery,
+                    onSubmit = onSubmitSearch,
+                    placeholderText = "Search text or #item... (Ctrl+F)",
+                    modifier = searchModifier.weight(1f)
+                )
+
+                ImageStatusDropdownFilter(
+                    selectedFilter = uiState.imageStatusFilter,
+                    onFilterSelected = onImageStatusFilterChanged
+                )
+            }
 
             ProblemNavigationControls(
                 uiState = uiState,
@@ -283,32 +325,65 @@ fun ContentExplorerPane(
                         // Compact padding so the explorer can show more rows at once.
                         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)
                     ) {
-                        itemsIndexed(items, key = { _, item -> item.contentId.value }) { _, item ->
-                            ExplorerRowItem(
-                                item = item,
-                                isSelected = item.contentId.value == uiState.selectedContentId,
-                                isMultiSelected = item.contentId.value in uiState.selectedContentIds,
-                                isHighlighted = item.contentId.value in uiState.highlightedContentIds,
-                                problemCount = uiState.problemProjection.problemsFor(item.contentId.value).size,
-                                onSelect = {
-                                    listFocusRequester.requestFocus()
-                                    onSelectRow(item.contentId.value)
-                                },
-                                onModifiedSelect = { ctrl, shift ->
-                                    listFocusRequester.requestFocus()
-                                    when {
-                                        shift -> onSelectMultiRange(item.contentId.value)
-                                        ctrl -> onToggleMultiSelection(item.contentId.value)
-                                    }
-                                },
-                                onDoubleClick = { onDoubleClickRow?.invoke(item.contentId.value) },
-                                onToggleHighlight = { onToggleHighlight(item.contentId.value) },
-                                onPlayQuestionAudio = onPlayQuestionAudio,
-                                playbackCoordinator = playbackCoordinator,
-                                onDuplicateItem = onDuplicateItem,
-                                onCopyQuestion = onCopyQuestion,
-                                onCopyAnswer = onCopyAnswer
-                            )
+                        if (uiState.imageStatusFilter == ImageStatusFilter.DUPLICATE_IMAGE) {
+                            items(uiState.duplicateImageGroups, key = { "group_${it.imageKey}" }) { group ->
+                                DuplicateGroupCard(
+                                    group = group,
+                                    packageName = uiState.packageName,
+                                    selectedContentId = uiState.selectedContentId,
+                                    selectedContentIds = uiState.selectedContentIds,
+                                    highlightedContentIds = uiState.highlightedContentIds,
+                                    thumbnailLoader = thumbnailLoader,
+                                    problemProjection = uiState.problemProjection,
+                                    onSelectRow = { id ->
+                                        listFocusRequester.requestFocus()
+                                        onSelectRow(id)
+                                    },
+                                    onModifiedSelect = { id, ctrl, shift ->
+                                        listFocusRequester.requestFocus()
+                                        when {
+                                            shift -> onSelectMultiRange(id)
+                                            ctrl -> onToggleMultiSelection(id)
+                                        }
+                                    },
+                                    onDoubleClickRow = onDoubleClickRow,
+                                    onToggleHighlight = onToggleHighlight,
+                                    onPlayQuestionAudio = onPlayQuestionAudio,
+                                    playbackCoordinator = playbackCoordinator,
+                                    onDuplicateItem = onDuplicateItem,
+                                    onCopyQuestion = onCopyQuestion,
+                                    onCopyAnswer = onCopyAnswer
+                                )
+                            }
+                        } else {
+                            itemsIndexed(items, key = { _, item -> item.contentId.value }) { _, item ->
+                                ExplorerRowItem(
+                                    item = item,
+                                    isSelected = item.contentId.value == uiState.selectedContentId,
+                                    isMultiSelected = item.contentId.value in uiState.selectedContentIds,
+                                    isHighlighted = item.contentId.value in uiState.highlightedContentIds,
+                                    problemCount = uiState.problemProjection.problemsFor(item.contentId.value).size,
+                                    duplicateInfo = null,
+                                    onSelect = {
+                                        listFocusRequester.requestFocus()
+                                        onSelectRow(item.contentId.value)
+                                    },
+                                    onModifiedSelect = { ctrl, shift ->
+                                        listFocusRequester.requestFocus()
+                                        when {
+                                            shift -> onSelectMultiRange(item.contentId.value)
+                                            ctrl -> onToggleMultiSelection(item.contentId.value)
+                                        }
+                                    },
+                                    onDoubleClick = { onDoubleClickRow?.invoke(item.contentId.value) },
+                                    onToggleHighlight = { onToggleHighlight(item.contentId.value) },
+                                    onPlayQuestionAudio = onPlayQuestionAudio,
+                                    playbackCoordinator = playbackCoordinator,
+                                    onDuplicateItem = onDuplicateItem,
+                                    onCopyQuestion = onCopyQuestion,
+                                    onCopyAnswer = onCopyAnswer
+                                )
+                            }
                         }
                     }
 
@@ -396,6 +471,7 @@ private fun MultiSelectionActions(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ProblemNavigationControls(
     uiState: PackageContentBrowserUiState,
@@ -406,27 +482,82 @@ private fun ProblemNavigationControls(
     var expanded by remember { mutableStateOf(false) }
     val items = uiState.filteredItems
     val selectedIndex = items.indexOfFirst { it.contentId.value == uiState.selectedContentId }
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = LESpacing.sm, vertical = 3.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp)
+    val problemCount = uiState.problemProjection.problematicContentCount
+    val isProblemActive = uiState.problemFilter != ContentProblemFilter.NONE
+    val canPrev = isProblemActive && selectedIndex > 0
+    val canNext = isProblemActive && selectedIndex >= 0 && selectedIndex < items.lastIndex
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(32.dp)
+            .padding(horizontal = LESpacing.sm, vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        // Left: Problem badge & Dropdown Filter
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.weight(1f)
         ) {
-            Text(
-                "Problems: ${uiState.problemProjection.problematicContentCount}",
-                style = LETypography.caption,
-                color = LEColors.textSecondary
-            )
+            Surface(
+                color = if (problemCount > 0) LEColors.warningContainer else LEColors.surfaceElevated,
+                shape = LERadius.xs,
+                modifier = Modifier.semantics { contentDescription = "Problems: $problemCount" }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Text(
+                        text = "⚠",
+                        style = LETypography.caption,
+                        color = if (problemCount > 0) LEColors.warning else LEColors.textMuted
+                    )
+                    Text(
+                        text = "$problemCount",
+                        style = LETypography.caption,
+                        fontWeight = FontWeight.Bold,
+                        color = if (problemCount > 0) LEColors.warning else LEColors.textMuted
+                    )
+                }
+            }
+
             Box {
-                TextButton(
-                    onClick = { expanded = true },
-                    modifier = Modifier.semantics {
-                        contentDescription = "Problem filter. Selected ${uiState.problemFilter.label}"
+                Surface(
+                    shape = LERadius.xs,
+                    color = if (isProblemActive) LEColors.primarySoft else androidx.compose.ui.graphics.Color.Transparent,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isProblemActive) LEColors.primary else LEColors.borderSubtle),
+                    modifier = Modifier
+                        .clip(LERadius.xs)
+                        .clickable { expanded = true }
+                        .semantics {
+                            contentDescription = "Problem filter. Selected ${uiState.problemFilter.label}"
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = uiState.problemFilter.label,
+                            style = LETypography.caption,
+                            fontWeight = if (isProblemActive) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isProblemActive) LEColors.primary else LEColors.textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "▾",
+                            style = LETypography.caption,
+                            color = if (isProblemActive) LEColors.primary else LEColors.textMuted
+                        )
                     }
-                ) { Text(uiState.problemFilter.label, style = LETypography.caption) }
+                }
+
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     ContentProblemFilter.entries.forEach { filter ->
                         DropdownMenuItem(
@@ -440,27 +571,67 @@ private fun ProblemNavigationControls(
                 }
             }
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(
-                onClick = onPrevious,
-                enabled = uiState.problemFilter != ContentProblemFilter.NONE && selectedIndex > 0,
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                modifier = Modifier.weight(1f).heightIn(min = 30.dp)
-            ) { Text("← Previous Problem", style = LETypography.caption, maxLines = 1) }
-            OutlinedButton(
-                onClick = onNext,
-                enabled = uiState.problemFilter != ContentProblemFilter.NONE && selectedIndex >= 0 && selectedIndex < items.lastIndex,
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                modifier = Modifier.weight(1f).heightIn(min = 30.dp)
-            ) { Text("Next Problem →", style = LETypography.caption, maxLines = 1) }
-        }
-        if (uiState.problemFilter != ContentProblemFilter.NONE && items.isEmpty()) {
-            Text(
-                if (uiState.problemProjection.problematicContentCount == 0) "No problems found"
-                else "No items with ${uiState.problemFilter.label}",
-                style = LETypography.caption,
-                color = LEColors.textMuted
-            )
+
+        // Right: Compact Previous / Next icon buttons
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            TooltipArea(
+                tooltip = {
+                    Surface(color = LEColors.textPrimary, shape = LERadius.xs) {
+                        Text("Previous Problem", style = LETypography.caption, color = LEColors.surface, modifier = Modifier.padding(LESpacing.xs))
+                    }
+                }
+            ) {
+                Surface(
+                    shape = LERadius.xs,
+                    color = if (canPrev) LEColors.surfaceElevated else LEColors.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (canPrev) LEColors.borderSubtle else LEColors.borderSubtle.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .size(width = 28.dp, height = 26.dp)
+                        .clip(LERadius.xs)
+                        .clickable(enabled = canPrev, onClick = onPrevious)
+                        .semantics { contentDescription = "Previous Problem" }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "‹",
+                            style = LETypography.paneTitle,
+                            fontWeight = FontWeight.Bold,
+                            color = if (canPrev) LEColors.primary else LEColors.textMuted.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+            }
+
+            TooltipArea(
+                tooltip = {
+                    Surface(color = LEColors.textPrimary, shape = LERadius.xs) {
+                        Text("Next Problem", style = LETypography.caption, color = LEColors.surface, modifier = Modifier.padding(LESpacing.xs))
+                    }
+                }
+            ) {
+                Surface(
+                    shape = LERadius.xs,
+                    color = if (canNext) LEColors.surfaceElevated else LEColors.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (canNext) LEColors.borderSubtle else LEColors.borderSubtle.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .size(width = 28.dp, height = 26.dp)
+                        .clip(LERadius.xs)
+                        .clickable(enabled = canNext, onClick = onNext)
+                        .semantics { contentDescription = "Next Problem" }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "›",
+                            style = LETypography.paneTitle,
+                            fontWeight = FontWeight.Bold,
+                            color = if (canNext) LEColors.primary else LEColors.textMuted.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -602,6 +773,7 @@ private fun ExplorerRowItem(
     isMultiSelected: Boolean,
     isHighlighted: Boolean,
     problemCount: Int,
+    duplicateInfo: Pair<String, Int>? = null,
     onSelect: () -> Unit,
     onModifiedSelect: (ctrl: Boolean, shift: Boolean) -> Unit,
     onDoubleClick: (() -> Unit)?,
@@ -751,13 +923,13 @@ private fun ExplorerRowItem(
                         }
                     }
                     Spacer(Modifier.width(4.dp))
-                    // Row Index #
+                    // Row Index # (Stable canonical package number)
                     Text(
                         text = item.index.toString(),
                         style = LETypography.caption,
                         color = if (isSelected) LEColors.primaryText else LEColors.textMuted,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.width(28.dp)
+                        modifier = Modifier.widthIn(min = 32.dp).padding(end = 4.dp)
                     )
 
                     // Ultra-compact single-line summary: question + answer stay visible on one row.
@@ -786,11 +958,43 @@ private fun ExplorerRowItem(
                         }
                     }
 
-                    // Vector Status Icons
+                    // Vector Status Icons & Duplicate Badge
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (duplicateInfo != null) {
+                            val (dupKey, count) = duplicateInfo
+                            TooltipArea(
+                                tooltip = {
+                                    Surface(color = LEColors.textPrimary, shape = LERadius.xs) {
+                                        Text(
+                                            text = "Duplicate image: $dupKey ($count items)",
+                                            style = LETypography.caption,
+                                            color = LEColors.surface,
+                                            modifier = Modifier.padding(LESpacing.xs)
+                                        )
+                                    }
+                                }
+                            ) {
+                                Surface(
+                                    color = LEColors.warningContainer.copy(alpha = 0.7f),
+                                    shape = LERadius.xs,
+                                    border = androidx.compose.foundation.BorderStroke(0.5.dp, LEColors.warning.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = "$dupKey ×$count",
+                                        style = LETypography.caption,
+                                        color = LEColors.warning,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                        }
+
                         val audioRef = item.questionAudioRef
                         if (audioRef != null) {
                             val isPlaying = playbackCoordinator?.getButtonState(audioRef) is AudioButtonState.Playing
@@ -822,6 +1026,237 @@ private fun ExplorerRowItem(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageStatusDropdownFilter(
+    selectedFilter: ImageStatusFilter,
+    onFilterSelected: (ImageStatusFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Surface(
+            color = if (selectedFilter != ImageStatusFilter.ALL) LEColors.primary.copy(alpha = 0.12f) else LEColors.surfaceElevated,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(6.dp),
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                if (selectedFilter != ImageStatusFilter.ALL) LEColors.primary else LEColors.borderSubtle
+            ),
+            modifier = Modifier
+                .height(34.dp)
+                .clickable { expanded = true }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = LESpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = LEIcons.Image,
+                    contentDescription = "Image filter",
+                    tint = if (selectedFilter != ImageStatusFilter.ALL) LEColors.primary else LEColors.textSecondary,
+                    modifier = Modifier.size(15.dp)
+                )
+                Text(
+                    text = when (selectedFilter) {
+                        ImageStatusFilter.ALL -> "All"
+                        ImageStatusFilter.MISSING_IMAGE -> "Missing"
+                        ImageStatusFilter.DUPLICATE_IMAGE -> "Duplicate"
+                        ImageStatusFilter.HAS_IMAGE -> "Has Image"
+                    },
+                    style = LETypography.caption,
+                    color = if (selectedFilter != ImageStatusFilter.ALL) LEColors.primary else LEColors.textSecondary,
+                    maxLines = 1
+                )
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    tint = if (selectedFilter != ImageStatusFilter.ALL) LEColors.primary else LEColors.textSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            ImageStatusFilter.entries.forEach { filter ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = filter.label,
+                            fontWeight = if (filter == selectedFilter) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                            color = if (filter == selectedFilter) LEColors.primary else LEColors.textPrimary
+                        )
+                    },
+                    onClick = {
+                        onFilterSelected(filter)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DuplicateGroupThumbnail(
+    reference: String,
+    packageName: String,
+    loader: LessonThumbnailLoader?,
+    modifier: Modifier = Modifier
+) {
+    if (loader != null) {
+        val result by produceState<ThumbnailResult>(ThumbnailResult.Loading, reference, packageName) {
+            value = if (reference.isBlank() || MediaReferencePolicy.isNoImageSentinel(reference)) {
+                ThumbnailResult.Unavailable
+            } else {
+                withContext(Dispatchers.IO) { loader.load(reference, packageName) }
+            }
+        }
+        Surface(
+            shape = LERadius.xs,
+            color = LEColors.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, LEColors.borderSubtle),
+            modifier = modifier.size(48.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                when (val current = result) {
+                    ThumbnailResult.Loading -> Text("…", style = LETypography.caption, color = LEColors.textMuted)
+                    ThumbnailResult.Unavailable -> Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = "No image",
+                        tint = LEColors.textMuted.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    is ThumbnailResult.Ready -> Image(
+                        bitmap = current.bitmap,
+                        contentDescription = "Shared image thumbnail",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+        }
+    } else {
+        Surface(
+            shape = LERadius.xs,
+            color = LEColors.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, LEColors.borderSubtle),
+            modifier = modifier.size(48.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Icon(
+                    imageVector = Icons.Default.Image,
+                    contentDescription = "Image preview",
+                    tint = LEColors.textMuted.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DuplicateGroupCard(
+    group: DuplicateImageGroup,
+    packageName: String,
+    selectedContentId: String?,
+    selectedContentIds: Set<String>,
+    highlightedContentIds: Set<String>,
+    thumbnailLoader: LessonThumbnailLoader?,
+    problemProjection: ContentProblemProjection,
+    onSelectRow: (String) -> Unit,
+    onModifiedSelect: (id: String, ctrl: Boolean, shift: Boolean) -> Unit,
+    onDoubleClickRow: ((String) -> Unit)?,
+    onToggleHighlight: (String) -> Unit,
+    onPlayQuestionAudio: ((String, String) -> Unit)?,
+    playbackCoordinator: PlaybackCoordinator?,
+    onDuplicateItem: ((String) -> Unit)?,
+    onCopyQuestion: ((String) -> Unit)?,
+    onCopyAnswer: ((String) -> Unit)?
+) {
+    Surface(
+        color = LEColors.surfaceElevated,
+        shape = LERadius.sm,
+        border = androidx.compose.foundation.BorderStroke(1.dp, LEColors.borderSubtle),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 2.dp, vertical = 3.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(LESpacing.xs)) {
+            // Group Header: Shared Thumbnail + Count Badge + Filename
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+            ) {
+                DuplicateGroupThumbnail(
+                    reference = group.imageRef,
+                    packageName = packageName,
+                    loader = thumbnailLoader
+                )
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            color = LEColors.warningContainer.copy(alpha = 0.8f),
+                            shape = LERadius.xs,
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, LEColors.warning.copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = "${group.items.size} items",
+                                style = LETypography.caption,
+                                color = LEColors.warning,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = group.imageKey,
+                        style = LETypography.caption,
+                        color = LEColors.textMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+            HorizontalDivider(color = LEColors.borderSubtle.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Group Items
+            group.items.forEach { item ->
+                ExplorerRowItem(
+                    item = item,
+                    isSelected = item.contentId.value == selectedContentId,
+                    isMultiSelected = item.contentId.value in selectedContentIds,
+                    isHighlighted = item.contentId.value in highlightedContentIds,
+                    problemCount = problemProjection.problemsFor(item.contentId.value).size,
+                    duplicateInfo = null,
+                    onSelect = { onSelectRow(item.contentId.value) },
+                    onModifiedSelect = { ctrl, shift -> onModifiedSelect(item.contentId.value, ctrl, shift) },
+                    onDoubleClick = { onDoubleClickRow?.invoke(item.contentId.value) },
+                    onToggleHighlight = { onToggleHighlight(item.contentId.value) },
+                    onPlayQuestionAudio = onPlayQuestionAudio,
+                    playbackCoordinator = playbackCoordinator,
+                    onDuplicateItem = onDuplicateItem,
+                    onCopyQuestion = onCopyQuestion,
+                    onCopyAnswer = onCopyAnswer
+                )
             }
         }
     }

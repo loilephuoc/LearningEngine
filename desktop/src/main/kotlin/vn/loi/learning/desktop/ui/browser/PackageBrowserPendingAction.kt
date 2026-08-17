@@ -21,6 +21,7 @@ sealed interface PackageBrowserPendingAction {
     data class ApplyQuery(val query: String) : PackageBrowserPendingAction
     data class ApplyLessonFilter(val lessonFilter: String) : PackageBrowserPendingAction
     data class ApplyMediaFilter(val mediaFilter: BrowserMediaFilter) : PackageBrowserPendingAction
+    data class ApplyImageStatusFilter(val imageStatusFilter: ImageStatusFilter) : PackageBrowserPendingAction
     data class ApplySort(val sortOption: BrowserSortOption) : PackageBrowserPendingAction
     data class ApplyProblemFilter(val problemFilter: ContentProblemFilter) : PackageBrowserPendingAction
     object ResetFilters : PackageBrowserPendingAction

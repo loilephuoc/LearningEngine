@@ -22,12 +22,20 @@ class AutoPlayPreferencesController(private val store: AutoPlayPreferenceStore) 
         mutableConfig.value = config
     }
 
+    fun updateSelectedPackageId(packageId: String?) {
+        updateConfig(mutableConfig.value.copy(selectedPackageId = packageId))
+    }
+
     fun updateDirection(direction: AutoPlayDirection) {
         updateConfig(mutableConfig.value.copy(direction = direction))
     }
 
     fun updateSource(source: AutoPlaySource) {
         updateConfig(mutableConfig.value.copy(source = source))
+    }
+
+    fun updatePlaybackOrder(playbackOrder: AutoPlayPlaybackOrder) {
+        updateConfig(mutableConfig.value.copy(playbackOrder = playbackOrder))
     }
 
     fun updateFrontDelayMs(delayMs: Long) {
@@ -69,6 +77,19 @@ class AutoPlayPreferencesController(private val store: AutoPlayPreferenceStore) 
     fun updateKeepScreenOn(enabled: Boolean) {
         updateConfig(mutableConfig.value.copy(keepScreenOn = enabled))
     }
+
+    fun updateBackgroundPlayback(enabled: Boolean) {
+        updateConfig(mutableConfig.value.copy(backgroundPlayback = enabled))
+    }
+
+    fun updateMuted(muted: Boolean) {
+        updateConfig(mutableConfig.value.copy(isMuted = muted))
+    }
+
+    fun updateSleepTimerMinutes(minutes: Double?) {
+        val coerced = minutes?.coerceIn(AutoPlayConfig.MIN_SLEEP_TIMER_MINUTES, AutoPlayConfig.MAX_SLEEP_TIMER_MINUTES)
+        updateConfig(mutableConfig.value.copy(sleepTimerMinutes = coerced))
+    }
 }
 
 class SharedPreferencesAutoPlayPreferenceStore(
@@ -79,6 +100,8 @@ class SharedPreferencesAutoPlayPreferenceStore(
     )
 
     override fun load(): AutoPlayConfig {
+        val selectedPackageId = preferences.getString(KEY_SELECTED_PACKAGE_ID, null)
+
         val directionStr = preferences.getString(KEY_DIRECTION, AutoPlayDirection.VIETNAMESE_TO_ENGLISH.name)
         val direction = runCatching {
             directionStr?.let { AutoPlayDirection.valueOf(it) }
@@ -88,6 +111,11 @@ class SharedPreferencesAutoPlayPreferenceStore(
         val source = runCatching {
             sourceStr?.let { AutoPlaySource.valueOf(it) }
         }.getOrNull() ?: AutoPlaySource.LEARNED
+
+        val playbackOrderStr = preferences.getString(KEY_PLAYBACK_ORDER, AutoPlayPlaybackOrder.SHUFFLED.name)
+        val playbackOrder = runCatching {
+            playbackOrderStr?.let { AutoPlayPlaybackOrder.valueOf(it) }
+        }.getOrNull() ?: AutoPlayPlaybackOrder.SHUFFLED
 
         val frontDelayMs = when {
             preferences.contains(KEY_FRONT_DELAY_MS) -> preferences.getLong(KEY_FRONT_DELAY_MS, 3000L)
@@ -132,10 +160,19 @@ class SharedPreferencesAutoPlayPreferenceStore(
         }.coerceIn(0L, AutoPlayConfig.MAX_DELAY_MS)
 
         val keepScreenOn = preferences.getBoolean(KEY_KEEP_SCREEN_ON, true)
+        val backgroundPlayback = preferences.getBoolean(KEY_BACKGROUND_PLAYBACK, true)
+        val isMuted = preferences.getBoolean(KEY_MUTED, false)
+
+        val sleepTimerMinutes = if (preferences.contains(KEY_SLEEP_TIMER_MINUTES)) {
+            val v = preferences.getFloat(KEY_SLEEP_TIMER_MINUTES, 0f).toDouble()
+            if (v > 0.0) v.coerceIn(AutoPlayConfig.MIN_SLEEP_TIMER_MINUTES, AutoPlayConfig.MAX_SLEEP_TIMER_MINUTES) else null
+        } else null
 
         return AutoPlayConfig(
+            selectedPackageId = selectedPackageId,
             direction = direction,
             source = source,
+            playbackOrder = playbackOrder,
             frontDelayMs = frontDelayMs,
             playFrontAudio = playFrontAudio,
             playAnswerAudio = playAnswerAudio,
@@ -144,14 +181,18 @@ class SharedPreferencesAutoPlayPreferenceStore(
             postExampleEnglishDelayMs = postExampleEnglishDelayMs,
             playExampleVietnameseAudio = playExampleVietnameseAudio,
             postExampleVietnameseDelayMs = postExampleVietnameseDelayMs,
-            keepScreenOn = keepScreenOn
+            keepScreenOn = keepScreenOn,
+            backgroundPlayback = backgroundPlayback,
+            isMuted = isMuted,
+            sleepTimerMinutes = sleepTimerMinutes
         )
     }
 
     override fun save(config: AutoPlayConfig) {
-        preferences.edit()
+        val editor = preferences.edit()
             .putString(KEY_DIRECTION, config.direction.name)
             .putString(KEY_SOURCE, config.source.name)
+            .putString(KEY_PLAYBACK_ORDER, config.playbackOrder.name)
             .putLong(KEY_FRONT_DELAY_MS, config.frontDelayMs)
             .putBoolean(KEY_PLAY_FRONT_AUDIO, config.playFrontAudio)
             .putBoolean(KEY_PLAY_ANSWER_AUDIO, config.playAnswerAudio)
@@ -161,13 +202,30 @@ class SharedPreferencesAutoPlayPreferenceStore(
             .putBoolean(KEY_PLAY_EXAMPLE_VI_AUDIO, config.playExampleVietnameseAudio)
             .putLong(KEY_POST_EXAMPLE_VI_DELAY_MS, config.postExampleVietnameseDelayMs)
             .putBoolean(KEY_KEEP_SCREEN_ON, config.keepScreenOn)
-            .apply()
+            .putBoolean(KEY_BACKGROUND_PLAYBACK, config.backgroundPlayback)
+            .putBoolean(KEY_MUTED, config.isMuted)
+
+        if (config.selectedPackageId != null) {
+            editor.putString(KEY_SELECTED_PACKAGE_ID, config.selectedPackageId)
+        } else {
+            editor.remove(KEY_SELECTED_PACKAGE_ID)
+        }
+
+        if (config.sleepTimerMinutes != null) {
+            editor.putFloat(KEY_SLEEP_TIMER_MINUTES, config.sleepTimerMinutes.toFloat())
+        } else {
+            editor.remove(KEY_SLEEP_TIMER_MINUTES)
+        }
+
+        editor.apply()
     }
 
     private companion object {
         const val FILE_NAME = "learning-engine-autoplay"
+        const val KEY_SELECTED_PACKAGE_ID = "autoplay.selected_package_id"
         const val KEY_DIRECTION = "autoplay.direction"
         const val KEY_SOURCE = "autoplay.source"
+        const val KEY_PLAYBACK_ORDER = "autoplay.playback_order"
         const val KEY_FRONT_DELAY_MS = "autoplay.front_delay_ms"
         const val KEY_FRONT_DELAY_INT = "autoplay.front_delay"
         const val KEY_PLAY_FRONT_AUDIO = "autoplay.play_front_audio"
@@ -181,6 +239,9 @@ class SharedPreferencesAutoPlayPreferenceStore(
         const val KEY_POST_EXAMPLE_VI_DELAY_MS = "autoplay.post_example_vi_delay_ms"
         const val KEY_POST_EXAMPLE_VI_DELAY_INT = "autoplay.post_example_vi_delay"
         const val KEY_KEEP_SCREEN_ON = "autoplay.keep_screen_on"
+        const val KEY_BACKGROUND_PLAYBACK = "autoplay.background_playback"
+        const val KEY_MUTED = "autoplay.muted"
+        const val KEY_SLEEP_TIMER_MINUTES = "autoplay.sleep_timer_minutes"
 
         // Legacy keys for backwards-compatibility
         const val LEGACY_KEY_PLAY_WORD_AUDIO = "autoplay.play_word_audio"

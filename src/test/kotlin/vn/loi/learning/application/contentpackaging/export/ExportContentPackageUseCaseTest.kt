@@ -279,6 +279,176 @@ class ExportContentPackageUseCaseTest {
         return instPkg to tempDir.resolve("$name.opd3")
     }
 
+    @Test
+    fun `export with compatible extension fallback resolves physical file and outputs canonical extension`() {
+        val (instPkg, destFile) = setupActivePackageWithContent("PackageExtFallback", PackageState.ACTIVE)
+        val content = contentRepo.findAll().first()
+        contentRepo.save(content.copy(media = ContentMedia(image = "PackageExtFallback/sun.png")))
+
+        val mediaDir = tempDir.resolve("media")
+        val pkgMediaDir = mediaDir.resolve("PackageExtFallback")
+        Files.createDirectories(pkgMediaDir)
+        val realJpg = pkgMediaDir.resolve("sun.jpg")
+        Files.write(realJpg, "jpg-image-bytes".toByteArray(Charsets.UTF_8))
+
+        val useCase = DefaultExportContentPackageUseCase(
+            installedPackageRepository = instPkgRepo,
+            contentPackageRepository = contentPkgRepo,
+            contentLibraryRepository = contentLibRepo,
+            contentRepository = contentRepo,
+            learningItemRepository = learningItemRepo,
+            opd3PackageExporter = vn.loi.learning.application.contentpackaging.Opd3PackageExporter(
+                zipWriter = vn.loi.learning.infrastructure.contentpackaging.JvmDeterministicZipWriter()
+            ),
+            mediaDirectory = mediaDir,
+            contentMediaStorage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(mediaDir)
+        )
+
+        val result = useCase.execute(
+            ExportContentPackageCommand(
+                installedPackageId = instPkg.id,
+                destinationPath = destFile
+            )
+        )
+
+        assertIs<ExportContentPackageResult.Success>(result)
+        assertTrue(Files.exists(destFile))
+        assertEquals(1, result.mediaAssetCount)
+    }
+
+    @Test
+    fun `export with genuine missing media fails with MissingMedia`() {
+        val (instPkg, destFile) = setupActivePackageWithContent("PackageMissingMedia", PackageState.ACTIVE)
+        val content = contentRepo.findAll().first()
+        contentRepo.save(content.copy(media = ContentMedia(image = "PackageMissingMedia/nonexistent.png")))
+
+        val mediaDir = tempDir.resolve("media_empty")
+        Files.createDirectories(mediaDir)
+
+        val useCase = DefaultExportContentPackageUseCase(
+            installedPackageRepository = instPkgRepo,
+            contentPackageRepository = contentPkgRepo,
+            contentLibraryRepository = contentLibRepo,
+            contentRepository = contentRepo,
+            learningItemRepository = learningItemRepo,
+            opd3PackageExporter = vn.loi.learning.application.contentpackaging.Opd3PackageExporter(
+                zipWriter = vn.loi.learning.infrastructure.contentpackaging.JvmDeterministicZipWriter()
+            ),
+            mediaDirectory = mediaDir
+        )
+
+        val result = useCase.execute(
+            ExportContentPackageCommand(
+                installedPackageId = instPkg.id,
+                destinationPath = destFile
+            )
+        )
+
+        assertIs<ExportContentPackageResult.Failure.MissingMedia>(result)
+    }
+
+    @Test
+    fun `export with no_image sentinel canonicalizes image to null and succeeds without requiring file`() {
+        val (instPkg, destFile) = setupActivePackageWithContent("PackageNoImage", PackageState.ACTIVE)
+        val content = contentRepo.findAll().first()
+        contentRepo.save(content.copy(media = ContentMedia(image = "no_image.jpg")))
+
+        val mediaDir = tempDir.resolve("media_no_image")
+        Files.createDirectories(mediaDir)
+
+        val useCase = DefaultExportContentPackageUseCase(
+            installedPackageRepository = instPkgRepo,
+            contentPackageRepository = contentPkgRepo,
+            contentLibraryRepository = contentLibRepo,
+            contentRepository = contentRepo,
+            learningItemRepository = learningItemRepo,
+            opd3PackageExporter = vn.loi.learning.application.contentpackaging.Opd3PackageExporter(
+                zipWriter = vn.loi.learning.infrastructure.contentpackaging.JvmDeterministicZipWriter()
+            ),
+            mediaDirectory = mediaDir
+        )
+
+        val result = useCase.execute(
+            ExportContentPackageCommand(
+                installedPackageId = instPkg.id,
+                destinationPath = destFile
+            )
+        )
+
+        assertIs<ExportContentPackageResult.Success>(result)
+        assertEquals(0, result.mediaAssetCount)
+    }
+
+    @Test
+    fun `export progress starts immediately, is monotonic, tracks media counts, and ends at 100 percent`() {
+        val (instPkg, destFile) = setupActivePackageWithContent("PackageProgressTest", PackageState.ACTIVE)
+        val content = contentRepo.findAll().first()
+
+        val mediaDir = tempDir.resolve("media_progress")
+        val pkgMediaDir = mediaDir.resolve("PackageProgressTest")
+        Files.createDirectories(pkgMediaDir)
+        val audioFile = pkgMediaDir.resolve("voice.mp3")
+        val imgFile = pkgMediaDir.resolve("photo.jpg")
+        Files.write(audioFile, "audio-bytes".toByteArray())
+        Files.write(imgFile, "image-bytes".toByteArray())
+
+        contentRepo.save(
+            content.copy(
+                media = ContentMedia(
+                    primaryAudio = "PackageProgressTest/voice.mp3",
+                    image = "PackageProgressTest/photo.jpg"
+                )
+            )
+        )
+
+        val events = mutableListOf<Triple<ExportProgressStage, String, Int>>()
+        val useCase = DefaultExportContentPackageUseCase(
+            installedPackageRepository = instPkgRepo,
+            contentPackageRepository = contentPkgRepo,
+            contentLibraryRepository = contentLibRepo,
+            contentRepository = contentRepo,
+            learningItemRepository = learningItemRepo,
+            opd3PackageExporter = vn.loi.learning.application.contentpackaging.Opd3PackageExporter(
+                zipWriter = vn.loi.learning.infrastructure.contentpackaging.JvmDeterministicZipWriter()
+            ),
+            mediaDirectory = mediaDir,
+            contentMediaStorage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(mediaDir)
+        )
+
+        val result = useCase.execute(
+            ExportContentPackageCommand(
+                installedPackageId = instPkg.id,
+                destinationPath = destFile,
+                progressListener = { stage, message, processed, total ->
+                    events.add(Triple(stage, message, processed))
+                }
+            )
+        )
+
+        assertIs<ExportContentPackageResult.Success>(result)
+        assertTrue(events.isNotEmpty(), "Progress events must not be empty")
+
+        // A. Starts immediately with RESOLVING_PACKAGE at 0%
+        assertEquals(ExportProgressStage.RESOLVING_PACKAGE, events.first().first)
+        assertEquals(0, events.first().third)
+
+        // B. Monotonic progress: processed % never decreases
+        var previousPercent = -1
+        for ((_, _, percent) in events) {
+            assertTrue(percent >= previousPercent, "Progress must be strictly non-decreasing: $percent >= $previousPercent")
+            previousPercent = percent
+        }
+
+        // C. Media count reaches total (2 media assets)
+        val mediaEvents = events.filter { it.first == ExportProgressStage.COLLECTING_MEDIA }
+        assertTrue(mediaEvents.any { it.second.contains("1 / 2") })
+        assertTrue(mediaEvents.any { it.second.contains("2 / 2") })
+
+        // D. Completion emits 100%
+        assertEquals(ExportProgressStage.COMPLETED, events.last().first)
+        assertEquals(100, events.last().third)
+    }
+
     private fun createUseCase(
         mediaByteReader: LegacyMediaByteReader = LegacyMediaByteReader { _, _ -> null }
     ): DefaultExportContentPackageUseCase =

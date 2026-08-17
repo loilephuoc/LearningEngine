@@ -47,7 +47,13 @@ class ContentLibraryViewModel(
     var packageIntegrityDialogState by mutableStateOf(PackageIntegrityDialogState())
         private set
 
+    var packageExportDialogState by mutableStateOf(PackageExportDialogState())
+        private set
+
     var libraryHealthOverviewState by mutableStateOf(LibraryHealthOverviewState())
+        private set
+
+    var imageReuseDialogState by mutableStateOf(vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewDialogState())
         private set
 
     fun checkPackageIntegrity(packageId: String) {
@@ -746,7 +752,21 @@ class ContentLibraryViewModel(
                 loadedBrowser to loadedLessonBrowser
             },
             onSuccess = { (loadedBrowser, loadedLessonBrowser) ->
-                packageBrowserUiState = loadedBrowser
+                val prev = packageBrowserUiState
+                val configuredBrowser = if (prev != null && prev.installedPackageId == loadedBrowser?.installedPackageId) {
+                    loadedBrowser.copy(
+                        query = prev.query,
+                        appliedQuery = prev.appliedQuery,
+                        selectedLessonFilter = prev.selectedLessonFilter,
+                        mediaFilter = prev.mediaFilter,
+                        imageStatusFilter = prev.imageStatusFilter,
+                        sortOption = prev.sortOption,
+                        problemFilter = prev.problemFilter
+                    )
+                } else {
+                    loadedBrowser
+                }
+                packageBrowserUiState = configuredBrowser
                 lessonBrowserUiState = loadedLessonBrowser
                 uiState = uiState.copy(loadError = null, operation = ContentLibraryOperation.Idle)
             },
@@ -766,24 +786,37 @@ class ContentLibraryViewModel(
         candidateQuery: String = current.appliedQuery,
         candidateLessonFilter: String = current.selectedLessonFilter,
         candidateMediaFilter: vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter = current.mediaFilter,
+        candidateImageStatusFilter: vn.loi.learning.desktop.ui.browser.ImageStatusFilter = current.imageStatusFilter,
         candidateSortOption: vn.loi.learning.application.contentpackaging.browser.BrowserSortOption = current.sortOption,
         candidateProblemFilter: vn.loi.learning.desktop.ui.browser.ContentProblemFilter = current.problemFilter
     ): Boolean {
         val editingId = current.editingContentId ?: return true
-        val candidateFiltered = vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserProjectionPolicy.filterAndSort(
+        val baseFiltered = vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserProjectionPolicy.filterAndSort(
             items = current.allItems,
             query = candidateQuery,
             lessonFilter = candidateLessonFilter,
             mediaFilter = candidateMediaFilter,
             sortOption = candidateSortOption
+        ).filter { current.problemProjection.matches(it.contentId.value, candidateProblemFilter) }
+        val candidateFiltered = vn.loi.learning.desktop.ui.browser.ImageStatusProjectionPolicy.filter(
+            items = baseFiltered,
+            filter = candidateImageStatusFilter,
+            duplicateKeys = current.duplicateImageKeys
         )
-        return candidateFiltered.any {
-            it.contentId.value == editingId && current.problemProjection.matches(it.contentId.value, candidateProblemFilter)
-        }
+        return candidateFiltered.any { it.contentId.value == editingId }
     }
 
     fun updatePackageBrowserQuery(query: String) {
         val current = packageBrowserUiState ?: return
+        val directNumber = vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserSearchEnterPolicy
+            .parseDirectItemNumber(query)
+
+        if (directNumber != null) {
+            // Numeric lookup candidate: display typed digits without debounced text filtering
+            packageBrowserUiState = current.copy(query = query)
+            return
+        }
+
         if (current.isDirty && !isEditedRowStillVisible(current, candidateQuery = query.trim())) {
             packageBrowserUiState = current.copy(
                 showUnsavedChangesDialog = true,
@@ -812,11 +845,54 @@ class ContentLibraryViewModel(
     fun selectPackageBrowserSearchResult(query: String) {
         val current = packageBrowserUiState ?: return
         if (current.showUnsavedChangesDialog) return
+
+        val directNumber = vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserSearchEnterPolicy
+            .parseDirectItemNumber(query)
+
+        if (directNumber != null) {
+            val existsInPackage = current.allItems.any { it.index == directNumber }
+            if (!existsInPackage) {
+                uiState = uiState.copy(
+                    importError = "Item #$directNumber does not exist in package ${current.packageName}.",
+                    importMessage = null
+                )
+                return
+            }
+
+            val target = current.filteredItems.firstOrNull { it.index == directNumber }
+            if (target == null) {
+                val filterName = when {
+                    current.imageStatusFilter == vn.loi.learning.desktop.ui.browser.ImageStatusFilter.MISSING_IMAGE -> "Missing Image"
+                    current.imageStatusFilter == vn.loi.learning.desktop.ui.browser.ImageStatusFilter.HAS_IMAGE -> "Has Image"
+                    current.imageStatusFilter == vn.loi.learning.desktop.ui.browser.ImageStatusFilter.DUPLICATE_IMAGE -> "Duplicate Image"
+                    current.selectedLessonFilter != "ALL" -> "Lesson '${current.selectedLessonFilter}'"
+                    current.mediaFilter != vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL -> current.mediaFilter.name
+                    current.problemFilter != vn.loi.learning.desktop.ui.browser.ContentProblemFilter.NONE -> "Problem"
+                    current.appliedQuery.isNotBlank() -> "current search"
+                    else -> "current"
+                }
+                uiState = uiState.copy(
+                    importMessage = "Item #$directNumber is not in the current $filterName filter.",
+                    importError = null
+                )
+                return
+            }
+
+            attemptSelectRowAutoEdit(target.contentId.value)
+            packageBrowserUiState = packageBrowserUiState?.copy(
+                centerSelectedRowRequest = (packageBrowserUiState?.centerSelectedRowRequest ?: 0L) + 1L
+            )
+            return
+        }
+
         val submitted = current.copy(query = query, appliedQuery = query.trim())
         packageBrowserUiState = submitted
         val target = vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserSearchEnterPolicy
             .resolveTarget(submitted.filteredItems, submitted.appliedQuery) ?: return
         attemptSelectRowAutoEdit(target.contentId.value)
+        packageBrowserUiState = packageBrowserUiState?.copy(
+            centerSelectedRowRequest = (packageBrowserUiState?.centerSelectedRowRequest ?: 0L) + 1L
+        )
     }
 
     fun togglePackageBrowserHighlight(contentId: String) {
@@ -932,6 +1008,19 @@ class ContentLibraryViewModel(
         packageBrowserUiState = current.copy(mediaFilter = filter)
     }
 
+    fun updatePackageBrowserImageStatusFilter(filter: vn.loi.learning.desktop.ui.browser.ImageStatusFilter) {
+        val current = packageBrowserUiState ?: return
+        if (current.imageStatusFilter == filter) return
+        if (current.isDirty && !isEditedRowStillVisible(current, candidateImageStatusFilter = filter)) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyImageStatusFilter(filter)
+            )
+            return
+        }
+        packageBrowserUiState = current.copy(imageStatusFilter = filter)
+    }
+
     fun updatePackageBrowserSort(sort: vn.loi.learning.application.contentpackaging.browser.BrowserSortOption) {
         val current = packageBrowserUiState ?: return
         if (current.isDirty && !isEditedRowStillVisible(current, candidateSortOption = sort)) {
@@ -976,7 +1065,7 @@ class ContentLibraryViewModel(
 
     fun resetPackageBrowserFilters() {
         val current = packageBrowserUiState ?: return
-        if (current.isDirty && !isEditedRowStillVisible(current, candidateQuery = "", candidateLessonFilter = "ALL", candidateMediaFilter = vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL, candidateSortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER)) {
+        if (current.isDirty && !isEditedRowStillVisible(current, candidateQuery = "", candidateLessonFilter = "ALL", candidateMediaFilter = vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL, candidateImageStatusFilter = vn.loi.learning.desktop.ui.browser.ImageStatusFilter.ALL, candidateSortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER)) {
             packageBrowserUiState = current.copy(
                 showUnsavedChangesDialog = true,
                 pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ResetFilters
@@ -988,6 +1077,7 @@ class ContentLibraryViewModel(
             appliedQuery = "",
             selectedLessonFilter = "ALL",
             mediaFilter = vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL,
+            imageStatusFilter = vn.loi.learning.desktop.ui.browser.ImageStatusFilter.ALL,
             sortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER,
             problemFilter = vn.loi.learning.desktop.ui.browser.ContentProblemFilter.NONE
         )
@@ -1174,6 +1264,7 @@ class ContentLibraryViewModel(
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
+                    imageStatusFilter = current.imageStatusFilter,
                     sortOption = current.sortOption,
                     problemFilter = current.problemFilter
                 )
@@ -1325,6 +1416,7 @@ class ContentLibraryViewModel(
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
+                    imageStatusFilter = current.imageStatusFilter,
                     sortOption = current.sortOption,
                     problemFilter = current.problemFilter,
                     selectedContentIds = result.contentIds.mapTo(linkedSetOf()) { it.value },
@@ -1509,7 +1601,15 @@ class ContentLibraryViewModel(
             },
             onSuccess = { reloaded ->
                 val selectedId = current.selectedContentId
-                val projected = reloaded.copy(query = current.query, appliedQuery = current.appliedQuery, selectedLessonFilter = current.selectedLessonFilter, mediaFilter = current.mediaFilter, sortOption = current.sortOption, problemFilter = current.problemFilter)
+                val projected = reloaded.copy(
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    imageStatusFilter = current.imageStatusFilter,
+                    sortOption = current.sortOption,
+                    problemFilter = current.problemFilter
+                )
                 val savedVisible = projected.filteredItems.firstOrNull { it.contentId.value == selectedId }
                 val selection = savedVisible ?: projected.filteredItems.firstOrNull()
                 val reloadedDraft = selection?.toDraftEdits()
@@ -1659,6 +1759,7 @@ class ContentLibraryViewModel(
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
+                    imageStatusFilter = current.imageStatusFilter,
                     sortOption = current.sortOption,
                     problemFilter = current.problemFilter
                 )
@@ -1770,6 +1871,7 @@ class ContentLibraryViewModel(
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
+                    imageStatusFilter = current.imageStatusFilter,
                     sortOption = current.sortOption,
                     problemFilter = current.problemFilter,
                     canUndoDelete = true,
@@ -1812,6 +1914,7 @@ class ContentLibraryViewModel(
                         appliedQuery = current.appliedQuery,
                         selectedLessonFilter = current.selectedLessonFilter,
                         mediaFilter = current.mediaFilter,
+                        imageStatusFilter = current.imageStatusFilter,
                         sortOption = current.sortOption,
                         problemFilter = current.problemFilter
                     )
@@ -1857,6 +1960,7 @@ class ContentLibraryViewModel(
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
+                    imageStatusFilter = current.imageStatusFilter,
                     sortOption = current.sortOption,
                     problemFilter = current.problemFilter
                 )
@@ -1987,6 +2091,7 @@ class ContentLibraryViewModel(
                         appliedQuery = current.appliedQuery,
                         selectedLessonFilter = current.selectedLessonFilter,
                         mediaFilter = current.mediaFilter,
+                        imageStatusFilter = current.imageStatusFilter,
                         sortOption = current.sortOption,
                         problemFilter = current.problemFilter
                     )
@@ -2036,6 +2141,7 @@ class ContentLibraryViewModel(
                         appliedQuery = current.appliedQuery,
                         selectedLessonFilter = current.selectedLessonFilter,
                         mediaFilter = current.mediaFilter,
+                        imageStatusFilter = current.imageStatusFilter,
                         sortOption = current.sortOption,
                         problemFilter = current.problemFilter
                     )
@@ -2123,6 +2229,10 @@ class ContentLibraryViewModel(
                 val current = packageBrowserUiState ?: return
                 packageBrowserUiState = current.copy(mediaFilter = action.mediaFilter)
             }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyImageStatusFilter -> {
+                val current = packageBrowserUiState ?: return
+                packageBrowserUiState = current.copy(imageStatusFilter = action.imageStatusFilter)
+            }
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplySort -> {
                 val current = packageBrowserUiState ?: return
                 packageBrowserUiState = current.copy(sortOption = action.sortOption)
@@ -2137,6 +2247,7 @@ class ContentLibraryViewModel(
                     appliedQuery = "",
                     selectedLessonFilter = "ALL",
                     mediaFilter = vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL,
+                    imageStatusFilter = vn.loi.learning.desktop.ui.browser.ImageStatusFilter.ALL,
                     sortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER,
                     problemFilter = vn.loi.learning.desktop.ui.browser.ContentProblemFilter.NONE
                 )
@@ -2391,8 +2502,20 @@ class ContentLibraryViewModel(
         packageName: String,
         destinationPath: Path
     ) {
-        if (uiState.operation !is ContentLibraryOperation.Idle) return
+        if (packageExportDialogState.exporting || uiState.operation !is ContentLibraryOperation.Idle) return
         clearOperationMessage()
+
+        packageExportDialogState = PackageExportDialogState(
+            visible = true,
+            exporting = true,
+            packageId = installedPackageId,
+            packageName = packageName,
+            stage = vn.loi.learning.application.contentpackaging.export.ExportProgressStage.RESOLVING_PACKAGE,
+            phase = "Preparing export...",
+            processed = 0,
+            total = 100,
+            outputPath = destinationPath
+        )
 
         uiState = uiState.copy(
             operation = ContentLibraryOperation.Exporting(
@@ -2409,15 +2532,25 @@ class ContentLibraryViewModel(
                     installedPackageId = installedPackageId,
                     destinationPath = destinationPath,
                     progressListener = { stage, message, processed, total ->
-                        if (uiState.operation is ContentLibraryOperation.Exporting) {
-                            uiState = uiState.copy(
-                                operation = ContentLibraryOperation.Exporting(
-                                    packageName = packageName,
+                        taskRunner.dispatch {
+                            if (packageExportDialogState.exporting) {
+                                packageExportDialogState = packageExportDialogState.copy(
+                                    stage = stage,
                                     phase = message,
                                     processed = processed,
                                     total = total
                                 )
-                            )
+                            }
+                            if (uiState.operation is ContentLibraryOperation.Exporting) {
+                                uiState = uiState.copy(
+                                    operation = ContentLibraryOperation.Exporting(
+                                        packageName = packageName,
+                                        phase = message,
+                                        processed = processed,
+                                        total = total
+                                    )
+                                )
+                            }
                         }
                     }
                 )
@@ -2425,6 +2558,15 @@ class ContentLibraryViewModel(
             onSuccess = { result ->
                 when (result) {
                     is vn.loi.learning.application.contentpackaging.export.ExportContentPackageResult.Success -> {
+                        packageExportDialogState = packageExportDialogState.copy(
+                            exporting = false,
+                            stage = vn.loi.learning.application.contentpackaging.export.ExportProgressStage.COMPLETED,
+                            phase = "OPD3 package export complete.",
+                            processed = 100,
+                            total = 100,
+                            result = result,
+                            error = null
+                        )
                         uiState = uiState.copy(
                             importMessage = "Package '$packageName' exported successfully to '${result.outputPath.fileName}' (${result.contentCount} contents, ${result.learningItemCount} items, ${result.mediaAssetCount} media files).",
                             importError = null,
@@ -2432,6 +2574,12 @@ class ContentLibraryViewModel(
                         )
                     }
                     is vn.loi.learning.application.contentpackaging.export.ExportContentPackageResult.Failure -> {
+                        packageExportDialogState = packageExportDialogState.copy(
+                            exporting = false,
+                            phase = "Export failed",
+                            error = result.message,
+                            result = null
+                        )
                         uiState = uiState.copy(
                             importMessage = null,
                             importError = result.message,
@@ -2441,6 +2589,12 @@ class ContentLibraryViewModel(
                 }
             },
             onFailure = { exception ->
+                packageExportDialogState = packageExportDialogState.copy(
+                    exporting = false,
+                    phase = "Export failed",
+                    error = exception.message ?: "Failed to export package.",
+                    result = null
+                )
                 uiState = uiState.copy(
                     importMessage = null,
                     importError = exception.message ?: "Failed to export package.",
@@ -2448,6 +2602,361 @@ class ContentLibraryViewModel(
                 )
             }
         )
+    }
+
+    fun dismissPackageExportDialog() {
+        if (!packageExportDialogState.exporting) {
+            packageExportDialogState = PackageExportDialogState()
+        }
+    }
+
+    fun openImageReuseReview(
+        installedPackageId: vn.loi.learning.domain.library.model.InstalledPackageId,
+        packageName: String
+    ) {
+        val availableSources = uiState.packages
+            .filter {
+                it.id != installedPackageId.value &&
+                    !it.name.equals(packageName, ignoreCase = true)
+            }
+            .map {
+                vn.loi.learning.desktop.ui.browser.imagereuse.ImageReusePackageOption(
+                    id = it.id,
+                    name = it.name,
+                    version = it.version
+                )
+            }
+        val initialSelectedIds = availableSources.map { it.id }.toSet()
+        imageReuseDialogState = vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewDialogState(
+            visible = true,
+            targetPackageId = installedPackageId.value,
+            targetPackageName = packageName,
+            stage = vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Setup(
+                availableSourcePackages = availableSources,
+                selectedSourcePackageIds = initialSelectedIds,
+                scope = vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseScope.MISSING_IMAGES_ONLY
+            )
+        )
+    }
+
+    fun toggleImageReuseSourcePackage(packageId: String) {
+        val currentStage = imageReuseDialogState.stage as? vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Setup ?: return
+        val updated = if (packageId in currentStage.selectedSourcePackageIds) {
+            currentStage.selectedSourcePackageIds - packageId
+        } else {
+            currentStage.selectedSourcePackageIds + packageId
+        }
+        imageReuseDialogState = imageReuseDialogState.copy(
+            stage = currentStage.copy(selectedSourcePackageIds = updated, scanError = null)
+        )
+    }
+
+    fun selectAllImageReuseSourcePackages() {
+        val currentStage = imageReuseDialogState.stage as? vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Setup ?: return
+        imageReuseDialogState = imageReuseDialogState.copy(
+            stage = currentStage.copy(
+                selectedSourcePackageIds = currentStage.availableSourcePackages.map { it.id }.toSet(),
+                scanError = null
+            )
+        )
+    }
+
+    fun clearAllImageReuseSourcePackages() {
+        val currentStage = imageReuseDialogState.stage as? vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Setup ?: return
+        imageReuseDialogState = imageReuseDialogState.copy(
+            stage = currentStage.copy(
+                selectedSourcePackageIds = emptySet(),
+                scanError = null
+            )
+        )
+    }
+
+    fun updateImageReuseScope(scope: vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseScope) {
+        val currentStage = imageReuseDialogState.stage as? vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Setup ?: return
+        imageReuseDialogState = imageReuseDialogState.copy(
+            stage = currentStage.copy(scope = scope, scanError = null)
+        )
+    }
+
+    fun startImageReuseScan() {
+        val currentStage = imageReuseDialogState.stage as? vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Setup ?: return
+        if (currentStage.selectedSourcePackageIds.isEmpty()) {
+            imageReuseDialogState = imageReuseDialogState.copy(
+                stage = currentStage.copy(scanError = "Please select at least one source package to scan.")
+            )
+            return
+        }
+        val targetPackageId = imageReuseDialogState.targetPackageId
+        val targetPackageName = imageReuseDialogState.targetPackageName
+        val selectedSources = currentStage.availableSourcePackages
+            .filter { it.id in currentStage.selectedSourcePackageIds }
+            .filter { it.id != targetPackageId && !it.name.equals(targetPackageName, ignoreCase = true) }
+        val allowedSourcePackageIds = selectedSources.map { it.id }.toSet()
+        val scope = currentStage.scope
+
+        imageReuseDialogState = imageReuseDialogState.copy(
+            stage = currentStage.copy(isScanning = true, scanError = null)
+        )
+
+        taskRunner.run(
+            work = {
+                val targetUi = packageBrowserFacade.loadForPackage(
+                    installedPackageId = vn.loi.learning.domain.library.model.InstalledPackageId(targetPackageId),
+                    packageName = targetPackageName
+                )
+                val sourcePackagesWithItems = selectedSources.associateWith { sourcePkg ->
+                    packageBrowserFacade.loadForPackage(
+                        installedPackageId = vn.loi.learning.domain.library.model.InstalledPackageId(sourcePkg.id),
+                        packageName = sourcePkg.name
+                    ).allItems
+                }
+                vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseDiscoveryEngine.discoverCandidates(
+                    targetItems = targetUi.allItems,
+                    sourcePackagesWithItems = sourcePackagesWithItems,
+                    scope = scope,
+                    mediaStorage = contentMediaStorage
+                )
+            },
+            onSuccess = { candidates ->
+                if (candidates.isEmpty()) {
+                    imageReuseDialogState = imageReuseDialogState.copy(
+                        stage = currentStage.copy(
+                            isScanning = false,
+                            scanError = "No candidate image matches found for the selected scope."
+                        )
+                    )
+                } else {
+                    imageReuseDialogState = imageReuseDialogState.copy(
+                        stage = vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Review(
+                            targetItems = candidates,
+                            currentTargetIndex = 0,
+                            currentCandidateIndex = 0,
+                            isApplying = false,
+                            appliedCount = 0,
+                            allowedSourcePackageIds = allowedSourcePackageIds
+                        )
+                    )
+                }
+            },
+            onFailure = { ex ->
+                imageReuseDialogState = imageReuseDialogState.copy(
+                    stage = currentStage.copy(
+                        isScanning = false,
+                        scanError = ex.message ?: "Failed to scan packages for candidate images."
+                    )
+                )
+            }
+        )
+    }
+
+    fun previousImageReuseItem() {
+        val review = imageReuseDialogState.stage as? vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Review ?: return
+        if (review.isApplying || !review.canGoPrevious) return
+
+        imageReuseDialogState = imageReuseDialogState.copy(
+            stage = review.copy(
+                currentTargetIndex = review.currentTargetIndex - 1,
+                currentCandidateIndex = 0,
+                applyError = null
+            )
+        )
+    }
+
+    fun undoLastImageReuse() {
+        val review = imageReuseDialogState.stage as? vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Review ?: return
+        if (review.isApplying || !review.canUndo) return
+        val lastUndo = review.undoStack.lastOrNull() ?: return
+
+        imageReuseDialogState = imageReuseDialogState.copy(
+            stage = review.copy(isApplying = true, applyError = null)
+        )
+
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.undoImageReuse(
+                    targetContentId = lastUndo.targetContentId,
+                    expectedCurrentImageRef = lastUndo.appliedImageRef,
+                    restoreImageRef = lastUndo.beforeImageRef
+                )
+            },
+            onSuccess = { _ ->
+                val nextAppliedCount = maxOf(0, review.appliedCount - 1)
+                val updatedTargetItems = review.targetItems.mapIndexed { idx, item ->
+                    if (idx == lastUndo.targetIndex && item.targetContentId == lastUndo.targetContentId) {
+                        item.copy(currentImageRef = lastUndo.beforeImageRef)
+                    } else {
+                        item
+                    }
+                }
+                imageReuseDialogState = imageReuseDialogState.copy(
+                    stage = review.copy(
+                        targetItems = updatedTargetItems,
+                        currentTargetIndex = lastUndo.targetIndex,
+                        currentCandidateIndex = lastUndo.candidateIndex,
+                        isApplying = false,
+                        appliedCount = nextAppliedCount,
+                        undoStack = review.undoStack.dropLast(1),
+                        applyError = null
+                    )
+                )
+            },
+            onFailure = { ex ->
+                imageReuseDialogState = imageReuseDialogState.copy(
+                    stage = review.copy(
+                        isApplying = false,
+                        applyError = ex.message ?: "Failed to undo last image reuse."
+                    )
+                )
+            }
+        )
+    }
+
+    fun skipImageReuseCandidate() {
+        val review = imageReuseDialogState.stage as? vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Review ?: return
+        if (review.isApplying) return
+        val currentTarget = review.currentTarget ?: return
+
+        if (review.currentCandidateIndex + 1 < currentTarget.candidates.size) {
+            imageReuseDialogState = imageReuseDialogState.copy(
+                stage = review.copy(
+                    currentCandidateIndex = review.currentCandidateIndex + 1,
+                    applyError = null
+                )
+            )
+        } else if (review.currentTargetIndex + 1 < review.targetItems.size) {
+            imageReuseDialogState = imageReuseDialogState.copy(
+                stage = review.copy(
+                    currentTargetIndex = review.currentTargetIndex + 1,
+                    currentCandidateIndex = 0,
+                    applyError = null
+                )
+            )
+        } else {
+            imageReuseDialogState = imageReuseDialogState.copy(
+                stage = vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Complete(
+                    totalReviewedTargets = review.targetItems.size,
+                    totalAppliedCount = review.appliedCount
+                )
+            )
+        }
+    }
+
+    fun skipImageReuseItem() {
+        val review = imageReuseDialogState.stage as? vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Review ?: return
+        if (review.isApplying) return
+
+        if (review.currentTargetIndex + 1 < review.targetItems.size) {
+            imageReuseDialogState = imageReuseDialogState.copy(
+                stage = review.copy(
+                    currentTargetIndex = review.currentTargetIndex + 1,
+                    currentCandidateIndex = 0,
+                    applyError = null
+                )
+            )
+        } else {
+            imageReuseDialogState = imageReuseDialogState.copy(
+                stage = vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Complete(
+                    totalReviewedTargets = review.targetItems.size,
+                    totalAppliedCount = review.appliedCount
+                )
+            )
+        }
+    }
+
+    fun applyImageReuseAndNext() {
+        val review = imageReuseDialogState.stage as? vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Review ?: return
+        if (review.isApplying) return
+        val currentTarget = review.currentTarget ?: return
+        val currentCandidate = review.currentCandidate ?: return
+        val mediaStorage = contentMediaStorage ?: run {
+            imageReuseDialogState = imageReuseDialogState.copy(
+                stage = review.copy(applyError = "Media storage is unavailable.")
+            )
+            return
+        }
+        val targetPackageName = imageReuseDialogState.targetPackageName
+
+        imageReuseDialogState = imageReuseDialogState.copy(
+            stage = review.copy(isApplying = true, applyError = null)
+        )
+
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.applyImageReuse(
+                    targetPackageName = targetPackageName,
+                    targetContentId = currentTarget.targetContentId,
+                    sourceCandidate = currentCandidate,
+                    mediaStorage = mediaStorage
+                )
+            },
+            onSuccess = { appliedPath ->
+                val nextAppliedCount = review.appliedCount + 1
+                val undoEntry = vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseUndoEntry(
+                    targetContentId = currentTarget.targetContentId,
+                    targetIndex = review.currentTargetIndex,
+                    candidateIndex = review.currentCandidateIndex,
+                    beforeImageRef = currentTarget.currentImageRef,
+                    appliedImageRef = appliedPath
+                )
+                val updatedTargetItems = review.targetItems.mapIndexed { idx, item ->
+                    if (idx == review.currentTargetIndex && item.targetContentId == currentTarget.targetContentId) {
+                        item.copy(currentImageRef = appliedPath)
+                    } else {
+                        item
+                    }
+                }
+                val updatedUndoStack = review.undoStack + undoEntry
+
+                if (review.currentTargetIndex + 1 < review.targetItems.size) {
+                    imageReuseDialogState = imageReuseDialogState.copy(
+                        stage = review.copy(
+                            targetItems = updatedTargetItems,
+                            currentTargetIndex = review.currentTargetIndex + 1,
+                            currentCandidateIndex = 0,
+                            isApplying = false,
+                            appliedCount = nextAppliedCount,
+                            undoStack = updatedUndoStack,
+                            applyError = null
+                        )
+                    )
+                } else {
+                    imageReuseDialogState = imageReuseDialogState.copy(
+                        stage = vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Complete(
+                            totalReviewedTargets = review.targetItems.size,
+                            totalAppliedCount = nextAppliedCount
+                        )
+                    )
+                }
+            },
+            onFailure = { ex ->
+                imageReuseDialogState = imageReuseDialogState.copy(
+                    stage = review.copy(
+                        isApplying = false,
+                        applyError = ex.message ?: "Failed to copy and apply image to target."
+                    )
+                )
+            }
+        )
+    }
+
+    fun closeImageReuseReview() {
+        val stage = imageReuseDialogState.stage
+        val appliedCount = when (stage) {
+            is vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Review -> stage.appliedCount
+            is vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewStage.Complete -> stage.totalAppliedCount
+            else -> 0
+        }
+        val targetPackageId = imageReuseDialogState.targetPackageId
+        val targetPackageName = imageReuseDialogState.targetPackageName
+
+        imageReuseDialogState = vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewDialogState()
+
+        if (appliedCount > 0 && targetPackageId.isNotBlank() && targetPackageName.isNotBlank()) {
+            browsePackageLessons(
+                installedPackageId = vn.loi.learning.domain.library.model.InstalledPackageId(targetPackageId),
+                packageName = targetPackageName
+            )
+        }
     }
 
     private fun updateImportProgress(

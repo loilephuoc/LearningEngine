@@ -52,7 +52,8 @@ internal fun typedModeMediaRole(
 internal fun resolveTypingFrontMediaBounds(
     density: StudyContentDensity,
     availableHeightDp: Int,
-    hasMedia: Boolean = true
+    hasMedia: Boolean = true,
+    imeVisible: Boolean = false
 ): StudyMediaBounds? {
     if (!hasMedia) return null
     val targetMax = 320
@@ -61,8 +62,17 @@ internal fun resolveTypingFrontMediaBounds(
         StudyContentDensity.STANDARD -> 0.92f
         StudyContentDensity.DENSE -> 0.85f
     }
-    val minimum = 128
-    val viewportCap = (availableHeightDp * 0.55f).toInt().coerceAtLeast(minimum)
-    val computedMax = (targetMax * densityScale).toInt().coerceIn(minimum, viewportCap)
+    val minimum = if (imeVisible) 80 else 128
+    val effectiveAvailableHeight = if (imeVisible) {
+        (availableHeightDp - 136).coerceAtLeast(minimum)
+    } else {
+        availableHeightDp
+    }
+    val viewportCap = if (imeVisible) {
+        (effectiveAvailableHeight * 0.75f).toInt().coerceAtLeast(minimum)
+    } else {
+        (availableHeightDp * 0.55f).toInt().coerceAtLeast(minimum)
+    }
+    val computedMax = (targetMax * (if (imeVisible) 1f else densityScale)).toInt().coerceIn(minimum, viewportCap)
     return StudyMediaBounds(minimum, computedMax)
 }

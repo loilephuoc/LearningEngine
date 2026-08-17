@@ -2,6 +2,7 @@ package vn.loi.learning.application.integrity
 
 import java.nio.file.Files
 import java.time.Instant
+import vn.loi.learning.application.contentmedia.MediaReferencePolicy
 import vn.loi.learning.application.port.*
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
@@ -190,7 +191,11 @@ class PackageIntegrityChecker(
             "translatedAudio" to content.media.translatedAudio,
             "exampleAudio" to content.media.exampleAudio,
             "exampleTranslatedAudio" to content.media.exampleTranslatedAudio
-        ).mapNotNull { (slot, ref) -> ref?.let { Triple(content.id, slot, it) } } }
+        ).mapNotNull { (slot, ref) ->
+            if (ref != null && !(slot == "image" && MediaReferencePolicy.isNoImageSentinel(ref))) {
+                Triple(content.id, slot, ref)
+            } else null
+        } }
         val resolution = references.map { it.third }.distinct().associateWith { ref -> resolver?.resolve(ref) }
         references.forEach { (contentId, slot, reference) ->
             val path = resolution[reference]

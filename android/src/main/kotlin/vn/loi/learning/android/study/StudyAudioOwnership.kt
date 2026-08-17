@@ -25,7 +25,8 @@ internal class StudyAudioOwnership {
         current?.takeIf { it.itemKey == itemKey } ?: StudyAudioOwnerToken(itemKey, -1L)
 
     fun claimAutoplay(token: StudyAudioOwnerToken, role: AudioRole): Boolean =
-        !feedbackActive && token == current && autoplayClaims.add(token to role)
+        !feedbackActive && token == current && autoplayClaims.add(token to role) &&
+            vn.loi.learning.android.controller.StudyControllerBridge.claimAutoplay(token.itemKey, role.name)
 
     fun permitsManualPlayback(token: StudyAudioOwnerToken): Boolean = !feedbackActive && token == current
 

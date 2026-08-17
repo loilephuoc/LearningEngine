@@ -14,6 +14,7 @@ class LearningEngineAndroidApplication : Application() {
         super.onCreate()
         AndroidStartupTrace.enabled = BuildConfig.DEBUG
         JsonPersistenceTrace.enabled = BuildConfig.DEBUG
+        vn.loi.learning.android.controller.ControllerDiagnosticsHolder.registerInputDeviceListener(this)
     }
 
     val themeController: AndroidThemeController by lazy {
@@ -21,6 +22,11 @@ class LearningEngineAndroidApplication : Application() {
     }
     val studyPreferencesController: AndroidStudyPreferencesController by lazy {
         AndroidStudyPreferencesController(SharedPreferencesStudyPreferenceStore(this))
+    }
+    val controllerPreferencesController: vn.loi.learning.android.controller.ControllerPreferencesController by lazy {
+        vn.loi.learning.android.controller.ControllerPreferencesController(
+            vn.loi.learning.android.controller.SharedPreferencesControllerPreferenceStore(this)
+        )
     }
 
     private val graphOwner by lazy {

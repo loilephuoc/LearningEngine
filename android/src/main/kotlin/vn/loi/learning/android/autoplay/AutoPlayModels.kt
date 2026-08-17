@@ -15,9 +15,22 @@ enum class AutoPlaySource(val displayName: String, val description: String) {
     RANDOM_ALL("Random All", "Randomized selection across all package vocabulary")
 }
 
+enum class AutoPlayPlaybackOrder(val displayName: String, val description: String) {
+    SHUFFLED("Shuffled", "Play each item once per cycle, then reshuffle for the next cycle."),
+    SOURCE_ORDER("Source order", "Keep the source's canonical ordering.")
+}
+
+data class AutoPlayPackageInfo(
+    val id: String,
+    val name: String,
+    val totalItemCount: Int
+)
+
 data class AutoPlayConfig(
+    val selectedPackageId: String? = null,
     val direction: AutoPlayDirection = AutoPlayDirection.VIETNAMESE_TO_ENGLISH,
     val source: AutoPlaySource = AutoPlaySource.LEARNED,
+    val playbackOrder: AutoPlayPlaybackOrder = AutoPlayPlaybackOrder.SHUFFLED,
     val frontDelayMs: Long = 3000L,
     val playFrontAudio: Boolean = true,
     val playAnswerAudio: Boolean = true,
@@ -26,7 +39,10 @@ data class AutoPlayConfig(
     val postExampleEnglishDelayMs: Long = 2000L,
     val playExampleVietnameseAudio: Boolean = false,
     val postExampleVietnameseDelayMs: Long = 3000L,
-    val keepScreenOn: Boolean = true
+    val keepScreenOn: Boolean = true,
+    val backgroundPlayback: Boolean = true,
+    val isMuted: Boolean = false,
+    val sleepTimerMinutes: Double? = null
 ) {
     init {
         require(frontDelayMs in MIN_FRONT_DELAY_MS..MAX_DELAY_MS) {
@@ -40,6 +56,11 @@ data class AutoPlayConfig(
         }
         require(postExampleVietnameseDelayMs in 0L..MAX_DELAY_MS) {
             "Post-Vietnamese-example delay must be between 0.0 and 60.0 seconds (was ${postExampleVietnameseDelayMs}ms)"
+        }
+        if (sleepTimerMinutes != null) {
+            require(sleepTimerMinutes in MIN_SLEEP_TIMER_MINUTES..MAX_SLEEP_TIMER_MINUTES) {
+                "Sleep timer must be between $MIN_SLEEP_TIMER_MINUTES and $MAX_SLEEP_TIMER_MINUTES minutes (was $sleepTimerMinutes)"
+            }
         }
     }
 
@@ -55,11 +76,24 @@ data class AutoPlayConfig(
     val postExampleVietnameseDelaySeconds: Double
         get() = postExampleVietnameseDelayMs / 1000.0
 
+    val sleepTimerDurationMs: Long?
+        get() = sleepTimerMinutes?.let { (it * 60_000.0).toLong() }
+
     companion object {
         const val MIN_FRONT_DELAY_MS = 100L
         const val MAX_DELAY_MS = 60_000L
 
+        const val MIN_SLEEP_TIMER_MINUTES = 0.1
+        const val MAX_SLEEP_TIMER_MINUTES = 720.0
+
         fun normalizeDecimalSeconds(input: String): Double? {
+            val sanitized = input.trim().replace(',', '.')
+            val parsed = sanitized.toDoubleOrNull() ?: return null
+            if (parsed.isNaN() || parsed.isInfinite()) return null
+            return parsed
+        }
+
+        fun normalizeDecimalMinutes(input: String): Double? {
             val sanitized = input.trim().replace(',', '.')
             val parsed = sanitized.toDoubleOrNull() ?: return null
             if (parsed.isNaN() || parsed.isInfinite()) return null
@@ -71,6 +105,15 @@ data class AutoPlayConfig(
                 seconds.toLong().toString()
             } else {
                 val formatted = "%.2f".format(java.util.Locale.US, seconds).trimEnd('0').trimEnd('.')
+                formatted
+            }
+        }
+
+        fun formatMinutes(minutes: Double): String {
+            return if (minutes % 1.0 == 0.0) {
+                minutes.toLong().toString()
+            } else {
+                val formatted = "%.2f".format(java.util.Locale.US, minutes).trimEnd('0').trimEnd('.')
                 formatted
             }
         }

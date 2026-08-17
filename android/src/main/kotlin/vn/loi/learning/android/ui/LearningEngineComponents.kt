@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -340,7 +341,8 @@ fun LearningEngineStudyTopBar(
     currentPosition: Int?,
     totalItems: Int?,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onAutoPlay: (() -> Unit)? = null
 ) {
     Column(modifier = modifier) {
         Row(
@@ -359,6 +361,19 @@ fun LearningEngineStudyTopBar(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
+            if (onAutoPlay != null) {
+                IconButton(
+                    onClick = onAutoPlay,
+                    modifier = Modifier.size(LearningSpacing.touchTarget)
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "Auto Play",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(LearningIconSize.card)
+                    )
+                }
+            }
             Text(
                 buildString {
                     append(modeLabel)

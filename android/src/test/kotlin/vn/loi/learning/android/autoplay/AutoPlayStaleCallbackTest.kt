@@ -33,7 +33,15 @@ class AutoPlayStaleCallbackTest {
         val scheduler = AutoPlayTimingStateMachineTest.FakeTimerScheduler()
         val engine = AutoPlayEngine(audioPlayer, scheduler)
 
-        engine.start(listOf(item1, item2), AutoPlayConfig(frontDelayMs = 1500L, playFrontAudio = false, playAnswerAudio = true))
+        engine.start(
+            listOf(item1, item2),
+            AutoPlayConfig(
+                playbackOrder = AutoPlayPlaybackOrder.SOURCE_ORDER,
+                frontDelayMs = 1500L,
+                playFrontAudio = false,
+                playAnswerAudio = true
+            )
+        )
 
         // Move to ANSWER_AUDIO for item1
         scheduler.fireNext()

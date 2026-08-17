@@ -71,6 +71,26 @@ class AutoPlayContentSelectorTest {
         // 5. Media resolution
         val item0 = learned.first { it.headword == "selector-pkg-0" }
         assertEquals("/resolved/audio/selector-pkg-0.mp3", item0.wordAudioPath)
+
+        // 6. Multi-package isolation & available packages
+        val installed2 = installPackage(context, "second-pkg", count = 4)
+        val available = selector.getAvailablePackages()
+        assertEquals(2, available.size)
+        val packageNames = available.map { it.name }
+        assertTrue(packageNames.contains("second-pkg"))
+        assertTrue(packageNames.contains("selector-pkg"))
+
+        // Scoped to second-pkg: has 4 items in RANDOM_ALL, 0 in LEARNED
+        val secondAll = selector.selectItems(AutoPlaySource.RANDOM_ALL, packageId = installed2.value)
+        assertEquals(4, secondAll.size)
+        assertTrue(secondAll.all { it.headword.startsWith("second-pkg") })
+
+        val secondLearned = selector.selectItems(AutoPlaySource.LEARNED, packageId = installed2.value)
+        assertEquals(0, secondLearned.size)
+
+        // Invalid package returns empty
+        val invalidPkg = selector.selectItems(AutoPlaySource.RANDOM_ALL, packageId = "non-existent-pkg")
+        assertEquals(0, invalidPkg.size)
     }
 
     private fun installPackage(

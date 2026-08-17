@@ -3,6 +3,7 @@ package vn.loi.learning.desktop.ui.contentlibrary
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -321,6 +322,64 @@ class DesktopLongOperationStateTest {
         val newer = LessonBrowserUiState(query = "new", appliedQuery = "")
         assertEquals("", applyDebouncedLessonQuery(newer, "old").appliedQuery)
         assertEquals("new", applyDebouncedLessonQuery(newer, "new").appliedQuery)
+    }
+
+    @Test
+    fun `export package blocks duplicate invocation while running`() {
+        val context = collectionContext()
+        val runner = QueuedTaskRunner()
+        val viewModel = ContentLibraryViewModel(
+            ContentLibraryFacade(context),
+            LessonBrowserFacade(context),
+            taskRunner = runner,
+            loadImmediately = false
+        )
+
+        val tempDest = Files.createTempFile("export_test_", ".opd3")
+        try {
+            viewModel.exportPackage("pkg-a", "Package A", tempDest)
+
+            assertTrue(viewModel.packageExportDialogState.visible)
+            assertTrue(viewModel.packageExportDialogState.exporting)
+            assertIs<ContentLibraryOperation.Exporting>(viewModel.uiState.operation)
+            assertEquals(1, runner.pendingCount)
+
+            // Try to trigger duplicate export while exporting
+            viewModel.exportPackage("pkg-a", "Package A", tempDest)
+            assertEquals(1, runner.pendingCount, "Duplicate export must be blocked and not queued")
+        } finally {
+            Files.deleteIfExists(tempDest)
+        }
+    }
+
+    @Test
+    fun `export package failure sets error state and unlocks UI`() {
+        val context = collectionContext()
+        val runner = QueuedTaskRunner()
+        val viewModel = ContentLibraryViewModel(
+            ContentLibraryFacade(context),
+            LessonBrowserFacade(context),
+            taskRunner = runner,
+            loadImmediately = false
+        )
+
+        val tempDest = Files.createTempFile("export_fail_test_", ".opd3")
+        try {
+            viewModel.exportPackage("pkg-a", "Package A", tempDest)
+            assertTrue(viewModel.packageExportDialogState.exporting)
+
+            runner.failNext(IllegalStateException("Simulated disk error"))
+
+            assertFalse(viewModel.packageExportDialogState.exporting)
+            assertEquals("Simulated disk error", viewModel.packageExportDialogState.error)
+            assertIs<ContentLibraryOperation.Idle>(viewModel.uiState.operation)
+
+            // Dismiss dialog
+            viewModel.dismissPackageExportDialog()
+            assertFalse(viewModel.packageExportDialogState.visible)
+        } finally {
+            Files.deleteIfExists(tempDest)
+        }
     }
 
     private class QueuedTaskRunner : DesktopTaskRunner {

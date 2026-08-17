@@ -65,21 +65,15 @@ class AutoPlayPassiveZeroMutationTest {
 
         engine.start(learnedItems, config)
 
-        // Run full cycle on item 1
-        scheduler.fireNext() // reveal
-        audioPlayer.completeAudio() // word audio
-        scheduler.fireNext() // post-word
-        audioPlayer.completeAudio() // example audio
-        scheduler.fireNext() // post-example -> item 2
+        // Item 1: front timer expires -> finishes item 1 and moves to item 2
+        scheduler.fireNext()
 
-        // Run full cycle on item 2
-        scheduler.fireNext() // reveal
-        audioPlayer.completeAudio() // word audio
-        scheduler.fireNext() // post-word
-        audioPlayer.completeAudio() // example audio
-        scheduler.fireNext() // post-example -> completed
+        // Item 2: front timer expires -> finishes item 2 and advances to Cycle 2
+        scheduler.fireNext()
 
-        assertIs<AutoPlayEngineState.Completed>(engine.state.value)
+        val running = engine.state.value
+        assertIs<AutoPlayEngineState.Running>(running)
+        assertEquals(2L, engine.currentCycleNumber)
 
         // Test with DUE source
         val dueItems = selector.selectItems(AutoPlaySource.DUE)

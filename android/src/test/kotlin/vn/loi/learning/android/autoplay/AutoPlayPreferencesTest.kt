@@ -59,6 +59,66 @@ class AutoPlayPreferencesTest {
     }
 
     @Test
+    fun `preferences controller persists isMuted and sleepTimerMinutes`() {
+        val store = FakePreferenceStore()
+        val controller = AutoPlayPreferencesController(store)
+
+        controller.updateMuted(true)
+        controller.updateSleepTimerMinutes(37.5)
+
+        val updated = controller.current()
+        assertTrue(updated.isMuted)
+        assertEquals(37.5, updated.sleepTimerMinutes)
+        assertEquals(2_250_000L, updated.sleepTimerDurationMs)
+        assertEquals(updated, store.load())
+
+        controller.updateSleepTimerMinutes(null)
+        val cleared = controller.current()
+        assertEquals(null, cleared.sleepTimerMinutes)
+        assertEquals(null, cleared.sleepTimerDurationMs)
+    }
+
+    @Test
+    fun `decimal minutes normalization accepts dot and comma formats`() {
+        assertEquals(0.5, AutoPlayConfig.normalizeDecimalMinutes("0.5"))
+        assertEquals(0.5, AutoPlayConfig.normalizeDecimalMinutes("0,5"))
+        assertEquals(37.5, AutoPlayConfig.normalizeDecimalMinutes(" 37,5 "))
+        assertEquals(60.0, AutoPlayConfig.normalizeDecimalMinutes("60"))
+        assertEquals(null, AutoPlayConfig.normalizeDecimalMinutes("invalid"))
+    }
+
+    @Test
+    fun `preferences controller persists and updates playbackOrder`() {
+        val store = FakePreferenceStore()
+        val controller = AutoPlayPreferencesController(store)
+
+        assertEquals(AutoPlayPlaybackOrder.SHUFFLED, controller.current().playbackOrder)
+
+        controller.updatePlaybackOrder(AutoPlayPlaybackOrder.SOURCE_ORDER)
+        assertEquals(AutoPlayPlaybackOrder.SOURCE_ORDER, controller.current().playbackOrder)
+        assertEquals(AutoPlayPlaybackOrder.SOURCE_ORDER, store.load().playbackOrder)
+
+        controller.updatePlaybackOrder(AutoPlayPlaybackOrder.SHUFFLED)
+        assertEquals(AutoPlayPlaybackOrder.SHUFFLED, controller.current().playbackOrder)
+    }
+
+    @Test
+    fun `preferences controller persists and updates selectedPackageId`() {
+        val store = FakePreferenceStore()
+        val controller = AutoPlayPreferencesController(store)
+
+        assertEquals(null, controller.current().selectedPackageId)
+
+        controller.updateSelectedPackageId("pkg-oxford-3000")
+        assertEquals("pkg-oxford-3000", controller.current().selectedPackageId)
+        assertEquals("pkg-oxford-3000", store.load().selectedPackageId)
+
+        controller.updateSelectedPackageId(null)
+        assertEquals(null, controller.current().selectedPackageId)
+        assertEquals(null, store.load().selectedPackageId)
+    }
+
+    @Test
     fun `decimal format helper formats integers and fractional numbers cleanly`() {
         assertEquals("2", AutoPlayConfig.formatSeconds(2.0))
         assertEquals("1.5", AutoPlayConfig.formatSeconds(1.5))

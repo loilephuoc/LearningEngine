@@ -41,12 +41,13 @@ internal fun StudyRuntimeShell(
     totalItems: Int?,
     onBack: () -> Unit,
     header: @Composable ColumnScope.() -> Unit,
+    onAutoPlay: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val policy = LocalLayoutPolicy.current
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = { LearningEngineStudyTopBar(title, modeLabel, currentPosition, totalItems, onBack) }
+        topBar = { LearningEngineStudyTopBar(title, modeLabel, currentPosition, totalItems, onBack, onAutoPlay = onAutoPlay) }
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding).imePadding(), contentAlignment = Alignment.TopCenter) {
             Column(

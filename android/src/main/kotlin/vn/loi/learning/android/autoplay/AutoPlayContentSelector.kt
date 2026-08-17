@@ -23,28 +23,48 @@ class AutoPlayContentSelector(
     private val resolveMedia: (String) -> String? = { null },
     private val now: () -> Long = System::currentTimeMillis
 ) {
-    fun currentScope(): LearnEntryScope? {
+    fun getAvailablePackages(): List<AutoPlayPackageInfo> {
+        val libraryId = context.defaultLibraryId ?: return emptyList()
+        val packages = context.installedPackageRepository?.findAll().orEmpty()
+            .filter { it.libraryId == libraryId && it.state == PackageState.ACTIVE }
+            .sortedBy { it.name.value }
+        return packages.map { pkg ->
+            val count = context.packageContentQuery?.getContentIdsForPackage(pkg.id)?.size ?: 0
+            AutoPlayPackageInfo(
+                id = pkg.id.value,
+                name = pkg.name.value,
+                totalItemCount = count
+            )
+        }
+    }
+
+    fun currentScope(explicitPackageId: String? = null): LearnEntryScope? {
         val libraryId = context.defaultLibraryId ?: return null
-        val activePackageId = context.domainLibraryRepository?.findById(libraryId)?.activePackageId ?: return null
-        val pkg = context.installedPackageRepository?.findById(activePackageId)
+        val pkgId = if (explicitPackageId != null) {
+            vn.loi.learning.domain.library.model.InstalledPackageId(explicitPackageId)
+        } else {
+            context.domainLibraryRepository?.findById(libraryId)?.activePackageId ?: return null
+        }
+        val pkg = context.installedPackageRepository?.findById(pkgId)
             ?.takeIf { it.libraryId == libraryId && it.state == PackageState.ACTIVE }
             ?: return null
         return LearnEntryScope(learnerId, pkg.id, pkg.topicId)
     }
 
-    fun getPackageName(): String? {
-        val scope = currentScope() ?: return null
+    fun getPackageName(explicitPackageId: String? = null): String? {
+        val scope = currentScope(explicitPackageId) ?: return null
         return runCatching {
             context.installedPackages.query().firstOrNull { it.id == scope.installedPackageId.value }?.name
+                ?: context.installedPackageRepository?.findById(scope.installedPackageId)?.name?.value
         }.getOrNull()
     }
 
-    fun countItemsForSource(source: AutoPlaySource): Int {
-        return selectItems(source).size
+    fun countItemsForSource(source: AutoPlaySource, packageId: String? = null): Int {
+        return selectItems(source, packageId = packageId).size
     }
 
-    fun selectItems(source: AutoPlaySource, randomSeed: Long? = null): List<AutoPlayItem> {
-        val scope = currentScope() ?: return emptyList()
+    fun selectItems(source: AutoPlaySource, randomSeed: Long? = null, packageId: String? = null): List<AutoPlayItem> {
+        val scope = currentScope(packageId) ?: return emptyList()
         val contentIds = context.packageContentQuery?.getContentIdsForPackage(scope.installedPackageId) ?: return emptyList()
         if (contentIds.isEmpty()) return emptyList()
 
@@ -155,6 +175,18 @@ class AutoPlayContentSelector(
         }
 
         return selectedContentIds.mapNotNull { cid ->
+            contentsById[cid]?.let(::mapContentToAutoPlayItem)
+        }
+    }
+
+    /**
+     * Selects and projects AutoPlayItems for a specific ordered snapshot of ContentIds (e.g. from active Study session).
+     * Zero scheduler/FSRS mutation.
+     */
+    fun selectItemsForContentIds(contentIds: List<ContentId>): List<AutoPlayItem> {
+        if (contentIds.isEmpty()) return emptyList()
+        val contentsById = context.contentRepository?.findByIds(contentIds.toSet())?.associateBy { it.id }.orEmpty()
+        return contentIds.mapNotNull { cid ->
             contentsById[cid]?.let(::mapContentToAutoPlayItem)
         }
     }

@@ -179,7 +179,8 @@ internal fun TypingStudyStage(
                 val typingFrontBounds = resolveTypingFrontMediaBounds(
                     density = density,
                     availableHeightDp = availableMediaHeightDp,
-                    hasMedia = !state.resolvedImage.isNullOrBlank()
+                    hasMedia = !state.resolvedImage.isNullOrBlank(),
+                    imeVisible = imeVisible
                 )
                 StudyMedia(
                     state.resolvedImage, mediaRole, density, availableMediaHeightDp,
@@ -197,7 +198,7 @@ internal fun TypingStudyStage(
             if (!feedbackVisible) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(StudySpacing.group),
+                    verticalArrangement = Arrangement.spacedBy(if (density == StudyContentDensity.DENSE) StudySpacing.micro else StudySpacing.group),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     StudyAnswerInput(
@@ -213,10 +214,12 @@ internal fun TypingStudyStage(
                         onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) },
                         modifier = Modifier.bringIntoViewRequester(stableActionsRequester)
                     )
-                    StudyRatingBar(
-                        onRating = { onEvent(AndroidStudyEvent.SelectTypingRatingOverride(it)) },
-                        selectedRating = state.manualRating
-                    )
+                    if (!imeVisible) {
+                        StudyRatingBar(
+                            onRating = { onEvent(AndroidStudyEvent.SelectTypingRatingOverride(it)) },
+                            selectedRating = state.manualRating
+                        )
+                    }
                 }
             }
             feedbackContent()

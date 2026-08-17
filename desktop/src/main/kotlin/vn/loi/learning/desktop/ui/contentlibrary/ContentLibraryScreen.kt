@@ -121,6 +121,8 @@ fun ContentLibraryScreen(
         onStartLessonStudy =
             onStartLessonStudy,
         onExportPackage = viewModel::exportPackage,
+        packageExportDialogState = viewModel.packageExportDialogState,
+        onDismissPackageExportDialog = viewModel::dismissPackageExportDialog,
         onCheckPackageIntegrity = viewModel::checkPackageIntegrity,
         onDismissPackageIntegrityReport = viewModel::dismissPackageIntegrityReport,
         thumbnailLoader = remember(contentMediaStorage) { LessonThumbnailLoader(contentMediaStorage) },
@@ -143,6 +145,7 @@ private fun ContentLibraryContent(
     detachPackageDialogState:
     DetachPackageDialogState,
     packageIntegrityDialogState: PackageIntegrityDialogState,
+    packageExportDialogState: PackageExportDialogState = PackageExportDialogState(),
     onRefresh: () -> Unit,
     onImportDirectory: (Path) -> Unit,
     onOpenLibrary: (String) -> Unit,
@@ -173,6 +176,7 @@ private fun ContentLibraryContent(
     onLessonSortChanged: (LessonBrowserSort) -> Unit,
     onStartLessonStudy: (PackageLessonSelection) -> Unit,
     onExportPackage: (String, String, Path) -> Unit = { _, _, _ -> },
+    onDismissPackageExportDialog: () -> Unit = {},
     onCheckPackageIntegrity: (String) -> Unit = {},
     onDismissPackageIntegrityReport: () -> Unit = {},
     thumbnailLoader: LessonThumbnailLoader,
@@ -471,6 +475,10 @@ private fun ContentLibraryContent(
 
     if (packageIntegrityDialogState.visible) {
         PackageIntegrityDialog(packageIntegrityDialogState, onDismissPackageIntegrityReport)
+    }
+
+    if (packageExportDialogState.visible) {
+        PackageExportDialog(packageExportDialogState, onDismissPackageExportDialog)
     }
 }
 

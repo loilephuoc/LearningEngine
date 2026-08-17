@@ -159,6 +159,34 @@ class PackageIntegrityCheckerTest {
     }
 
     @Test
+    fun `compatible same-basename fallback is not classified as MISSING_MEDIA`() {
+        val fixture = Fixture(allMediaSlots = true)
+        val content = fixture.contents.findById(ContentId("content"))!!
+        val mediaDir = Files.createTempDirectory("media_fallback_test")
+        try {
+            val storage = JvmContentMediaStorage(mediaDir)
+            storage.store("Pkg", "fallback_test.jpg", byteArrayOf(1, 2, 3))
+            val pngRef = "Pkg/fallback_test.png"
+            fixture.contents.save(content.copy(media = ContentMedia(image = pngRef)))
+
+            val report = fixture.checker().check(fixture.installedId, storage)
+            assertTrue(report.findings.none { it.code == "MISSING_MEDIA" })
+        } finally {
+            mediaDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `no_image sentinel produces no MISSING_MEDIA warning`() {
+        val fixture = Fixture(allMediaSlots = true)
+        val content = fixture.contents.findById(ContentId("content"))!!
+        fixture.contents.save(content.copy(media = ContentMedia(image = "no_image.jpg")))
+
+        val report = fixture.checker().check(fixture.installedId, fixture.media)
+        assertTrue(report.findings.none { it.code == "MISSING_MEDIA" })
+    }
+
+    @Test
     fun `repeated media reference is resolved once`() {
         val fixture = Fixture(allMediaSlots = true)
         val content = fixture.contents.findById(ContentId("content"))!!

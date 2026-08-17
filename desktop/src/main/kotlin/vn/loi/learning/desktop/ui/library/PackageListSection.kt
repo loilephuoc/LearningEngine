@@ -48,6 +48,7 @@ fun PackageListSection(
     onCheckPackageIntegrity: ((String) -> Unit)? = null,
     integrityScanningPackageId: String? = null,
     integrityScanBusy: Boolean = false,
+    exportBusy: Boolean = false,
     packageExportChooser: (String) -> Path? = ::choosePackageExportDestination,
     modifier: Modifier = Modifier
 ) {
@@ -111,6 +112,7 @@ fun PackageListSection(
                         onResetProgress = { onResetPackageProgress?.invoke(pkg.id, pkg.name) },
                         onCheckIntegrity = { onCheckPackageIntegrity?.invoke(pkg.packageId.value) },
                         integrityBusy = integrityScanBusy || integrityScanningPackageId == pkg.packageId.value,
+                        exportBusy = exportBusy,
                         packageExportChooser = packageExportChooser
                     )
                 } else {
@@ -128,6 +130,7 @@ fun PackageListSection(
                         onOpenLibrary = onOpenLibrary,
                         onExportPackage = onExportPackage,
                         onRemovePackage = onRemovePackage,
+                        exportBusy = exportBusy,
                         packageExportChooser = packageExportChooser
                     )
                 }
@@ -152,6 +155,7 @@ private fun CompactPackageCard(
     onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
     onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
+    exportBusy: Boolean = false,
     packageExportChooser: (String) -> Path? = ::choosePackageExportDestination,
     modifier: Modifier = Modifier
 ) {
@@ -248,9 +252,14 @@ private fun CompactPackageCard(
                     PackageCompactSetActiveAction(onClick = onSetActive)
                 }
                 if (onExportPackage != null && (pkg.state == PackageState.ACTIVE || pkg.state == PackageState.ARCHIVED)) {
-                    PackageCompactAction(Icons.Default.FileDownload, "Export", onClick = {
-                        packageExportChooser(pkg.name)?.let { onExportPackage(pkg.id, pkg.name, it) }
-                    })
+                    PackageCompactAction(
+                        icon = Icons.Default.FileDownload,
+                        label = "Export",
+                        onClick = {
+                            packageExportChooser(pkg.name)?.let { onExportPackage(pkg.id, pkg.name, it) }
+                        },
+                        enabled = !exportBusy
+                    )
                 }
                 if (onMoveUp != null && canMoveUp) PackageCompactAction(Icons.Default.ArrowUpward, "Up", onClick = onMoveUp)
                 if (onMoveDown != null && canMoveDown) PackageCompactAction(Icons.Default.ArrowDownward, "Down", onClick = onMoveDown)
@@ -283,10 +292,12 @@ private fun PackageCompactAction(
     icon: ImageVector,
     label: String,
     primary: Boolean = false,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     TextButton(
         onClick = onClick,
+        enabled = enabled,
         colors = if (primary) {
             ButtonDefaults.textButtonColors(
                 contentColor = Color.White,
@@ -327,6 +338,7 @@ fun PackageCard(
     onResetProgress: (() -> Unit)? = null,
     onCheckIntegrity: (() -> Unit)? = null,
     integrityBusy: Boolean = false,
+    exportBusy: Boolean = false,
     packageExportChooser: (String) -> Path? = ::choosePackageExportDestination,
     modifier: Modifier = Modifier
 ) {
@@ -362,7 +374,7 @@ fun PackageCard(
                 pkg, isActivePackage, canMoveUp, canMoveDown, onArchive, onRestore,
                 onSetActive, onMoveUp, onMoveDown, onOpenLibrary, onExportPackage,
                 onRemovePackage, onResetProgress, packageExportChooser,
-                onCheckIntegrity, integrityBusy
+                onCheckIntegrity, integrityBusy, exportBusy
             )
         }
     }
@@ -574,7 +586,8 @@ private fun PackageActionBar(
     onResetProgress: (() -> Unit)?,
     packageExportChooser: (String) -> Path?,
     onCheckIntegrity: (() -> Unit)?,
-    integrityBusy: Boolean
+    integrityBusy: Boolean,
+    exportBusy: Boolean = false
 ) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
@@ -595,9 +608,14 @@ private fun PackageActionBar(
             }
         }
         if (onExportPackage != null && (pkg.state == PackageState.ACTIVE || pkg.state == PackageState.ARCHIVED)) {
-            PackageSecondaryAction(Icons.Default.FileDownload, "Export OPD3", onClick = {
-                packageExportChooser(pkg.name)?.let { onExportPackage(pkg.id, pkg.name, it) }
-            })
+            PackageSecondaryAction(
+                Icons.Default.FileDownload,
+                "Export OPD3",
+                onClick = {
+                    packageExportChooser(pkg.name)?.let { onExportPackage(pkg.id, pkg.name, it) }
+                },
+                enabled = !exportBusy && !integrityBusy
+            )
         }
         if (onCheckIntegrity != null && pkg.state != PackageState.REMOVED) {
             PackageSecondaryAction(

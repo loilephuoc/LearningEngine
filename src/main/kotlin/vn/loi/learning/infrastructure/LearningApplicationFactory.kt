@@ -824,7 +824,8 @@ object LearningApplicationFactory {
             contentRepository = contentRepository,
             learningItemRepository = learningItemRepository,
             opd3PackageExporter = vn.loi.learning.application.contentpackaging.Opd3PackageExporter(zipWriter = vn.loi.learning.infrastructure.contentpackaging.JvmDeterministicZipWriter()),
-            mediaDirectory = mediaDirectory
+            mediaDirectory = mediaDirectory,
+            contentMediaStorage = mediaDirectory?.let { vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(it) }
         )
 
         val packageBrowserQuery =
@@ -843,7 +844,8 @@ object LearningApplicationFactory {
                 installedPackageRepository = domainInstalledPackageRepository,
                 contentPackageRepository = contentPackageRepository,
                 transactionRunner = transactionRunner,
-                studySessionRepository = studySessionRepository
+                studySessionRepository = studySessionRepository,
+                mediaStorage = mediaDirectory?.let { vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(it) }
             )
         val lessonBrowser = vn.loi.learning.application.contentpackaging.browser.LessonBrowserQueryService(packageBrowserQuery)
         val scopedStudy = vn.loi.learning.application.session.ScopedStudySessionService(

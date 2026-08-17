@@ -44,6 +44,14 @@ class AutoPlayTimingStateMachineTest {
         var stopCount = 0
         var activeAudioCount = 0
         var maxConcurrentAudio = 0
+        private var _isMuted = false
+
+        override val isMuted: Boolean
+            get() = _isMuted
+
+        override fun setMuted(muted: Boolean) {
+            _isMuted = muted
+        }
 
         override fun play(path: String?, onComplete: () -> Unit) {
             playCount++
@@ -149,11 +157,11 @@ class AutoPlayTimingStateMachineTest {
         running = engine.state.value as AutoPlayEngineState.Running
         assertEquals(AutoPlayStage.POST_EXAMPLE_VI_DELAY, running.stage)
         assertEquals(listOf(1500L, 750L, 1250L, 2500L), scheduler.scheduledDelays)
-
-        // 8. Post-example VI delay expires -> Complete run
+        // 8. Post-example VI delay expires -> Continuously advances to Cycle 2
         scheduler.fireNext()
-        val completed = engine.state.value as AutoPlayEngineState.Completed
-        assertEquals(1, completed.totalCount)
+        val runningAfter = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(AutoPlayStage.FRONT_WAIT, runningAfter.stage)
+        assertEquals(2L, engine.currentCycleNumber)
     }
 
     @Test
@@ -171,21 +179,54 @@ class AutoPlayTimingStateMachineTest {
             playExampleEnglishAudio = true,
             postExampleEnglishDelayMs = 1000L,
             playExampleVietnameseAudio = true,
-            postExampleVietnameseDelayMs = 2000L
+            postExampleVietnameseDelayMs = 1000L
         )
 
         engine.start(listOf(sampleItem), config)
 
-        // Front audio is English word
+        // 1. FRONT_WAIT with English front audio
         var running = engine.state.value as AutoPlayEngineState.Running
         assertEquals(AutoPlayStage.FRONT_WAIT, running.stage)
         assertEquals(listOf<String?>("audio/apple.mp3"), audioPlayer.playedPaths)
 
-        // Front timer expires -> Answer audio is Vietnamese translation
+        // 2. Front timer expires -> REVEAL -> Vietnamese Answer audio
         scheduler.fireNext()
         running = engine.state.value as AutoPlayEngineState.Running
         assertEquals(AutoPlayStage.ANSWER_AUDIO, running.stage)
         assertEquals(listOf<String?>("audio/apple.mp3", "audio/qua_tao.mp3"), audioPlayer.playedPaths)
+
+        // 3. Answer audio completes -> POST_ANSWER_DELAY
+        audioPlayer.completeAudio()
+        running = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(AutoPlayStage.POST_ANSWER_DELAY, running.stage)
+
+        // 4. Post-answer delay expires -> Example EN Audio
+        scheduler.fireNext()
+        running = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(AutoPlayStage.EXAMPLE_EN_AUDIO, running.stage)
+        assertEquals(listOf<String?>("audio/apple.mp3", "audio/qua_tao.mp3", "audio/apple_ex.mp3"), audioPlayer.playedPaths)
+
+        // 5. Example EN audio completes -> POST_EXAMPLE_EN_DELAY
+        audioPlayer.completeAudio()
+        running = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(AutoPlayStage.POST_EXAMPLE_EN_DELAY, running.stage)
+
+        // 6. Post-example EN delay expires -> Example VI Audio
+        scheduler.fireNext()
+        running = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(AutoPlayStage.EXAMPLE_VI_AUDIO, running.stage)
+        assertEquals(listOf<String?>("audio/apple.mp3", "audio/qua_tao.mp3", "audio/apple_ex.mp3", "audio/qua_tao_ex.mp3"), audioPlayer.playedPaths)
+
+        // 7. Example VI audio completes -> POST_EXAMPLE_VI_DELAY
+        audioPlayer.completeAudio()
+        running = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(AutoPlayStage.POST_EXAMPLE_VI_DELAY, running.stage)
+
+        // 8. Post-example VI delay expires -> Advances to Cycle 2
+        scheduler.fireNext()
+        val runningCycle2 = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(AutoPlayStage.FRONT_WAIT, runningCycle2.stage)
+        assertEquals(2L, engine.currentCycleNumber)
     }
 
     @Test
@@ -194,10 +235,9 @@ class AutoPlayTimingStateMachineTest {
         val scheduler = FakeTimerScheduler()
         val engine = AutoPlayEngine(audioPlayer, scheduler)
 
-        // Front Audio OFF, Answer OFF, Example EN OFF, Example VI ON
         val config = AutoPlayConfig(
             direction = AutoPlayDirection.VIETNAMESE_TO_ENGLISH,
-            frontDelayMs = 500L, // 0.5s
+            frontDelayMs = 1000L,
             playFrontAudio = false,
             playAnswerAudio = false,
             postAnswerDelayMs = 0L,
@@ -225,13 +265,15 @@ class AutoPlayTimingStateMachineTest {
         running = engine.state.value as AutoPlayEngineState.Running
         assertEquals(AutoPlayStage.POST_EXAMPLE_VI_DELAY, running.stage)
 
-        // 4. Timer expires -> Complete
+        // 4. Timer expires -> Advances to Cycle 2
         scheduler.fireNext()
-        assertTrue(engine.state.value is AutoPlayEngineState.Completed)
+        val runningCycle2 = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(AutoPlayStage.FRONT_WAIT, runningCycle2.stage)
+        assertEquals(2L, engine.currentCycleNumber)
     }
 
     @Test
-    fun `TC04 - Missing media skips without stalling`() {
+    fun `TC04 - Missing media skips without stalling and advances to next cycle`() {
         val audioPlayer = FakeAudioPlayer()
         val scheduler = FakeTimerScheduler()
         val engine = AutoPlayEngine(audioPlayer, scheduler)
@@ -256,9 +298,11 @@ class AutoPlayTimingStateMachineTest {
 
         engine.start(listOf(itemNoAudio), config)
 
-        // Front timer fires -> missing audios skip safely without stalling -> completes run
+        // Front timer fires -> missing audios skip safely without stalling -> continuously enters cycle 2
         scheduler.fireNext()
-        assertTrue(engine.state.value is AutoPlayEngineState.Completed)
+        val running = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(AutoPlayStage.FRONT_WAIT, running.stage)
+        assertEquals(2L, engine.currentCycleNumber)
         assertTrue(audioPlayer.playedPaths.isEmpty())
     }
 
@@ -301,5 +345,138 @@ class AutoPlayTimingStateMachineTest {
         engine.stop()
         assertEquals(0, audioPlayer.activeAudioCount)
         assertEquals(1, audioPlayer.maxConcurrentAudio)
+    }
+
+    @Test
+    fun `continuous shuffle cycles play every item once per cycle without duplicate boundary items`() {
+        val audioPlayer = FakeAudioPlayer()
+        val scheduler = FakeTimerScheduler()
+
+        val itemA = sampleItem.copy(contentId = ContentId("item_a"), headword = "apple")
+        val itemB = sampleItem.copy(contentId = ContentId("item_b"), headword = "banana")
+        val itemC = sampleItem.copy(contentId = ContentId("item_c"), headword = "cherry")
+        val itemD = sampleItem.copy(contentId = ContentId("item_d"), headword = "date")
+        val itemE = sampleItem.copy(contentId = ContentId("item_e"), headword = "elderberry")
+        val items = listOf(itemA, itemB, itemC, itemD, itemE)
+
+        // Deterministic rotation shuffle for test
+        var shuffleCount = 0
+        val testShuffleStrategy = object : AutoPlayShuffleStrategy {
+            override fun <T> shuffle(items: List<T>): List<T> {
+                shuffleCount++
+                val rot = shuffleCount % items.size
+                return items.drop(rot) + items.take(rot)
+            }
+        }
+
+        val engine = AutoPlayEngine(audioPlayer, scheduler, shuffleStrategy = testShuffleStrategy)
+        val config = AutoPlayConfig(
+            playbackOrder = AutoPlayPlaybackOrder.SHUFFLED,
+            frontDelayMs = 100L,
+            playFrontAudio = false,
+            playAnswerAudio = false,
+            playExampleEnglishAudio = false,
+            playExampleVietnameseAudio = false
+        )
+
+        engine.start(items, config)
+
+        // Cycle 1: visit all 5 items
+        val cycle1Visits = mutableListOf<String>()
+        for (i in 0 until 5) {
+            val state = engine.state.value as AutoPlayEngineState.Running
+            cycle1Visits.add(state.item.headword)
+            assertEquals(1L, engine.currentCycleNumber)
+            scheduler.fireNext() // fires front timer, then finishes stage
+        }
+
+        // Must have all 5 items with no duplicates
+        assertEquals(5, cycle1Visits.size)
+        assertEquals(items.map { it.headword }.toSet(), cycle1Visits.toSet())
+
+        // Now in Cycle 2 automatically!
+        val cycle2FirstState = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(2L, engine.currentCycleNumber)
+        // Boundary check: first of cycle 2 must not equal last of cycle 1
+        val cycle1Last = cycle1Visits.last()
+        kotlin.test.assertNotEquals(cycle1Last, cycle2FirstState.item.headword)
+
+        // Previous from first item of cycle 2 must return to last item of cycle 1
+        engine.previous()
+        val prevRunning = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(cycle1Last, prevRunning.item.headword)
+
+        // Next moves forward again into cycle 2
+        engine.next()
+        val nextRunning = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(cycle2FirstState.item.headword, nextRunning.item.headword)
+
+        engine.stop()
+    }
+
+    @Test
+    fun `single item source cycles continuously without infinite loop`() {
+        val audioPlayer = FakeAudioPlayer()
+        val scheduler = FakeTimerScheduler()
+        val engine = AutoPlayEngine(audioPlayer, scheduler)
+
+        val config = AutoPlayConfig(
+            playbackOrder = AutoPlayPlaybackOrder.SHUFFLED,
+            playFrontAudio = false,
+            playAnswerAudio = false,
+            playExampleEnglishAudio = false,
+            playExampleVietnameseAudio = false
+        )
+        engine.start(listOf(sampleItem), config)
+
+        assertEquals(1L, engine.currentCycleNumber)
+        scheduler.fireNext()
+        assertEquals(2L, engine.currentCycleNumber)
+        scheduler.fireNext()
+        assertEquals(3L, engine.currentCycleNumber)
+
+        engine.stop()
+    }
+
+    @Test
+    fun `two item source avoids immediate boundary repeat`() {
+        val itemA = sampleItem.copy(contentId = ContentId("item_a"), headword = "alpha")
+        val itemB = sampleItem.copy(contentId = ContentId("item_b"), headword = "beta")
+        val items = listOf(itemA, itemB)
+
+        val audioPlayer = FakeAudioPlayer()
+        val scheduler = FakeTimerScheduler()
+        val engine = AutoPlayEngine(audioPlayer, scheduler)
+
+        val config = AutoPlayConfig(
+            playbackOrder = AutoPlayPlaybackOrder.SHUFFLED,
+            frontDelayMs = 100L,
+            playFrontAudio = false,
+            playAnswerAudio = false,
+            playExampleEnglishAudio = false,
+            playExampleVietnameseAudio = false
+        )
+
+        engine.start(items, config)
+
+        // Item 1
+        var state = engine.state.value as AutoPlayEngineState.Running
+        val item1 = state.item.headword
+        scheduler.fireNext()
+
+        // Item 2 (end of Cycle 1)
+        state = engine.state.value as AutoPlayEngineState.Running
+        val item2 = state.item.headword
+        kotlin.test.assertNotEquals(item1, item2)
+        scheduler.fireNext()
+
+        // Item 1 of Cycle 2
+        state = engine.state.value as AutoPlayEngineState.Running
+        assertEquals(2L, engine.currentCycleNumber)
+        // Must avoid repeating item2 immediately across cycle boundary
+        kotlin.test.assertNotEquals(item2, state.item.headword)
+        assertEquals(item1, state.item.headword)
+
+        engine.stop()
     }
 }

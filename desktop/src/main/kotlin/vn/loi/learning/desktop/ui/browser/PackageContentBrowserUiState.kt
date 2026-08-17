@@ -15,6 +15,7 @@ data class PackageContentBrowserUiState(
     val selectedLessonFilter: String = "ALL",
     val availableLessons: List<String> = emptyList(),
     val mediaFilter: BrowserMediaFilter = BrowserMediaFilter.ALL,
+    val imageStatusFilter: ImageStatusFilter = ImageStatusFilter.ALL,
     val sortOption: BrowserSortOption = BrowserSortOption.ORIGINAL_ORDER,
     val problemFilter: ContentProblemFilter = ContentProblemFilter.NONE,
     val problemProjection: ContentProblemProjection = ContentProblemProjection(),
@@ -57,6 +58,14 @@ data class PackageContentBrowserUiState(
 ) {
     val totalCount: Int get() = allItems.size
 
+    val duplicateImageCounts: Map<String, Int> by lazy {
+        ImageStatusProjectionPolicy.computeDuplicateImageCounts(allItems)
+    }
+
+    val duplicateImageKeys: Set<String> by lazy {
+        duplicateImageCounts.keys
+    }
+
     /**
      * True KHI VÀ CHỈ KHI người dùng có thao tác chỉnh sửa thực sự trên bản thảo
      * so với baseline ban đầu của item được chọn, HOẶC đang tạo mới item (isCreatingNewItem).
@@ -69,13 +78,34 @@ data class PackageContentBrowserUiState(
     }
 
     val filteredItems: List<PackageContentBrowserItem> by lazy {
-        PackageContentBrowserProjectionPolicy.filterAndSort(
+        val baseFiltered = PackageContentBrowserProjectionPolicy.filterAndSort(
             items = allItems,
             query = appliedQuery,
             lessonFilter = selectedLessonFilter,
             mediaFilter = mediaFilter,
             sortOption = sortOption
         ).filter { problemProjection.matches(it.contentId.value, problemFilter) }
+
+        val imageFiltered = ImageStatusProjectionPolicy.filter(baseFiltered, imageStatusFilter, duplicateImageKeys)
+        if (imageStatusFilter == ImageStatusFilter.DUPLICATE_IMAGE) {
+            // Group items sharing the same duplicate image filename together while preserving original relative order inside each group
+            imageFiltered.sortedWith(
+                compareBy(
+                    { it.imageRef?.let(ImageStatusProjectionPolicy::imageRefKey).orEmpty() },
+                    { it.index }
+                )
+            )
+        } else {
+            imageFiltered
+        }
+    }
+
+    val duplicateImageGroups: List<DuplicateImageGroup> by lazy {
+        if (imageStatusFilter == ImageStatusFilter.DUPLICATE_IMAGE) {
+            ImageStatusProjectionPolicy.computeDuplicateGroups(filteredItems)
+        } else {
+            emptyList()
+        }
     }
 
     val selectedItemInView: PackageContentBrowserItem? get() {
@@ -90,6 +120,6 @@ data class PackageContentBrowserUiState(
 
     val isFilterDefault: Boolean get() =
         query.isBlank() && appliedQuery.isBlank() && selectedLessonFilter == "ALL" &&
-                mediaFilter == BrowserMediaFilter.ALL && sortOption == BrowserSortOption.ORIGINAL_ORDER
-                && problemFilter == ContentProblemFilter.NONE
+                mediaFilter == BrowserMediaFilter.ALL && imageStatusFilter == ImageStatusFilter.ALL &&
+                sortOption == BrowserSortOption.ORIGINAL_ORDER && problemFilter == ContentProblemFilter.NONE
 }

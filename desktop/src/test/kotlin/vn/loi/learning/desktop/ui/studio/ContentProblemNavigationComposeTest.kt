@@ -25,11 +25,11 @@ class ContentProblemNavigationComposeTest {
                     onProblemFilterChanged = { selectedFilter = it }, onNextProblem = { next++ }
                 )
             }
-            onNodeWithText("Problems: 2").assertIsDisplayed()
+            onNodeWithContentDescription("Problems: 2").assertIsDisplayed()
             onNodeWithText("All Problems").performClick()
             onNodeWithText("Missing Image (2)").performClick()
-            onNodeWithText("← Previous Problem").assertIsNotEnabled()
-            onNodeWithText("Next Problem →").assertIsEnabled().performClick()
+            onNodeWithContentDescription("Previous Problem").assertIsNotEnabled()
+            onNodeWithContentDescription("Next Problem").assertIsEnabled().performClick()
         }
         assertEquals(ContentProblemFilter.MISSING_IMAGE, selectedFilter)
         assertEquals(1, next)

@@ -1,9 +1,11 @@
 package vn.loi.learning.android.autoplay
 
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 interface CancellableTimer {
     fun cancel()
@@ -13,58 +15,113 @@ interface AutoPlayTimerScheduler {
     fun schedule(delayMillis: Long, onTrigger: () -> Unit): CancellableTimer
 }
 
+class CoroutineAutoPlayTimerScheduler(
+    private val scope: kotlinx.coroutines.CoroutineScope
+) : AutoPlayTimerScheduler {
+    override fun schedule(delayMillis: Long, onTrigger: () -> Unit): CancellableTimer {
+        val job: kotlinx.coroutines.Job = scope.launch {
+            kotlinx.coroutines.delay(delayMillis)
+            onTrigger()
+        }
+        return object : CancellableTimer {
+            override fun cancel() {
+                job.cancel()
+            }
+        }
+    }
+}
+
 interface AutoPlayAudioPlayer {
     fun play(path: String?, onComplete: () -> Unit)
     fun stop()
+    fun setMuted(muted: Boolean) {}
+    val isMuted: Boolean get() = false
+    val exoPlayer: androidx.media3.exoplayer.ExoPlayer? get() = null
+}
+
+interface AutoPlayShuffleStrategy {
+    fun <T> shuffle(items: List<T>): List<T>
+}
+
+class DefaultAutoPlayShuffleStrategy(
+    private val random: java.util.Random = java.util.Random()
+) : AutoPlayShuffleStrategy {
+    override fun <T> shuffle(items: List<T>): List<T> {
+        val list = items.toMutableList()
+        list.shuffle(random)
+        return list
+    }
 }
 
 class AutoPlayEngine(
     private val audioPlayer: AutoPlayAudioPlayer,
     private val timerScheduler: AutoPlayTimerScheduler,
-    private val clock: () -> Long = System::currentTimeMillis
+    private val clock: () -> Long = System::currentTimeMillis,
+    private val shuffleStrategy: AutoPlayShuffleStrategy = DefaultAutoPlayShuffleStrategy()
 ) {
     private val mutableState = MutableStateFlow<AutoPlayEngineState>(AutoPlayEngineState.Idle(AutoPlayConfig()))
     val state: StateFlow<AutoPlayEngineState> = mutableState.asStateFlow()
 
-    private var activeItems: List<AutoPlayItem> = emptyList()
+    private var sourceItems: List<AutoPlayItem> = emptyList()
+    private var currentCycleItems: List<AutoPlayItem> = emptyList()
     private var currentConfig: AutoPlayConfig = AutoPlayConfig()
     private var currentIndex: Int = 0
+    private var cycleNumber: Long = 1L
 
-    private val generationToken = AtomicLong(0L)
-    private var activeTimer: CancellableTimer? = null
-
-    val currentItem: AutoPlayItem?
-        get() = activeItems.getOrNull(currentIndex)
+    private val visitHistory = mutableListOf<AutoPlayItem>()
+    private var historyIndex: Int = -1
 
     val hasPrevious: Boolean
-        get() = currentIndex > 0
+        get() = historyIndex > 0
 
     val hasNext: Boolean
-        get() = currentIndex + 1 < activeItems.size
+        get() = sourceItems.isNotEmpty()
+
+    val currentItem: AutoPlayItem?
+        get() = currentCycleItems.getOrNull(currentIndex)
+
+    val currentCycleNumber: Long
+        get() = cycleNumber
 
     fun start(items: List<AutoPlayItem>, config: AutoPlayConfig, startIndex: Int = 0) {
         cancelCurrentOperations()
         currentConfig = config
-        activeItems = items
+        sourceItems = items
+        cycleNumber = 1L
+        visitHistory.clear()
+        historyIndex = -1
 
         if (items.isEmpty()) {
+            currentCycleItems = emptyList()
             mutableState.value = AutoPlayEngineState.Empty(config.source, config)
             return
         }
 
-        currentIndex = startIndex.coerceIn(0, items.size - 1)
-        startItem(currentIndex)
+        currentCycleItems = if (config.playbackOrder == AutoPlayPlaybackOrder.SHUFFLED) {
+            shuffleStrategy.shuffle(sourceItems)
+        } else {
+            sourceItems
+        }
+
+        currentIndex = startIndex.coerceIn(0, currentCycleItems.size - 1)
+        startCycleItem(currentIndex, pushHistory = true)
     }
 
-    private fun startItem(index: Int) {
+    private fun startCycleItem(index: Int, pushHistory: Boolean) {
         val token = generationToken.incrementAndGet()
-        val item = activeItems[index]
+        currentIndex = index
+        val item = currentCycleItems[index]
+
+        if (pushHistory) {
+            visitHistory.add(item)
+            historyIndex = visitHistory.size - 1
+        }
 
         mutableState.value = AutoPlayEngineState.Running(
             stage = AutoPlayStage.FRONT_WAIT,
             item = item,
             currentIndex = index,
-            totalCount = activeItems.size,
+            totalCount = currentCycleItems.size,
             config = currentConfig,
             isPaused = false
         )
@@ -95,7 +152,7 @@ class AutoPlayEngine(
             stage = AutoPlayStage.REVEAL,
             item = item,
             currentIndex = currentIndex,
-            totalCount = activeItems.size,
+            totalCount = currentCycleItems.size,
             config = currentConfig,
             isPaused = false
         )
@@ -112,34 +169,32 @@ class AutoPlayEngine(
                 stage = AutoPlayStage.ANSWER_AUDIO,
                 item = item,
                 currentIndex = currentIndex,
-                totalCount = activeItems.size,
+                totalCount = currentCycleItems.size,
                 config = currentConfig,
                 isPaused = false
             )
 
             audioPlayer.play(answerAudio) {
-                if (isTokenValid(token)) {
-                    enterPostAnswerDelay(token, item)
-                }
+                onAnswerAudioComplete(token, item)
             }
         } else {
-            if (!currentConfig.playExampleEnglishAudio && !currentConfig.playExampleVietnameseAudio) {
-                // If all revealed audio is disabled or unavailable, dwell on reveal
-                enterPostAnswerDelay(token, item)
-            } else {
-                proceedToExampleEnglishAudio(token, item)
-            }
+            proceedToExampleEnglishAudio(token, item)
         }
     }
 
-    private fun enterPostAnswerDelay(token: Long, item: AutoPlayItem) {
+    private fun onAnswerAudioComplete(token: Long, item: AutoPlayItem) {
+        if (!isTokenValid(token)) return
+        proceedToPostAnswerDelay(token, item)
+    }
+
+    private fun proceedToPostAnswerDelay(token: Long, item: AutoPlayItem) {
         if (!isTokenValid(token)) return
 
         mutableState.value = AutoPlayEngineState.Running(
             stage = AutoPlayStage.POST_ANSWER_DELAY,
             item = item,
             currentIndex = currentIndex,
-            totalCount = activeItems.size,
+            totalCount = currentCycleItems.size,
             config = currentConfig,
             isPaused = false
         )
@@ -152,34 +207,38 @@ class AutoPlayEngine(
     private fun proceedToExampleEnglishAudio(token: Long, item: AutoPlayItem) {
         if (!isTokenValid(token)) return
 
-        if (currentConfig.playExampleEnglishAudio && !item.exampleAudioPath.isNullOrBlank()) {
+        val exampleEnAudio = item.exampleAudioPath
+        if (currentConfig.playExampleEnglishAudio && !exampleEnAudio.isNullOrBlank()) {
             mutableState.value = AutoPlayEngineState.Running(
                 stage = AutoPlayStage.EXAMPLE_EN_AUDIO,
                 item = item,
                 currentIndex = currentIndex,
-                totalCount = activeItems.size,
+                totalCount = currentCycleItems.size,
                 config = currentConfig,
                 isPaused = false
             )
 
-            audioPlayer.play(item.exampleAudioPath) {
-                if (isTokenValid(token)) {
-                    enterPostExampleEnglishDelay(token, item)
-                }
+            audioPlayer.play(exampleEnAudio) {
+                onExampleEnglishAudioComplete(token, item)
             }
         } else {
             proceedToExampleVietnameseAudio(token, item)
         }
     }
 
-    private fun enterPostExampleEnglishDelay(token: Long, item: AutoPlayItem) {
+    private fun onExampleEnglishAudioComplete(token: Long, item: AutoPlayItem) {
+        if (!isTokenValid(token)) return
+        proceedToPostExampleEnglishDelay(token, item)
+    }
+
+    private fun proceedToPostExampleEnglishDelay(token: Long, item: AutoPlayItem) {
         if (!isTokenValid(token)) return
 
         mutableState.value = AutoPlayEngineState.Running(
             stage = AutoPlayStage.POST_EXAMPLE_EN_DELAY,
             item = item,
             currentIndex = currentIndex,
-            totalCount = activeItems.size,
+            totalCount = currentCycleItems.size,
             config = currentConfig,
             isPaused = false
         )
@@ -192,37 +251,37 @@ class AutoPlayEngine(
     private fun proceedToExampleVietnameseAudio(token: Long, item: AutoPlayItem) {
         if (!isTokenValid(token)) return
 
-        if (currentConfig.playExampleVietnameseAudio && !item.exampleTranslatedAudioPath.isNullOrBlank()) {
+        val exampleViAudio = item.exampleTranslatedAudioPath
+        if (currentConfig.playExampleVietnameseAudio && !exampleViAudio.isNullOrBlank()) {
             mutableState.value = AutoPlayEngineState.Running(
                 stage = AutoPlayStage.EXAMPLE_VI_AUDIO,
                 item = item,
                 currentIndex = currentIndex,
-                totalCount = activeItems.size,
+                totalCount = currentCycleItems.size,
                 config = currentConfig,
                 isPaused = false
             )
 
-            audioPlayer.play(item.exampleTranslatedAudioPath) {
-                if (isTokenValid(token)) {
-                    enterPostExampleVietnameseDelay(token, item)
-                }
+            audioPlayer.play(exampleViAudio) {
+                onExampleVietnameseAudioComplete(token)
             }
         } else {
             advanceToNextItem(token)
         }
     }
 
-    private fun enterPostExampleVietnameseDelay(token: Long, item: AutoPlayItem) {
+    private fun onExampleVietnameseAudioComplete(token: Long) {
+        if (!isTokenValid(token)) return
+        proceedToPostExampleVietnameseDelay(token)
+    }
+
+    private fun proceedToPostExampleVietnameseDelay(token: Long) {
         if (!isTokenValid(token)) return
 
-        mutableState.value = AutoPlayEngineState.Running(
-            stage = AutoPlayStage.POST_EXAMPLE_VI_DELAY,
-            item = item,
-            currentIndex = currentIndex,
-            totalCount = activeItems.size,
-            config = currentConfig,
-            isPaused = false
-        )
+        val current = mutableState.value
+        if (current is AutoPlayEngineState.Running) {
+            mutableState.value = current.copy(stage = AutoPlayStage.POST_EXAMPLE_VI_DELAY)
+        }
 
         scheduleTimer(currentConfig.postExampleVietnameseDelayMs, token) {
             advanceToNextItem(token)
@@ -231,46 +290,37 @@ class AutoPlayEngine(
 
     private fun advanceToNextItem(token: Long) {
         if (!isTokenValid(token)) return
-
-        if (currentIndex + 1 < activeItems.size) {
-            currentIndex++
-            startItem(currentIndex)
-        } else {
-            completeRun()
-        }
+        next()
     }
 
-    private fun completeRun() {
-        cancelCurrentOperations()
-        mutableState.value = AutoPlayEngineState.Completed(
-            totalCount = activeItems.size,
-            config = currentConfig
-        )
-    }
+    private val generationToken = AtomicLong(0L)
+    private var activeTimer: CancellableTimer? = null
 
     fun pause() {
-        val current = mutableState.value as? AutoPlayEngineState.Running ?: return
-        if (current.isPaused) return
+        val current = mutableState.value
+        if (current !is AutoPlayEngineState.Running || current.isPaused) return
 
-        val stageBeforePause = current.stage
-        cancelCurrentOperations()
+        generationToken.incrementAndGet()
+        activeTimer?.cancel()
+        activeTimer = null
+        audioPlayer.stop()
 
         mutableState.value = current.copy(
             stage = AutoPlayStage.PAUSED,
             isPaused = true,
-            stageBeforePause = stageBeforePause
+            stageBeforePause = current.stage
         )
     }
 
     fun resume() {
-        val current = mutableState.value as? AutoPlayEngineState.Running ?: return
-        if (!current.isPaused) return
+        val current = mutableState.value
+        if (current !is AutoPlayEngineState.Running || !current.isPaused) return
 
-        val targetStage = current.stageBeforePause ?: AutoPlayStage.FRONT_WAIT
-        val token = generationToken.incrementAndGet()
+        val resumeStage = current.stageBeforePause ?: current.stage
         val item = current.item
+        val token = generationToken.incrementAndGet()
 
-        when (targetStage) {
+        when (resumeStage) {
             AutoPlayStage.FRONT_WAIT -> {
                 mutableState.value = current.copy(stage = AutoPlayStage.FRONT_WAIT, isPaused = false, stageBeforePause = null)
                 scheduleTimer(currentConfig.frontDelayMs, token) {
@@ -283,7 +333,10 @@ class AutoPlayEngine(
                     }
                 }
             }
-            AutoPlayStage.REVEAL,
+            AutoPlayStage.REVEAL -> {
+                mutableState.value = current.copy(stage = AutoPlayStage.REVEAL, isPaused = false, stageBeforePause = null)
+                proceedToAnswerAudio(token, item)
+            }
             AutoPlayStage.ANSWER_AUDIO -> {
                 proceedToAnswerAudio(token, item)
             }
@@ -318,43 +371,114 @@ class AutoPlayEngine(
             AutoPlayStage.PAUSED,
             AutoPlayStage.COMPLETED,
             AutoPlayStage.STOPPED -> {
-                startItem(currentIndex)
+                startCycleItem(currentIndex, pushHistory = false)
             }
         }
     }
 
     fun next() {
-        if (activeItems.isEmpty()) return
+        if (sourceItems.isEmpty()) return
         cancelCurrentOperations()
 
-        if (currentIndex + 1 < activeItems.size) {
-            currentIndex++
-            startItem(currentIndex)
-        } else {
-            completeRun()
+        // If user previously pressed Previous and is navigating forward in visit history
+        if (historyIndex >= 0 && historyIndex < visitHistory.size - 1) {
+            historyIndex++
+            val nextHistoryItem = visitHistory[historyIndex]
+            val matchedIndex = currentCycleItems.indexOfFirst { it.contentId == nextHistoryItem.contentId }
+            if (matchedIndex >= 0) {
+                currentIndex = matchedIndex
+            }
+            startItemDirect(nextHistoryItem, currentIndex)
+            return
         }
+
+        // Moving forward in current cycle
+        if (currentIndex + 1 < currentCycleItems.size) {
+            startCycleItem(currentIndex + 1, pushHistory = true)
+        } else {
+            // Reached end of current cycle -> Automatically advance to Next Cycle!
+            startNextCycle()
+        }
+    }
+
+    private fun startNextCycle() {
+        cycleNumber++
+        val previousLast = visitHistory.lastOrNull()
+
+        currentCycleItems = if (currentConfig.playbackOrder == AutoPlayPlaybackOrder.SHUFFLED) {
+            generateNextShuffledCycle(sourceItems, previousLast, currentCycleItems, shuffleStrategy)
+        } else {
+            sourceItems
+        }
+
+        startCycleItem(0, pushHistory = true)
     }
 
     fun previous() {
-        if (activeItems.isEmpty()) return
+        if (sourceItems.isEmpty()) return
         cancelCurrentOperations()
 
-        if (currentIndex > 0) {
-            currentIndex--
+        if (historyIndex > 0) {
+            historyIndex--
+            val prevItem = visitHistory[historyIndex]
+            val matchedIndex = currentCycleItems.indexOfFirst { it.contentId == prevItem.contentId }
+            if (matchedIndex >= 0) {
+                currentIndex = matchedIndex
+            }
+            startItemDirect(prevItem, currentIndex)
+        } else {
+            // Already at earliest history item, restart current item
+            val currentItem = currentCycleItems.getOrNull(currentIndex) ?: return
+            startItemDirect(currentItem, currentIndex)
         }
-        startItem(currentIndex)
+    }
+
+    private fun startItemDirect(item: AutoPlayItem, index: Int) {
+        val token = generationToken.incrementAndGet()
+        mutableState.value = AutoPlayEngineState.Running(
+            stage = AutoPlayStage.FRONT_WAIT,
+            item = item,
+            currentIndex = index,
+            totalCount = currentCycleItems.size,
+            config = currentConfig,
+            isPaused = false
+        )
+
+        scheduleTimer(currentConfig.frontDelayMs, token) {
+            onFrontWaitComplete(token, item)
+        }
+
+        if (currentConfig.playFrontAudio) {
+            val frontAudioPath = item.frontAudioPath(currentConfig.direction)
+            if (!frontAudioPath.isNullOrBlank()) {
+                audioPlayer.play(frontAudioPath) {}
+            }
+        }
     }
 
     fun replay() {
-        if (activeItems.isEmpty()) return
+        if (sourceItems.isEmpty()) return
         cancelCurrentOperations()
-        currentIndex = 0
-        startItem(0)
+        visitHistory.clear()
+        historyIndex = -1
+        cycleNumber = 1L
+
+        currentCycleItems = if (currentConfig.playbackOrder == AutoPlayPlaybackOrder.SHUFFLED) {
+            shuffleStrategy.shuffle(sourceItems)
+        } else {
+            sourceItems
+        }
+
+        startCycleItem(0, pushHistory = true)
     }
 
     fun stop() {
         cancelCurrentOperations()
-        activeItems = emptyList()
+        sourceItems = emptyList()
+        currentCycleItems = emptyList()
+        visitHistory.clear()
+        historyIndex = -1
+        cycleNumber = 1L
         mutableState.value = AutoPlayEngineState.Idle(currentConfig)
     }
 
@@ -382,4 +506,35 @@ class AutoPlayEngine(
 
     private fun isTokenValid(token: Long): Boolean =
         token == generationToken.get()
+
+    companion object {
+        fun generateNextShuffledCycle(
+            source: List<AutoPlayItem>,
+            previousLast: AutoPlayItem?,
+            previousPermutation: List<AutoPlayItem>,
+            strategy: AutoPlayShuffleStrategy
+        ): List<AutoPlayItem> {
+            if (source.size <= 1) return source
+            var attempts = 0
+            var shuffled = strategy.shuffle(source)
+            while (attempts < 10) {
+                val startsWithSame = previousLast != null && shuffled.first().contentId == previousLast.contentId
+                val isIdentical = source.size > 2 && shuffled.map { it.contentId } == previousPermutation.map { it.contentId }
+                if (!startsWithSame && !isIdentical) {
+                    return shuffled
+                }
+                shuffled = strategy.shuffle(source)
+                attempts++
+            }
+            // Deterministic rotation/swap if random repeats
+            if (shuffled.size > 1 && previousLast != null && shuffled.first().contentId == previousLast.contentId) {
+                val mutable = shuffled.toMutableList()
+                val temp = mutable[0]
+                mutable[0] = mutable[mutable.size - 1]
+                mutable[mutable.size - 1] = temp
+                shuffled = mutable
+            }
+            return shuffled
+        }
+    }
 }

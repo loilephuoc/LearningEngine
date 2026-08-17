@@ -240,6 +240,26 @@ class SessionPolicyLimiterTest {
         assertEquals((0 until 5).map { LearningItemId("new-$it-0") }, result.take(5).map { it.learningItemId })
     }
 
+    @Test
+    fun `Phase T - new daily limit matrix selects exact minimum of available and limit`() {
+        val unseenCounts = listOf(0, 1, 2, 5, 10, 49, 50, 51, 99, 100, 101, 500)
+        val limits = listOf(1, 5, 10, 50)
+
+        for (unseen in unseenCounts) {
+            val entries = (0 until unseen).map { newEntry("new-$it", "content-$it") }
+            for (limit in limits) {
+                val policy = SessionPolicy(newItemLimit = limit, reviewItemLimit = 0)
+                val result = limiter.applyEntries(entries, policy)
+                val expected = minOf(unseen, limit)
+                assertEquals(
+                    expected,
+                    result.size,
+                    "For unseen=$unseen and limit=$limit, expected $expected items but got ${result.size}"
+                )
+            }
+        }
+    }
+
     private fun newEntry(
         id: String,
         contentId: String? = null

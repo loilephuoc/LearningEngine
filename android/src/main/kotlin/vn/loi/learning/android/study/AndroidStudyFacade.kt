@@ -414,6 +414,124 @@ class AndroidStudyFacade(
     )
     private var sessionContentSnapshot: SessionContentSnapshot? = null
 
+    /**
+     * Resolves the exact, canonical, ordered ContentId membership of the ACTIVE Study/Review session
+     * for passive Auto Play playback.
+     *
+     * Invariants:
+     * - Obey active session/queue planned membership (e.g. Learn New 20, Quick Review 19, Again/Hard 6).
+     * - Zero package-wide fallback.
+     * - Zero FSRS mutation or ReviewEvent creation.
+     */
+    fun activeStudySessionAutoPlayContentIds(): List<ContentId> {
+        val session = currentItem?.session
+            ?: context.engine.getActiveSession(learnerId)
+            ?: return emptyList()
+        val queue = context.engine.getStudyQueue(session.id)
+        if (queue != null) {
+            val fromQueue = when {
+                queue.fixedPracticeMembership.isNotEmpty() ->
+                    queue.fixedPracticeMembership.mapNotNull { queue.itemContentIds[it] }
+                queue.learningItemIds.isNotEmpty() ->
+                    queue.learningItemIds.mapNotNull { queue.itemContentIds[it] }
+                else ->
+                    queue.itemContentIds.values.toList()
+            }.distinct()
+            if (fromQueue.isNotEmpty()) {
+                return fromQueue
+            }
+        }
+        return emptyList()
+    }
+
+    /**
+     * Resolves canonical Auto Play content IDs for a Review mode entry without mutating FSRS.
+     */
+    fun resolveReviewEntryAutoPlayContentIds(entry: AndroidSessionEntry): List<ContentId> {
+        val active = currentItem?.session ?: context.engine.getActiveSession(learnerId)
+        if (active != null) {
+            val matches = when (entry) {
+                AndroidSessionEntry.DIFFICULT -> active.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT
+                AndroidSessionEntry.LATEST_SESSION -> active.policy.focusedPracticeKind == FocusedPracticeKind.LATEST_SESSION
+                AndroidSessionEntry.QUICK_REVIEW -> active.policy.practiceLoopPolicy == PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW
+                AndroidSessionEntry.LEARNED -> active.policy.focusedPracticeKind == FocusedPracticeKind.NONE &&
+                    active.policy.practiceLoopPolicy != PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW
+                else -> false
+            }
+            if (matches) {
+                val activeIds = activeStudySessionAutoPlayContentIds()
+                if (activeIds.isNotEmpty()) return activeIds
+            }
+        }
+
+        val scope = currentScope() ?: return emptyList()
+        val requestedAt = Moment(now())
+        val queue = when (entry) {
+            AndroidSessionEntry.LATEST_SESSION -> {
+                when (val result = context.engine.startLatestCompletedNewItemsReview(
+                    StartLatestCompletedNewItemsReviewRequest(scope, requestedAt)
+                )) {
+                    is StartLatestCompletedNewItemsReviewResult.Accepted -> {
+                        context.engine.finishSession(result.session.id, requestedAt, completionProvenance = SessionCompletionProvenance.REPLACED_OR_LEFT)
+                        result.queue
+                    }
+                    else -> null
+                }
+            }
+            AndroidSessionEntry.DIFFICULT -> {
+                when (val result = context.engine.startDifficultItemsReview(
+                    StartDifficultItemsReviewRequest(scope, requestedAt)
+                )) {
+                    is StartDifficultItemsReviewResult.Accepted -> {
+                        context.engine.finishSession(result.session.id, requestedAt, completionProvenance = SessionCompletionProvenance.REPLACED_OR_LEFT)
+                        result.queue
+                    }
+                    else -> null
+                }
+            }
+            AndroidSessionEntry.LEARNED -> {
+                when (val result = context.engine.startLearnedItemsReview(
+                    StartLearnedItemsReviewRequest(scope, requestedAt)
+                )) {
+                    is StartLearnedItemsReviewResult.Accepted -> {
+                        context.engine.finishSession(result.session.id, requestedAt, completionProvenance = SessionCompletionProvenance.REPLACED_OR_LEFT)
+                        result.queue
+                    }
+                    else -> null
+                }
+            }
+            AndroidSessionEntry.QUICK_REVIEW -> {
+                when (val result = context.engine.startLearnedItemsReview(
+                    StartLearnedItemsReviewRequest(scope, requestedAt, PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW)
+                )) {
+                    is StartLearnedItemsReviewResult.Accepted -> {
+                        context.engine.finishSession(result.session.id, requestedAt, completionProvenance = SessionCompletionProvenance.REPLACED_OR_LEFT)
+                        result.queue
+                    }
+                    else -> null
+                }
+            }
+            else -> null
+        } ?: return emptyList()
+
+        return when {
+            queue.fixedPracticeMembership.isNotEmpty() ->
+                queue.fixedPracticeMembership.mapNotNull { queue.itemContentIds[it] }
+            queue.learningItemIds.isNotEmpty() ->
+                queue.learningItemIds.mapNotNull { queue.itemContentIds[it] }
+            else ->
+                queue.itemContentIds.values.toList()
+        }.distinct()
+    }
+
+    /**
+     * Returns package-wide content scope for package statistics or library browser.
+     */
+    fun packageContentScopeIds(): List<ContentId> {
+        val scope = currentScope() ?: return emptyList()
+        return packageContentIds(scope.installedPackageId).toList()
+    }
+
     fun home(): AndroidStudyState.Home {
         sessionContentSnapshot = null
         onHomeQuery()

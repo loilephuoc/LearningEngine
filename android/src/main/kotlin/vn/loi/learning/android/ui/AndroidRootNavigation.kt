@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -238,7 +239,8 @@ fun StudyHub(
 fun ReviewHub(
     home: AndroidStudyState.Home,
     quickReviewSummary: QuickReviewSessionInsights? = null,
-    onEvent: (AndroidStudyEvent) -> Unit
+    onEvent: (AndroidStudyEvent) -> Unit,
+    onAutoPlayEntry: ((AndroidSessionEntry) -> Unit)? = null
 ) {
     LearningEngineScreenShell("Review", "Strengthen memory across active content",
         Modifier.verticalScroll(rememberScrollState())) {
@@ -305,6 +307,19 @@ fun ReviewHub(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                if (onAutoPlayEntry != null && action.available) {
+                    IconButton(
+                        onClick = { onAutoPlayEntry(action.entry) },
+                        modifier = Modifier.size(LearningSpacing.touchTarget)
+                    ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Auto Play ${action.title}",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(LearningIconSize.card)
+                        )
+                    }
+                }
                 LearningEngineSecondaryButton(
                     label = if (home.availability.hasActiveSession && action.available) "Switch" else "Start",
                     onClick = { onEvent(AndroidStudyEvent.Start(action.entry)) },
@@ -367,6 +382,8 @@ fun SettingsScreen(
     onReviewDailyLimit: (Int) -> Boolean,
     continuousSkim: Boolean,
     onContinuousSkim: (Boolean) -> Unit,
+    onControllerSettings: () -> Unit = {},
+    onControllerDiagnostics: () -> Unit = {},
     onAction: (AndroidOperationKind) -> Unit
 ) {
     LearningEngineScreenShell("Settings", "Appearance and local data",
@@ -405,6 +422,21 @@ fun SettingsScreen(
             )
             Text("Daily progress follows your local calendar day and is learner-wide.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+            Text("External Controller", style = LearningTextRole.sectionTitle)
+            LearningEngineSettingsRow(
+                Icons.Default.Gamepad,
+                "8BitDo / Controller Settings",
+                "Configure button bindings, active profile, and modifier button",
+                onControllerSettings
+            )
+            LearningEngineSettingsRow(
+                Icons.Default.BugReport,
+                "Controller Diagnostics",
+                "Test S/D/K modes, keycodes, and accessibility filtering",
+                onControllerDiagnostics
+            )
         }
         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
             Text("Data management", style = LearningTextRole.sectionTitle)

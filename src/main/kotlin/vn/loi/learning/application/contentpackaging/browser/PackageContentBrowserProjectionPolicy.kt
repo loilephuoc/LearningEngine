@@ -107,10 +107,28 @@ object PackageContentBrowserProjectionPolicy {
 }
 
 object PackageContentBrowserSearchEnterPolicy {
+
+    /**
+     * Parses a query string to check if it is a direct item number lookup.
+     * Matches integer digits with optional leading '#' and surrounding whitespace.
+     * Examples: "195", "#195", " 195 ", " #195 ".
+     * Does not match mixed queries like "195 bank" or "unit 195".
+     */
+    fun parseDirectItemNumber(query: String): Int? {
+        val trimmed = query.trim()
+        val rawNumber = if (trimmed.startsWith('#')) trimmed.substring(1).trim() else trimmed
+        if (rawNumber.isEmpty() || !rawNumber.all { it.isDigit() }) return null
+        return rawNumber.toIntOrNull()
+    }
+
     fun resolveTarget(
         filteredItems: List<PackageContentBrowserItem>,
         query: String
     ): PackageContentBrowserItem? {
+        val directIndex = parseDirectItemNumber(query)
+        if (directIndex != null) {
+            return filteredItems.firstOrNull { it.index == directIndex }
+        }
         val normalizedQuery = PackageContentBrowserProjectionPolicy.normalizeSearchText(query.trim())
         if (normalizedQuery.isEmpty()) return null
         val exactQuestions = filteredItems.filter { item ->

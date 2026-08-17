@@ -22,6 +22,8 @@ import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Image as SkiaImage
+import java.nio.file.Files
+import vn.loi.learning.application.contentmedia.MediaReferencePolicy
 import vn.loi.learning.application.port.ContentMediaStorage
 
 class LessonThumbnailLoader(
@@ -39,9 +41,22 @@ class LessonThumbnailLoader(
         require(maximumEntries > 0)
     }
 
-    fun load(reference: String): ThumbnailResult {
-        synchronized(cache) { cache[reference] }?.let { return ThumbnailResult.Ready(it) }
-        val path = mediaStorage.resolve(reference) ?: return ThumbnailResult.Unavailable
+    fun load(reference: String, packageName: String? = null): ThumbnailResult {
+        if (reference.isBlank() || MediaReferencePolicy.isNoImageSentinel(reference)) {
+            return ThumbnailResult.Unavailable
+        }
+        val path = vn.loi.learning.desktop.ui.browser.imagereuse.PackageMediaResolver.resolve(packageName, reference, mediaStorage)
+            ?: mediaStorage.resolve(reference)
+            ?: return ThumbnailResult.Unavailable
+        val cacheKey = runCatching {
+            val absPath = path.toAbsolutePath().normalize().toString()
+            val size = Files.size(path)
+            val lastModified = Files.getLastModifiedTime(path).toMillis()
+            "$absPath:$size:$lastModified"
+        }.getOrElse { path.toAbsolutePath().normalize().toString() }
+
+        synchronized(cache) { cache[cacheKey] }?.let { return ThumbnailResult.Ready(it) }
+
         return try {
             val source = readBounded(path) ?: return ThumbnailResult.Unavailable
             val scale = minOf(1.0, maximumDimension.toDouble() / maxOf(source.width, source.height))
@@ -60,7 +75,7 @@ class LessonThumbnailLoader(
                 output.toByteArray()
             }
             val bitmap = SkiaImage.makeFromEncoded(encoded).toComposeImageBitmap()
-            synchronized(cache) { cache[reference] = bitmap }
+            synchronized(cache) { cache[cacheKey] = bitmap }
             ThumbnailResult.Ready(bitmap)
         } catch (_: Exception) {
             ThumbnailResult.Unavailable
@@ -95,7 +110,7 @@ sealed interface ThumbnailResult {
 @Composable
 fun LessonThumbnail(reference: String?, loader: LessonThumbnailLoader) {
     val result by produceState<ThumbnailResult>(ThumbnailResult.Loading, reference) {
-        value = if (reference.isNullOrBlank()) ThumbnailResult.Unavailable
+        value = if (reference.isNullOrBlank() || MediaReferencePolicy.isNoImageSentinel(reference)) ThumbnailResult.Unavailable
         else withContext(Dispatchers.IO) { loader.load(reference) }
     }
     Box(

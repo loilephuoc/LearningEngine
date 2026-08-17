@@ -85,6 +85,25 @@ data class PackageIntegrityDialogState(
     val error: String? = null
 )
 
+data class PackageExportDialogState(
+    val visible: Boolean = false,
+    val exporting: Boolean = false,
+    val packageId: String = "",
+    val packageName: String = "",
+    val stage: vn.loi.learning.application.contentpackaging.export.ExportProgressStage = vn.loi.learning.application.contentpackaging.export.ExportProgressStage.RESOLVING_PACKAGE,
+    val phase: String = "",
+    val processed: Int = 0,
+    val total: Int = 100,
+    val outputPath: java.nio.file.Path? = null,
+    val result: vn.loi.learning.application.contentpackaging.export.ExportContentPackageResult.Success? = null,
+    val error: String? = null
+) {
+    val fraction: Float
+        get() = if (total > 0) (processed.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 0f
+    val percentageText: String
+        get() = "${(fraction * 100).toInt()}%"
+}
+
 data class LibraryHealthPackageResult(
     val packageId: String,
     val packageName: String,

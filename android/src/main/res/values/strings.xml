@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="controller_accessibility_service_label">LearningEngine Controller Diagnostic</string>
+    <string name="controller_accessibility_service_description">Diagnostic service used strictly to observe 8BitDo Micro controller hardware key events in background/screen-off modes.</string>
+</resources>

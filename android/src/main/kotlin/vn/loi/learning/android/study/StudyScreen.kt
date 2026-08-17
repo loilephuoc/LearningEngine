@@ -269,7 +269,8 @@ private fun HomeLearningProgress(presentation: AndroidLearningLandingPresentatio
 fun StudyScreen(
     state: AndroidStudyState,
     onEvent: (AndroidStudyEvent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onAutoPlay: (() -> Unit)? = null
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
@@ -394,7 +395,8 @@ fun StudyScreen(
                                     }
                                     onEvent(AndroidStudyEvent.RateIntroduction(rating))
                                 },
-                                onOpenFullscreenImage = { fullscreenImageUri = it }
+                                onOpenFullscreenImage = { fullscreenImageUri = it },
+                                onAutoPlay = onAutoPlay
                             )
                         }
                     }
@@ -565,7 +567,8 @@ private fun StudyRuntimeScreen(
         IntroductionPlaybackFocus,
         IntroductionRatingFeedbackOrigin
     ) -> Unit,
-    onOpenFullscreenImage: (String) -> Unit
+    onOpenFullscreenImage: (String) -> Unit,
+    onAutoPlay: (() -> Unit)? = null
 ) {
     val quickReview = state is AndroidStudyState.Introduction && state.focusedPracticeKind ==
         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
@@ -656,7 +659,6 @@ private fun StudyRuntimeScreen(
 
     val restartAudio: (AudioRole, String?, Boolean) -> Unit = { role, path, isLooping ->
         if (!quickReviewTransitionPending && audioOwnership.permitsManualPlayback(audioOwnerToken) && !path.isNullOrBlank()) {
-            audioController.stop()
             activeRole = role
             when (role) {
                 AudioRole.EXPECTED_ANSWER -> {
@@ -667,11 +669,14 @@ private fun StudyRuntimeScreen(
                 }
                 else -> Unit
             }
-            audioController.replay(path, isLooping = isLooping) { playbackState ->
-                if (playbackState is AndroidAudioState.Idle || playbackState is AndroidAudioState.Failed) {
-                    if (audioOwnership.isCurrent(audioOwnerToken) && activeRole == role) activeRole = null
-                }
-            }
+            vn.loi.learning.android.controller.StudyControllerBridge.playAudio(
+                itemKey = itemKey,
+                path = path,
+                role = role.name,
+                isLooping = isLooping,
+                reason = if (isLooping) vn.loi.learning.android.controller.StudyAudioReason.MANUAL_LOOP
+                else vn.loi.learning.android.controller.StudyAudioReason.MANUAL_PLAY
+            )
         }
     }
 
@@ -720,7 +725,9 @@ private fun StudyRuntimeScreen(
     }
 
     val stopAudioAndDispatch: (AndroidStudyEvent) -> Unit = { event ->
-        audioController.stop()
+        vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+            vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+        )
         activeRole = null
         onEvent(event)
     }
@@ -730,6 +737,9 @@ private fun StudyRuntimeScreen(
         ) {
             swipeRatingSubmitted = true
             audioController.stop()
+            vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+            )
             activeRole = null
             onIntroductionRatingWithFeedback(state, rating, introductionPlaybackFocus, origin)
         }
@@ -742,6 +752,9 @@ private fun StudyRuntimeScreen(
             quickReviewTransitionPending = true
             quickReviewQuestionPlaying = false
             audioController.stop()
+            vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+            )
             activeRole = null
             val acceptedItemKey = itemKey
             val generation = ++quickReviewTransitionGeneration
@@ -782,6 +795,117 @@ private fun StudyRuntimeScreen(
         }
     }
 
+    DisposableEffect(audioController, state, quickReviewTransitionPending, onAutoPlay) {
+        val replayer: () -> Boolean = {
+            if (!quickReviewTransitionPending) {
+                val promptAudio = when (state) {
+                    is AndroidStudyState.Introduction -> state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio
+                    is AndroidStudyState.Typing -> state.resolvedPromptAudio ?: state.resolvedExpectedAnswerAudio
+                    is AndroidStudyState.MultipleChoice -> state.resolvedPromptAudio ?: state.resolvedExpectedAnswerAudio
+                    is AndroidStudyState.Listening -> state.resolvedPromptAudio
+                    is AndroidStudyState.ImageRecall -> state.resolvedPromptAudio ?: state.resolvedExpectedAnswerAudio
+                    is AndroidStudyState.ExampleCompletion -> state.resolvedPromptAudio ?: state.resolvedExpectedAnswerAudio
+                }
+                if (!promptAudio.isNullOrBlank()) {
+                    val role = if (state is AndroidStudyState.Introduction) AudioRole.EXPECTED_ANSWER else AudioRole.PROMPT
+                    restartAudio(role, promptAudio, false)
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        }
+
+        val exampleEnglishPlayer: () -> Boolean = {
+            val exampleAudio = when (state) {
+                is AndroidStudyState.Introduction -> state.resolvedExampleEnglishAudio
+                is AndroidStudyState.Typing -> state.resolvedExampleEnglishAudio
+                is AndroidStudyState.MultipleChoice -> state.resolvedExampleEnglishAudio
+                is AndroidStudyState.Listening -> state.resolvedExampleEnglishAudio
+                is AndroidStudyState.ImageRecall -> state.resolvedExampleEnglishAudio
+                is AndroidStudyState.ExampleCompletion -> state.resolvedExampleEnglishAudio
+            }
+            if (!exampleAudio.isNullOrBlank()) {
+                restartAudio(AudioRole.EXAMPLE_ENGLISH, exampleAudio, false)
+                true
+            } else false
+        }
+
+        val exampleVietnamesePlayer: () -> Boolean = {
+            val exampleAudio = when (state) {
+                is AndroidStudyState.Introduction -> state.resolvedExampleVietnameseAudio
+                is AndroidStudyState.Typing -> state.resolvedExampleVietnameseAudio
+                is AndroidStudyState.MultipleChoice -> state.resolvedExampleVietnameseAudio
+                is AndroidStudyState.Listening -> state.resolvedExampleVietnameseAudio
+                is AndroidStudyState.ImageRecall -> state.resolvedExampleVietnameseAudio
+                is AndroidStudyState.ExampleCompletion -> state.resolvedExampleVietnameseAudio
+            }
+            if (!exampleAudio.isNullOrBlank()) {
+                restartAudio(AudioRole.EXAMPLE_VIETNAMESE, exampleAudio, false)
+                true
+            } else false
+        }
+
+        val primaryEnglishPlayer: () -> Boolean = {
+            if (!quickReviewTransitionPending) {
+                val promptAudio = when (state) {
+                    is AndroidStudyState.Introduction -> state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio
+                    is AndroidStudyState.Typing -> state.resolvedPromptAudio ?: state.resolvedExpectedAnswerAudio
+                    is AndroidStudyState.MultipleChoice -> state.resolvedPromptAudio ?: state.resolvedExpectedAnswerAudio
+                    is AndroidStudyState.Listening -> state.resolvedPromptAudio
+                    is AndroidStudyState.ImageRecall -> state.resolvedPromptAudio ?: state.resolvedExpectedAnswerAudio
+                    is AndroidStudyState.ExampleCompletion -> state.resolvedPromptAudio ?: state.resolvedExpectedAnswerAudio
+                }
+                if (!promptAudio.isNullOrBlank()) {
+                    val role = if (state is AndroidStudyState.Introduction) AudioRole.EXPECTED_ANSWER else AudioRole.PROMPT
+                    restartAudio(role, promptAudio, false)
+                    true
+                } else false
+            } else false
+        }
+
+        val primaryVietnamesePlayer: () -> Boolean = {
+            if (!quickReviewTransitionPending) {
+                val meaningAudio = when (state) {
+                    is AndroidStudyState.Introduction -> state.resolvedMeaningAudio
+                    is AndroidStudyState.Typing -> state.resolvedMeaningAudio
+                    is AndroidStudyState.MultipleChoice -> state.resolvedMeaningAudio
+                    is AndroidStudyState.Listening -> state.resolvedMeaningAudio
+                    is AndroidStudyState.ImageRecall -> state.resolvedMeaningAudio
+                    is AndroidStudyState.ExampleCompletion -> state.resolvedMeaningAudio
+                }
+                if (!meaningAudio.isNullOrBlank()) {
+                    restartAudio(AudioRole.MEANING, meaningAudio, false)
+                    true
+                } else false
+            } else false
+        }
+
+        val startAutoPlay: () -> Boolean = {
+            if (onAutoPlay != null) {
+                onAutoPlay()
+                true
+            } else false
+        }
+
+        vn.loi.learning.android.controller.StudyControllerBridge.registerAudioReplayer(replayer)
+        vn.loi.learning.android.controller.StudyControllerBridge.registerPrimaryEnglishPlayer(primaryEnglishPlayer)
+        vn.loi.learning.android.controller.StudyControllerBridge.registerPrimaryVietnamesePlayer(primaryVietnamesePlayer)
+        vn.loi.learning.android.controller.StudyControllerBridge.registerExampleEnglishPlayer(exampleEnglishPlayer)
+        vn.loi.learning.android.controller.StudyControllerBridge.registerExampleVietnamesePlayer(exampleVietnamesePlayer)
+        vn.loi.learning.android.controller.StudyControllerBridge.registerStartAutoPlay(startAutoPlay)
+        onDispose {
+            vn.loi.learning.android.controller.StudyControllerBridge.unregisterAudioReplayer(replayer)
+            vn.loi.learning.android.controller.StudyControllerBridge.unregisterPrimaryEnglishPlayer(primaryEnglishPlayer)
+            vn.loi.learning.android.controller.StudyControllerBridge.unregisterPrimaryVietnamesePlayer(primaryVietnamesePlayer)
+            vn.loi.learning.android.controller.StudyControllerBridge.unregisterExampleEnglishPlayer(exampleEnglishPlayer)
+            vn.loi.learning.android.controller.StudyControllerBridge.unregisterExampleVietnamesePlayer(exampleVietnamesePlayer)
+            vn.loi.learning.android.controller.StudyControllerBridge.unregisterStartAutoPlay(startAutoPlay)
+        }
+    }
+
     LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen) {
         if (state is AndroidStudyState.Listening &&
             !state.completed && !state.resolvedPromptAudio.isNullOrBlank()
@@ -805,7 +929,6 @@ private fun StudyRuntimeScreen(
             restartAudio(AudioRole.EXPECTED_ANSWER, imageRecall.resolvedExpectedAnswerAudio, true)
         }
     }
-
 
     LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen, (state as? AndroidStudyState.Introduction)?.revealed) {
         val introduction = state as? AndroidStudyState.Introduction ?: return@LaunchedEffect
@@ -944,6 +1067,7 @@ private fun StudyRuntimeScreen(
         totalItems = if (focusedSkimUx) null else
             (state as? AndroidStudyState.Introduction)?.packageTotal ?: state.totalItems,
         onBack = { stopAudioAndDispatch(AndroidStudyEvent.Home) },
+        onAutoPlay = onAutoPlay,
         header = {
             state.hud?.let { hud ->
                 if (state is AndroidStudyState.Introduction) {
@@ -1007,10 +1131,11 @@ private fun StudyRuntimeScreen(
                             else AndroidStudyEvent.DifficultPracticeAdvance
                         )
                     }
-                }
-                else if (state is AndroidStudyState.Introduction && state.historyPreview) {
+                } else if (state is AndroidStudyState.Introduction && state.historyPreview) {
                     if (state.navigation.canNext) stopAudioAndDispatch(AndroidStudyEvent.NextVisited)
-                } else submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)
+                } else {
+                    submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)
+                }
             },
             onIntroductionPrevious = {
                 if (!quickReviewTransitionPending && state.navigation.canPrevious) {

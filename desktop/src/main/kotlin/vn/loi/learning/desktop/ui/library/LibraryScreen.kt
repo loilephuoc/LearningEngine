@@ -26,6 +26,7 @@ import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryOperation
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserCard
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
+import vn.loi.learning.desktop.ui.contentlibrary.PackageExportDialog
 import vn.loi.learning.desktop.ui.contentlibrary.PackageIntegrityDialog
 import vn.loi.learning.desktop.ui.contentlibrary.LibraryHealthOverviewState
 import vn.loi.learning.desktop.ui.contentlibrary.LibraryHealthPackageTarget
@@ -216,6 +217,7 @@ fun LibraryScreen(
                     onClearQuery = contentLibraryViewModel::clearPackageBrowserQuery,
                     onLessonFilterChanged = contentLibraryViewModel::updatePackageBrowserLessonFilter,
                     onMediaFilterChanged = contentLibraryViewModel::updatePackageBrowserMediaFilter,
+                    onImageStatusFilterChanged = contentLibraryViewModel::updatePackageBrowserImageStatusFilter,
                     onSortChanged = contentLibraryViewModel::updatePackageBrowserSort,
                     onProblemFilterChanged = contentLibraryViewModel::updatePackageBrowserProblemFilter,
                     onPreviousProblem = { contentLibraryViewModel.navigatePackageBrowserProblem(-1) },
@@ -267,6 +269,12 @@ fun LibraryScreen(
                     onDuplicateItem = contentLibraryViewModel::duplicateItem,
                     onCopyQuestion = { text -> contentLibraryViewModel.copyToClipboard(text) },
                     onCopyAnswer = { text -> contentLibraryViewModel.copyToClipboard(text) },
+                    onOpenImageReuseReview = {
+                        contentLibraryViewModel.openImageReuseReview(
+                            packageBrowserUiState.installedPackageId,
+                            packageBrowserUiState.packageName
+                        )
+                    },
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 )
             } else {
@@ -300,6 +308,7 @@ fun LibraryScreen(
                     },
                     onImport = handleImport,
                     isImporting = isImporting,
+                    isExporting = contentLibraryViewModel.packageExportDialogState.exporting,
                     onOpenLibrary = { pkgId, pkgName ->
                         contentLibraryViewModel.browsePackageLessons(pkgId, pkgName)
                     },
@@ -369,6 +378,34 @@ fun LibraryScreen(
             )
         }
 
+        if (contentLibraryViewModel.packageExportDialogState.visible) {
+            PackageExportDialog(
+                contentLibraryViewModel.packageExportDialogState,
+                contentLibraryViewModel::dismissPackageExportDialog
+            )
+        }
+
+        val imageReuseState = contentLibraryViewModel.imageReuseDialogState
+        if (imageReuseState.visible) {
+            vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseReviewDialog(
+                state = imageReuseState,
+                thumbnailLoader = remember(contentMediaStorage) {
+                    vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader(contentMediaStorage)
+                },
+                contentMediaStorage = contentMediaStorage,
+                onToggleSourcePackage = contentLibraryViewModel::toggleImageReuseSourcePackage,
+                onSelectAllSourcePackages = contentLibraryViewModel::selectAllImageReuseSourcePackages,
+                onClearAllSourcePackages = contentLibraryViewModel::clearAllImageReuseSourcePackages,
+                onScopeChanged = contentLibraryViewModel::updateImageReuseScope,
+                onStartScan = contentLibraryViewModel::startImageReuseScan,
+                onPreviousItem = contentLibraryViewModel::previousImageReuseItem,
+                onUndoLastUse = contentLibraryViewModel::undoLastImageReuse,
+                onSkipCandidate = contentLibraryViewModel::skipImageReuseCandidate,
+                onSkipItem = contentLibraryViewModel::skipImageReuseItem,
+                onApplyAndNext = contentLibraryViewModel::applyImageReuseAndNext,
+                onClose = contentLibraryViewModel::closeImageReuseReview
+            )
+        }
 
         LibraryDialogHost(
             dialogState = viewModel.activeDialog,
@@ -482,6 +519,7 @@ fun LibraryScreenContent(
     onRefresh: () -> Unit = {},
     onImport: () -> Unit = {},
     isImporting: Boolean = false,
+    isExporting: Boolean = false,
     onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
     onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
@@ -611,7 +649,8 @@ fun LibraryScreenContent(
                             onRemovePackage = onRemovePackage,
                             onCheckPackageIntegrity = onCheckPackageIntegrity,
                             integrityScanningPackageId = integrityScanningPackageId,
-                            integrityScanBusy = integrityScanBusy
+                            integrityScanBusy = integrityScanBusy,
+                            exportBusy = isExporting
                         )
 
                     LibrarySection.INSTALLED ->
@@ -630,7 +669,8 @@ fun LibraryScreenContent(
                             onRemovePackage = onRemovePackage,
                             onCheckPackageIntegrity = onCheckPackageIntegrity,
                             integrityScanningPackageId = integrityScanningPackageId,
-                            integrityScanBusy = integrityScanBusy
+                            integrityScanBusy = integrityScanBusy,
+                            exportBusy = isExporting
                         )
 
                     LibrarySection.ACTIVE ->
@@ -649,7 +689,8 @@ fun LibraryScreenContent(
                             onRemovePackage = onRemovePackage,
                             onCheckPackageIntegrity = onCheckPackageIntegrity,
                             integrityScanningPackageId = integrityScanningPackageId,
-                            integrityScanBusy = integrityScanBusy
+                            integrityScanBusy = integrityScanBusy,
+                            exportBusy = isExporting
                         )
 
                     LibrarySection.ARCHIVED ->
@@ -668,7 +709,8 @@ fun LibraryScreenContent(
                             onRemovePackage = onRemovePackage,
                             onCheckPackageIntegrity = onCheckPackageIntegrity,
                             integrityScanningPackageId = integrityScanningPackageId,
-                            integrityScanBusy = integrityScanBusy
+                            integrityScanBusy = integrityScanBusy,
+                            exportBusy = isExporting
                         )
 
                     LibrarySection.COLLECTIONS ->

@@ -47,6 +47,7 @@ fun ContentStudioScreen(
     onClearQuery: () -> Unit,
     onLessonFilterChanged: (String) -> Unit,
     onMediaFilterChanged: (BrowserMediaFilter) -> Unit,
+    onImageStatusFilterChanged: (vn.loi.learning.desktop.ui.browser.ImageStatusFilter) -> Unit = {},
     onSortChanged: (BrowserSortOption) -> Unit,
     onProblemFilterChanged: (ContentProblemFilter) -> Unit = {},
     onPreviousProblem: () -> Unit = {},
@@ -93,6 +94,7 @@ fun ContentStudioScreen(
     onDuplicateItem: ((String) -> Unit)? = null,
     onCopyQuestion: ((String) -> Unit)? = null,
     onCopyAnswer: ((String) -> Unit)? = null,
+    onOpenImageReuseReview: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val playbackCoordinator = remember(contentMediaStorage) {
@@ -178,6 +180,7 @@ fun ContentStudioScreen(
             onCancelNewItemClick = { onCancelNewItem?.invoke() },
             onDeleteClick = { onRequestDelete?.invoke() },
             onUndoDeleteClick = { onUndoDelete?.invoke() },
+            onImageReuseReviewClick = { onOpenImageReuseReview?.invoke() },
             canUndoDelete = uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem,
             isCreateSubmitting = uiState.isCreateSubmitting,
             deleteTargetCount = uiState.selectedContentIds.size
@@ -207,6 +210,7 @@ fun ContentStudioScreen(
                     onClearQuery = onClearQuery,
                     onLessonFilterChanged = onLessonFilterChanged,
                     onMediaFilterChanged = onMediaFilterChanged,
+                    onImageStatusFilterChanged = onImageStatusFilterChanged,
                     onSortChanged = onSortChanged,
                     onProblemFilterChanged = onProblemFilterChanged,
                     onPreviousProblem = onPreviousProblem,
@@ -218,6 +222,7 @@ fun ContentStudioScreen(
                         playbackCoordinator?.play(ref) ?: onPlayAudio?.invoke(ref)
                     },
                     playbackCoordinator = playbackCoordinator,
+                    thumbnailLoader = thumbnailLoader,
                     // PLE-020
                     searchFocusRequester = searchFocusRequester,
                     onDuplicateItem = onDuplicateItem,
@@ -246,6 +251,8 @@ fun ContentStudioScreen(
                     onUpdateDraftPartOfSpeech = onUpdateDraftPartOfSpeech,
                     onUpdateDraftExampleText = onUpdateDraftExampleText,
                     onUpdateDraftExampleTranslation = onUpdateDraftExampleTranslation,
+                    onUpdateDraftImageRef = onUpdateDraftImageRef,
+                    onImportMediaFile = onImportMediaFile,
                     onRequestDelete = onRequestDelete,
                     onConfirmDelete = onConfirmDelete,
                     onDismissDelete = onDismissDelete,
@@ -475,6 +482,7 @@ private fun StudioTopBar(
     onCancelNewItemClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onUndoDeleteClick: () -> Unit,
+    onImageReuseReviewClick: (() -> Unit)? = null,
     canUndoDelete: Boolean,
     isCreateSubmitting: Boolean,
     deleteTargetCount: Int
@@ -533,6 +541,12 @@ private fun StudioTopBar(
                         onClick = onUndoDeleteClick,
                         icon = LEIcons.Undo,
                         enabled = canUndoDelete
+                    )
+                    LESecondaryButton(
+                        text = "Image Reuse Review",
+                        onClick = { onImageReuseReviewClick?.invoke() },
+                        icon = LEIcons.Image,
+                        enabled = !isCreatingNewItem
                     )
                     if (isCreatingNewItem) {
                         LEPrimaryButton(

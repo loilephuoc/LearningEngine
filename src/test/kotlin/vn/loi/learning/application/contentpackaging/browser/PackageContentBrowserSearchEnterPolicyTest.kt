@@ -4,6 +4,45 @@ import kotlin.test.*
 import vn.loi.learning.domain.content.model.ContentId
 
 class PackageContentBrowserSearchEnterPolicyTest {
+
+    @Test
+    fun `Section 20 - parseDirectItemNumber recognizes digit-only and hash-prefixed queries`() {
+        assertEquals(195, PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber("195"))
+        assertEquals(195, PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber("#195"))
+        assertEquals(195, PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber(" 195 "))
+        assertEquals(195, PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber(" #195 "))
+        assertEquals(0, PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber("0"))
+        assertEquals(999999, PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber("999999"))
+
+        // Invalid direct item number queries
+        assertNull(PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber("195 bank"))
+        assertNull(PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber("unit195"))
+        assertNull(PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber("unit 195"))
+        assertNull(PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber("#"))
+        assertNull(PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber(""))
+        assertNull(PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber("   "))
+        assertNull(PackageContentBrowserSearchEnterPolicy.parseDirectItemNumber("bank"))
+    }
+
+    @Test
+    fun `direct item number jump resolves matching canonical index in filteredItems`() {
+        val item1 = item("c1", "apple", index = 1)
+        val item195 = item("c195", "bang", index = 195)
+        val item200 = item("c200", "cat", index = 200)
+
+        val target = PackageContentBrowserSearchEnterPolicy.resolveTarget(
+            listOf(item1, item195, item200),
+            "195"
+        )
+        assertEquals(item195, target)
+
+        val targetWithHash = PackageContentBrowserSearchEnterPolicy.resolveTarget(
+            listOf(item1, item195, item200),
+            " #195 "
+        )
+        assertEquals(item195, targetWithHash)
+    }
+
     @Test
     fun `one normalized exact Question wins among partial results`() {
         val exact = item("exact", "ＴＯ MAKE")
@@ -27,8 +66,8 @@ class PackageContentBrowserSearchEnterPolicyTest {
         assertNull(PackageContentBrowserSearchEnterPolicy.resolveTarget(emptyList(), "lean"))
     }
 
-    private fun item(id: String, question: String) = PackageContentBrowserItem(
-        index = id.hashCode(), contentId = ContentId(id), questionText = question,
+    private fun item(id: String, question: String, index: Int = id.hashCode()) = PackageContentBrowserItem(
+        index = index, contentId = ContentId(id), questionText = question,
         answerText = "Answer $id", pronunciation = "", partOfSpeech = "WORD",
         group = null, section = null, lesson = "Lesson", packageName = "Package",
         hasImage = false, hasAudio = false, imageRef = null, audioRef = null, questionAudioRef = null,

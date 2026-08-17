@@ -41,7 +41,7 @@ sealed interface AndroidAudioSource {
     }
 }
 
-class AndroidAudioController(
+open class AndroidAudioController(
     context: Context? = null,
     private val createPlayer: () -> MediaPlayer = ::MediaPlayer
 ) : AutoCloseable {
@@ -53,7 +53,7 @@ class AndroidAudioController(
         AndroidStartupTrace.write(error, "AndroidAudioController: $message")
     }
 
-    fun replay(
+    open fun replay(
         path: String?,
         isLooping: Boolean = false,
         onPlaybackEvent: (AndroidAudioPlaybackEvent) -> Unit = {},
@@ -182,11 +182,11 @@ class AndroidAudioController(
         }
     }
 
-    fun stop() {
+    open fun stop() {
         close()
     }
 
-    override fun close() {
+    open override fun close() {
         activeSessionId++
         player?.runCatching {
             if (isPlaying) {

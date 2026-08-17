@@ -158,6 +158,46 @@ class PackageContentBrowserFacade(
         )
     }
 
+    fun replaceContentImage(
+        contentId: ContentId,
+        newImageRef: String?
+    ): vn.loi.learning.domain.content.model.Content {
+        val service = editService
+            ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
+        return service.replaceContentImage(contentId, newImageRef)
+    }
+
+    fun applyImageReuse(
+        targetPackageName: String,
+        targetContentId: String,
+        sourceCandidate: vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseSourceCandidate,
+        mediaStorage: ContentMediaStorage
+    ): String {
+        val service = editService
+            ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
+        return vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseDiscoveryEngine.applyImageReuse(
+            targetPackageName = targetPackageName,
+            targetContentId = targetContentId,
+            sourceCandidate = sourceCandidate,
+            mediaStorage = mediaStorage,
+            editService = service
+        )
+    }
+
+    fun undoImageReuse(
+        targetContentId: String,
+        expectedCurrentImageRef: String,
+        restoreImageRef: String?
+    ): vn.loi.learning.domain.content.model.Content {
+        val service = editService
+            ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
+        return service.undoImageReuse(
+            contentId = ContentId(targetContentId),
+            expectedCurrentImageRef = expectedCurrentImageRef,
+            restoreImageRef = restoreImageRef
+        )
+    }
+
     fun updatePartOfSpeechBatch(
         contentIds: Set<String>,
         partOfSpeech: String,
@@ -171,6 +211,22 @@ class PackageContentBrowserFacade(
             loadForPackage(installedPackageId, packageName)
         } catch (failure: Exception) {
             throw CanonicalMutationCommittedException(contentIds.first(), "Batch POS", failure)
+        }
+        return result to reloaded
+    }
+
+    fun repairMediaReferences(
+        installedPackageId: InstalledPackageId,
+        packageName: String,
+        mediaStorage: ContentMediaStorage? = null
+    ): Pair<vn.loi.learning.application.contentpackaging.browser.PackageMediaReferenceRepairResult, PackageContentBrowserUiState> {
+        val service = editService
+            ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
+        val result = service.repairPackageMediaReferences(installedPackageId, mediaStorage)
+        val reloaded = try {
+            loadForPackage(installedPackageId, packageName)
+        } catch (failure: Exception) {
+            throw CanonicalMutationCommittedException(installedPackageId.value, "Media Reference Repair", failure)
         }
         return result to reloaded
     }

@@ -5,106 +5,88 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import vn.loi.learning.android.media.AndroidAudioController
-import vn.loi.learning.android.media.AndroidAudioPlaybackEvent
-import vn.loi.learning.android.media.AndroidAudioState
-
-class CoroutineAutoPlayTimerScheduler(
-    private val scope: CoroutineScope
-) : AutoPlayTimerScheduler {
-    override fun schedule(delayMillis: Long, onTrigger: () -> Unit): CancellableTimer {
-        val job: Job = scope.launch {
-            delay(delayMillis)
-            onTrigger()
-        }
-        return object : CancellableTimer {
-            override fun cancel() {
-                job.cancel()
-            }
-        }
-    }
-}
-
-class AndroidAutoPlayAudioPlayer(
-    context: Context? = null
-) : AutoPlayAudioPlayer, AutoCloseable {
-    private val controller = AndroidAudioController(context)
-
-    override fun play(path: String?, onComplete: () -> Unit) {
-        if (path.isNullOrBlank()) {
-            onComplete()
-            return
-        }
-        var completed = false
-        val state = controller.replay(
-            path = path,
-            isLooping = false,
-            onPlaybackEvent = { event ->
-                if (event is AndroidAudioPlaybackEvent.Completed && !completed) {
-                    completed = true
-                    onComplete()
-                }
-            },
-            onState = { audioState ->
-                if ((audioState is AndroidAudioState.Failed || audioState is AndroidAudioState.Unavailable) && !completed) {
-                    completed = true
-                    onComplete()
-                }
-            }
-        )
-        if (state is AndroidAudioState.Unavailable || state is AndroidAudioState.Failed) {
-            if (!completed) {
-                completed = true
-                onComplete()
-            }
-        }
-    }
-
-    override fun stop() {
-        controller.stop()
-    }
-
-    override fun close() {
-        controller.close()
-    }
-}
 
 class AutoPlayViewModel(
     private val contentSelector: AutoPlayContentSelector,
     private val preferencesController: AutoPlayPreferencesController,
-    private val audioPlayer: AutoPlayAudioPlayer,
+    private val coordinator: AutoPlayRuntimeCoordinator,
+    private val appContext: Context? = null,
     externalScope: CoroutineScope? = null
 ) : ViewModel() {
     private val scope = externalScope ?: viewModelScope
-    private val timerScheduler = CoroutineAutoPlayTimerScheduler(scope)
-    val engine = AutoPlayEngine(audioPlayer, timerScheduler)
 
-    val engineState: StateFlow<AutoPlayEngineState> = engine.state
+    val engineState: StateFlow<AutoPlayEngineState> = coordinator.engineState
     val config: StateFlow<AutoPlayConfig> = preferencesController.config
+    val isMuted: StateFlow<Boolean> = coordinator.isMuted
+    val remainingSleepMillis: StateFlow<Long?> = coordinator.remainingSleepMillis
 
     private val mutableItemCounts = MutableStateFlow<Map<AutoPlaySource, Int>>(emptyMap())
     val itemCounts: StateFlow<Map<AutoPlaySource, Int>> = mutableItemCounts.asStateFlow()
 
+    private val mutableAvailablePackages = MutableStateFlow<List<AutoPlayPackageInfo>>(emptyList())
+    val availablePackages: StateFlow<List<AutoPlayPackageInfo>> = mutableAvailablePackages.asStateFlow()
+
     private val mutablePackageTitle = MutableStateFlow<String?>(null)
     val packageTitle: StateFlow<String?> = mutablePackageTitle.asStateFlow()
+
+    private val mutableIsPackageAvailable = MutableStateFlow(true)
+    val isPackageAvailable: StateFlow<Boolean> = mutableIsPackageAvailable.asStateFlow()
 
     init {
         refreshSourceCounts()
     }
 
+    fun selectPackage(packageId: String) {
+        preferencesController.updateSelectedPackageId(packageId)
+        refreshSourceCounts()
+    }
+
     fun refreshSourceCounts() {
         scope.launch(Dispatchers.Default) {
-            mutablePackageTitle.value = contentSelector.getPackageName()
-            val counts = AutoPlaySource.entries.associateWith { source ->
-                contentSelector.countItemsForSource(source)
+            val packages = contentSelector.getAvailablePackages()
+            mutableAvailablePackages.value = packages
+
+            val currentConfig = preferencesController.current()
+            val targetPkgId = currentConfig.selectedPackageId
+
+            val effectivePkgId = if (targetPkgId != null) {
+                val exists = packages.any { it.id == targetPkgId }
+                if (exists) {
+                    mutableIsPackageAvailable.value = true
+                    targetPkgId
+                } else {
+                    // Package was deleted or unavailable - do not silently substitute
+                    mutableIsPackageAvailable.value = false
+                    null
+                }
+            } else {
+                // If no package was ever selected, default to the first available package if present
+                val defaultPkg = packages.firstOrNull()
+                if (defaultPkg != null) {
+                    preferencesController.updateSelectedPackageId(defaultPkg.id)
+                    mutableIsPackageAvailable.value = true
+                    defaultPkg.id
+                } else {
+                    mutableIsPackageAvailable.value = false
+                    null
+                }
             }
-            mutableItemCounts.value = counts
+
+            if (effectivePkgId != null) {
+                mutablePackageTitle.value = contentSelector.getPackageName(effectivePkgId)
+                val counts = AutoPlaySource.entries.associateWith { source ->
+                    contentSelector.countItemsForSource(source, packageId = effectivePkgId)
+                }
+                mutableItemCounts.value = counts
+            } else {
+                mutablePackageTitle.value = null
+                val counts = AutoPlaySource.entries.associateWith { 0 }
+                mutableItemCounts.value = counts
+            }
         }
     }
 
@@ -114,6 +96,10 @@ class AutoPlayViewModel(
 
     fun selectSource(source: AutoPlaySource) {
         preferencesController.updateSource(source)
+    }
+
+    fun selectPlaybackOrder(playbackOrder: AutoPlayPlaybackOrder) {
+        preferencesController.updatePlaybackOrder(playbackOrder)
     }
 
     fun updateFrontDelayMs(delayMs: Long) {
@@ -172,42 +158,107 @@ class AutoPlayViewModel(
         preferencesController.updateKeepScreenOn(enabled)
     }
 
+    fun updateBackgroundPlayback(enabled: Boolean) {
+        preferencesController.updateBackgroundPlayback(enabled)
+    }
+
+    fun toggleMute() {
+        coordinator.toggleMute()
+        preferencesController.updateMuted(coordinator.isMuted.value)
+    }
+
+    fun setMuted(muted: Boolean) {
+        coordinator.setMuted(muted)
+        preferencesController.updateMuted(muted)
+    }
+
+    fun updateSleepTimerMinutes(minutes: Double?) {
+        preferencesController.updateSleepTimerMinutes(minutes)
+        coordinator.setSleepTimerMinutes(minutes)
+    }
+
     fun startAutoPlay() {
         val currentConfig = preferencesController.current()
-        val items = contentSelector.selectItems(currentConfig.source)
-        engine.start(items, currentConfig)
+        val pkgId = currentConfig.selectedPackageId
+        if (!mutableIsPackageAvailable.value || pkgId == null) return
+        val items = contentSelector.selectItems(currentConfig.source, packageId = pkgId)
+
+        if (appContext != null && items.isNotEmpty()) {
+            AutoPlayPlaybackService.startService(appContext)
+        }
+
+        coordinator.start(items, currentConfig)
+    }
+
+    fun startAutoPlayWithItems(items: List<AutoPlayItem>) {
+        if (items.isEmpty()) return
+        val currentConfig = preferencesController.current()
+        if (appContext != null) {
+            AutoPlayPlaybackService.startService(appContext)
+        }
+        coordinator.start(items, currentConfig)
+    }
+
+    fun startAutoPlayForContentIds(contentIds: List<vn.loi.learning.domain.content.model.ContentId>) {
+        val items = contentSelector.selectItemsForContentIds(contentIds)
+        startAutoPlayWithItems(items)
+    }
+
+    fun startAutoPlayForSource(source: AutoPlaySource) {
+        preferencesController.updateSource(source)
+        val currentConfig = preferencesController.current()
+        val pkgId = currentConfig.selectedPackageId
+        val items = contentSelector.selectItems(source, packageId = pkgId)
+        if (items.isNotEmpty()) {
+            if (appContext != null) {
+                AutoPlayPlaybackService.startService(appContext)
+            }
+            coordinator.start(items, currentConfig.copy(source = source))
+        }
     }
 
     fun pause() {
-        engine.pause()
+        coordinator.pause()
     }
 
     fun resume() {
-        engine.resume()
+        coordinator.resume()
     }
 
     fun next() {
-        engine.next()
+        coordinator.next()
     }
 
     fun previous() {
-        engine.previous()
+        coordinator.previous()
     }
 
     fun replay() {
-        engine.replay()
+        val currentConfig = preferencesController.current()
+        val pkgId = currentConfig.selectedPackageId
+        if (!mutableIsPackageAvailable.value || pkgId == null) return
+        val items = contentSelector.selectItems(currentConfig.source, packageId = pkgId)
+        if (appContext != null && items.isNotEmpty()) {
+            AutoPlayPlaybackService.startService(appContext)
+        }
+        coordinator.replay()
     }
 
     fun stop() {
-        engine.stop()
+        coordinator.stop()
+        if (appContext != null) {
+            AutoPlayPlaybackService.stopService(appContext)
+        }
         refreshSourceCounts()
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        engine.stop()
-        if (audioPlayer is AutoCloseable) {
-            audioPlayer.close()
+    fun onHostActivityStop() {
+        val currentConfig = preferencesController.current()
+        if (!currentConfig.backgroundPlayback) {
+            val state = engineState.value
+            if (state is AutoPlayEngineState.Running && !state.isPaused) {
+                coordinator.pause()
+            }
         }
     }
 }

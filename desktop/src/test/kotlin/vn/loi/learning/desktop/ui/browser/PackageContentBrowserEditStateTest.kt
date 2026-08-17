@@ -970,8 +970,8 @@ class PackageContentBrowserEditStateTest {
     @Test
     fun `search Enter selects a single result and ignores ambiguous partial results`() {
         val (vm, _) = createViewModelWithPackage(contentCount = 4)
-        vm.updatePackageBrowserQuery("4")
-        vm.selectPackageBrowserSearchResult("4")
+        vm.updatePackageBrowserQuery("Question 4")
+        vm.selectPackageBrowserSearchResult("Question 4")
         assertEquals("cnt-4", vm.packageBrowserUiState!!.selectedContentId)
 
         vm.updatePackageBrowserQuery("Question")

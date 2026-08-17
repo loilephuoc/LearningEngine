@@ -2,6 +2,7 @@ package vn.loi.learning.application.contentpackaging.browser
 
 import java.io.File
 import java.util.UUID
+import vn.loi.learning.application.contentmedia.MediaReferencePolicy
 import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.application.port.ContentPackageRepository
@@ -26,6 +27,13 @@ import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.learning.model.LearningMode
 
+data class PackageMediaReferenceRepairResult(
+    val totalInspected: Int,
+    val noImageSentinelsCleared: Int,
+    val extensionsCanonicalized: Int,
+    val repairedContentIds: Set<ContentId>
+)
+
 /**
  * Application Service xử lý các thao tác chỉnh sửa, tạo mới, xóa và quản lý media của Content
  * từ Learning Browser / Content Studio.
@@ -36,7 +44,8 @@ class ContentBrowserEditService(
     private val installedPackageRepository: InstalledPackageRepository? = null,
     private val contentPackageRepository: ContentPackageRepository? = null,
     private val transactionRunner: TransactionRunner? = null,
-    private val studySessionRepository: StudySessionRepository? = null
+    private val studySessionRepository: StudySessionRepository? = null,
+    private val mediaStorage: ContentMediaStorage? = null
 ) {
 
     /**
@@ -170,7 +179,7 @@ class ContentBrowserEditService(
         )
 
         val contentMedia = ContentMedia(
-            image = imageRef?.trim()?.takeIf { it.isNotBlank() },
+            image = MediaReferencePolicy.canonicalizeMediaReference(imageRef, mediaStorage),
             primaryAudio = questionAudioRef?.trim()?.takeIf { it.isNotBlank() },
             translatedAudio = answerAudioRef?.trim()?.takeIf { it.isNotBlank() },
             exampleAudio = exampleAudioRef?.trim()?.takeIf { it.isNotBlank() },
@@ -252,7 +261,7 @@ class ContentBrowserEditService(
         )
 
         val updatedMedia = existing.media.copy(
-            image = imageRef?.trim()?.takeIf { it.isNotBlank() },
+            image = MediaReferencePolicy.canonicalizeMediaReference(imageRef, mediaStorage),
             primaryAudio = questionAudioRef?.trim()?.takeIf { it.isNotBlank() },
             translatedAudio = answerAudioRef?.trim()?.takeIf { it.isNotBlank() },
             exampleAudio = exampleAudioRef?.trim()?.takeIf { it.isNotBlank() },
@@ -295,6 +304,48 @@ class ContentBrowserEditService(
             exampleAudioRef = existing.media.exampleAudio,
             translationAudioRef = existing.media.exampleTranslatedAudio
         )
+    }
+
+    /**
+     * Replaces only the media image reference of an existing Content.
+     * All text, metadata, custom fields, and audio references are preserved untouched.
+     */
+    fun replaceContentImage(
+        contentId: ContentId,
+        newImageRef: String?
+    ): Content {
+        val existing = contentRepository.findById(contentId)
+            ?: throw IllegalArgumentException("Content not found: ${contentId.value}")
+        val canonicalImage = MediaReferencePolicy.canonicalizeMediaReference(newImageRef, mediaStorage)
+        val updated = existing.copy(
+            media = existing.media.copy(image = canonicalImage)
+        )
+        contentRepository.save(updated)
+        return updated
+    }
+
+    /**
+     * Safely undoes an image reuse operation if and only if the Content's image reference
+     * matches the expected applied reference, restoring the exact previous reference.
+     */
+    fun undoImageReuse(
+        contentId: ContentId,
+        expectedCurrentImageRef: String,
+        restoreImageRef: String?
+    ): Content {
+        val existing = contentRepository.findById(contentId)
+            ?: throw IllegalArgumentException("Content not found: ${contentId.value}")
+        val expectedCanonical = MediaReferencePolicy.canonicalizeMediaReference(expectedCurrentImageRef, mediaStorage)
+        val currentCanonical = existing.media.image
+        if (currentCanonical != expectedCanonical) {
+            throw IllegalStateException("Cannot undo because this item's image has changed since the reuse action.")
+        }
+        val canonicalRestore = MediaReferencePolicy.canonicalizeMediaReference(restoreImageRef, mediaStorage)
+        val updated = existing.copy(
+            media = existing.media.copy(image = canonicalRestore)
+        )
+        contentRepository.save(updated)
+        return updated
     }
 
     /** Atomically updates only the canonical partOfSpeech custom field for the requested contents. */
@@ -647,6 +698,84 @@ class ContentBrowserEditService(
                 existingOtherFields + ContentCustomField(id = posFieldId, value = partOfSpeech)
             )
         }
+    }
+
+    /**
+     * Sửa đổi an toàn các tham chiếu media của package:
+     * 1. Xóa các sentinel no_image (no_image.jpg, no_image.png...) -> null.
+     * 2. Chuẩn hóa các đuôi mở rộng bị lệch nếu ContentMediaStorage tìm thấy file thực tế (.png -> .jpg).
+     * Tuyệt đối không thay đổi question, answer, POS, audio, FSRS, ReviewEvents, LearningItems.
+     */
+    fun repairPackageMediaReferences(
+        installedPackageId: InstalledPackageId,
+        customMediaStorage: ContentMediaStorage? = null
+    ): PackageMediaReferenceRepairResult {
+        val storage = customMediaStorage ?: mediaStorage
+        val instPkgRepo = installedPackageRepository
+            ?: throw IllegalStateException("InstalledPackageRepository is required for repair.")
+        val instPkg = instPkgRepo.findById(installedPackageId)
+            ?: throw IllegalArgumentException("InstalledPackage not found: ${installedPackageId.value}")
+
+        val pkgRepo = contentPackageRepository
+            ?: throw IllegalStateException("ContentPackageRepository is required for repair.")
+        val libRepo = contentLibraryRepository
+            ?: throw IllegalStateException("ContentLibraryRepository is required for repair.")
+
+        val contentPackage = pkgRepo.findById(instPkg.packageId)
+            ?: throw IllegalArgumentException("ContentPackage not found: ${instPkg.packageId.value}")
+
+        val ownedLibraries = contentPackage.libraryIds.mapNotNull { libRepo.findById(it) }
+        val contentIds = ownedLibraries.flatMapTo(linkedSetOf()) { it.contentIds }
+        val allContents = if (contentIds.isNotEmpty()) {
+            contentRepository.findByIds(contentIds)
+        } else {
+            contentRepository.findAll().filter { it.id.value.startsWith(instPkg.packageId.value) || it.id.value.contains(instPkg.name.value) }
+        }
+
+        var noImageCount = 0
+        var extCount = 0
+        val repairedContents = mutableListOf<Content>()
+        val repairedIds = mutableSetOf<ContentId>()
+
+        allContents.forEach { content ->
+            var changed = false
+            var curMedia = content.media
+
+            // 1. Check no_image sentinel
+            if (!curMedia.image.isNullOrBlank() && MediaReferencePolicy.isNoImageSentinel(curMedia.image)) {
+                curMedia = curMedia.copy(image = null)
+                noImageCount++
+                changed = true
+            } else if (!curMedia.image.isNullOrBlank() && storage != null) {
+                val canonical = MediaReferencePolicy.canonicalizeMediaReference(curMedia.image, storage)
+                if (canonical != curMedia.image) {
+                    curMedia = curMedia.copy(image = canonical)
+                    extCount++
+                    changed = true
+                }
+            }
+
+            if (changed) {
+                repairedContents.add(content.copy(media = curMedia))
+                repairedIds.add(content.id)
+            }
+        }
+
+        if (repairedContents.isNotEmpty()) {
+            val tx = transactionRunner
+            if (tx != null) {
+                tx.runInTransaction { contentRepository.saveAll(repairedContents) }
+            } else {
+                contentRepository.saveAll(repairedContents)
+            }
+        }
+
+        return PackageMediaReferenceRepairResult(
+            totalInspected = allContents.size,
+            noImageSentinelsCleared = noImageCount,
+            extensionsCanonicalized = extCount,
+            repairedContentIds = repairedIds
+        )
     }
 }
 

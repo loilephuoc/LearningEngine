@@ -5,6 +5,7 @@ import android.content.Intent
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -42,8 +43,61 @@ import kotlinx.coroutines.withContext
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.mutableIntStateOf
+import android.view.KeyEvent
+import android.view.MotionEvent
+import vn.loi.learning.android.controller.ControllerDiagnosticsHolder
+import vn.loi.learning.android.controller.ControllerDiagnosticsScreen
+import vn.loi.learning.android.controller.ControllerSettingsScreen
+import vn.loi.learning.android.controller.ControllerInputRouter
+import vn.loi.learning.android.controller.EventOrigin
 
 class MainActivity : ComponentActivity() {
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val dev = event.device ?: if (event.deviceId > 0) android.view.InputDevice.getDevice(event.deviceId) else null
+        if (vn.loi.learning.android.controller.ControllerInputDiagnostic.isCandidateControllerDevice(dev)) {
+            val router = ControllerInputRouter.getInstance(this)
+            if (router.isControllerEnabled()) {
+                router.onKeyEvent(event, origin = EventOrigin.ACTIVITY)
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        ControllerDiagnosticsHolder.recordMotionEvent(event)
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        ControllerDiagnosticsHolder.setLifecycleState("STARTED")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ControllerDiagnosticsHolder.setLifecycleState("RESUMED")
+        ControllerDiagnosticsHolder.setForeground(true)
+        ControllerDiagnosticsHolder.refreshDevices(this)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        ControllerDiagnosticsHolder.setLifecycleState("PAUSED")
+    }
+
+    override fun onStop() {
+        super.onStop()
+        ControllerDiagnosticsHolder.setLifecycleState("STOPPED")
+        ControllerDiagnosticsHolder.setForeground(false)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        ControllerDiagnosticsHolder.setLifecycleState("DESTROYED")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -87,6 +141,17 @@ class MainActivity : ComponentActivity() {
                         onTypingViMutedChanged = app.studyPreferencesController::updateTypingViMuted
                     )
                 }
+                val studyBackgroundAudioController = remember(app) {
+                    vn.loi.learning.android.media.AndroidAudioController(app).also {
+                        vn.loi.learning.android.controller.StudyControllerBridge.registerBackgroundAudioController(it)
+                    }
+                }
+                DisposableEffect(studyBackgroundAudioController) {
+                    onDispose {
+                        vn.loi.learning.android.controller.StudyControllerBridge.unregisterBackgroundAudioController(studyBackgroundAudioController)
+                        studyBackgroundAudioController.close()
+                    }
+                }
                 val state = studyViewModel.state.collectAsStateWithLifecycle().value
                 val quickReviewSummary = studyViewModel.quickReviewSummary.collectAsStateWithLifecycle().value
                 val contentViewModel = viewModel<AndroidContentViewModel> {
@@ -99,6 +164,16 @@ class MainActivity : ComponentActivity() {
                     ), createSavedStateHandle())
                 }
                 val libraryState = libraryViewModel.state.collectAsStateWithLifecycle().value
+                val autoPlayViewModel = viewModel<AutoPlayViewModel> {
+                    val selector = AutoPlayContentSelector(
+                        context = graph.engine,
+                        resolveMedia = { reference -> graph.media.resolve(reference)?.toString() }
+                    )
+                    val prefStore = SharedPreferencesAutoPlayPreferenceStore(app)
+                    val prefController = AutoPlayPreferencesController(prefStore)
+                    val coordinator = AutoPlayRuntimeCoordinator.getInstance(app)
+                    AutoPlayViewModel(selector, prefController, coordinator, app)
+                }
                 val packageOperations=remember { AndroidPackageOperations(graph) }
                 val operationScope=rememberCoroutineScope()
                 var packageActionId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -160,6 +235,8 @@ class MainActivity : ComponentActivity() {
                 }
                 val showRootNavigation = when {
                     currentRoute == "autoplay" -> false
+                    currentRoute == "controller_diagnostics" -> false
+                    currentRoute == "controller_settings" -> false
                     currentRoute?.startsWith("package/") == true -> false
                     currentRoute == "library" -> libraryState is AndroidLibraryState.Root
                     currentRoute == "study" -> state is AndroidStudyState.Home
@@ -200,16 +277,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("autoplay", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
-                        val autoPlayViewModel = viewModel<AutoPlayViewModel> {
-                            val selector = AutoPlayContentSelector(
-                                context = graph.engine,
-                                resolveMedia = { reference -> graph.media.resolve(reference)?.toString() }
-                            )
-                            val prefStore = SharedPreferencesAutoPlayPreferenceStore(app)
-                            val prefController = AutoPlayPreferencesController(prefStore)
-                            val audioPlayer = AndroidAutoPlayAudioPlayer(app)
-                            AutoPlayViewModel(selector, prefController, audioPlayer)
-                        }
                         AutoPlayScreen(
                             viewModel = autoPlayViewModel,
                             onBack = {
@@ -290,12 +357,22 @@ class MainActivity : ComponentActivity() {
                             studyViewModel.onEvent(AndroidStudyEvent.Home)
                             navController.navigate("home") { popUpTo("study") { inclusive = true } }
                         }
-                        StudyScreen(state, onEvent = { event ->
-                            studyViewModel.onEvent(event)
-                            if (event == AndroidStudyEvent.Home) {
-                                navController.navigate("home") { popUpTo("study") { inclusive = true } }
+                        StudyScreen(
+                            state,
+                            onEvent = { event ->
+                                studyViewModel.onEvent(event)
+                                if (event == AndroidStudyEvent.Home) {
+                                    navController.navigate("home") { popUpTo("study") { inclusive = true } }
+                                }
+                            },
+                            onAutoPlay = {
+                                val contentIds = studyViewModel.activeStudySessionAutoPlayContentIds()
+                                if (contentIds.isNotEmpty()) {
+                                    autoPlayViewModel.startAutoPlayForContentIds(contentIds)
+                                    navController.navigate("autoplay") { launchSingleTop = true }
+                                }
                             }
-                        }) }
+                        ) }
                     }
                     composable("review", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
                         val home=state as? AndroidStudyState.Home
@@ -306,7 +383,18 @@ class MainActivity : ComponentActivity() {
                                     if (state.retryable) ({ studyViewModel.onEvent(AndroidStudyEvent.Retry) }) else null)
                                 else -> AndroidFeatureLoading("Opening Study")
                             }
-                        } else ReviewHub(home, quickReviewSummary, openStudyFromExplicitEvent)
+                        } else ReviewHub(
+                            home,
+                            quickReviewSummary,
+                            openStudyFromExplicitEvent,
+                            onAutoPlayEntry = { entry ->
+                                val contentIds = studyViewModel.resolveReviewEntryAutoPlayContentIds(entry)
+                                if (contentIds.isNotEmpty()) {
+                                    autoPlayViewModel.startAutoPlayForContentIds(contentIds)
+                                    navController.navigate("autoplay") { launchSingleTop = true }
+                                }
+                            }
+                        )
                     }
                     composable("settings", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
                         SettingsScreen(
@@ -314,8 +402,21 @@ class MainActivity : ComponentActivity() {
                             app.studyPreferencesController::updateNew,
                             app.studyPreferencesController::updateReview,
                             continuousSkim,
-                            app.studyPreferencesController::updateContinuousSkim
+                            app.studyPreferencesController::updateContinuousSkim,
+                            onControllerSettings = { navController.navigate("controller_settings") { launchSingleTop = true } },
+                            onControllerDiagnostics = { navController.navigate("controller_diagnostics") { launchSingleTop = true } }
                         ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
+                    }
+                    composable("controller_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        ControllerSettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            onOpenDiagnostics = { navController.navigate("controller_diagnostics") { launchSingleTop = true } }
+                        )
+                    }
+                    composable("controller_diagnostics", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        ControllerDiagnosticsScreen(
+                            onBack = { navController.popBackStack() }
+                        )
                     }
                 } } }
             }

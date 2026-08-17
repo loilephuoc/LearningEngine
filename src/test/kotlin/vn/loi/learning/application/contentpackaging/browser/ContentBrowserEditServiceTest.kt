@@ -510,4 +510,80 @@ class ContentBrowserEditServiceTest {
 
         return appContext to instId
     }
+
+    @Test
+    fun `importMediaAsset generates unique file name with original name suffix`() {
+        val (appContext, _) = createFixture(contentCount = 1)
+        val tempFile = java.io.File.createTempFile("test_source_", ".jpg")
+        try {
+            tempFile.writeBytes("dummy-bytes".toByteArray())
+            val tempDir = java.nio.file.Files.createTempDirectory("media_storage_test")
+            try {
+                val mediaStorage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(tempDir)
+                val service = ContentBrowserEditService(appContext.contentRepository!!)
+
+                val relativePath = service.importMediaAsset("TestPkg", tempFile, mediaStorage)
+                assertTrue(relativePath.startsWith("TestPkg/"))
+                assertTrue(relativePath.endsWith(".jpg"))
+                assertFalse(relativePath.contains("no_image.jpg"))
+            } finally {
+                tempDir.toFile().deleteRecursively()
+            }
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    @Test
+    fun `repairPackageMediaReferences clears no_image sentinels and canonicalizes extensions without touching items`() {
+        val (appContext, instId) = createFixture(contentCount = 2)
+        val contentRepo = appContext.contentRepository!!
+
+        // Content 1: has no_image.jpg sentinel
+        val c1 = contentRepo.findById(ContentId("cnt-1"))!!
+        contentRepo.save(c1.copy(media = ContentMedia(image = "no_image.jpg")))
+
+        // Content 2: has .png reference, but on disk it's .jpg
+        val tempDir = java.nio.file.Files.createTempDirectory("media_repair_test")
+        try {
+            val pkgDir = tempDir.resolve("Test Package")
+            java.nio.file.Files.createDirectories(pkgDir)
+            val realJpg = pkgDir.resolve("real_photo.jpg")
+            java.nio.file.Files.write(realJpg, "jpg-data".toByteArray())
+
+            val c2 = contentRepo.findById(ContentId("cnt-2"))!!
+            contentRepo.save(c2.copy(media = ContentMedia(image = "Test Package/real_photo.png")))
+
+            val mediaStorage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(tempDir)
+            val service = ContentBrowserEditService(
+                contentRepository = contentRepo,
+                contentLibraryRepository = appContext.contentLibraryRepository,
+                installedPackageRepository = appContext.installedPackageRepository,
+                contentPackageRepository = appContext.contentPackageRepository,
+                mediaStorage = mediaStorage
+            )
+
+            val learningItemsBefore = appContext.learningItemRepository!!.findAll()
+
+            val result = service.repairPackageMediaReferences(instId)
+            assertEquals(2, result.totalInspected)
+            assertEquals(1, result.noImageSentinelsCleared)
+            assertEquals(1, result.extensionsCanonicalized)
+            assertEquals(2, result.repairedContentIds.size)
+
+            val updatedC1 = contentRepo.findById(ContentId("cnt-1"))!!
+            assertNull(updatedC1.media.image)
+
+            val updatedC2 = contentRepo.findById(ContentId("cnt-2"))!!
+            assertEquals("Test Package/real_photo.jpg", updatedC2.media.image)
+
+            // Verify learning items and text fields are strictly untouched
+            val learningItemsAfter = appContext.learningItemRepository!!.findAll()
+            assertEquals(learningItemsBefore, learningItemsAfter)
+            assertEquals("Question 1", updatedC1.text.primaryText)
+            assertEquals("Question 2", updatedC2.text.primaryText)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
 }

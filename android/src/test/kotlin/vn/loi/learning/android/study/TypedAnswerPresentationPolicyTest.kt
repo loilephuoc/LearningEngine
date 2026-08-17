@@ -87,7 +87,26 @@ class TypedAnswerPresentationPolicyTest {
             availableHeightDp = 300,
             hasMedia = true
         )!!
-        assertEquals(165, shortViewport.maxHeightDp)
+        // When IME is visible, image dynamically receives remaining available height instead of hard 96dp cap
+        val imeAdaptiveBounds = resolveTypingFrontMediaBounds(
+            density = StudyContentDensity.DENSE,
+            availableHeightDp = 520,
+            hasMedia = true,
+            imeVisible = true
+        )!!
+        assertEquals(80, imeAdaptiveBounds.minHeightDp)
+        assertEquals(288, imeAdaptiveBounds.maxHeightDp)
+        assertTrue(imeAdaptiveBounds.maxHeightDp > 200)
+
+        // Shorter viewport with IME open shrinks dynamically
+        val imeShortBounds = resolveTypingFrontMediaBounds(
+            density = StudyContentDensity.DENSE,
+            availableHeightDp = 300,
+            hasMedia = true,
+            imeVisible = true
+        )!!
+        assertEquals(80, imeShortBounds.minHeightDp)
+        assertEquals(123, imeShortBounds.maxHeightDp)
 
         // No image returns null and reserves zero space
         kotlin.test.assertNull(
