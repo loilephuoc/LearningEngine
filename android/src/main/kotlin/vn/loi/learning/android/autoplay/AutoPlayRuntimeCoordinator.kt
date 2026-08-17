@@ -46,7 +46,7 @@ class AutoPlayRuntimeCoordinator(
     private val mutableConfig = MutableStateFlow(AutoPlayConfig())
     val config: StateFlow<AutoPlayConfig> = mutableConfig.asStateFlow()
 
-    private val mutableIsMuted = MutableStateFlow(false)
+    private val mutableIsMuted = MutableStateFlow(vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value)
     val isMuted: StateFlow<Boolean> = mutableIsMuted.asStateFlow()
 
     private val mutableSleepDeadline = MutableStateFlow<Long?>(null)
@@ -60,12 +60,31 @@ class AutoPlayRuntimeCoordinator(
 
     private var activeItems: List<AutoPlayItem> = emptyList()
 
+    init {
+        val initialMuted = vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value
+        mutableIsMuted.value = initialMuted
+        audioPlayer.setMuted(initialMuted)
+        mutableConfig.value = mutableConfig.value.copy(isMuted = initialMuted)
+
+        scope.launch {
+            vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.collect { muted ->
+                if (mutableIsMuted.value != muted) {
+                    mutableIsMuted.value = muted
+                    audioPlayer.setMuted(muted)
+                    if (mutableConfig.value.isMuted != muted) {
+                        mutableConfig.value = mutableConfig.value.copy(isMuted = muted)
+                    }
+                }
+            }
+        }
+    }
+
     val exoPlayer: ExoPlayer?
         get() = audioPlayer.exoPlayer
 
     fun updateConfig(newConfig: AutoPlayConfig) {
         mutableConfig.value = newConfig
-        if (newConfig.isMuted != mutableIsMuted.value) {
+        if (newConfig.isMuted != vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value) {
             setMuted(newConfig.isMuted)
         }
     }
@@ -76,10 +95,12 @@ class AutoPlayRuntimeCoordinator(
         if (mutableConfig.value.isMuted != muted) {
             mutableConfig.value = mutableConfig.value.copy(isMuted = muted)
         }
+        vn.loi.learning.android.media.LearningEngineAudioPolicy.setMuted(muted)
     }
 
     fun toggleMute() {
-        setMuted(!mutableIsMuted.value)
+        val next = !mutableIsMuted.value
+        setMuted(next)
     }
 
     fun setSleepTimerDurationMs(durationMs: Long?) {

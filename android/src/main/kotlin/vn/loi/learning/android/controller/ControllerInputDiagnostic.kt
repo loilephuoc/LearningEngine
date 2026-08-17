@@ -415,6 +415,39 @@ object ControllerDiagnosticsHolder {
     const val TRACE_TAG = "LearningEngineControllerTrace"
     private const val MAX_TRACE_ENTRIES = 50
 
+    fun setGlobalMute(muted: Boolean) {
+        _state.update { it.copy(isGlobalMuted = muted) }
+    }
+
+    fun setActiveStudyPlayback(playback: ActiveStudyPlayback?) {
+        _state.update { it.copy(activeStudyPlayback = playback) }
+    }
+
+    fun recordVolumeResult(
+        direction: String,
+        result: vn.loi.learning.android.media.SystemVolumeAdjustmentResult,
+        status: vn.loi.learning.android.media.SystemVolumeStatus
+    ) {
+        val summary = when (result) {
+            is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.Success ->
+                "$direction: ${result.before} -> ${result.after} (min=${result.min}, max=${result.max})"
+            is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.Boundary ->
+                "$direction: Boundary - ${result.message}"
+            is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.FixedVolume ->
+                "$direction: Fixed - ${result.message}"
+            is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.NoChange ->
+                "$direction: NoChange - ${result.message}"
+            is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.Error ->
+                "$direction: Error - ${result.message}"
+        }
+        _state.update {
+            it.copy(
+                systemVolumeStatus = status,
+                lastVolumeAction = summary
+            )
+        }
+    }
+
     fun recordRuntimeTrace(entry: ControllerRuntimeTraceEntry) {
         Log.i(TRACE_TAG, entry.toLogLine())
         _state.update { current ->
@@ -443,7 +476,9 @@ object ControllerDiagnosticsHolder {
                 runtimeTrace = emptyList(),
                 audioTrace = emptyList(),
                 lastEvent = null,
-                lastDispatchedResult = null
+                lastDispatchedResult = null,
+                activeStudyPlayback = null,
+                lastVolumeAction = null
             )
         }
     }

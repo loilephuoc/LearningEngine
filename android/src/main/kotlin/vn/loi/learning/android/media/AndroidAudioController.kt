@@ -44,10 +44,22 @@ sealed interface AndroidAudioSource {
 open class AndroidAudioController(
     context: Context? = null,
     private val createPlayer: () -> MediaPlayer = ::MediaPlayer
-) : AutoCloseable {
+) : AutoCloseable, MuteableAudioPlayer {
     private val appContext: Context? = context?.applicationContext
     private var player: MediaPlayer? = null
     private var activeSessionId: Long = 0L
+
+    init {
+        LearningEngineAudioPolicy.registerPlayer(this)
+    }
+
+    override fun applyMute(muted: Boolean) {
+        player?.let { mp ->
+            runCatching {
+                if (muted) mp.setVolume(0f, 0f) else mp.setVolume(1f, 1f)
+            }
+        }
+    }
 
     private fun log(error: Boolean, message: String) {
         AndroidStartupTrace.write(error, "AndroidAudioController: $message")
@@ -76,6 +88,12 @@ open class AndroidAudioController(
             val mediaPlayer = createPlayer()
             player = mediaPlayer
             mediaPlayer.isLooping = isLooping
+            val currentMuted = LearningEngineAudioPolicy.isMuted.value
+            if (currentMuted) {
+                mediaPlayer.setVolume(0f, 0f)
+            } else {
+                mediaPlayer.setVolume(1f, 1f)
+            }
 
             log(false, "audio_source_type ${source::class.simpleName}")
 
@@ -150,6 +168,12 @@ open class AndroidAudioController(
                 if (currentSessionId == activeSessionId) {
                     log(false, "audio_prepared starting playback")
                     onPlaybackEvent(AndroidAudioPlaybackEvent.Prepared(runCatching { mp.duration }.getOrDefault(-1)))
+                    val mutedNow = LearningEngineAudioPolicy.isMuted.value
+                    if (mutedNow) {
+                        mp.setVolume(0f, 0f)
+                    } else {
+                        mp.setVolume(1f, 1f)
+                    }
                     mp.start()
                     log(false, "audio_playing")
                     onState(AndroidAudioState.Playing)

@@ -18,15 +18,9 @@ class ControllerActionDispatcher(
     private val autoPlayCoordinatorProvider: () -> AutoPlayRuntimeCoordinator? = {
         runCatching { AutoPlayRuntimeCoordinator.getInstance(appContext) }.getOrNull()
     },
-    private val systemVolumeAdjuster: (Int) -> Boolean = { direction ->
-        val am = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-        if (am != null) {
-            am.adjustStreamVolume(AudioManager.STREAM_MUSIC, direction, AudioManager.FLAG_SHOW_UI)
-            true
-        } else {
-            false
-        }
-    }
+    private val audioPolicy: vn.loi.learning.android.media.LearningEngineAudioPolicy = vn.loi.learning.android.media.LearningEngineAudioPolicy,
+    private val systemMediaVolumeController: vn.loi.learning.android.media.SystemMediaVolumeController = vn.loi.learning.android.media.AndroidSystemMediaVolumeController(appContext),
+    private val systemVolumeAdjuster: ((Int) -> Boolean)? = null
 ) {
 
     /**
@@ -67,13 +61,9 @@ class ControllerActionDispatcher(
             }
 
             ControllerAction.MUTE_TOGGLE -> {
-                val autoPlay = autoPlayCoordinatorProvider()
-                if (autoPlay != null && autoPlay.engineState.value !is AutoPlayEngineState.Idle) {
-                    autoPlay.toggleMute()
-                    ControllerActionResult.Executed(action, "AutoPlay")
-                } else {
-                    ControllerActionResult.UnavailableInContext(action, "AutoPlay is not active")
-                }
+                val newMuted = audioPolicy.toggleMuted()
+                ControllerDiagnosticsHolder.setGlobalMute(newMuted)
+                ControllerActionResult.Executed(action, "App Audio: ${if (newMuted) "Muted" else "Unmuted"}")
             }
 
             ControllerAction.STOP_AUTO_PLAY -> {
@@ -157,17 +147,17 @@ class ControllerActionDispatcher(
                     autoPlay.replay()
                     ControllerActionResult.Executed(action, "AutoPlay: Primary English")
                 } else if (studyBridge.playPrimaryEnglish()) {
-                    ControllerActionResult.Executed(action, "Study: Primary English Audio")
+                    ControllerActionResult.Executed(action, "Study: Primary English")
                 } else {
-                    ControllerActionResult.UnavailableInContext(action, "No primary English audio available for current item")
+                    ControllerActionResult.UnavailableInContext(action, "Primary English audio is not available in current state")
                 }
             }
 
             ControllerAction.PLAY_PRIMARY_VI -> {
                 if (studyBridge.playPrimaryVietnamese()) {
-                    ControllerActionResult.Executed(action, "Study: Primary Vietnamese Audio")
+                    ControllerActionResult.Executed(action, "Study: Primary Vietnamese")
                 } else {
-                    ControllerActionResult.UnavailableInContext(action, "No primary Vietnamese audio available for current item")
+                    ControllerActionResult.UnavailableInContext(action, "Primary Vietnamese audio is not available in current state")
                 }
             }
 
@@ -204,18 +194,66 @@ class ControllerActionDispatcher(
             }
 
             ControllerAction.SYSTEM_VOLUME_UP -> {
-                if (systemVolumeAdjuster(AudioManager.ADJUST_RAISE)) {
-                    ControllerActionResult.Executed(action, "System: Volume Raised")
+                if (systemVolumeAdjuster != null) {
+                    if (systemVolumeAdjuster.invoke(AudioManager.ADJUST_RAISE)) {
+                        ControllerActionResult.Executed(action, "System: Volume Raised")
+                    } else {
+                        ControllerActionResult.UnavailableInContext(action, "System volume adjustment unavailable")
+                    }
                 } else {
-                    ControllerActionResult.UnavailableInContext(action, "System volume adjustment unavailable")
+                    val isForeground = ControllerDiagnosticsHolder.state.value.isForeground
+                    val result = systemMediaVolumeController.adjustVolume(AudioManager.ADJUST_RAISE, isForeground)
+                    val status = systemMediaVolumeController.currentStatus()
+                    ControllerDiagnosticsHolder.recordVolumeResult("UP", result, status)
+                    when (result) {
+                        is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.Success -> {
+                            ControllerActionResult.Executed(action, "System: Volume Raised (${result.before} -> ${result.after})")
+                        }
+                        is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.Boundary -> {
+                            ControllerActionResult.Executed(action, "System: ${result.message}")
+                        }
+                        is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.FixedVolume -> {
+                            ControllerActionResult.UnavailableInContext(action, result.message)
+                        }
+                        is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.NoChange -> {
+                            ControllerActionResult.UnavailableInContext(action, result.message)
+                        }
+                        is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.Error -> {
+                            ControllerActionResult.UnavailableInContext(action, result.message)
+                        }
+                    }
                 }
             }
 
             ControllerAction.SYSTEM_VOLUME_DOWN -> {
-                if (systemVolumeAdjuster(AudioManager.ADJUST_LOWER)) {
-                    ControllerActionResult.Executed(action, "System: Volume Lowered")
+                if (systemVolumeAdjuster != null) {
+                    if (systemVolumeAdjuster.invoke(AudioManager.ADJUST_LOWER)) {
+                        ControllerActionResult.Executed(action, "System: Volume Lowered")
+                    } else {
+                        ControllerActionResult.UnavailableInContext(action, "System volume adjustment unavailable")
+                    }
                 } else {
-                    ControllerActionResult.UnavailableInContext(action, "System volume adjustment unavailable")
+                    val isForeground = ControllerDiagnosticsHolder.state.value.isForeground
+                    val result = systemMediaVolumeController.adjustVolume(AudioManager.ADJUST_LOWER, isForeground)
+                    val status = systemMediaVolumeController.currentStatus()
+                    ControllerDiagnosticsHolder.recordVolumeResult("DOWN", result, status)
+                    when (result) {
+                        is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.Success -> {
+                            ControllerActionResult.Executed(action, "System: Volume Lowered (${result.before} -> ${result.after})")
+                        }
+                        is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.Boundary -> {
+                            ControllerActionResult.Executed(action, "System: ${result.message}")
+                        }
+                        is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.FixedVolume -> {
+                            ControllerActionResult.UnavailableInContext(action, result.message)
+                        }
+                        is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.NoChange -> {
+                            ControllerActionResult.UnavailableInContext(action, result.message)
+                        }
+                        is vn.loi.learning.android.media.SystemVolumeAdjustmentResult.Error -> {
+                            ControllerActionResult.UnavailableInContext(action, result.message)
+                        }
+                    }
                 }
             }
 

@@ -261,6 +261,75 @@ fun ControllerDiagnosticsScreen(
                 }
             }
 
+            // Audio & System Volume Status Card
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Audio & System Volume Status",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Global App Mute:", style = MaterialTheme.typography.bodyMedium)
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (state.isGlobalMuted) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Text(
+                                    text = if (state.isGlobalMuted) "MUTED" else "UNMUTED",
+                                    color = if (state.isGlobalMuted) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        val playback = state.activeStudyPlayback
+                        Text(
+                            text = if (playback != null) {
+                                "Study Audio: role=${playback.role ?: "none"}, reason=${playback.reason}, looping=${playback.isLooping}, startedWhileForeground=${playback.startedWhileForeground}"
+                            } else {
+                                "Study Audio: IDLE"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        val volStatus = state.systemVolumeStatus
+                        Text(
+                            text = if (volStatus != null) {
+                                "System Media: ${volStatus.currentVolume}/${volStatus.maxVolume} (min=${volStatus.minVolume}, fixed=${volStatus.isVolumeFixed})"
+                            } else {
+                                "System Media: ready"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (state.lastVolumeAction != null) {
+                            Text(
+                                text = "Last Volume Action: ${state.lastVolumeAction}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+
             // Connected Devices Section
             item {
                 Text(

@@ -26,6 +26,17 @@ interface StudyControllerTarget {
 }
 
 /**
+ * Metadata for currently active Study background/controller audio playback.
+ */
+data class ActiveStudyPlayback(
+    val itemKey: String?,
+    val role: String?,
+    val isLooping: Boolean,
+    val reason: StudyAudioReason,
+    val startedWhileForeground: Boolean
+)
+
+/**
  * Thread-safe bridge connecting controller input dispatches to the currently active Study target,
  * audio playback authorities (primary EN/VI, examples, loops), continue actions, and AutoPlay starter.
  */
@@ -40,10 +51,25 @@ object StudyControllerBridge {
     private val continueCurrentModeRef = AtomicReference<(() -> Boolean)?>(null)
     private val startAutoPlayRef = AtomicReference<(() -> Boolean)?>(null)
     private val backgroundAudioControllerRef = AtomicReference<AndroidAudioController?>(null)
+    private val isForegroundRef = java.util.concurrent.atomic.AtomicBoolean(true)
+    private val currentPlaybackRef = AtomicReference<ActiveStudyPlayback?>(null)
     private val consumedAutoplayKeys = mutableSetOf<String>()
 
     val activeTarget: StudyControllerTarget?
         get() = targetRef.get()
+
+    val currentPlayback: ActiveStudyPlayback?
+        get() = currentPlaybackRef.get()
+
+    fun onActivityForegroundChanged(isForeground: Boolean) {
+        val previous = isForegroundRef.getAndSet(isForeground)
+        if (previous && !isForeground) {
+            val playback = currentPlaybackRef.get()
+            if (playback != null && playback.startedWhileForeground && playback.reason == StudyAudioReason.MANUAL_LOOP) {
+                stopAudio(StudyAudioReason.MANUAL_LOOP)
+            }
+        }
+    }
 
     fun register(target: StudyControllerTarget) {
         targetRef.set(target)
@@ -76,6 +102,16 @@ object StudyControllerBridge {
         if (path.isNullOrBlank()) return false
         val controller = backgroundAudioControllerRef.get() ?: return false
         val fileName = path.substringAfterLast('/').substringAfterLast('\\')
+        val wasForeground = isForegroundRef.get()
+        val playback = ActiveStudyPlayback(
+            itemKey = itemKey,
+            role = role,
+            isLooping = isLooping,
+            reason = reason,
+            startedWhileForeground = wasForeground
+        )
+        currentPlaybackRef.set(playback)
+        ControllerDiagnosticsHolder.setActiveStudyPlayback(playback)
         ControllerDiagnosticsHolder.recordAudioTrace(
             StudyAudioTraceEntry(
                 kind = StudyAudioEventKind.AUDIO_START,
@@ -91,6 +127,8 @@ object StudyControllerBridge {
     }
 
     fun stopAudio(reason: StudyAudioReason) {
+        currentPlaybackRef.set(null)
+        ControllerDiagnosticsHolder.setActiveStudyPlayback(null)
         val controller = backgroundAudioControllerRef.get()
         if (controller != null) {
             ControllerDiagnosticsHolder.recordAudioTrace(
@@ -270,6 +308,8 @@ object StudyControllerBridge {
         continueCurrentModeRef.set(null)
         startAutoPlayRef.set(null)
         backgroundAudioControllerRef.set(null)
+        currentPlaybackRef.set(null)
+        isForegroundRef.set(true)
         consumedAutoplayKeys.clear()
     }
 }

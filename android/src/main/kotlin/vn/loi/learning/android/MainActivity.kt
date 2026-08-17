@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
         ControllerDiagnosticsHolder.setLifecycleState("RESUMED")
         ControllerDiagnosticsHolder.setForeground(true)
         ControllerDiagnosticsHolder.refreshDevices(this)
+        vn.loi.learning.android.controller.StudyControllerBridge.onActivityForegroundChanged(true)
     }
 
     override fun onPause() {
@@ -91,6 +92,7 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         ControllerDiagnosticsHolder.setLifecycleState("STOPPED")
         ControllerDiagnosticsHolder.setForeground(false)
+        vn.loi.learning.android.controller.StudyControllerBridge.onActivityForegroundChanged(false)
     }
 
     override fun onDestroy() {

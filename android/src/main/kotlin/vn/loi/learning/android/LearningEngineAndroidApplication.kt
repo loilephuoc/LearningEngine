@@ -14,6 +14,7 @@ class LearningEngineAndroidApplication : Application() {
         super.onCreate()
         AndroidStartupTrace.enabled = BuildConfig.DEBUG
         JsonPersistenceTrace.enabled = BuildConfig.DEBUG
+        vn.loi.learning.android.media.LearningEngineAudioPolicy.init(this)
         vn.loi.learning.android.controller.ControllerDiagnosticsHolder.registerInputDeviceListener(this)
     }
 
