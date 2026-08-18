@@ -11,6 +11,9 @@ import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.library.model.LibraryDescriptor
 import vn.loi.learning.domain.content.model.Content
+import vn.loi.learning.domain.content.model.ContentCustomField
+import vn.loi.learning.domain.content.model.ContentCustomFields
+import vn.loi.learning.domain.content.model.ContentFieldId
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.ContentMedia
 import vn.loi.learning.domain.content.model.ContentMetadata
@@ -585,5 +588,79 @@ class ContentBrowserEditServiceTest {
         } finally {
             tempDir.toFile().deleteRecursively()
         }
+    }
+
+    @Test
+    fun `updatePartOfSpeechMultiBatch updates multiple contents to distinct POS values and leaves others untouched`() {
+        val (appContext, _) = createFixture(contentCount = 3)
+        val contentRepo = appContext.contentRepository!!
+        val service = ContentBrowserEditService(
+            contentRepository = contentRepo,
+            transactionRunner = requireNotNull(appContext.transactionRunner)
+        )
+
+        // Preset cnt-3 to already have "WORD" and "USER_CONFIRMED"
+        val c3 = contentRepo.findById(ContentId("cnt-3"))!!
+        contentRepo.save(c3.copy(customFields = ContentCustomFields(setOf(
+            ContentCustomField(ContentFieldId("partOfSpeech"), "WORD"),
+            ContentCustomField(ContentFieldId("partOfSpeechReviewStatus"), "USER_CONFIRMED")
+        ))))
+
+        val updates = mapOf(
+            ContentId("cnt-1") to "NOUN",
+            ContentId("cnt-2") to "VERB",
+            ContentId("cnt-3") to "WORD" // Already "WORD" and USER_CONFIRMED
+        )
+
+        val result = service.updatePartOfSpeechMultiBatch(updates)
+        assertEquals(3, result.selectedCount)
+        assertEquals(2, result.changedCount)
+        assertEquals(1, result.unchangedCount)
+
+        val updated1 = contentRepo.findById(ContentId("cnt-1"))!!
+        assertEquals("NOUN", updated1.customFields[ContentFieldId("partOfSpeech")]?.value)
+        assertEquals("USER_CONFIRMED", updated1.customFields[ContentFieldId("partOfSpeechReviewStatus")]?.value)
+
+        val updated2 = contentRepo.findById(ContentId("cnt-2"))!!
+        assertEquals("VERB", updated2.customFields[ContentFieldId("partOfSpeech")]?.value)
+        assertEquals("USER_CONFIRMED", updated2.customFields[ContentFieldId("partOfSpeechReviewStatus")]?.value)
+
+        val updated3 = contentRepo.findById(ContentId("cnt-3"))!!
+        assertEquals("WORD", updated3.customFields[ContentFieldId("partOfSpeech")]?.value)
+        assertEquals("USER_CONFIRMED", updated3.customFields[ContentFieldId("partOfSpeechReviewStatus")]?.value)
+    }
+
+    @Test
+    fun `unlockPartOfSpeechReviewBatch removes USER_CONFIRMED status and leaves POS and learning progress unchanged`() {
+        val (appContext, _) = createFixture(contentCount = 2)
+        val contentRepo = appContext.contentRepository!!
+        val learningItemRepo = appContext.learningItemRepository!!
+        val service = ContentBrowserEditService(
+            contentRepository = contentRepo,
+            transactionRunner = requireNotNull(appContext.transactionRunner)
+        )
+
+        // Mark cnt-1 as USER_CONFIRMED with NOUN
+        val c1 = contentRepo.findById(ContentId("cnt-1"))!!
+        contentRepo.save(c1.copy(customFields = ContentCustomFields(setOf(
+            ContentCustomField(ContentFieldId("partOfSpeech"), "NOUN"),
+            ContentCustomField(ContentFieldId("partOfSpeechReviewStatus"), "USER_CONFIRMED")
+        ))))
+
+        val learningItemsBefore = learningItemRepo.findAll()
+
+        val result = service.unlockPartOfSpeechReviewBatch(listOf(ContentId("cnt-1"), ContentId("cnt-2")))
+        assertEquals(2, result.selectedCount)
+        assertEquals(1, result.changedCount) // only cnt-1 was USER_CONFIRMED
+
+        val unlocked1 = contentRepo.findById(ContentId("cnt-1"))!!
+        assertEquals("NOUN", unlocked1.customFields[ContentFieldId("partOfSpeech")]?.value)
+        assertNull(unlocked1.customFields[ContentFieldId("partOfSpeechReviewStatus")])
+
+        val untouched2 = contentRepo.findById(ContentId("cnt-2"))!!
+        assertNull(untouched2.customFields[ContentFieldId("partOfSpeechReviewStatus")])
+
+        val learningItemsAfter = learningItemRepo.findAll()
+        assertEquals(learningItemsBefore, learningItemsAfter)
     }
 }

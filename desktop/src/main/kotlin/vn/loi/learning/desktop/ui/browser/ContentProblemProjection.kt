@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.browser
 
 import java.nio.file.Files
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem
+import vn.loi.learning.application.partofspeech.PartOfSpeechNormalizer
 import vn.loi.learning.application.port.ContentMediaStorage
 
 enum class ContentProblem(val label: String) {
@@ -10,6 +11,9 @@ enum class ContentProblem(val label: String) {
     MISSING_ANSWER_AUDIO("Missing Answer Audio"),
     MISSING_EXAMPLE_AUDIO("Missing Example Audio"),
     MISSING_TRANSLATION_AUDIO("Missing Translation Audio"),
+    MISSING_ANY_AUDIO("Missing Any Audio"),
+    MISSING_POS("Missing POS"),
+    UNKNOWN_POS("Unknown/Custom POS"),
     INCOMPLETE_REQUIRED_TEXT("Incomplete")
 }
 
@@ -21,6 +25,9 @@ enum class ContentProblemFilter(val label: String) {
     MISSING_ANSWER_AUDIO("Missing Answer Audio"),
     MISSING_EXAMPLE_AUDIO("Missing Example Audio"),
     MISSING_TRANSLATION_AUDIO("Missing Translation Audio"),
+    MISSING_ANY_AUDIO("Missing Any Audio"),
+    MISSING_POS("Missing POS"),
+    UNKNOWN_POS("Unknown/Custom POS"),
     INCOMPLETE_REQUIRED_TEXT("Incomplete");
 
     val problem: ContentProblem?
@@ -62,11 +69,30 @@ fun ContentProblemProjection.summarize(contentIds: Set<String>): SelectedMediaCh
 object ContentProblemDetector {
     fun detect(item: PackageContentBrowserItem, media: MediaReferenceAvailability): Set<ContentProblem> =
         buildSet {
-            missing(item.imageRef, media)?.let { add(ContentProblem.MISSING_IMAGE) }
-            missing(item.questionAudioRef, media)?.let { add(ContentProblem.MISSING_QUESTION_AUDIO) }
-            missing(item.answerAudioRef, media)?.let { add(ContentProblem.MISSING_ANSWER_AUDIO) }
-            missing(item.exampleAudioRef, media)?.let { add(ContentProblem.MISSING_EXAMPLE_AUDIO) }
-            missing(item.translationAudioRef, media)?.let { add(ContentProblem.MISSING_TRANSLATION_AUDIO) }
+            missingBrokenMedia(item.imageRef, media)?.let { add(ContentProblem.MISSING_IMAGE) }
+
+            val missingQAudio = isMissingAudio(item.questionAudioRef, media)
+            val missingAAudio = isMissingAudio(item.answerAudioRef, media)
+            val missingEAudio = isMissingAudio(item.exampleAudioRef, media)
+            val missingTAudio = isMissingAudio(item.translationAudioRef, media)
+
+            if (missingQAudio) add(ContentProblem.MISSING_QUESTION_AUDIO)
+            if (missingAAudio) add(ContentProblem.MISSING_ANSWER_AUDIO)
+            if (missingEAudio) add(ContentProblem.MISSING_EXAMPLE_AUDIO)
+            if (missingTAudio) add(ContentProblem.MISSING_TRANSLATION_AUDIO)
+            if (missingQAudio || missingAAudio || missingEAudio || missingTAudio) {
+                add(ContentProblem.MISSING_ANY_AUDIO)
+            }
+
+            if (item.partOfSpeech.isNullOrBlank()) {
+                add(ContentProblem.MISSING_POS)
+            } else {
+                val canonical = PartOfSpeechNormalizer.canonicalize(item.partOfSpeech)
+                if (canonical == null || !canonical.known) {
+                    add(ContentProblem.UNKNOWN_POS)
+                }
+            }
+
             if (item.questionText.isBlank() || item.answerText.isBlank()) {
                 add(ContentProblem.INCOMPLETE_REQUIRED_TEXT)
             }
@@ -79,7 +105,12 @@ object ContentProblemDetector {
         items.associate { it.contentId.value to detect(it, media) }
     )
 
-    private fun missing(reference: String?, media: MediaReferenceAvailability): Unit? =
+    private fun isMissingAudio(reference: String?, media: MediaReferenceAvailability): Boolean {
+        if (reference.isNullOrBlank()) return true
+        return !media.exists(reference)
+    }
+
+    private fun missingBrokenMedia(reference: String?, media: MediaReferenceAvailability): Unit? =
         reference?.takeIf(String::isNotBlank)?.takeUnless(media::exists)?.let { Unit }
 }
 

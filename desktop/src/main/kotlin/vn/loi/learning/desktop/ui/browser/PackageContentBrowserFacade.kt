@@ -234,6 +234,40 @@ class PackageContentBrowserFacade(
         return result to reloaded
     }
 
+    fun updatePartOfSpeechMultiBatch(
+        updates: Map<String, String>,
+        installedPackageId: InstalledPackageId,
+        packageName: String
+    ): Pair<vn.loi.learning.application.contentpackaging.browser.BatchPartOfSpeechResult, PackageContentBrowserUiState> {
+        val service = editService
+            ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
+        val typedUpdates = updates.mapKeys { (k, _) -> ContentId(k) }
+        val result = service.updatePartOfSpeechMultiBatch(typedUpdates)
+        val reloaded = try {
+            loadForPackage(installedPackageId, packageName)
+        } catch (failure: Exception) {
+            throw CanonicalMutationCommittedException(updates.keys.firstOrNull() ?: "", "Batch POS", failure)
+        }
+        return result to reloaded
+    }
+
+    fun unlockPartOfSpeechReviewBatch(
+        contentIds: Set<String>,
+        installedPackageId: InstalledPackageId,
+        packageName: String
+    ): Pair<vn.loi.learning.application.contentpackaging.browser.BatchPartOfSpeechResult, PackageContentBrowserUiState> {
+        val service = editService
+            ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
+        val typedIds = contentIds.map(::ContentId)
+        val result = service.unlockPartOfSpeechReviewBatch(typedIds)
+        val reloaded = try {
+            loadForPackage(installedPackageId, packageName)
+        } catch (failure: Exception) {
+            throw CanonicalMutationCommittedException(contentIds.firstOrNull() ?: "", "Unlock POS", failure)
+        }
+        return result to reloaded
+    }
+
     fun repairMediaReferences(
         installedPackageId: InstalledPackageId,
         packageName: String,

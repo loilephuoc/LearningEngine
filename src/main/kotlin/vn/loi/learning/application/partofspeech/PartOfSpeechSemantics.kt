@@ -101,7 +101,7 @@ object PartOfSpeechNormalizer {
     val knownCatalog: Set<String> = setOf(
         "NOUN", "VERB", "ADJECTIVE", "ADVERB", "PREPOSITION", "PRONOUN",
         "CONJUNCTION", "INTERJECTION", "DETERMINER", "ARTICLE", "AUXILIARY",
-        "MODAL", "PHRASAL VERB", "PHRASE", "IDIOM", "COLLOCATION", "NUMBER",
+        "MODAL", "NOUN PHRASE", "PHRASAL VERB", "PHRASE", "IDIOM", "COLLOCATION", "NUMBER",
         "ABBREVIATION", "PREFIX", "SUFFIX", "WORD"
     )
 
@@ -353,13 +353,14 @@ class PartOfSpeechSemanticRegistry(
             "ARTICLE" to PosColorFamily.SKY,
             "AUXILIARY" to PosColorFamily.EMERALD,
             "MODAL" to PosColorFamily.LIME,
+            "NOUN PHRASE" to PosColorFamily.TURQUOISE,
             "PHRASAL VERB" to PosColorFamily.DEEP_GREEN,
             "PHRASE" to PosColorFamily.VIOLET,
             "IDIOM" to PosColorFamily.FUCHSIA,
             "COLLOCATION" to PosColorFamily.PINK,
             "NUMBER" to PosColorFamily.SLATE,
             "ABBREVIATION" to PosColorFamily.BROWN,
-            "PREFIX" to PosColorFamily.TURQUOISE,
+            "PREFIX" to PosColorFamily.CORAL,
             "SUFFIX" to PosColorFamily.CORAL,
             "WORD" to PosColorFamily.NEUTRAL
         ).mapIndexed { index, (canonical, family) ->

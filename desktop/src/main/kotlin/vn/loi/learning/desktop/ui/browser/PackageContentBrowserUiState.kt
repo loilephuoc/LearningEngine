@@ -54,7 +54,9 @@ data class PackageContentBrowserUiState(
     val pendingAction: PackageBrowserPendingAction? = null,
     val canUndoDelete: Boolean = false,
     val undoDeleteLabel: String? = null,
-    val isCreateSubmitting: Boolean = false
+    val isCreateSubmitting: Boolean = false,
+    val posReviewState: vn.loi.learning.desktop.ui.browser.posreview.PosBatchReviewState? = null,
+    val contentMaintenanceExportState: vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportState? = null
 ) {
     val totalCount: Int get() = allItems.size
 

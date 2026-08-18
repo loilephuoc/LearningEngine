@@ -37,5 +37,6 @@ data class PackageContentBrowserItem(
     val learningItemIds: List<LearningItemId>,
     val learningModes: List<LearningMode>,
     val tags: Set<String>,
-    val searchableText: String
+    val searchableText: String,
+    val partOfSpeechReviewStatus: String? = null
 )

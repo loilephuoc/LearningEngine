@@ -279,6 +279,33 @@ fun LibraryScreen(
                             packageBrowserUiState.packageName
                         )
                     },
+                    // POS Review callbacks
+                    onOpenPosReview = { contentLibraryViewModel.openPosReview() },
+                    onSelectPosReviewScope = contentLibraryViewModel::setPosReviewScope,
+                    onTogglePosReviewRowSelection = contentLibraryViewModel::togglePosReviewRowSelection,
+                    onTogglePosReviewAllFiltered = contentLibraryViewModel::togglePosReviewAllFiltered,
+                    onClearPosReviewSelection = contentLibraryViewModel::clearPosReviewSelection,
+                    onUpdatePosReviewRowNewPos = contentLibraryViewModel::updatePosReviewRowNewPos,
+                    onAnalyzePosReview = contentLibraryViewModel::analyzePosReview,
+                    onResetPosReviewDrafts = contentLibraryViewModel::resetPosReviewDrafts,
+                    onBatchSetPosReviewSelectedPos = contentLibraryViewModel::batchSetPosReviewSelectedPos,
+                    onBatchSetPosReviewFilteredPos = contentLibraryViewModel::batchSetPosReviewFilteredPos,
+                    onPosReviewSearchQueryChanged = contentLibraryViewModel::setPosReviewSearchQuery,
+                    onPosReviewStatusFilterChanged = contentLibraryViewModel::setPosReviewStatusFilter,
+                    onRequestUnlockPosReviewSelected = contentLibraryViewModel::requestUnlockPosReviewSelected,
+                    onCancelUnlockPosReviewConfirmation = contentLibraryViewModel::cancelUnlockPosReviewConfirmation,
+                    onConfirmUnlockPosReviewSelected = contentLibraryViewModel::confirmUnlockPosReviewSelected,
+                    onRequestApplyPosReview = contentLibraryViewModel::requestApplyPosReview,
+                    onCancelApplyPosReview = contentLibraryViewModel::cancelApplyPosReview,
+                    onConfirmApplyPosReview = contentLibraryViewModel::confirmApplyPosReview,
+                    onClosePosReview = contentLibraryViewModel::closePosReview,
+                    // Content Maintenance Export callbacks
+                    onOpenContentMaintenanceExport = { contentLibraryViewModel.openContentMaintenanceExport() },
+                    onSelectContentMaintenanceExportScope = contentLibraryViewModel::setContentMaintenanceExportScope,
+                    onTargetExportDirectoryChanged = contentLibraryViewModel::setExportTargetDirectory,
+                    onTargetExportFileNameChanged = contentLibraryViewModel::setExportFileName,
+                    onExecuteContentMaintenanceExport = contentLibraryViewModel::executeContentMaintenanceExport,
+                    onCloseContentMaintenanceExport = contentLibraryViewModel::closeContentMaintenanceExport,
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 )
             } else {

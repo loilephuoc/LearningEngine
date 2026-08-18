@@ -37,6 +37,7 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
 import java.awt.datatransfer.UnsupportedFlavorException
+import vn.loi.learning.application.partofspeech.PartOfSpeechNormalizer
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
@@ -1176,7 +1177,15 @@ private fun PosDropdownSelector(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val posOptions = listOf("WORD", "NOUN", "VERB", "ADJECTIVE", "ADVERB", "PHRASE")
+    val canonicalCatalog = remember { PartOfSpeechNormalizer.knownCatalog.sorted() }
+    val posOptions = remember(selectedPos) {
+        val trimmed = selectedPos.trim()
+        if (trimmed.isNotBlank() && trimmed !in canonicalCatalog) {
+            listOf(trimmed) + canonicalCatalog
+        } else {
+            canonicalCatalog
+        }
+    }
 
     Card(
         shape = LERadius.md,

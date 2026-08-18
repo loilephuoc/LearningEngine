@@ -95,6 +95,31 @@ fun ContentStudioScreen(
     onCopyQuestion: ((String) -> Unit)? = null,
     onCopyAnswer: ((String) -> Unit)? = null,
     onOpenImageReuseReview: (() -> Unit)? = null,
+    onOpenPosReview: (() -> Unit)? = null,
+    onSelectPosReviewScope: ((vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope) -> Unit)? = null,
+    onTogglePosReviewRowSelection: ((String) -> Unit)? = null,
+    onTogglePosReviewAllFiltered: (() -> Unit)? = null,
+    onClearPosReviewSelection: (() -> Unit)? = null,
+    onUpdatePosReviewRowNewPos: ((String, String) -> Unit)? = null,
+    onAnalyzePosReview: (() -> Unit)? = null,
+    onResetPosReviewDrafts: (() -> Unit)? = null,
+    onBatchSetPosReviewSelectedPos: ((String) -> Unit)? = null,
+    onBatchSetPosReviewFilteredPos: ((String) -> Unit)? = null,
+    onPosReviewSearchQueryChanged: ((String) -> Unit)? = null,
+    onPosReviewStatusFilterChanged: ((vn.loi.learning.desktop.ui.browser.posreview.PosReviewRowStatus) -> Unit)? = null,
+    onRequestUnlockPosReviewSelected: (() -> Unit)? = null,
+    onCancelUnlockPosReviewConfirmation: (() -> Unit)? = null,
+    onConfirmUnlockPosReviewSelected: (() -> Unit)? = null,
+    onRequestApplyPosReview: (() -> Unit)? = null,
+    onCancelApplyPosReview: (() -> Unit)? = null,
+    onConfirmApplyPosReview: (() -> Unit)? = null,
+    onClosePosReview: (() -> Unit)? = null,
+    onOpenContentMaintenanceExport: (() -> Unit)? = null,
+    onSelectContentMaintenanceExportScope: ((vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope) -> Unit)? = null,
+    onTargetExportDirectoryChanged: ((String) -> Unit)? = null,
+    onTargetExportFileNameChanged: ((String) -> Unit)? = null,
+    onExecuteContentMaintenanceExport: (() -> Unit)? = null,
+    onCloseContentMaintenanceExport: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val playbackCoordinator = remember(contentMediaStorage) {
@@ -181,6 +206,8 @@ fun ContentStudioScreen(
             onDeleteClick = { onRequestDelete?.invoke() },
             onUndoDeleteClick = { onUndoDelete?.invoke() },
             onImageReuseReviewClick = { onOpenImageReuseReview?.invoke() },
+            onPosReviewClick = { onOpenPosReview?.invoke() },
+            onExportJsonClick = { onOpenContentMaintenanceExport?.invoke() },
             canUndoDelete = uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem,
             isCreateSubmitting = uiState.isCreateSubmitting,
             deleteTargetCount = uiState.selectedContentIds.size
@@ -206,6 +233,8 @@ fun ContentStudioScreen(
                     onHighlightSelected = onHighlightSelected,
                     onRemoveHighlightSelected = onRemoveHighlightSelected,
                     onCheckSelectedMedia = onCheckSelectedMedia,
+                    onPosReviewSelected = { onOpenPosReview?.invoke() },
+                    onExportJsonSelected = { onOpenContentMaintenanceExport?.invoke() },
                     onQueryChanged = onQueryChanged,
                     onClearQuery = onClearQuery,
                     onLessonFilterChanged = onLessonFilterChanged,
@@ -464,6 +493,55 @@ fun ContentStudioScreen(
             }
         )
     }
+
+    uiState.posReviewState?.let { posState ->
+        val scopes = mapOf(
+            vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.ALL_ITEMS to uiState.allItems.size,
+            vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.SELECTED_ITEMS to uiState.selectedContentIds.size,
+            vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.CURRENT_SEARCH_RESULTS to (if (uiState.appliedQuery.isBlank()) uiState.allItems.size else uiState.allItems.count { it.searchableText.contains(uiState.appliedQuery.lowercase()) }),
+            vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.CURRENT_FILTER_RESULTS to uiState.filteredItems.size
+        )
+        vn.loi.learning.desktop.ui.browser.posreview.PosBatchReviewDialog(
+            state = posState,
+            availableScopes = scopes,
+            onSelectScope = { scope -> onSelectPosReviewScope?.invoke(scope) },
+            onToggleRowSelection = { id -> onTogglePosReviewRowSelection?.invoke(id) },
+            onToggleAllFiltered = { onTogglePosReviewAllFiltered?.invoke() },
+            onClearSelection = { onClearPosReviewSelection?.invoke() },
+            onUpdateRowNewPos = { id, pos -> onUpdatePosReviewRowNewPos?.invoke(id, pos) },
+            onAnalyzePos = { onAnalyzePosReview?.invoke() },
+            onResetDrafts = { onResetPosReviewDrafts?.invoke() },
+            onBatchSetSelectedPos = { pos -> onBatchSetPosReviewSelectedPos?.invoke(pos) },
+            onBatchSetFilteredPos = { pos -> onBatchSetPosReviewFilteredPos?.invoke(pos) },
+            onSearchQueryChanged = { q -> onPosReviewSearchQueryChanged?.invoke(q) },
+            onStatusFilterChanged = { f -> onPosReviewStatusFilterChanged?.invoke(f) },
+            onRequestUnlockSelected = { onRequestUnlockPosReviewSelected?.invoke() },
+            onCancelUnlockConfirmation = { onCancelUnlockPosReviewConfirmation?.invoke() },
+            onConfirmUnlockSelected = { onConfirmUnlockPosReviewSelected?.invoke() },
+            onRequestApply = { onRequestApplyPosReview?.invoke() },
+            onCancelApplyConfirmation = { onCancelApplyPosReview?.invoke() },
+            onConfirmApply = { onConfirmApplyPosReview?.invoke() },
+            onDismiss = { onClosePosReview?.invoke() }
+        )
+    }
+
+    uiState.contentMaintenanceExportState?.let { exportState ->
+        val scopes = mapOf(
+            vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.CURRENT_FILTER_RESULTS to uiState.filteredItems.size,
+            vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.SELECTED_ITEMS to uiState.selectedContentIds.size,
+            vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.CURRENT_SEARCH_RESULTS to (if (uiState.appliedQuery.isBlank()) uiState.allItems.size else uiState.allItems.count { it.searchableText.contains(uiState.appliedQuery.lowercase()) }),
+            vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.ALL_ITEMS to uiState.allItems.size
+        )
+        vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportDialog(
+            state = exportState,
+            availableScopes = scopes,
+            onSelectScope = { scope -> onSelectContentMaintenanceExportScope?.invoke(scope) },
+            onTargetDirectoryChanged = { dir -> onTargetExportDirectoryChanged?.invoke(dir) },
+            onTargetFileNameChanged = { name -> onTargetExportFileNameChanged?.invoke(name) },
+            onExecuteExport = { onExecuteContentMaintenanceExport?.invoke() },
+            onDismiss = { onCloseContentMaintenanceExport?.invoke() }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -483,6 +561,8 @@ private fun StudioTopBar(
     onDeleteClick: () -> Unit,
     onUndoDeleteClick: () -> Unit,
     onImageReuseReviewClick: (() -> Unit)? = null,
+    onPosReviewClick: (() -> Unit)? = null,
+    onExportJsonClick: (() -> Unit)? = null,
     canUndoDelete: Boolean,
     isCreateSubmitting: Boolean,
     deleteTargetCount: Int
@@ -546,6 +626,16 @@ private fun StudioTopBar(
                         text = "Image Reuse Review",
                         onClick = { onImageReuseReviewClick?.invoke() },
                         icon = LEIcons.Image,
+                        enabled = !isCreatingNewItem
+                    )
+                    LESecondaryButton(
+                        text = "POS Review",
+                        onClick = { onPosReviewClick?.invoke() },
+                        enabled = !isCreatingNewItem
+                    )
+                    LESecondaryButton(
+                        text = "Export JSON",
+                        onClick = { onExportJsonClick?.invoke() },
                         enabled = !isCreatingNewItem
                     )
                     if (isCreatingNewItem) {

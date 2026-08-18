@@ -155,7 +155,8 @@ class PackageContentBrowserQueryService(
                 learningItemIds = learningItemIds,
                 learningModes = learningModes,
                 tags = content.metadata.tags,
-                searchableText = searchableText
+                searchableText = searchableText,
+                partOfSpeechReviewStatus = content.customFields[vn.loi.learning.domain.content.model.ContentFieldId("partOfSpeechReviewStatus")]?.value
             )
         }
     }

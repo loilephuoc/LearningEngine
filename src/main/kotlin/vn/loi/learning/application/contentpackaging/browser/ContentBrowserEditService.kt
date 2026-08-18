@@ -348,27 +348,54 @@ class ContentBrowserEditService(
         return updated
     }
 
-    /** Atomically updates only the canonical partOfSpeech custom field for the requested contents. */
+    /** Atomically updates only the canonical partOfSpeech custom field for the requested contents with a single POS value. */
     fun updatePartOfSpeechBatch(
         contentIds: Collection<ContentId>,
-        partOfSpeech: String
+        partOfSpeech: String,
+        markUserConfirmed: Boolean = true
+    ): BatchPartOfSpeechResult =
+        updatePartOfSpeechMultiBatch(contentIds.associateWith { partOfSpeech }, markUserConfirmed)
+
+    /**
+     * Atomically updates only the canonical partOfSpeech custom field for the requested contents
+     * with individual POS values per ContentId, and atomically sets partOfSpeechReviewStatus = USER_CONFIRMED.
+     */
+    fun updatePartOfSpeechMultiBatch(
+        updates: Map<ContentId, String>,
+        markUserConfirmed: Boolean = true
     ): BatchPartOfSpeechResult {
-        val requestedIds = contentIds.distinct()
+        val requestedIds = updates.keys.distinct()
         require(requestedIds.isNotEmpty()) { "At least one ContentId is required for Batch POS." }
         val existing = contentRepository.findByIds(requestedIds)
         val existingById = existing.associateBy(Content::id)
         val sanitized = requestedIds.mapNotNull(existingById::get)
         require(sanitized.isNotEmpty()) { "No selected Content exists for Batch POS." }
-        val target = partOfSpeech.trim()
-        val changed = sanitized.filter { content ->
-            content.customFields[ContentFieldId("partOfSpeech")]?.value.orEmpty() != target
+
+        val posFieldId = ContentFieldId("partOfSpeech")
+        val statusFieldId = ContentFieldId("partOfSpeechReviewStatus")
+        val changed = mutableListOf<Content>()
+        val updated = mutableListOf<Content>()
+
+        for (content in sanitized) {
+            val target = updates[content.id]?.trim().orEmpty()
+            val currentPos = content.customFields[posFieldId]?.value.orEmpty().trim()
+
+            if (currentPos != target) {
+                val targetStatus = if (markUserConfirmed) "USER_CONFIRMED" else content.customFields[statusFieldId]?.value
+                changed += content
+                updated += content.copy(
+                    customFields = updatePartOfSpeech(
+                        existing = content.customFields,
+                        partOfSpeech = target,
+                        reviewStatus = targetStatus
+                    )
+                )
+            }
         }
-        val updated = changed.map { content ->
-            content.copy(customFields = updatePartOfSpeech(content.customFields, target))
-        }
+
         if (updated.isNotEmpty()) {
             val transaction = requireNotNull(transactionRunner) {
-                "Atomic transaction support is required for Batch POS."
+               "Atomic transaction support is required for Batch POS."
             }
             try {
                 transaction.runInTransaction { contentRepository.saveAll(updated) }
@@ -385,8 +412,65 @@ class ContentBrowserEditService(
         }
         return BatchPartOfSpeechResult(
             selectedCount = sanitized.size,
-            changedCount = changed.size,
-            unchangedCount = sanitized.size - changed.size,
+            changedCount = updated.size,
+            unchangedCount = sanitized.size - updated.size,
+            contentIds = sanitized.mapTo(linkedSetOf(), Content::id)
+        )
+    }
+
+    /**
+     * Atomically clears USER_CONFIRMED review authority for the requested contents,
+     * allowing them to be evaluated by automatic POS analyzers again.
+     */
+    fun unlockPartOfSpeechReviewBatch(
+        contentIds: Collection<ContentId>
+    ): BatchPartOfSpeechResult {
+        val requestedIds = contentIds.distinct()
+        require(requestedIds.isNotEmpty()) { "At least one ContentId is required to unlock POS review." }
+        val existing = contentRepository.findByIds(requestedIds)
+        val existingById = existing.associateBy(Content::id)
+        val sanitized = requestedIds.mapNotNull(existingById::get)
+        require(sanitized.isNotEmpty()) { "No selected Content exists to unlock POS review." }
+
+        val posFieldId = ContentFieldId("partOfSpeech")
+        val statusFieldId = ContentFieldId("partOfSpeechReviewStatus")
+        val changed = mutableListOf<Content>()
+        val updated = mutableListOf<Content>()
+
+        for (content in sanitized) {
+            val currentStatus = content.customFields[statusFieldId]?.value.orEmpty().trim()
+            if (currentStatus == "USER_CONFIRMED") {
+                changed += content
+                val currentPos = content.customFields[posFieldId]?.value.orEmpty()
+                updated += content.copy(
+                    customFields = updatePartOfSpeech(
+                        existing = content.customFields,
+                        partOfSpeech = currentPos,
+                        reviewStatus = "UNREVIEWED"
+                    )
+                )
+            }
+        }
+
+        if (updated.isNotEmpty()) {
+            val transaction = requireNotNull(transactionRunner) {
+                "Atomic transaction support is required to unlock POS review."
+            }
+            try {
+                transaction.runInTransaction { contentRepository.saveAll(updated) }
+            } catch (failure: Throwable) {
+                try {
+                    contentRepository.saveAll(changed)
+                } catch (rollbackFailure: Throwable) {
+                    failure.addSuppressed(rollbackFailure)
+                }
+                throw failure
+            }
+        }
+        return BatchPartOfSpeechResult(
+            selectedCount = sanitized.size,
+            changedCount = updated.size,
+            unchangedCount = sanitized.size - updated.size,
             contentIds = sanitized.mapTo(linkedSetOf(), Content::id)
         )
     }
@@ -686,18 +770,21 @@ class ContentBrowserEditService(
 
     private fun updatePartOfSpeech(
         existing: ContentCustomFields,
-        partOfSpeech: String
+        partOfSpeech: String,
+        reviewStatus: String? = null
     ): ContentCustomFields {
         val posFieldId = ContentFieldId("partOfSpeech")
-        val existingOtherFields = existing.fields.filter { it.id != posFieldId }.toSet()
+        val statusFieldId = ContentFieldId("partOfSpeechReviewStatus")
+        var existingOtherFields = existing.fields.filter { it.id != posFieldId && it.id != statusFieldId }.toSet()
 
-        return if (partOfSpeech.isBlank()) {
-            ContentCustomFields(existingOtherFields)
-        } else {
-            ContentCustomFields(
-                existingOtherFields + ContentCustomField(id = posFieldId, value = partOfSpeech)
-            )
+        if (partOfSpeech.isNotBlank()) {
+            existingOtherFields = existingOtherFields + ContentCustomField(id = posFieldId, value = partOfSpeech)
         }
+        if (reviewStatus != null && reviewStatus != "UNREVIEWED" && reviewStatus.isNotBlank()) {
+            existingOtherFields = existingOtherFields + ContentCustomField(id = statusFieldId, value = reviewStatus)
+        }
+
+        return ContentCustomFields(existingOtherFields)
     }
 
     /**

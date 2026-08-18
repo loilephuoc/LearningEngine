@@ -1451,6 +1451,464 @@ class ContentLibraryViewModel(
         )
     }
 
+    fun openPosReview(initialScope: vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope? = null) {
+        val current = packageBrowserUiState ?: return
+        val resolvedScope = initialScope ?: when {
+            current.selectedContentIds.size > 1 -> vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.SELECTED_ITEMS
+            current.problemFilter != vn.loi.learning.desktop.ui.browser.ContentProblemFilter.NONE -> vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.CURRENT_FILTER_RESULTS
+            current.appliedQuery.isNotBlank() -> vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.CURRENT_SEARCH_RESULTS
+            else -> vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.ALL_ITEMS
+        }
+        val items = resolveItemsForPosReviewScope(current, resolvedScope)
+        val rows = buildPosReviewRows(items)
+        packageBrowserUiState = current.copy(
+            posReviewState = vn.loi.learning.desktop.ui.browser.posreview.PosBatchReviewState(
+                scope = resolvedScope,
+                currentRows = rows
+            )
+        )
+    }
+
+    fun closePosReview() {
+        packageBrowserUiState = packageBrowserUiState?.copy(posReviewState = null)
+    }
+
+    fun setPosReviewScope(scope: vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope) {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        val items = resolveItemsForPosReviewScope(current, scope)
+        val rows = buildPosReviewRows(items)
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.copy(
+                scope = scope,
+                currentRows = rows,
+                selectedRowIds = emptySet(),
+                searchQuery = "",
+                statusFilter = vn.loi.learning.desktop.ui.browser.posreview.PosReviewRowStatus.ALL,
+                showConfirmApply = false,
+                errorMessage = null
+            )
+        )
+    }
+
+    fun togglePosReviewRowSelection(contentId: String) {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.toggleRowSelection(contentId)
+        )
+    }
+
+    fun togglePosReviewAllFiltered() {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.toggleAllFiltered()
+        )
+    }
+
+    fun clearPosReviewSelection() {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.clearSelection()
+        )
+    }
+
+    fun updatePosReviewRowNewPos(contentId: String, newPos: String) {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.updateRowNewPos(contentId, newPos)
+        )
+    }
+
+    fun analyzePosReview() {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.analyzeRows()
+        )
+    }
+
+    fun resetPosReviewDrafts() {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.resetDrafts()
+        )
+    }
+
+    fun batchSetPosReviewSelectedPos(newPos: String) {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.batchSetSelectedPos(newPos)
+        )
+    }
+
+    fun batchSetPosReviewFilteredPos(newPos: String) {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.batchSetFilteredPos(newPos)
+        )
+    }
+
+    fun setPosReviewSearchQuery(query: String) {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.copy(searchQuery = query)
+        )
+    }
+
+    fun setPosReviewStatusFilter(filter: vn.loi.learning.desktop.ui.browser.posreview.PosReviewRowStatus) {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.copy(statusFilter = filter)
+        )
+    }
+
+    fun requestApplyPosReview() {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        if (reviewState.changedCount > 0 && !reviewState.isSubmitting) {
+            packageBrowserUiState = current.copy(
+                posReviewState = reviewState.copy(showConfirmApply = true)
+            )
+        }
+    }
+
+    fun cancelApplyPosReview() {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.copy(showConfirmApply = false)
+        )
+    }
+
+    fun confirmApplyPosReview() {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        if (reviewState.isSubmitting || reviewState.changedCount == 0) return
+
+        val updates = reviewState.currentRows
+            .filter { it.isChanged }
+            .associate { it.contentId to it.newPos }
+
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.copy(isSubmitting = true, showConfirmApply = false)
+        )
+
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.updatePartOfSpeechMultiBatch(
+                    updates = updates,
+                    installedPackageId = current.installedPackageId,
+                    packageName = current.packageName
+                )
+            },
+            onSuccess = { (result, reloaded) ->
+                val projected = withProblemProjection(reloaded).copy(
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    imageStatusFilter = current.imageStatusFilter,
+                    sortOption = current.sortOption,
+                    problemFilter = current.problemFilter,
+                    selectedContentIds = current.selectedContentIds,
+                    selectionAnchorContentId = current.selectionAnchorContentId,
+                    highlightedContentIds = current.highlightedContentIds,
+                    centerSelectedRowRequest = current.centerSelectedRowRequest,
+                    posReviewState = null,
+                    batchPartOfSpeechResult = "POS Review: ${result.changedCount} items updated (${result.unchangedCount} unchanged)"
+                )
+                val primary = projected.allItems.firstOrNull { it.contentId.value == current.selectedContentId }
+                    ?: projected.filteredItems.firstOrNull()
+                val draft = primary?.toDraftEdits()
+                packageBrowserUiState = projected.copy(
+                    selectedContentId = primary?.contentId?.value,
+                    editingContentId = primary?.contentId?.value,
+                    loadedBaselineDraft = draft,
+                    draftEdits = draft
+                )
+                uiState = uiState.copy(importError = null)
+                onContentDataChanged?.invoke()
+            },
+            onFailure = { failure ->
+                val latest = packageBrowserUiState
+                packageBrowserUiState = latest?.copy(
+                    posReviewState = latest.posReviewState?.copy(
+                        isSubmitting = false,
+                        errorMessage = "Batch POS apply failed: ${failure.message}"
+                    )
+                )
+                uiState = uiState.copy(importError = "Batch POS apply failed: ${failure.message}")
+            }
+        )
+    }
+
+    fun requestUnlockPosReviewSelected() {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        if (reviewState.canUnlockSelected) {
+            packageBrowserUiState = current.copy(
+                posReviewState = reviewState.copy(showConfirmUnlock = true)
+            )
+        }
+    }
+
+    fun cancelUnlockPosReviewConfirmation() {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.copy(showConfirmUnlock = false)
+        )
+    }
+
+    fun confirmUnlockPosReviewSelected() {
+        val current = packageBrowserUiState ?: return
+        val reviewState = current.posReviewState ?: return
+        val confirmedSelectedIds = reviewState.selectedRowIds
+            .filter { id -> reviewState.currentRows.any { it.contentId == id && it.isConfirmed } }
+            .toSet()
+        if (confirmedSelectedIds.isEmpty() || reviewState.isSubmitting) return
+
+        packageBrowserUiState = current.copy(
+            posReviewState = reviewState.copy(isSubmitting = true, showConfirmUnlock = false)
+        )
+
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.unlockPartOfSpeechReviewBatch(
+                    contentIds = confirmedSelectedIds,
+                    installedPackageId = current.installedPackageId,
+                    packageName = current.packageName
+                )
+            },
+            onSuccess = { (result, reloaded) ->
+                val projected = withProblemProjection(reloaded).copy(
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    imageStatusFilter = current.imageStatusFilter,
+                    sortOption = current.sortOption,
+                    problemFilter = current.problemFilter,
+                    selectedContentIds = current.selectedContentIds,
+                    selectionAnchorContentId = current.selectionAnchorContentId,
+                    highlightedContentIds = current.highlightedContentIds,
+                    centerSelectedRowRequest = current.centerSelectedRowRequest
+                )
+                val primary = projected.allItems.firstOrNull { it.contentId.value == current.selectedContentId }
+                    ?: projected.filteredItems.firstOrNull()
+                val draft = primary?.toDraftEdits()
+                val reloadedItems = resolveItemsForPosReviewScope(projected, reviewState.scope)
+                val newRows = buildPosReviewRows(reloadedItems)
+                packageBrowserUiState = projected.copy(
+                    selectedContentId = primary?.contentId?.value,
+                    editingContentId = primary?.contentId?.value,
+                    loadedBaselineDraft = draft,
+                    draftEdits = draft,
+                    posReviewState = reviewState.copy(
+                        currentRows = newRows,
+                        isSubmitting = false,
+                        showConfirmUnlock = false,
+                        selectedRowIds = emptySet()
+                    ),
+                    batchPartOfSpeechResult = "Unlocked ${result.changedCount} POS review item(s)"
+                )
+                uiState = uiState.copy(importError = null)
+                onContentDataChanged?.invoke()
+            },
+            onFailure = { failure ->
+                val latest = packageBrowserUiState
+                packageBrowserUiState = latest?.copy(
+                    posReviewState = latest.posReviewState?.copy(
+                        isSubmitting = false,
+                        showConfirmUnlock = false,
+                        errorMessage = "Unlock POS failed: ${failure.message}"
+                    )
+                )
+                uiState = uiState.copy(importError = "Unlock POS failed: ${failure.message}")
+            }
+        )
+    }
+
+    private fun resolveItemsForPosReviewScope(
+        state: vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState,
+        scope: vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope
+    ): List<vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem> =
+        when (scope) {
+            vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.ALL_ITEMS ->
+                state.allItems
+            vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.SELECTED_ITEMS ->
+                state.allItems.filter { it.contentId.value in state.selectedContentIds }
+            vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.CURRENT_SEARCH_RESULTS ->
+                if (state.appliedQuery.isBlank()) state.allItems
+                else state.allItems.filter { it.searchableText.contains(state.appliedQuery.lowercase()) }
+            vn.loi.learning.desktop.ui.browser.posreview.PosReviewScope.CURRENT_FILTER_RESULTS ->
+                state.filteredItems
+        }
+
+    private fun buildPosReviewRows(
+        items: List<vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem>
+    ): List<vn.loi.learning.desktop.ui.browser.posreview.PosReviewRowItem> =
+        items.map { item ->
+            val pos = item.partOfSpeech.orEmpty()
+            val canonical = vn.loi.learning.application.partofspeech.PartOfSpeechNormalizer.canonicalize(pos)
+            val authority = if (item.partOfSpeechReviewStatus?.equals("USER_CONFIRMED", ignoreCase = true) == true) {
+                vn.loi.learning.desktop.ui.browser.posreview.PosReviewAuthority.USER_CONFIRMED
+            } else {
+                vn.loi.learning.desktop.ui.browser.posreview.PosReviewAuthority.UNREVIEWED
+            }
+            vn.loi.learning.desktop.ui.browser.posreview.PosReviewRowItem(
+                contentId = item.contentId.value,
+                question = item.questionText,
+                answer = item.answerText,
+                translation = item.exampleTranslation.orEmpty(),
+                originalPos = pos,
+                newPos = pos,
+                isCustomOrUnknown = pos.isNotBlank() && (canonical == null || !canonical.known),
+                exampleText = item.exampleText,
+                pronunciation = item.pronunciation.orEmpty(),
+                reviewAuthority = authority
+            )
+        }
+
+    fun openContentMaintenanceExport(initialScope: vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope? = null) {
+        val current = packageBrowserUiState ?: return
+        val resolvedScope = initialScope ?: when {
+            current.problemFilter != vn.loi.learning.desktop.ui.browser.ContentProblemFilter.NONE ->
+                vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.CURRENT_FILTER_RESULTS
+            current.selectedContentIds.size > 1 ->
+                vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.SELECTED_ITEMS
+            current.appliedQuery.isNotBlank() ->
+                vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.CURRENT_SEARCH_RESULTS
+            else ->
+                vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.ALL_ITEMS
+        }
+        val defaultDir = System.getProperty("user.home") ?: "."
+        val fileName = vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExporter.generateSuggestedFileName(
+            packageName = current.packageName,
+            filter = current.problemFilter,
+            scope = resolvedScope
+        )
+        packageBrowserUiState = current.copy(
+            contentMaintenanceExportState = vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportState(
+                selectedScope = resolvedScope,
+                targetDirectory = defaultDir,
+                targetFileName = fileName
+            )
+        )
+    }
+
+    fun closeContentMaintenanceExport() {
+        packageBrowserUiState = packageBrowserUiState?.copy(contentMaintenanceExportState = null)
+    }
+
+    fun setContentMaintenanceExportScope(scope: vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope) {
+        val current = packageBrowserUiState ?: return
+        val exportState = current.contentMaintenanceExportState ?: return
+        val fileName = vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExporter.generateSuggestedFileName(
+            packageName = current.packageName,
+            filter = current.problemFilter,
+            scope = scope
+        )
+        packageBrowserUiState = current.copy(
+            contentMaintenanceExportState = exportState.copy(
+                selectedScope = scope,
+                targetFileName = fileName,
+                exportSuccessMessage = null,
+                errorMessage = null
+            )
+        )
+    }
+
+    fun setExportTargetDirectory(dir: String) {
+        val current = packageBrowserUiState ?: return
+        val exportState = current.contentMaintenanceExportState ?: return
+        packageBrowserUiState = current.copy(
+            contentMaintenanceExportState = exportState.copy(targetDirectory = dir)
+        )
+    }
+
+    fun setExportFileName(fileName: String) {
+        val current = packageBrowserUiState ?: return
+        val exportState = current.contentMaintenanceExportState ?: return
+        packageBrowserUiState = current.copy(
+            contentMaintenanceExportState = exportState.copy(targetFileName = fileName)
+        )
+    }
+
+    fun executeContentMaintenanceExport() {
+        val current = packageBrowserUiState ?: return
+        val exportState = current.contentMaintenanceExportState ?: return
+        val items = resolveItemsForExportScope(current, exportState.selectedScope)
+        if (items.isEmpty()) {
+            packageBrowserUiState = current.copy(
+                contentMaintenanceExportState = exportState.copy(errorMessage = "No items in selected scope to export.")
+            )
+            return
+        }
+
+        packageBrowserUiState = current.copy(
+            contentMaintenanceExportState = exportState.copy(isExporting = true, errorMessage = null)
+        )
+
+        taskRunner.run(
+            work = {
+                val targetFile = java.io.File(exportState.targetDirectory, exportState.targetFileName)
+                vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExporter.exportToFile(
+                    targetFile = targetFile,
+                    packageId = current.installedPackageId.value,
+                    packageName = current.packageName,
+                    scope = exportState.selectedScope,
+                    filter = current.problemFilter,
+                    items = items
+                )
+            },
+            onSuccess = { file ->
+                val latest = packageBrowserUiState
+                packageBrowserUiState = latest?.copy(
+                    contentMaintenanceExportState = latest.contentMaintenanceExportState?.copy(
+                        isExporting = false,
+                        exportSuccessMessage = "Exported ${items.size} items to ${file.name}",
+                        exportedFilePath = file.absolutePath
+                    )
+                )
+            },
+            onFailure = { failure ->
+                val latest = packageBrowserUiState
+                packageBrowserUiState = latest?.copy(
+                    contentMaintenanceExportState = latest.contentMaintenanceExportState?.copy(
+                        isExporting = false,
+                        errorMessage = "Export failed: ${failure.message}"
+                    )
+                )
+            }
+        )
+    }
+
+    private fun resolveItemsForExportScope(
+        state: vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState,
+        scope: vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope
+    ): List<vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem> =
+        when (scope) {
+            vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.ALL_ITEMS ->
+                state.allItems
+            vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.SELECTED_ITEMS ->
+                state.allItems.filter { it.contentId.value in state.selectedContentIds }
+            vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.CURRENT_SEARCH_RESULTS ->
+                if (state.appliedQuery.isBlank()) state.allItems
+                else state.allItems.filter { it.searchableText.contains(state.appliedQuery.lowercase()) }
+            vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportScope.CURRENT_FILTER_RESULTS ->
+                state.filteredItems
+        }
+
     fun updateDraftExampleText(value: String) {
         val current = packageBrowserUiState ?: return
         val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()

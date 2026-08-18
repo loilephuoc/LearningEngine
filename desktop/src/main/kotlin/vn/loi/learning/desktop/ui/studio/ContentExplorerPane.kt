@@ -95,6 +95,8 @@ fun ContentExplorerPane(
     onHighlightSelected: () -> Unit = {},
     onRemoveHighlightSelected: () -> Unit = {},
     onCheckSelectedMedia: () -> Unit = {},
+    onPosReviewSelected: (() -> Unit)? = null,
+    onExportJsonSelected: (() -> Unit)? = null,
     onQueryChanged: (String) -> Unit,
     onClearQuery: () -> Unit,
     onLessonFilterChanged: (String) -> Unit,
@@ -259,6 +261,8 @@ fun ContentExplorerPane(
                     onHighlightSelected = onHighlightSelected,
                     onRemoveHighlightSelected = onRemoveHighlightSelected,
                     onCheckSelectedMedia = onCheckSelectedMedia,
+                    onPosReviewSelected = onPosReviewSelected,
+                    onExportJsonSelected = onExportJsonSelected,
                     onClearSelection = onClearMultiSelection
                 )
             }
@@ -433,6 +437,8 @@ private fun MultiSelectionActions(
     onHighlightSelected: () -> Unit,
     onRemoveHighlightSelected: () -> Unit,
     onCheckSelectedMedia: () -> Unit,
+    onPosReviewSelected: (() -> Unit)? = null,
+    onExportJsonSelected: (() -> Unit)? = null,
     onClearSelection: () -> Unit
 ) {
     Column(
@@ -463,6 +469,20 @@ private fun MultiSelectionActions(
                 contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
                 modifier = Modifier.semantics { contentDescription = "Check media for $selectedCount selected items" }
             ) { Text("Check Selected Media", style = LETypography.caption) }
+            if (onPosReviewSelected != null) {
+                TextButton(
+                    onClick = onPosReviewSelected,
+                    contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
+                    modifier = Modifier.semantics { contentDescription = "POS Review for $selectedCount selected items" }
+                ) { Text("POS Review", style = LETypography.caption) }
+            }
+            if (onExportJsonSelected != null) {
+                TextButton(
+                    onClick = onExportJsonSelected,
+                    contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
+                    modifier = Modifier.semantics { contentDescription = "Export JSON for $selectedCount selected items" }
+                ) { Text("Export JSON", style = LETypography.caption) }
+            }
             TextButton(
                 onClick = onClearSelection,
                 contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)
