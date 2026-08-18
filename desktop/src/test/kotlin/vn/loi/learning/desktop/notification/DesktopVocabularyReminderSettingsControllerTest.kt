@@ -19,6 +19,7 @@ class DesktopVocabularyReminderSettingsControllerTest {
             listOf("1.5" to 1_500L, "2.5" to 2_500L, "4.2" to 4_200L, "12.75" to 12_750L, "60" to 60_000L).forEach { (text, millis) ->
                 val valid = assertIs<DesktopVocabularyReminderDraftValidation.Valid>(draft(minutes.toString(), text).validate(null))
                 assertEquals(minutes, valid.settings.intervalMinutes)
+                assertEquals(minutes * 60_000L, valid.settings.intervalMillis)
                 assertEquals(millis, valid.settings.displayDurationMillis)
                 assertEquals(java.time.LocalTime.of(22, 0), valid.settings.activeStart)
                 assertEquals(java.time.LocalTime.of(6, 30), valid.settings.activeEnd)
@@ -27,7 +28,40 @@ class DesktopVocabularyReminderSettingsControllerTest {
     }
 
     @Test
-    fun `draft rejects malformed nonpositive interval and duration outside bounds`() {
+    fun `draft accepts custom seconds intervals at or above minimum five seconds`() {
+        listOf("5" to 5_000L, "10" to 10_000L, "20" to 20_000L, "30" to 30_000L, "45" to 45_000L).forEach { (secText, millis) ->
+            val draft = DesktopVocabularyReminderDraft(
+                enabled = true,
+                selectedPackageId = null,
+                selectionMode = DesktopVocabularyReminderSelectionMode.RANDOM_ALL,
+                intervalValueText = secText,
+                intervalUnit = DesktopVocabularyReminderIntervalUnit.SECONDS,
+                activeStartText = "08:00",
+                activeEndText = "22:00",
+                displayDurationText = "8",
+                autoPlayPronunciation = false
+            )
+            val valid = assertIs<DesktopVocabularyReminderDraftValidation.Valid>(draft.validate(null))
+            assertEquals(millis, valid.settings.intervalMillis)
+        }
+    }
+
+    @Test
+    fun `draft rejects malformed nonpositive interval below minimum and duration outside bounds`() {
+        listOf("0", "-1", "NaN", "Infinity", "4").forEach {
+            val secondsDraft = DesktopVocabularyReminderDraft(
+                enabled = true,
+                selectedPackageId = null,
+                selectionMode = DesktopVocabularyReminderSelectionMode.RANDOM_ALL,
+                intervalValueText = it,
+                intervalUnit = DesktopVocabularyReminderIntervalUnit.SECONDS,
+                activeStartText = "08:00",
+                activeEndText = "22:00",
+                displayDurationText = "8",
+                autoPlayPronunciation = false
+            )
+            assertIs<DesktopVocabularyReminderDraftValidation.Invalid>(secondsDraft.validate(null))
+        }
         listOf("0", "-1", "NaN", "Infinity", "1.5").forEach {
             assertIs<DesktopVocabularyReminderDraftValidation.Invalid>(draft(it, "8").validate(null))
         }
@@ -51,6 +85,45 @@ class DesktopVocabularyReminderSettingsControllerTest {
         assertEquals(1, fixture.store.saves)
         assertEquals(420_000L, fixture.scheduler.lastDelay)
         assertEquals(1_500L, fixture.runtime.settings.displayDurationMillis)
+    }
+
+    @Test
+    fun `twenty second interval schedules twenty thousand milliseconds delay`() {
+        val fixture = Fixture()
+        fixture.runtime.start()
+        val secDraft = DesktopVocabularyReminderDraft(
+            enabled = true,
+            selectedPackageId = null,
+            selectionMode = DesktopVocabularyReminderSelectionMode.RANDOM_ALL,
+            intervalValueText = "20",
+            intervalUnit = DesktopVocabularyReminderIntervalUnit.SECONDS,
+            activeStartText = "08:00",
+            activeEndText = "22:00",
+            displayDurationText = "8",
+            autoPlayPronunciation = false
+        )
+        assertEquals(DesktopVocabularyReminderActionResult.Success, fixture.controller.apply(secDraft))
+        assertEquals(20_000L, fixture.scheduler.lastDelay)
+        assertEquals(20_000L, fixture.runtime.settings.intervalMillis)
+    }
+
+    @Test
+    fun `updatePopupLocation and resetPopupPosition update and persist correctly`() {
+        val fixture = Fixture()
+        val location = DesktopVocabularyReminderPopupLocation(
+            monitorId = "display-2",
+            normalizedX = 0.5,
+            normalizedY = 0.5,
+            customPosition = true
+        )
+        assertTrue(fixture.controller.updatePopupLocation(location))
+        assertEquals(location, fixture.runtime.settings.popupLocation)
+        assertEquals(1, fixture.store.saves)
+
+        assertTrue(fixture.controller.resetPopupPosition())
+        assertFalse(fixture.runtime.settings.popupLocation.customPosition)
+        assertEquals("display-2", fixture.runtime.settings.popupLocation.monitorId)
+        assertEquals(2, fixture.store.saves)
     }
 
     @Test

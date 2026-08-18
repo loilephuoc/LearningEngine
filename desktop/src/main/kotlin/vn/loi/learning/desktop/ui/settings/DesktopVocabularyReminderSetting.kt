@@ -40,6 +40,10 @@ import vn.loi.learning.desktop.notification.DesktopVocabularyReminderSelectionMo
 import vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettingsController
 import vn.loi.learning.domain.library.model.InstalledPackageId
 
+import androidx.compose.foundation.layout.Box
+import vn.loi.learning.desktop.notification.DesktopVocabularyReminderIntervalUnit
+import vn.loi.learning.desktop.notification.DesktopVocabularyReminderPopupPositioning
+
 @Composable
 fun DesktopVocabularyReminderSetting(controller: DesktopVocabularyReminderSettingsController) {
     var configuration by remember(controller) { mutableStateOf(controller.load()) }
@@ -61,7 +65,7 @@ fun DesktopVocabularyReminderSetting(controller: DesktopVocabularyReminderSettin
                 Column(Modifier.weight(1f)) {
                     Text("Desktop Vocabulary Reminder", fontWeight = FontWeight.Bold)
                     Text(
-                        buildSummary(settings.enabled, selectedPackage?.name, settings.selectedPackageId, settings.selectionMode.label(), settings.intervalMinutes, settings.pausedUntil),
+                        buildSummary(settings.enabled, selectedPackage?.name, settings.selectedPackageId, settings.selectionMode.label(), settings.intervalMillis, settings.pausedUntil),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -123,6 +127,9 @@ private fun ReminderConfigurationDialog(
 ) {
     var packageMenu by remember { mutableStateOf(false) }
     val selected = packages.firstOrNull { it.id == draft.selectedPackageId?.value }
+    val monitors = remember { DesktopVocabularyReminderPopupPositioning.enumerateMonitors() }
+    val currentMonitor = DesktopVocabularyReminderPopupPositioning.resolveMonitor(draft.popupLocation.monitorId, monitors)
+
     AlertDialog(
         onDismissRequest = onCancel,
         title = { Text("Desktop Vocabulary Reminder") },
@@ -160,12 +167,92 @@ private fun ReminderConfigurationDialog(
                         )
                     }
                 }
-                OutlinedTextField(draft.intervalText, { onDraftChanged(draft.copy(intervalText = it)) }, label = { Text("Show next vocabulary every (minutes)") }, singleLine = true)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(5, 10, 15, 30, 60).forEach { value ->
-                        FilterChip(draft.intervalText == value.toString(), { onDraftChanged(draft.copy(intervalText = value.toString())) }, { Text("$value min") })
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = draft.intervalValueText,
+                        onValueChange = { onDraftChanged(draft.copy(intervalValueText = it)) },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Show next vocabulary every") },
+                        singleLine = true
+                    )
+                    var unitMenu by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { unitMenu = true }) {
+                            Text(if (draft.intervalUnit == DesktopVocabularyReminderIntervalUnit.SECONDS) "Seconds ▼" else "Minutes ▼")
+                        }
+                        DropdownMenu(expanded = unitMenu, onDismissRequest = { unitMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Seconds") },
+                                onClick = {
+                                    unitMenu = false
+                                    onDraftChanged(draft.copy(intervalUnit = DesktopVocabularyReminderIntervalUnit.SECONDS))
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Minutes") },
+                                onClick = {
+                                    unitMenu = false
+                                    onDraftChanged(draft.copy(intervalUnit = DesktopVocabularyReminderIntervalUnit.MINUTES))
+                                }
+                            )
+                        }
                     }
                 }
+
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    FilterChip(
+                        selected = draft.intervalUnit == DesktopVocabularyReminderIntervalUnit.SECONDS && draft.intervalValueText == "30",
+                        onClick = { onDraftChanged(draft.copy(intervalValueText = "30", intervalUnit = DesktopVocabularyReminderIntervalUnit.SECONDS)) },
+                        label = { Text("30 sec") }
+                    )
+                    listOf(1, 5, 10, 15, 30, 60).forEach { value ->
+                        FilterChip(
+                            selected = draft.intervalUnit == DesktopVocabularyReminderIntervalUnit.MINUTES && draft.intervalValueText == value.toString(),
+                            onClick = { onDraftChanged(draft.copy(intervalValueText = value.toString(), intervalUnit = DesktopVocabularyReminderIntervalUnit.MINUTES)) },
+                            label = { Text("$value min") }
+                        )
+                    }
+                }
+
+                Text("Popup position", fontWeight = FontWeight.SemiBold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Monitor: ${currentMonitor.displayName}")
+                        if (draft.popupLocation.customPosition) {
+                            Text("Custom position saved", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        } else {
+                            Text("Default bottom-right", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (monitors.size > 1) {
+                            OutlinedButton(onClick = {
+                                val currentIdx = monitors.indexOfFirst { it.id == currentMonitor.id }.takeIf { it >= 0 } ?: 0
+                                val nextMonitor = monitors[(currentIdx + 1) % monitors.size]
+                                onDraftChanged(draft.copy(popupLocation = draft.popupLocation.copy(monitorId = nextMonitor.id)))
+                            }) {
+                                Text(if (monitors.size == 2) "Move monitor" else "Next monitor")
+                            }
+                        }
+                        if (draft.popupLocation.customPosition) {
+                            OutlinedButton(onClick = {
+                                onDraftChanged(draft.copy(popupLocation = draft.popupLocation.copy(customPosition = false, normalizedX = null, normalizedY = null)))
+                            }) {
+                                Text("Reset position")
+                            }
+                        }
+                    }
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(draft.activeStartText, { onDraftChanged(draft.copy(activeStartText = it)) }, Modifier.weight(1f), label = { Text("Active from (HH:mm)") }, singleLine = true)
                     OutlinedTextField(draft.activeEndText, { onDraftChanged(draft.copy(activeEndText = it)) }, Modifier.weight(1f), label = { Text("Active until (HH:mm)") }, singleLine = true)
@@ -210,11 +297,21 @@ internal fun DesktopVocabularyReminderSelectionMode.label() = when (this) {
     DesktopVocabularyReminderSelectionMode.MARKED_DIFFICULT -> "Marked difficult"
 }
 
-private fun buildSummary(enabled: Boolean, packageName: String?, packageId: InstalledPackageId?, mode: String, interval: Int, pausedUntil: Instant?): String = buildList {
+private fun buildSummary(enabled: Boolean, packageName: String?, packageId: InstalledPackageId?, mode: String, intervalMillis: Long, pausedUntil: Instant?): String = buildList {
     add(if (enabled) "Enabled" else "Disabled")
     add(packageName ?: packageId?.let { "Unavailable (${it.value})" } ?: "No package")
     add(mode)
-    add("Every $interval minutes")
+    val intervalSummary = when {
+        intervalMillis < 60_000L -> {
+            val sec = intervalMillis / 1_000L
+            if (sec == 1L) "Every 1 second" else "Every $sec seconds"
+        }
+        else -> {
+            val min = intervalMillis / 60_000L
+            if (min == 1L) "Every 1 minute" else "Every $min minutes"
+        }
+    }
+    add(intervalSummary)
     pausedUntil?.takeIf { it.isAfter(Instant.now()) }?.let {
         add("Paused until ${DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault()).format(it)}")
     }

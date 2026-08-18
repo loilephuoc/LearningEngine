@@ -18,7 +18,9 @@ sealed interface DesktopVocabularyReminderPopupState {
         val audioAvailable: Boolean,
         val audioPlaying: Boolean,
         val autoPlayPronunciation: Boolean,
-        val markedDifficult: Boolean
+        val markedDifficult: Boolean,
+        val popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation(),
+        val dragging: Boolean = false
     ) : DesktopVocabularyReminderPopupState
 
     data class FullImage(
@@ -72,9 +74,11 @@ class DesktopVocabularyReminderPopupController(
     private var remainingMillis = 0L
     private var deadlineMillis = 0L
     private var hovered = false
+    private var dragging = false
     private var audioPlaying = false
     private var autoPlayPronunciation = false
     private var markedDifficult = false
+    private var currentPopupLocation = DesktopVocabularyReminderPopupLocation()
     private var hideTask: DesktopVocabularyReminderScheduledTask? = null
     private val audioRegistration = audio.listen { playing ->
         uiDispatcher.dispatch {
@@ -97,7 +101,8 @@ class DesktopVocabularyReminderPopupController(
     override fun dispatch(
         candidate: DesktopVocabularyCandidate,
         displayDurationMillis: Long,
-        autoPlayPronunciation: Boolean
+        autoPlayPronunciation: Boolean,
+        popupLocation: DesktopVocabularyReminderPopupLocation
     ) {
         require(displayDurationMillis in DesktopVocabularyReminderSettings.MIN_DISPLAY_DURATION_MILLIS..
             DesktopVocabularyReminderSettings.MAX_DISPLAY_DURATION_MILLIS)
@@ -113,6 +118,8 @@ class DesktopVocabularyReminderPopupController(
                 currentGeneration = token
                 remainingMillis = displayDurationMillis
                 hovered = false
+                dragging = false
+                currentPopupLocation = popupLocation
                 this@DesktopVocabularyReminderPopupController.autoPlayPronunciation = autoPlayPronunciation
                 audioPlaying = this@DesktopVocabularyReminderPopupController.autoPlayPronunciation &&
                     candidate.primaryAudioReference != null
@@ -126,13 +133,37 @@ class DesktopVocabularyReminderPopupController(
         }
     }
 
+    fun dragStarted() = uiDispatcher.dispatch {
+        synchronized(lock) {
+            if (!active.get() || dragging) return@synchronized
+            dragging = true
+            remainingMillis = (deadlineMillis - clock.nowMillis()).coerceAtLeast(0L)
+            hideTask?.cancel()
+            hideTask = null
+            publishVisible()
+        }
+    }
+
+    fun dragEnded() = uiDispatcher.dispatch {
+        synchronized(lock) {
+            if (!active.get() || !dragging) return@synchronized
+            dragging = false
+            publishVisible()
+            if (!hovered) {
+                if (remainingMillis <= 0L) hide(currentGeneration) else scheduleHide(currentGeneration, remainingMillis)
+            }
+        }
+    }
+
     fun pointerEntered() = uiDispatcher.dispatch {
         synchronized(lock) {
             if (!active.get() || hovered) return@synchronized
-            remainingMillis = (deadlineMillis - clock.nowMillis()).coerceAtLeast(0L)
+            if (!dragging) {
+                remainingMillis = (deadlineMillis - clock.nowMillis()).coerceAtLeast(0L)
+                hideTask?.cancel()
+                hideTask = null
+            }
             hovered = true
-            hideTask?.cancel()
-            hideTask = null
             publishVisible()
         }
     }
@@ -142,7 +173,9 @@ class DesktopVocabularyReminderPopupController(
             if (!active.get() || !hovered) return@synchronized
             hovered = false
             publishVisible()
-            if (remainingMillis <= 0L) hide(currentGeneration) else scheduleHide(currentGeneration, remainingMillis)
+            if (!dragging) {
+                if (remainingMillis <= 0L) hide(currentGeneration) else scheduleHide(currentGeneration, remainingMillis)
+            }
         }
     }
 
@@ -172,6 +205,7 @@ class DesktopVocabularyReminderPopupController(
     override fun settingsUpdated(settings: DesktopVocabularyReminderSettings) = uiDispatcher.dispatch {
         synchronized(lock) {
             autoPlayPronunciation = settings.autoPlayPronunciation
+            currentPopupLocation = settings.popupLocation
             if (active.get()) publishVisible()
         }
     }
@@ -233,13 +267,14 @@ class DesktopVocabularyReminderPopupController(
     private fun hide(token: Long, force: Boolean = false) {
         if (generation.get() != token) return
         if (!force && mutableState.value is DesktopVocabularyReminderPopupState.FullImage) return
-        if (!force && (token != currentGeneration || hovered)) return
+        if (!force && (token != currentGeneration || hovered || dragging)) return
         hideTask?.cancel()
         hideTask = null
         audio.runCatching { stop() }
         currentCandidate = null
         remainingMillis = 0L
         hovered = false
+        dragging = false
         audioPlaying = false
         active.set(false)
         mutableState.value = DesktopVocabularyReminderPopupState.Hidden
@@ -256,7 +291,9 @@ class DesktopVocabularyReminderPopupController(
             audioAvailable = candidate.primaryAudioReference != null,
             audioPlaying = audioPlaying,
             autoPlayPronunciation = autoPlayPronunciation,
-            markedDifficult = markedDifficult
+            markedDifficult = markedDifficult,
+            popupLocation = currentPopupLocation,
+            dragging = dragging
         )
     }
 }

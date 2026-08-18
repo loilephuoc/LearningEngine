@@ -138,6 +138,61 @@ class DesktopVocabularyReminderPopupPresentationTest {
         )
     }
 
+    @Test
+    fun `multi monitor resolution and fallback to primary works predictably`() {
+        val mon1 = DesktopReminderMonitor("mon-1", "Primary", Rectangle(0, 0, 1920, 1080), Rectangle(0, 0, 1920, 1040), 1.0, 1.0, true)
+        val mon2 = DesktopReminderMonitor("mon-2", "Secondary", Rectangle(1920, 0, 2560, 1440), Rectangle(1920, 0, 2560, 1400), 1.25, 1.25, false)
+        val monitors = listOf(mon1, mon2)
+
+        assertEquals(mon2, DesktopVocabularyReminderPopupPositioning.resolveMonitor("mon-2", monitors))
+        assertEquals(mon1, DesktopVocabularyReminderPopupPositioning.resolveMonitor("missing", monitors))
+        assertEquals(mon1, DesktopVocabularyReminderPopupPositioning.resolveMonitor(null, monitors))
+    }
+
+    @Test
+    fun `resolveCustomPosition maps normalized coordinates into usable work area and clamps`() {
+        val monitor = DesktopReminderMonitor("mon-1", "Primary", Rectangle(0, 0, 1920, 1080), Rectangle(0, 0, 1920, 1040), 1.0, 1.0, true)
+
+        // 0.0, 0.0 -> top left
+        val topLeft = DesktopVocabularyReminderPopupPositioning.resolveCustomPosition(monitor, 0.0, 0.0, 300, 100)
+        assertEquals(0, topLeft.xDp)
+        assertEquals(0, topLeft.yDp)
+
+        // 1.0, 1.0 -> bottom right of usable area
+        val botRight = DesktopVocabularyReminderPopupPositioning.resolveCustomPosition(monitor, 1.0, 1.0, 300, 100)
+        assertEquals(1620, botRight.xDp)
+        assertEquals(940, botRight.yDp)
+
+        // 0.5, 0.5 -> center
+        val center = DesktopVocabularyReminderPopupPositioning.resolveCustomPosition(monitor, 0.5, 0.5, 300, 100)
+        assertEquals(810, center.xDp)
+        assertEquals(470, center.yDp)
+
+        // Out of bounds normalized values clamp safely
+        val clamped = DesktopVocabularyReminderPopupPositioning.resolveCustomPosition(monitor, -0.5, 1.5, 300, 100)
+        assertEquals(0, clamped.xDp)
+        assertEquals(940, clamped.yDp)
+    }
+
+    @Test
+    fun `calculateNormalizedPosition accurately identifies target monitor and relative coordinates`() {
+        val mon1 = DesktopReminderMonitor("mon-1", "Primary", Rectangle(0, 0, 1920, 1080), Rectangle(0, 0, 1920, 1040), 1.0, 1.0, true)
+        val mon2 = DesktopReminderMonitor("mon-2", "Secondary", Rectangle(1920, 0, 1920, 1080), Rectangle(1920, 0, 1920, 1040), 1.0, 1.0, false)
+        val monitors = listOf(mon1, mon2)
+
+        // Position on monitor 2
+        val (targetId, norm) = DesktopVocabularyReminderPopupPositioning.calculateNormalizedPosition(
+            logicalX = 1920 + 810,
+            logicalY = 470,
+            widthDp = 300,
+            heightDp = 100,
+            monitors = monitors
+        )
+        assertEquals("mon-2", targetId)
+        assertEquals(0.5, norm.first, 0.01)
+        assertEquals(0.5, norm.second, 0.01)
+    }
+
     private fun candidate(imageReference: String? = null) = DesktopVocabularyCandidate(
         ContentId("content"), InstalledPackageId("package"), "Package", "Word",
         "Answer", "Translation", null, null, imageReference, null, null, null

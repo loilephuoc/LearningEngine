@@ -25,11 +25,17 @@ class DesktopVocabularyReminderSettingsStoreTest {
                 enabled = true,
                 selectedPackageId = InstalledPackageId("unavailable-package-is-preserved"),
                 selectionMode = DesktopVocabularyReminderSelectionMode.RANDOM_LEARNED,
-                intervalMinutes = 30,
+                intervalMillis = 1_800_000L,
                 activeStart = LocalTime.of(22, 0),
                 activeEnd = LocalTime.of(6, 30),
                 displayDurationMillis = 12_750,
-                pausedUntil = Instant.parse("2026-08-14T00:00:00Z")
+                pausedUntil = Instant.parse("2026-08-14T00:00:00Z"),
+                popupLocation = DesktopVocabularyReminderPopupLocation(
+                    monitorId = "display-1",
+                    normalizedX = 0.75,
+                    normalizedY = 0.85,
+                    customPosition = true
+                )
             )
             store.save(settings)
             assertEquals(settings, store.load())
@@ -38,12 +44,16 @@ class DesktopVocabularyReminderSettingsStoreTest {
                 """enabled=true
 installed.package.id=unavailable-package-is-preserved
 selection.mode=RANDOM_LEARNED
-interval.minutes=30
+interval.millis=1800000
 active.start=22:00
 active.end=06:30
 display.duration.millis=12750
 audio.autoplay.pronunciation=false
 paused.until.epoch.millis=1786665600000
+popup.monitor.id=display-1
+popup.position.custom=true
+popup.position.x.normalized=0.75
+popup.position.y.normalized=0.85
 """,
                 file.readText()
             )
@@ -77,11 +87,43 @@ paused.until.epoch.millis=1786665600000
         assertEquals(InstalledPackageId("legacy-package"), loaded.selectedPackageId)
         assertEquals(DesktopVocabularyReminderSelectionMode.DUE, loaded.selectionMode)
         assertEquals(15, loaded.intervalMinutes)
+        assertEquals(900_000L, loaded.intervalMillis)
         assertEquals(8_000L, loaded.displayDurationMillis)
         assertEquals(Instant.parse("2026-08-14T00:00:00Z"), loaded.pausedUntil)
         store.save(loaded)
         assertTrue(file.readText().contains("display.duration.millis=8000"))
         assertFalse(file.readText().contains("display.duration.seconds"))
+        assertTrue(file.readText().contains("interval.millis=900000"))
+    }
+
+    @Test
+    fun `canonical interval millis takes precedence over legacy interval minutes`() = withStore { store, file ->
+        file.writeText(
+            """enabled=true
+interval.millis=20000
+interval.minutes=15
+"""
+        )
+        val loaded = store.load()
+        assertEquals(20_000L, loaded.intervalMillis)
+        store.save(loaded)
+        assertTrue(file.readText().contains("interval.millis=20000"))
+    }
+
+    @Test
+    fun `popup location restores custom position and safely falls back on invalid coordinates`() = withStore { store, file ->
+        file.writeText(
+            """popup.monitor.id=test-mon
+popup.position.custom=true
+popup.position.x.normalized=0.25
+popup.position.y.normalized=invalid-num
+"""
+        )
+        val loaded = store.load()
+        assertEquals("test-mon", loaded.popupLocation.monitorId)
+        assertTrue(loaded.popupLocation.customPosition)
+        assertEquals(0.25, loaded.popupLocation.normalizedX)
+        assertNull(loaded.popupLocation.normalizedY)
     }
 
     @Test
@@ -114,6 +156,7 @@ paused.until.epoch.millis=not-a-long
         assertEquals(InstalledPackageId("kept-package"), loaded.selectedPackageId)
         assertEquals(DesktopVocabularyReminderSelectionMode.AGAIN_HARD, loaded.selectionMode)
         assertEquals(17, loaded.intervalMinutes)
+        assertEquals(17 * 60_000L, loaded.intervalMillis)
         assertEquals(LocalTime.of(8, 0), loaded.activeStart)
         assertEquals(LocalTime.of(23, 15), loaded.activeEnd)
         assertEquals(8_000, loaded.displayDurationMillis)

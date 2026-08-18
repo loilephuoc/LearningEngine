@@ -16,7 +16,14 @@ fun interface DesktopVocabularyReminderSelectionSource {
 
 interface DesktopVocabularyReminderSink {
     val isReminderActive: Boolean
-    fun dispatch(candidate: DesktopVocabularyCandidate, displayDurationMillis: Long, autoPlayPronunciation: Boolean)
+    fun dispatch(
+        candidate: DesktopVocabularyCandidate,
+        displayDurationMillis: Long,
+        autoPlayPronunciation: Boolean,
+        popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation()
+    )
+    fun dispatch(candidate: DesktopVocabularyCandidate, displayDurationMillis: Long, autoPlayPronunciation: Boolean) =
+        dispatch(candidate, displayDurationMillis, autoPlayPronunciation, DesktopVocabularyReminderPopupLocation())
 
     fun invalidate() = Unit
 
@@ -126,7 +133,7 @@ class DesktopVocabularyReminderRuntime(
         scheduledTask?.cancel()
         scheduledTask = null
         if (!closed && backgroundMode && settings.enabled) {
-            scheduledTask = delayScheduler.schedule(settings.intervalMinutes * MILLIS_PER_MINUTE, ::tick)
+            scheduledTask = delayScheduler.schedule(settings.intervalMillis, ::tick)
         }
     }
 
@@ -153,7 +160,12 @@ class DesktopVocabularyReminderRuntime(
         if (sink.isReminderActive) return
         when (val result = selector.select(settings)) {
             is DesktopVocabularyCandidateSelectionResult.Selected ->
-                sink.dispatch(result.candidate, settings.displayDurationMillis, settings.autoPlayPronunciation)
+                sink.dispatch(
+                    result.candidate,
+                    settings.displayDurationMillis,
+                    settings.autoPlayPronunciation,
+                    settings.popupLocation
+                )
             is DesktopVocabularyCandidateSelectionResult.NoCandidate -> Unit
         }
     }
@@ -178,5 +190,10 @@ class DesktopVocabularyReminderRuntime(
 
 object NoOpDesktopVocabularyReminderSink : DesktopVocabularyReminderSink {
     override val isReminderActive = false
-    override fun dispatch(candidate: DesktopVocabularyCandidate, displayDurationMillis: Long, autoPlayPronunciation: Boolean) = Unit
+    override fun dispatch(
+        candidate: DesktopVocabularyCandidate,
+        displayDurationMillis: Long,
+        autoPlayPronunciation: Boolean,
+        popupLocation: DesktopVocabularyReminderPopupLocation
+    ) = Unit
 }

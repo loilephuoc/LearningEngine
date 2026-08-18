@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop
+package vn.loi.learning.desktop
 
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.getValue
@@ -222,7 +222,10 @@ fun main() {
                     controller = popupController,
                     contentMediaStorage = contentMediaStorage,
                     mainGraphicsConfiguration = mainGraphicsConfiguration,
-                    themePreference = runtimeConfiguration.theme
+                    themePreference = runtimeConfiguration.theme,
+                    onLocationChanged = { newLoc ->
+                        runtime.vocabularyReminderSettingsController?.updatePopupLocation(newLoc)
+                    }
                 )
             }
             if (popupController != null && popupState is DesktopVocabularyReminderPopupState.FullImage) {

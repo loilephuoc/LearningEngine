@@ -322,6 +322,44 @@ class DesktopVocabularyReminderPopupControllerTest {
         override fun toggle(contentId: ContentId): Boolean = if (ids.add(contentId)) true else { ids.remove(contentId); false }
     }
 
+    @Test
+    fun `dragStarted pauses auto-hide countdown and dragEnded resumes remaining duration`() {
+        val fixture = Fixture()
+        fixture.clock.now = 1_000L
+        fixture.controller.dispatch(
+            candidate = candidate("drag-test"),
+            displayDurationMillis = 8_000L,
+            autoPlayPronunciation = false,
+            popupLocation = DesktopVocabularyReminderPopupLocation(customPosition = true)
+        )
+        val initialVisible = assertIs<DesktopVocabularyReminderPopupState.Visible>(fixture.controller.state.value)
+        assertEquals(8_000L, initialVisible.remainingMillis)
+        assertFalse(initialVisible.dragging)
+        assertEquals(1, fixture.timer.active.size)
+
+        // Advance clock by 3 seconds and start dragging
+        fixture.clock.now = 4_000L
+        fixture.controller.dragStarted()
+
+        val draggingVisible = assertIs<DesktopVocabularyReminderPopupState.Visible>(fixture.controller.state.value)
+        assertTrue(draggingVisible.dragging)
+        assertEquals(5_000L, draggingVisible.remainingMillis)
+        assertEquals(0, fixture.timer.active.size) // Hide task was cancelled
+
+        // Finish dragging after another 2 seconds
+        fixture.clock.now = 6_000L
+        fixture.controller.dragEnded()
+
+        val afterDragVisible = assertIs<DesktopVocabularyReminderPopupState.Visible>(fixture.controller.state.value)
+        assertFalse(afterDragVisible.dragging)
+        assertEquals(1, fixture.timer.active.size) // Rescheduled with remaining duration (5000ms)
+        assertEquals(5_000L, fixture.timer.active.first().delayMillis)
+
+        // Fire timer
+        fixture.timer.fireActive()
+        assertEquals(DesktopVocabularyReminderPopupState.Hidden, fixture.controller.state.value)
+    }
+
     private class FakeAudio : DesktopVocabularyReminderAudioLifecycle {
         val starts = mutableListOf<String>()
         val loops = mutableListOf<String>()

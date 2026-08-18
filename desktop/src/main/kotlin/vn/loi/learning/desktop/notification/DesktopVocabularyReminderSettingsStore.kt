@@ -25,11 +25,17 @@ class DesktopVocabularyReminderSettingsStore(
             Files.newBufferedReader(filePath, StandardCharsets.UTF_8).use(properties::load)
         }.getOrElse { return DesktopVocabularyReminderSettings() }
         val defaults = DesktopVocabularyReminderSettings()
+        val popupLocation = DesktopVocabularyReminderPopupLocation(
+            monitorId = properties.value(POPUP_MONITOR_ID),
+            normalizedX = properties.normalizedCoordinate(POPUP_POSITION_X_NORMALIZED),
+            normalizedY = properties.normalizedCoordinate(POPUP_POSITION_Y_NORMALIZED),
+            customPosition = properties.booleanOrDefault(POPUP_POSITION_CUSTOM, defaults.popupLocation.customPosition)
+        )
         return DesktopVocabularyReminderSettings(
             enabled = properties.booleanOrDefault(ENABLED, defaults.enabled),
             selectedPackageId = properties.optionalPackageId(INSTALLED_PACKAGE_ID),
             selectionMode = properties.enumOrDefault(SELECTION_MODE, defaults.selectionMode),
-            intervalMinutes = properties.intervalOrDefault(INTERVAL_MINUTES, defaults.intervalMinutes),
+            intervalMillis = properties.intervalMillisOrDefault(defaults.intervalMillis),
             activeStart = properties.timeOrDefault(ACTIVE_START, defaults.activeStart),
             activeEnd = properties.timeOrDefault(ACTIVE_END, defaults.activeEnd),
             displayDurationMillis = properties.durationMillisOrLegacyDefault(
@@ -39,7 +45,8 @@ class DesktopVocabularyReminderSettingsStore(
                 AUDIO_AUTOPLAY_PRONUNCIATION,
                 defaults.autoPlayPronunciation
             ),
-            pausedUntil = properties.optionalInstant(PAUSED_UNTIL_EPOCH_MILLIS)
+            pausedUntil = properties.optionalInstant(PAUSED_UNTIL_EPOCH_MILLIS),
+            popupLocation = popupLocation
         )
     }
 
@@ -69,12 +76,16 @@ class DesktopVocabularyReminderSettingsStore(
         appendLine("enabled=${settings.enabled}")
         appendLine("installed.package.id=${settings.selectedPackageId?.value.orEmpty()}")
         appendLine("selection.mode=${settings.selectionMode.name}")
-        appendLine("interval.minutes=${settings.intervalMinutes}")
+        appendLine("interval.millis=${settings.intervalMillis}")
         appendLine("active.start=${settings.activeStart}")
         appendLine("active.end=${settings.activeEnd}")
         appendLine("display.duration.millis=${settings.displayDurationMillis}")
         appendLine("audio.autoplay.pronunciation=${settings.autoPlayPronunciation}")
         appendLine("paused.until.epoch.millis=${settings.pausedUntil?.toEpochMilli()?.toString().orEmpty()}")
+        appendLine("popup.monitor.id=${settings.popupLocation.monitorId.orEmpty()}")
+        appendLine("popup.position.custom=${settings.popupLocation.customPosition}")
+        appendLine("popup.position.x.normalized=${settings.popupLocation.normalizedX?.toString().orEmpty()}")
+        appendLine("popup.position.y.normalized=${settings.popupLocation.normalizedY?.toString().orEmpty()}")
     }
 
     companion object {
@@ -82,11 +93,16 @@ class DesktopVocabularyReminderSettingsStore(
         private const val ENABLED = "enabled"
         private const val INSTALLED_PACKAGE_ID = "installed.package.id"
         private const val SELECTION_MODE = "selection.mode"
-        private const val INTERVAL_MINUTES = "interval.minutes"
+        internal const val INTERVAL_MILLIS = "interval.millis"
+        internal const val INTERVAL_MINUTES = "interval.minutes"
         private const val ACTIVE_START = "active.start"
         private const val ACTIVE_END = "active.end"
         private const val AUDIO_AUTOPLAY_PRONUNCIATION = "audio.autoplay.pronunciation"
         private const val PAUSED_UNTIL_EPOCH_MILLIS = "paused.until.epoch.millis"
+        private const val POPUP_MONITOR_ID = "popup.monitor.id"
+        private const val POPUP_POSITION_CUSTOM = "popup.position.custom"
+        private const val POPUP_POSITION_X_NORMALIZED = "popup.position.x.normalized"
+        private const val POPUP_POSITION_Y_NORMALIZED = "popup.position.y.normalized"
     }
 }
 
@@ -103,12 +119,17 @@ private fun Properties.booleanOrDefault(key: String, default: Boolean): Boolean 
 private inline fun <reified T : Enum<T>> Properties.enumOrDefault(key: String, default: T): T =
     value(key)?.let { runCatching { enumValueOf<T>(it.uppercase()) }.getOrNull() } ?: default
 
-private fun Properties.intervalOrDefault(key: String, default: Int): Int =
-    value(key)?.toIntOrNull()?.takeIf {
-        it in DesktopVocabularyReminderSettings.MIN_INTERVAL_MINUTES..
-            DesktopVocabularyReminderSettings.MAX_INTERVAL_MINUTES
-    }
-        ?: default
+private fun Properties.intervalMillisOrDefault(default: Long): Long {
+    val canonical = value(DesktopVocabularyReminderSettingsStore.INTERVAL_MILLIS)?.toLongOrNull()
+    val legacy = value(DesktopVocabularyReminderSettingsStore.INTERVAL_MINUTES)?.toLongOrNull()?.times(60_000L)
+    return (canonical ?: legacy)?.takeIf {
+        it in DesktopVocabularyReminderSettings.MIN_INTERVAL_MILLIS..
+            DesktopVocabularyReminderSettings.MAX_INTERVAL_MILLIS
+    } ?: default
+}
+
+private fun Properties.normalizedCoordinate(key: String): Double? =
+    value(key)?.toDoubleOrNull()?.takeIf { it in 0.0..1.0 }
 
 private fun Properties.durationMillisOrLegacyDefault(default: Long): Long {
     val canonical = value("display.duration.millis")?.toLongOrNull()

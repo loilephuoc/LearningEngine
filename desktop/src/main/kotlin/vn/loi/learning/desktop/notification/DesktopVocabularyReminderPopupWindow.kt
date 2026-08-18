@@ -32,7 +32,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -64,6 +67,9 @@ import vn.loi.learning.desktop.runtime.DesktopThemePreference
 import vn.loi.learning.desktop.ui.theme.LearningTheme
 import vn.loi.learning.desktop.ui.study.StudyPosBadge
 import kotlin.math.roundToInt
+
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 
 data class DesktopVocabularyReminderPopupWindowPolicy(
     val undecorated: Boolean = true,
@@ -132,18 +138,29 @@ fun DesktopVocabularyReminderPopupWindow(
     contentMediaStorage: ContentMediaStorage,
     mainGraphicsConfiguration: GraphicsConfiguration?,
     themePreference: DesktopThemePreference,
-    policy: DesktopVocabularyReminderPopupWindowPolicy = DesktopVocabularyReminderPopupWindowPolicy()
+    policy: DesktopVocabularyReminderPopupWindowPolicy = DesktopVocabularyReminderPopupWindowPolicy(),
+    onLocationChanged: (DesktopVocabularyReminderPopupLocation) -> Unit = {}
 ) {
-    val geometry = DesktopVocabularyReminderPopupPositioning.resolveGeometry(mainGraphicsConfiguration)
+    val monitor = DesktopVocabularyReminderPopupPositioning.resolveMonitor(visible.popupLocation.monitorId)
     val initialDimensions = resolvePopupDimensions(visible.candidate)
-    val placement = DesktopVocabularyReminderPopupPositioning.bottomRight(
-        geometry,
-        requestedWidthDp = initialDimensions.first.coerceAtLeast(308),
-        requestedHeightDp = initialDimensions.second
-    )
+    val initialPlacement = if (visible.popupLocation.customPosition && visible.popupLocation.normalizedX != null && visible.popupLocation.normalizedY != null) {
+        DesktopVocabularyReminderPopupPositioning.resolveCustomPosition(
+            monitor = monitor,
+            normalizedX = visible.popupLocation.normalizedX,
+            normalizedY = visible.popupLocation.normalizedY,
+            requestedWidthDp = initialDimensions.first.coerceAtLeast(308),
+            requestedHeightDp = initialDimensions.second
+        )
+    } else {
+        DesktopVocabularyReminderPopupPositioning.bottomRight(
+            monitor = monitor,
+            requestedWidthDp = initialDimensions.first.coerceAtLeast(308),
+            requestedHeightDp = initialDimensions.second
+        )
+    }
     val windowState = rememberWindowState(
-        position = WindowPosition(placement.xDp.dp, placement.yDp.dp),
-        size = DpSize(placement.widthDp.dp, placement.heightDp.dp)
+        position = WindowPosition(initialPlacement.xDp.dp, initialPlacement.yDp.dp),
+        size = DpSize(initialPlacement.widthDp.dp, initialPlacement.heightDp.dp)
     )
     Window(
         onCloseRequest = controller::closePopup,
@@ -155,6 +172,7 @@ fun DesktopVocabularyReminderPopupWindow(
         focusable = policy.focusable,
         alwaysOnTop = policy.alwaysOnTop
     ) {
+        val window = this.window
         LearningTheme(preference = themePreference) {
             val textMeasurer = rememberTextMeasurer()
             val density = LocalDensity.current
@@ -176,29 +194,98 @@ fun DesktopVocabularyReminderPopupWindow(
                 translationWidth,
                 if (visible.candidate.imageReference == null) 0 else COMPACT_PRESENTATION.imageMaxWidthDp
             )
-            val adaptivePlacement = DesktopVocabularyReminderPopupPositioning.bottomRight(
-                geometry,
-                adaptiveWidth,
-                initialDimensions.second
-            )
+            val adaptivePlacement = if (visible.popupLocation.customPosition && visible.popupLocation.normalizedX != null && visible.popupLocation.normalizedY != null) {
+                DesktopVocabularyReminderPopupPositioning.resolveCustomPosition(
+                    monitor = monitor,
+                    normalizedX = visible.popupLocation.normalizedX,
+                    normalizedY = visible.popupLocation.normalizedY,
+                    requestedWidthDp = adaptiveWidth,
+                    requestedHeightDp = initialDimensions.second
+                )
+            } else {
+                DesktopVocabularyReminderPopupPositioning.bottomRight(
+                    monitor = monitor,
+                    adaptiveWidth,
+                    initialDimensions.second
+                )
+            }
             LaunchedEffect(visible.generation, adaptivePlacement) {
                 windowState.position = WindowPosition(adaptivePlacement.xDp.dp, adaptivePlacement.yDp.dp)
                 windowState.size = DpSize(adaptivePlacement.widthDp.dp, adaptivePlacement.heightDp.dp)
             }
-            DesktopVocabularyReminderCard(
-                candidate = visible.candidate,
-                audioAvailable = visible.audioAvailable,
-                audioPlaying = visible.audioPlaying,
-                autoPlayPronunciation = visible.autoPlayPronunciation,
-                markedDifficult = visible.markedDifficult,
-                contentMediaStorage = contentMediaStorage,
-                onClose = controller::closePopup,
-                onPointerEnter = controller::pointerEntered,
-                onPointerExit = controller::pointerExited,
-                onToggleAudio = controller::toggleAudio,
-                onToggleDifficult = controller::toggleDifficultMarker,
-                onOpenImage = controller::openFullImage
-            )
+
+            var isDragging by remember { mutableStateOf(false) }
+            var dragStartMouse by remember { mutableStateOf<java.awt.Point?>(null) }
+            var dragStartWinPos by remember { mutableStateOf<java.awt.Point?>(null) }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = {
+                                val mouseLoc = java.awt.MouseInfo.getPointerInfo()?.location
+                                if (mouseLoc != null) {
+                                    dragStartMouse = mouseLoc
+                                    dragStartWinPos = java.awt.Point(window.x, window.y)
+                                    isDragging = true
+                                    controller.dragStarted()
+                                }
+                            },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                val mouseLoc = java.awt.MouseInfo.getPointerInfo()?.location
+                                val startM = dragStartMouse
+                                val startW = dragStartWinPos
+                                if (mouseLoc != null && startM != null && startW != null) {
+                                    val dx = mouseLoc.x - startM.x
+                                    val dy = mouseLoc.y - startM.y
+                                    window.setLocation(startW.x + dx, startW.y + dy)
+                                }
+                            },
+                            onDragEnd = {
+                                if (isDragging) {
+                                    isDragging = false
+                                    controller.dragEnded()
+                                    val (targetMonId, norm) = DesktopVocabularyReminderPopupPositioning.calculateNormalizedPosition(
+                                        logicalX = window.x,
+                                        logicalY = window.y,
+                                        widthDp = window.width,
+                                        heightDp = window.height
+                                    )
+                                    val newLoc = DesktopVocabularyReminderPopupLocation(
+                                        monitorId = targetMonId,
+                                        normalizedX = norm.first,
+                                        normalizedY = norm.second,
+                                        customPosition = true
+                                    )
+                                    onLocationChanged(newLoc)
+                                }
+                            },
+                            onDragCancel = {
+                                if (isDragging) {
+                                    isDragging = false
+                                    controller.dragEnded()
+                                }
+                            }
+                        )
+                    }
+            ) {
+                DesktopVocabularyReminderCard(
+                    candidate = visible.candidate,
+                    audioAvailable = visible.audioAvailable,
+                    audioPlaying = visible.audioPlaying,
+                    autoPlayPronunciation = visible.autoPlayPronunciation,
+                    markedDifficult = visible.markedDifficult,
+                    contentMediaStorage = contentMediaStorage,
+                    onClose = controller::closePopup,
+                    onPointerEnter = controller::pointerEntered,
+                    onPointerExit = controller::pointerExited,
+                    onToggleAudio = controller::toggleAudio,
+                    onToggleDifficult = controller::toggleDifficultMarker,
+                    onOpenImage = controller::openFullImage
+                )
+            }
         }
     }
 }

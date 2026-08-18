@@ -15,7 +15,7 @@ import vn.loi.learning.domain.library.model.InstalledPackageId
 class DesktopVocabularyReminderRuntimeTest {
     @Test
     fun `foreground gate cancels cadence and each background transition starts fresh interval`() {
-        val fixture = RuntimeFixture(fixtureSettings().copy(intervalMinutes = 10))
+        val fixture = RuntimeFixture(fixtureSettings().copy(intervalMillis = 600_000L))
         fixture.runtime.start()
         fixture.runtime.setBackgroundMode(false)
         assertEquals(0, fixture.scheduler.activeCount)
@@ -34,7 +34,7 @@ class DesktopVocabularyReminderRuntimeTest {
     @Test
     fun `arbitrary minute intervals schedule exact fixed delays`() {
         listOf(1, 7, 12, 90, 120).forEach { minutes ->
-            val fixture = RuntimeFixture(fixtureSettings().copy(intervalMinutes = minutes))
+            val fixture = RuntimeFixture(fixtureSettings().copy(intervalMillis = minutes * 60_000L))
             fixture.runtime.start()
             assertEquals(listOf(minutes * 60_000L), fixture.scheduler.activeDelays)
         }
@@ -254,16 +254,32 @@ class DesktopVocabularyReminderRuntimeTest {
         }
     }
 
+    @Test
+    fun `arbitrary second intervals schedule exact fixed delays in milliseconds`() {
+        listOf(5_000L, 10_000L, 20_000L, 45_000L).forEach { millis ->
+            val fixture = RuntimeFixture(fixtureSettings().copy(intervalMillis = millis))
+            fixture.runtime.start()
+            assertEquals(listOf(millis), fixture.scheduler.activeDelays)
+        }
+    }
+
     private class FakeSink : DesktopVocabularyReminderSink {
         var active = false
         val candidates = mutableListOf<DesktopVocabularyCandidate>()
         val displayDurations = mutableListOf<Long>()
+        val popupLocations = mutableListOf<DesktopVocabularyReminderPopupLocation>()
         var invalidations = 0
         var closeCalls = 0
         override val isReminderActive: Boolean get() = active
-        override fun dispatch(candidate: DesktopVocabularyCandidate, displayDurationMillis: Long, autoPlayPronunciation: Boolean) {
+        override fun dispatch(
+            candidate: DesktopVocabularyCandidate,
+            displayDurationMillis: Long,
+            autoPlayPronunciation: Boolean,
+            popupLocation: DesktopVocabularyReminderPopupLocation
+        ) {
             candidates += candidate
             displayDurations += displayDurationMillis
+            popupLocations += popupLocation
         }
         override fun invalidate() { invalidations += 1 }
         override fun close() { closeCalls += 1 }
