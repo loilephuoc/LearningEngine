@@ -15,6 +15,45 @@ enum class ImageReuseScope(val label: String, val description: String) {
 }
 
 /**
+ * Explicit user intent for the target item's image in Image Reuse Review.
+ */
+sealed interface TargetImageIntent {
+    /** Keep current target image untouched on navigation, or copy source candidate if user clicks Use Source Image & Next. */
+    data object Unchanged : TargetImageIntent
+
+    /** User explicitly replaced target image with a newly selected / dropped image. */
+    data class Replace(val imageRef: String) : TargetImageIntent
+
+    /** User explicitly removed target image. Target image must become null. */
+    data object Remove : TargetImageIntent
+
+    /** User explicitly chose to reuse a specific source image. */
+    data class ReuseSource(val imageRef: String) : TargetImageIntent
+}
+
+/**
+ * In-memory draft for Target item editing in Image Reuse Review.
+ */
+data class ImageReuseTargetDraft(
+    val targetContentId: String,
+    val question: String,
+    val answer: String,
+    val translation: String,
+    val exampleText: String,
+    val partOfSpeech: String,
+    val pronunciation: String = "",
+    val imageIntent: TargetImageIntent = TargetImageIntent.Unchanged
+) {
+    fun isDirty(target: ImageReuseTargetItem): Boolean =
+        question != target.question ||
+        answer != target.answer ||
+        translation != target.translation ||
+        exampleText != target.exampleText ||
+        partOfSpeech != target.partOfSpeech ||
+        imageIntent !is TargetImageIntent.Unchanged
+}
+
+/**
  * A reusable image candidate discovered from an installed source package.
  * All fields are read-only and provided for semantic context.
  */
@@ -42,6 +81,7 @@ data class ImageReuseTargetItem(
     val exampleText: String,
     val partOfSpeech: String,
     val currentImageRef: String?,
+    val pronunciation: String = "",
     val candidates: List<ImageReuseSourceCandidate>
 )
 
@@ -117,7 +157,8 @@ sealed interface ImageReuseReviewStage {
         val applyError: String? = null,
         val appliedCount: Int = 0,
         val undoStack: List<ImageReuseUndoEntry> = emptyList(),
-        val allowedSourcePackageIds: Set<String> = emptySet()
+        val allowedSourcePackageIds: Set<String> = emptySet(),
+        val targetDraft: ImageReuseTargetDraft? = null
     ) : ImageReuseReviewStage {
         init {
             if (allowedSourcePackageIds.isNotEmpty()) {
@@ -134,6 +175,41 @@ sealed interface ImageReuseReviewStage {
 
         val currentCandidate: ImageReuseSourceCandidate?
             get() = currentTarget?.candidates?.getOrNull(currentCandidateIndex)
+
+        val effectiveTargetDraft: ImageReuseTargetDraft
+            get() = targetDraft?.takeIf { it.targetContentId == currentTarget?.targetContentId }
+                ?: currentTarget?.let {
+                    ImageReuseTargetDraft(
+                        targetContentId = it.targetContentId,
+                        question = it.question,
+                        answer = it.answer,
+                        translation = it.translation,
+                        exampleText = it.exampleText,
+                        partOfSpeech = it.partOfSpeech,
+                        pronunciation = it.pronunciation,
+                        imageIntent = TargetImageIntent.Unchanged
+                    )
+                } ?: ImageReuseTargetDraft("", "", "", "", "", "")
+
+        val isTargetDraftDirty: Boolean
+            get() {
+                val target = currentTarget ?: return false
+                val draft = effectiveTargetDraft
+                return draft.question != target.question ||
+                    draft.answer != target.answer ||
+                    draft.translation != target.translation ||
+                    draft.exampleText != target.exampleText ||
+                    draft.partOfSpeech != target.partOfSpeech ||
+                    draft.imageIntent !is TargetImageIntent.Unchanged
+            }
+
+        val effectiveTargetImageRef: String?
+            get() = when (val intent = effectiveTargetDraft.imageIntent) {
+                is TargetImageIntent.Unchanged -> currentTarget?.currentImageRef
+                is TargetImageIntent.Replace -> intent.imageRef
+                is TargetImageIntent.Remove -> null
+                is TargetImageIntent.ReuseSource -> intent.imageRef
+            }
 
         val totalTargets: Int
             get() = targetItems.size

@@ -155,8 +155,8 @@ class CentralImageDropTargetTest {
     }
 
     @Test
-    fun `Dropping valid image onto empty central image area imports image and updates draft imageRef`() {
-        val (vm, storage, _) = createHarness(initialImageRef = null)
+    fun `Dropping valid image onto empty central image area imports image, auto-saves immediately, and reloads canonical item`() {
+        val (vm, storage, contentId) = createHarness(initialImageRef = null)
 
         val tempImage = File.createTempFile("test_cat", ".jpg").apply {
             writeBytes(byteArrayOf(1, 2, 3, 4, 5))
@@ -172,13 +172,14 @@ class CentralImageDropTargetTest {
         val imageRef = draft.imageRef
         assertNotNull(imageRef)
         assertTrue(imageRef.contains(tempImage.name))
-        assertTrue(state.isDirty, "Draft must be marked dirty after drop")
+        assertFalse(state.isDirty, "Existing item must be auto-saved and clean after image drop")
         assertTrue(storage.exists(imageRef), "Imported file must exist in media storage")
+        assertEquals(imageRef, state.selectedItemAnywhere?.imageRef, "Canonical item must reflect new imageRef after auto-save")
     }
 
     @Test
-    fun `Dropping valid image onto existing image replaces image reference with new imported file`() {
-        val (vm, storage, _) = createHarness(initialImageRef = "media/old_image.png")
+    fun `Dropping valid image onto existing image replaces image reference, auto-saves, and reloads canonical item`() {
+        val (vm, storage, contentId) = createHarness(initialImageRef = "media/old_image.png")
 
         val initialDraft = vm.packageBrowserUiState!!.draftEdits
         assertEquals("media/old_image.png", initialDraft?.imageRef)
@@ -191,17 +192,20 @@ class CentralImageDropTargetTest {
         // Action invoked on central drop target
         vm.importDraftMediaFile(replacementImage, "image")
 
-        val updatedDraft = vm.packageBrowserUiState!!.draftEdits
+        val state = vm.packageBrowserUiState!!
+        val updatedDraft = state.draftEdits
         assertNotNull(updatedDraft)
         val updatedRef = updatedDraft.imageRef
         assertNotNull(updatedRef)
         assertTrue(updatedRef != "media/old_image.png")
         assertTrue(updatedRef.contains(replacementImage.name))
         assertTrue(storage.exists(updatedRef))
+        assertFalse(state.isDirty, "Existing item must be clean after image replace auto-save")
+        assertEquals(updatedRef, state.selectedItemAnywhere?.imageRef)
     }
 
     @Test
-    fun `Dropping image preserves unsaved text changes in draft`() {
+    fun `Dropping image preserves unsaved text changes in draft and persists both`() {
         val (vm, _, _) = createHarness(initialImageRef = null)
 
         // User makes text edits before dropping image
@@ -216,19 +220,57 @@ class CentralImageDropTargetTest {
 
         vm.importDraftMediaFile(imageFile, "image")
 
-        val draft = vm.packageBrowserUiState!!.draftEdits
+        val state = vm.packageBrowserUiState!!
+        val draft = state.draftEdits
         assertNotNull(draft)
         // Image is updated
         val imageRef = draft.imageRef
         assertNotNull(imageRef)
         assertTrue(imageRef.contains(imageFile.name))
-        // All unsaved text fields remain intact
+        // All unsaved text fields remain intact and are persisted together
         assertEquals("New Question Edited", draft.questionText)
         assertEquals("Bản dịch mới chưa lưu", draft.exampleTranslation)
         assertEquals("verb", draft.partOfSpeech)
         assertEquals("Xin chào", draft.answerText)
         assertEquals("Hello world", draft.exampleText)
         assertEquals("həˈloʊ", draft.pronunciation)
+        assertFalse(state.isDirty, "Draft is persisted and clean")
+    }
+
+    @Test
+    fun `Importing image when creating new item does NOT auto-persist`() {
+        val (vm, storage, _) = createHarness(initialImageRef = null)
+        vm.startNewItem()
+
+        val tempImage = File.createTempFile("new_item_cat", ".jpg").apply {
+            writeBytes(byteArrayOf(1, 2, 3))
+            deleteOnExit()
+        }
+
+        vm.importDraftMediaFile(tempImage, "image")
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.isCreatingNewItem, "Must still be creating new item")
+        assertTrue(state.isDirty, "New item draft must remain dirty")
+        assertNotNull(state.draftEdits?.imageRef)
+        assertTrue(state.draftEdits!!.imageRef!!.contains(tempImage.name))
+    }
+
+    @Test
+    fun `Importing audio slot does NOT auto-persist and keeps draft dirty`() {
+        val (vm, storage, _) = createHarness(initialImageRef = null)
+
+        val audioFile = File.createTempFile("question_audio", ".mp3").apply {
+            writeBytes(byteArrayOf(1, 2, 3))
+            deleteOnExit()
+        }
+
+        vm.importDraftMediaFile(audioFile, "question")
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.isDirty, "Draft must remain dirty after audio import")
+        assertNotNull(state.draftEdits?.questionAudioRef)
+        assertTrue(state.draftEdits!!.questionAudioRef!!.contains(audioFile.name))
     }
 
     @Test

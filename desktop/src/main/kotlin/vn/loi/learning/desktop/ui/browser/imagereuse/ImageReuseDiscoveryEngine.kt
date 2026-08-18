@@ -97,6 +97,7 @@ object ImageReuseDiscoveryEngine {
                         exampleText = targetItem.exampleText.orEmpty(),
                         partOfSpeech = targetItem.partOfSpeech,
                         currentImageRef = targetItem.imageRef,
+                        pronunciation = targetItem.pronunciation,
                         candidates = matchingCandidates
                     )
                 )
@@ -104,6 +105,32 @@ object ImageReuseDiscoveryEngine {
         }
 
         return result
+    }
+
+    /**
+     * Resolves, reads, and copies the source candidate's image file into the target package's media storage.
+     * Returns the collision-safe relative asset path.
+     * Source package and file remain strictly untouched.
+     */
+    fun copySourceImageToTargetPackage(
+        targetPackageName: String,
+        sourceCandidate: ImageReuseSourceCandidate,
+        mediaStorage: ContentMediaStorage
+    ): String {
+        val sourcePath = PackageMediaResolver.resolve(sourceCandidate.sourcePackageName, sourceCandidate.imageRef, mediaStorage)
+            ?: throw IllegalStateException("Source image could not be resolved: ${sourceCandidate.imageRef}")
+
+        require(Files.exists(sourcePath) && Files.isReadable(sourcePath)) {
+            "Source image file is not readable: $sourcePath"
+        }
+
+        val bytes = Files.readAllBytes(sourcePath)
+        val sourceFileName = sourcePath.fileName.toString()
+        val cleanName = sourceFileName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val uniqueName = "${UUID.randomUUID().toString().take(8)}_$cleanName"
+
+        val asset = mediaStorage.store(targetPackageName, uniqueName, bytes)
+        return asset.relativePath
     }
 
     /**
@@ -120,20 +147,8 @@ object ImageReuseDiscoveryEngine {
         mediaStorage: ContentMediaStorage,
         editService: ContentBrowserEditService
     ): String {
-        val sourcePath = PackageMediaResolver.resolve(sourceCandidate.sourcePackageName, sourceCandidate.imageRef, mediaStorage)
-            ?: throw IllegalStateException("Source image could not be resolved: ${sourceCandidate.imageRef}")
-
-        require(Files.exists(sourcePath) && Files.isReadable(sourcePath)) {
-            "Source image file is not readable: $sourcePath"
-        }
-
-        val bytes = Files.readAllBytes(sourcePath)
-        val sourceFileName = sourcePath.fileName.toString()
-        val cleanName = sourceFileName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-        val uniqueName = "${UUID.randomUUID().toString().take(8)}_$cleanName"
-
-        val asset = mediaStorage.store(targetPackageName, uniqueName, bytes)
-        editService.replaceContentImage(ContentId(targetContentId), asset.relativePath)
-        return asset.relativePath
+        val assetPath = copySourceImageToTargetPackage(targetPackageName, sourceCandidate, mediaStorage)
+        editService.replaceContentImage(ContentId(targetContentId), assetPath)
+        return assetPath
     }
 }

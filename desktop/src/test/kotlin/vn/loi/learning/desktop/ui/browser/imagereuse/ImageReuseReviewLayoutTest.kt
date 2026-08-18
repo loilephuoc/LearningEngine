@@ -42,8 +42,9 @@ class ImageReuseReviewLayoutTest {
         assertTrue(footerSource.contains("\"Close\""))
         assertTrue(footerSource.contains("\"Skip Candidate\""))
         assertTrue(footerSource.contains("\"Skip This Item\""))
-        assertTrue(footerSource.contains("\"Use Image & Next\""))
-        assertTrue(footerSource.contains("Enter: Use & Next  ·  Space/→: Skip Candidate  ·  N: Skip Item  ·  ←: Prev Item  ·  Ctrl+Z: Undo  ·  Esc: Close"))
+        assertTrue(footerSource.contains("primaryButtonText"))
+        assertTrue(footerSource.contains("Enter: Use & Next"))
+        assertTrue(footerSource.contains("Enter: Save & Next"))
     }
 
     private fun imageReuseSource(name: String): String = imageReuseSourceDirectory().resolve(name).readText()

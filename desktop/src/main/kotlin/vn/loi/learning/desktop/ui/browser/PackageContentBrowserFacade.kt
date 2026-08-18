@@ -167,6 +167,25 @@ class PackageContentBrowserFacade(
         return service.replaceContentImage(contentId, newImageRef)
     }
 
+    fun persistTargetItem(
+        targetContentId: String,
+        draft: vn.loi.learning.desktop.ui.browser.imagereuse.ImageReuseTargetDraft,
+        resolvedImageRef: String?
+    ) {
+        val service = editService
+            ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
+        service.updateContent(
+            contentId = ContentId(targetContentId),
+            questionText = draft.question,
+            answerText = draft.answer,
+            pronunciation = draft.pronunciation,
+            partOfSpeech = draft.partOfSpeech,
+            exampleText = draft.exampleText,
+            exampleTranslation = draft.translation,
+            imageRef = resolvedImageRef
+        )
+    }
+
     fun applyImageReuse(
         targetPackageName: String,
         targetContentId: String,

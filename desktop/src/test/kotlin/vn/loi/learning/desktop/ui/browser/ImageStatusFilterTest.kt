@@ -476,4 +476,135 @@ class ImageStatusFilterTest {
         assertEquals("B", state.selectedItemAnywhere?.contentId?.value)
         assertEquals("itemB", state.selectedItemInView?.questionText)
     }
+
+    @Test
+    fun `Duplicate Question correctly identifies tablet, tablet, tablet as duplicates`() {
+        val items = listOf(
+            createItem(1, "1", "tablet", null),
+            createItem(2, "2", "phone", null),
+            createItem(3, "3", "tablet", null),
+            createItem(4, "4", "tablet", null),
+            createItem(5, "5", "laptop", null)
+        )
+
+        val duplicateKeys = ImageStatusProjectionPolicy.computeDuplicateQuestionKeys(items)
+        assertEquals(setOf("tablet"), duplicateKeys)
+
+        val filtered = ImageStatusProjectionPolicy.filter(
+            items = items,
+            filter = ContentItemFilter.DUPLICATE_QUESTION,
+            duplicateImageKeys = emptySet(),
+            duplicateQuestionKeys = duplicateKeys
+        )
+        assertEquals(listOf("1", "3", "4"), filtered.map { it.contentId.value })
+    }
+
+    @Test
+    fun `Duplicate Question normalizes trimmed and case-insensitive Tablet, tablet, and space-padded tablet`() {
+        val items = listOf(
+            createItem(1, "1", "Tablet", null),
+            createItem(2, "2", " tablet ", null),
+            createItem(3, "3", "other", null),
+            createItem(4, "4", "TABLET", null)
+        )
+
+        val duplicateKeys = ImageStatusProjectionPolicy.computeDuplicateQuestionKeys(items)
+        assertEquals(setOf("tablet"), duplicateKeys)
+
+        val filtered = ImageStatusProjectionPolicy.filter(
+            items = items,
+            filter = ContentItemFilter.DUPLICATE_QUESTION,
+            duplicateImageKeys = emptySet(),
+            duplicateQuestionKeys = duplicateKeys
+        )
+        assertEquals(listOf("1", "2", "4"), filtered.map { it.contentId.value })
+    }
+
+    @Test
+    fun `Duplicate Question excludes blank questions and does not treat multiple blanks as duplicates`() {
+        val items = listOf(
+            createItem(1, "1", "", null),
+            createItem(2, "2", "   ", null),
+            createItem(3, "3", "\t\n", null),
+            createItem(4, "4", "valid", null)
+        )
+
+        val duplicateKeys = ImageStatusProjectionPolicy.computeDuplicateQuestionKeys(items)
+        assertTrue(duplicateKeys.isEmpty())
+
+        val filtered = ImageStatusProjectionPolicy.filter(
+            items = items,
+            filter = ContentItemFilter.DUPLICATE_QUESTION,
+            duplicateImageKeys = emptySet(),
+            duplicateQuestionKeys = duplicateKeys
+        )
+        assertTrue(filtered.isEmpty())
+    }
+
+    @Test
+    fun `Duplicate Question does not fuzzy match tablet vs tablets vs tablet computer`() {
+        val items = listOf(
+            createItem(1, "1", "tablet", null),
+            createItem(2, "2", "tablets", null),
+            createItem(3, "3", "tablet computer", null)
+        )
+
+        val duplicateKeys = ImageStatusProjectionPolicy.computeDuplicateQuestionKeys(items)
+        assertTrue(duplicateKeys.isEmpty())
+
+        val filtered = ImageStatusProjectionPolicy.filter(
+            items = items,
+            filter = ContentItemFilter.DUPLICATE_QUESTION,
+            duplicateImageKeys = emptySet(),
+            duplicateQuestionKeys = duplicateKeys
+        )
+        assertTrue(filtered.isEmpty())
+    }
+
+    @Test
+    fun `PackageContentBrowserUiState groups duplicate question items together and preserves deterministic index order`() {
+        val item1 = createItem(1, "1", "zebra", null)
+        val item2 = createItem(2, "2", "apple", null)
+        val item3 = createItem(3, "3", "zebra", null)
+        val item4 = createItem(4, "4", "apple", null)
+        val item5 = createItem(5, "5", "apple", null)
+        val item6 = createItem(6, "6", "unique", null)
+
+        val state = PackageContentBrowserUiState(
+            installedPackageId = vn.loi.learning.domain.library.model.InstalledPackageId("pkg_1"),
+            packageName = "Package 1",
+            allItems = listOf(item1, item2, item3, item4, item5, item6),
+            imageStatusFilter = ContentItemFilter.DUPLICATE_QUESTION
+        )
+
+        val filtered = state.filteredItems
+        assertEquals(5, filtered.size)
+        // Group "apple" first (sorted alphabetically by question key: "apple" < "zebra")
+        // Within "apple" group: index 2, 4, 5
+        // Within "zebra" group: index 1, 3
+        assertEquals(listOf("2", "4", "5", "1", "3"), filtered.map { it.contentId.value })
+        assertEquals(listOf("apple", "apple", "apple", "zebra", "zebra"), filtered.map { it.questionText })
+    }
+
+    @Test
+    fun `Duplicate Question projection does not mutate original items or canonical data`() {
+        val itemA = createItem(1, "1", " Tablet ", "img.jpg")
+        val itemB = createItem(2, "2", "tablet", "img.jpg")
+        val originalList = listOf(itemA, itemB)
+
+        val state = PackageContentBrowserUiState(
+            installedPackageId = vn.loi.learning.domain.library.model.InstalledPackageId("pkg_1"),
+            packageName = "Package 1",
+            allItems = originalList,
+            imageStatusFilter = ContentItemFilter.DUPLICATE_QUESTION
+        )
+
+        val filtered = state.filteredItems
+        assertEquals(2, filtered.size)
+        // Verify original item references and attributes are untouched
+        assertEquals(" Tablet ", state.allItems[0].questionText)
+        assertEquals("tablet", state.allItems[1].questionText)
+        assertEquals("img.jpg", state.allItems[0].imageRef)
+        assertEquals("img.jpg", state.allItems[1].imageRef)
+    }
 }

@@ -4,15 +4,18 @@ import vn.loi.learning.application.contentmedia.MediaReferencePolicy
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem
 
 /**
- * Filter for identifying Content items based on their current image reference state.
+ * Filter for identifying Content items based on their current image reference state or question duplicate state.
  * Strictly read-only derived presentation state.
  */
-enum class ImageStatusFilter(val label: String) {
+enum class ContentItemFilter(val label: String) {
     ALL("All"),
     MISSING_IMAGE("Missing Image"),
     DUPLICATE_IMAGE("Duplicate Image Filename"),
+    DUPLICATE_QUESTION("Duplicate Question"),
     HAS_IMAGE("Has Image")
 }
+
+typealias ImageStatusFilter = ContentItemFilter
 
 object ImageStatusProjectionPolicy {
 
@@ -33,6 +36,13 @@ object ImageStatusProjectionPolicy {
         imageRef.trim().replace('\\', '/').substringAfterLast('/').lowercase()
 
     /**
+     * Normalizes a question string for duplicate comparison: trimmed and lowercased.
+     * Blank questions are not normalized into a valid duplicate key.
+     */
+    fun questionKey(questionText: String): String =
+        questionText.trim().lowercase()
+
+    /**
      * Computes the map of canonical image keys to their occurrence counts for keys appearing >= 2 times.
      * Missing/placeholder image references are strictly excluded before counting duplicates.
      */
@@ -42,6 +52,22 @@ object ImageStatusProjectionPolicy {
             val ref = item.imageRef
             if (!isMissingImage(ref)) {
                 val key = imageRefKey(ref!!)
+                counts[key] = (counts[key] ?: 0) + 1
+            }
+        }
+        return counts.filterValues { it >= 2 }
+    }
+
+    /**
+     * Computes the map of normalized question keys to their occurrence counts for keys appearing >= 2 times.
+     * Blank questions are strictly excluded before counting duplicates.
+     */
+    fun computeDuplicateQuestionCounts(items: List<PackageContentBrowserItem>): Map<String, Int> {
+        val counts = mutableMapOf<String, Int>()
+        for (item in items) {
+            val q = item.questionText
+            if (q.isNotBlank()) {
+                val key = questionKey(q)
                 counts[key] = (counts[key] ?: 0) + 1
             }
         }
@@ -94,20 +120,31 @@ object ImageStatusProjectionPolicy {
         computeDuplicateImageCounts(items).keys
 
     /**
-     * Filters a list of items by image status.
+     * Computes the set of normalized question keys that appear in 2 or more items within the given package items.
+     * Blank questions are strictly excluded.
+     */
+    fun computeDuplicateQuestionKeys(items: List<PackageContentBrowserItem>): Set<String> =
+        computeDuplicateQuestionCounts(items).keys
+
+    /**
+     * Filters a list of items by content item status.
      * Preserves original relative ordering and performs zero mutations.
      */
     fun filter(
         items: List<PackageContentBrowserItem>,
-        filter: ImageStatusFilter,
-        duplicateKeys: Set<String>
+        filter: ContentItemFilter,
+        duplicateImageKeys: Set<String>,
+        duplicateQuestionKeys: Set<String> = emptySet()
     ): List<PackageContentBrowserItem> = when (filter) {
-        ImageStatusFilter.ALL -> items
-        ImageStatusFilter.MISSING_IMAGE -> items.filter { isMissingImage(it.imageRef) }
-        ImageStatusFilter.HAS_IMAGE -> items.filter { !isMissingImage(it.imageRef) }
-        ImageStatusFilter.DUPLICATE_IMAGE -> items.filter { item ->
+        ContentItemFilter.ALL -> items
+        ContentItemFilter.MISSING_IMAGE -> items.filter { isMissingImage(it.imageRef) }
+        ContentItemFilter.HAS_IMAGE -> items.filter { !isMissingImage(it.imageRef) }
+        ContentItemFilter.DUPLICATE_IMAGE -> items.filter { item ->
             val ref = item.imageRef
-            !isMissingImage(ref) && imageRefKey(ref!!) in duplicateKeys
+            !isMissingImage(ref) && imageRefKey(ref!!) in duplicateImageKeys
+        }
+        ContentItemFilter.DUPLICATE_QUESTION -> items.filter { item ->
+            item.questionText.isNotBlank() && questionKey(item.questionText) in duplicateQuestionKeys
         }
     }
 }

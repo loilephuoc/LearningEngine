@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,9 +21,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import java.nio.file.Path
 import vn.loi.learning.application.port.ContentMediaStorage
+import vn.loi.learning.desktop.ui.theme.LEColors
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryOperation
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserCard
@@ -103,7 +107,7 @@ fun LibraryScreen(
                 }
             }
 
-            (contentLibraryUiState.operation as? ContentLibraryOperation.Loading)?.let { loadingOp ->
+            (contentLibraryUiState.operation as? ContentLibraryOperation.Loading)?.takeIf { it.phase != "Loading package browser" }?.let { loadingOp ->
                 Surface(
                     color = MaterialTheme.colorScheme.secondaryContainer,
                     shape = RoundedCornerShape(8.dp),
@@ -346,6 +350,17 @@ fun LibraryScreen(
             }
         }
 
+        if (contentLibraryUiState.operation is ContentLibraryOperation.Loading) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .align(Alignment.TopCenter),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = Color.Transparent
+            )
+        }
+
         packagePendingRemoval?.let { (pkgId, pkgName) ->
             AlertDialog(
                 onDismissRequest = { packagePendingRemoval = null },
@@ -403,6 +418,8 @@ fun LibraryScreen(
                 onSkipCandidate = contentLibraryViewModel::skipImageReuseCandidate,
                 onSkipItem = contentLibraryViewModel::skipImageReuseItem,
                 onApplyAndNext = contentLibraryViewModel::applyImageReuseAndNext,
+                onReplaceTargetImage = contentLibraryViewModel::replaceImageReuseTargetImage,
+                onRemoveTargetImage = contentLibraryViewModel::removeImageReuseTargetImage,
                 onClose = contentLibraryViewModel::closeImageReuseReview
             )
         }

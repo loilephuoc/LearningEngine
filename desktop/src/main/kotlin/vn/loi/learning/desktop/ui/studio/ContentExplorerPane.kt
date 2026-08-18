@@ -1066,7 +1066,8 @@ private fun ImageStatusDropdownFilter(
                     text = when (selectedFilter) {
                         ImageStatusFilter.ALL -> "All"
                         ImageStatusFilter.MISSING_IMAGE -> "Missing"
-                        ImageStatusFilter.DUPLICATE_IMAGE -> "Duplicate"
+                        ImageStatusFilter.DUPLICATE_IMAGE -> "Dup Image"
+                        ImageStatusFilter.DUPLICATE_QUESTION -> "Dup Question"
                         ImageStatusFilter.HAS_IMAGE -> "Has Image"
                     },
                     style = LETypography.caption,

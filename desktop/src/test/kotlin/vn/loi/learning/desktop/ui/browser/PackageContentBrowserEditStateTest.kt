@@ -1274,4 +1274,94 @@ class PackageContentBrowserEditStateTest {
 
         return vm to instId
     }
+
+    @Test
+    fun `importDraftMediaFile with image on existing item auto-persists immediately and updates canonical state`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val tempMediaDir = java.nio.file.Files.createTempDirectory("edit-media-test")
+        val storage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(tempMediaDir)
+        val (vm, _) = createViewModelWithPackageInContext(appContext, 2)
+        // Set storage on vm
+        val vmWithStorage = ContentLibraryViewModel(
+            facade = ContentLibraryFacade(appContext),
+            lessonBrowserFacade = LessonBrowserFacade(appContext),
+            packageBrowserFacade = PackageContentBrowserFacade(
+                queryService = appContext.packageBrowserQuery,
+                editService = vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
+                    contentRepository = appContext.contentRepository!!,
+                    contentLibraryRepository = appContext.contentLibraryRepository,
+                    installedPackageRepository = appContext.installedPackageRepository,
+                    contentPackageRepository = appContext.contentPackageRepository,
+                    transactionRunner = requireNotNull(appContext.transactionRunner)
+                ),
+                learningItemRepository = appContext.learningItemRepository
+            ),
+            contentMediaStorage = storage
+        )
+        val instId = vm.packageBrowserUiState!!.installedPackageId
+        vmWithStorage.browsePackageLessons(instId, "Persist Package")
+        vmWithStorage.attemptSelectRowAutoEdit("cnt-1")
+
+        val imageFile = java.io.File.createTempFile("photo", ".png").apply {
+            writeBytes(byteArrayOf(1, 2, 3))
+            deleteOnExit()
+        }
+
+        vmWithStorage.importDraftMediaFile(imageFile, "image")
+
+        val state = vmWithStorage.packageBrowserUiState!!
+        assertFalse(state.isDirty, "Auto-saved image must clear dirty flag")
+        assertNotNull(state.draftEdits?.imageRef)
+        assertEquals(state.draftEdits?.imageRef, state.loadedBaselineDraft?.imageRef)
+        val canonical = appContext.contentRepository!!.findById(ContentId("cnt-1"))
+        assertEquals(state.draftEdits?.imageRef, canonical?.media?.image)
+    }
+
+    @Test
+    fun `importDraftMediaFile failure retains draft in dirty state and exposes error`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val tempMediaDir = java.nio.file.Files.createTempDirectory("edit-media-fail")
+        val storage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(tempMediaDir)
+
+        val baseRepo = appContext.contentRepository!!
+        val throwingContentRepo = object : vn.loi.learning.application.port.ContentRepository by baseRepo {
+            override fun save(content: vn.loi.learning.domain.content.model.Content) {
+                throw RuntimeException("Disk full or simulated DB failure")
+            }
+        }
+
+        val failingEditService = vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
+            contentRepository = throwingContentRepo,
+            contentLibraryRepository = appContext.contentLibraryRepository,
+            installedPackageRepository = appContext.installedPackageRepository,
+            contentPackageRepository = appContext.contentPackageRepository,
+            transactionRunner = requireNotNull(appContext.transactionRunner)
+        )
+
+        val vm = ContentLibraryViewModel(
+            facade = ContentLibraryFacade(appContext),
+            lessonBrowserFacade = LessonBrowserFacade(appContext),
+            packageBrowserFacade = PackageContentBrowserFacade(
+                queryService = appContext.packageBrowserQuery,
+                editService = failingEditService,
+                learningItemRepository = appContext.learningItemRepository
+            ),
+            contentMediaStorage = storage
+        )
+        val (_, instId) = createViewModelWithPackageInContext(appContext, 2)
+        vm.browsePackageLessons(instId, "Persist Package")
+        vm.attemptSelectRowAutoEdit("cnt-1")
+
+        val imageFile = java.io.File.createTempFile("photo_fail", ".jpg").apply {
+            writeBytes(byteArrayOf(5, 6, 7))
+            deleteOnExit()
+        }
+
+        vm.importDraftMediaFile(imageFile, "image")
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.isDirty, "Draft must remain dirty when persist fails")
+        assertTrue(vm.uiState.importError?.contains("Save failed: Disk full") == true)
+        assertNotNull(state.draftEdits?.imageRef)
+    }
 }

@@ -4,10 +4,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -18,28 +20,35 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.awtTransferable
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import java.awt.FileDialog
+import java.awt.Frame
+import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import vn.loi.learning.application.contentmedia.MediaReferencePolicy
 import vn.loi.learning.application.port.ContentMediaStorage
-import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnail
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
 import vn.loi.learning.desktop.ui.contentlibrary.ThumbnailResult
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
+import vn.loi.learning.desktop.ui.studio.DragDropUtils
 
 @Composable
 fun ImageReuseReviewDialog(
@@ -51,18 +60,22 @@ fun ImageReuseReviewDialog(
     onClearAllSourcePackages: () -> Unit,
     onScopeChanged: (ImageReuseScope) -> Unit,
     onStartScan: () -> Unit,
-    onPreviousItem: () -> Unit,
+    onPreviousItem: (ImageReuseTargetDraft?) -> Unit,
     onUndoLastUse: () -> Unit,
-    onSkipCandidate: () -> Unit,
-    onSkipItem: () -> Unit,
-    onApplyAndNext: () -> Unit,
-    onClose: () -> Unit
+    onSkipCandidate: (ImageReuseTargetDraft?) -> Unit,
+    onSkipItem: (ImageReuseTargetDraft?) -> Unit,
+    onApplyAndNext: (ImageReuseTargetDraft?) -> Unit,
+    onReplaceTargetImage: (File) -> Unit = {},
+    onRemoveTargetImage: () -> Unit = {},
+    onClose: (ImageReuseTargetDraft?) -> Unit
 ) {
     if (!state.visible || state.stage == null) return
 
     val focusRequester = remember { FocusRequester() }
+    var isEditorFocused by remember { mutableStateOf(false) }
+    var currentDraftProvider by remember { mutableStateOf<(() -> ImageReuseTargetDraft)?>(null) }
 
-    LaunchedEffect(state.stage) {
+    LaunchedEffect(Unit) {
         try {
             focusRequester.requestFocus()
         } catch (_: Exception) {}
@@ -72,7 +85,7 @@ fun ImageReuseReviewDialog(
         onDismissRequest = {
             val stage = state.stage
             if (stage !is ImageReuseReviewStage.Review || !stage.isApplying) {
-                onClose()
+                onClose(currentDraftProvider?.invoke())
             }
         },
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -95,11 +108,16 @@ fun ImageReuseReviewDialog(
                     .focusable()
                     .onPreviewKeyEvent { keyEvent ->
                         if (keyEvent.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                        // Focus Guard: If user is editing a text field, let BasicTextField handle all keys (letters, Space, Backspace, IME, Enter)
+                        if (isEditorFocused) {
+                            return@onPreviewKeyEvent false
+                        }
+
                         val stage = state.stage
                         when {
                             keyEvent.key == Key.Escape -> {
                                 if (stage !is ImageReuseReviewStage.Review || !stage.isApplying) {
-                                    onClose()
+                                    onClose(currentDraftProvider?.invoke())
                                     true
                                 } else false
                             }
@@ -112,21 +130,21 @@ fun ImageReuseReviewDialog(
                                         } else false
                                     }
                                     keyEvent.key == Key.Enter || keyEvent.key == Key.NumPadEnter -> {
-                                        onApplyAndNext()
+                                        onApplyAndNext(currentDraftProvider?.invoke())
                                         true
                                     }
                                     keyEvent.key == Key.Spacebar || keyEvent.key == Key.DirectionRight -> {
-                                        onSkipCandidate()
+                                        onSkipCandidate(currentDraftProvider?.invoke())
                                         true
                                     }
                                     keyEvent.key == Key.DirectionLeft -> {
                                         if (stage.canGoPrevious) {
-                                            onPreviousItem()
+                                            onPreviousItem(currentDraftProvider?.invoke())
                                             true
                                         } else false
                                     }
                                     keyEvent.key == Key.N -> {
-                                        onSkipItem()
+                                        onSkipItem(currentDraftProvider?.invoke())
                                         true
                                     }
                                     else -> false
@@ -139,7 +157,6 @@ fun ImageReuseReviewDialog(
                 tonalElevation = 8.dp
             ) {
                 Column(modifier = Modifier.fillMaxSize().padding(LESpacing.lg)) {
-                    // Header
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -170,10 +187,10 @@ fun ImageReuseReviewDialog(
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = LESpacing.md), color = LEColors.borderSubtle)
 
-                    // Stage Body
                     Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                         when (val stage = state.stage) {
                             is ImageReuseReviewStage.Setup -> {
+                                currentDraftProvider = null
                                 ImageReuseSetupView(
                                     stage = stage,
                                     targetPackageName = state.targetPackageName,
@@ -182,7 +199,7 @@ fun ImageReuseReviewDialog(
                                     onClearAllSourcePackages = onClearAllSourcePackages,
                                     onScopeChanged = onScopeChanged,
                                     onStartScan = onStartScan,
-                                    onClose = onClose
+                                    onClose = { onClose(null) }
                                 )
                             }
                             is ImageReuseReviewStage.Review -> {
@@ -191,19 +208,24 @@ fun ImageReuseReviewDialog(
                                     targetPackageName = state.targetPackageName,
                                     thumbnailLoader = thumbnailLoader,
                                     contentMediaStorage = contentMediaStorage,
+                                    onEditorFocusChanged = { isEditorFocused = it },
+                                    onRegisterDraftProvider = { provider -> currentDraftProvider = provider },
                                     onPreviousItem = onPreviousItem,
                                     onUndoLastUse = onUndoLastUse,
                                     onSkipCandidate = onSkipCandidate,
                                     onSkipItem = onSkipItem,
                                     onApplyAndNext = onApplyAndNext,
+                                    onReplaceTargetImage = onReplaceTargetImage,
+                                    onRemoveTargetImage = onRemoveTargetImage,
                                     onClose = onClose
                                 )
                             }
                             is ImageReuseReviewStage.Complete -> {
+                                currentDraftProvider = null
                                 ImageReuseCompleteView(
                                     stage = stage,
                                     targetPackageName = state.targetPackageName,
-                                    onClose = onClose
+                                    onClose = { onClose(null) }
                                 )
                             }
                         }
@@ -229,7 +251,6 @@ private fun ImageReuseSetupView(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(LESpacing.md)
     ) {
-        // Target Package Info
         Surface(
             color = LEColors.surfaceElevated,
             shape = RoundedCornerShape(8.dp),
@@ -248,100 +269,121 @@ private fun ImageReuseSetupView(
             }
         }
 
-        // Scope Selection
-        Text("Scan Scope", style = LETypography.sectionTitle)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
-        ) {
-            ImageReuseScope.entries.forEach { scopeOption ->
-                val isSelected = stage.scope == scopeOption
-                Surface(
-                    color = if (isSelected) LEColors.primary.copy(alpha = 0.1f) else LEColors.surfaceElevated,
-                    shape = RoundedCornerShape(8.dp),
-                    border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, LEColors.primary) else null,
-                    modifier = Modifier.weight(1f).clickable { onScopeChanged(scopeOption) }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(LESpacing.md),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
-                    ) {
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { onScopeChanged(scopeOption) },
-                            colors = RadioButtonDefaults.colors(selectedColor = LEColors.primary)
-                        )
-                        Column {
-                            Text(scopeOption.label, style = LETypography.fieldValueEmphasized)
-                            Text(scopeOption.description, style = LETypography.caption, color = LEColors.textSecondary)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Source Packages Selection
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Source Packages (Read-Only)", style = LETypography.sectionTitle)
-            Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
-                LESecondaryButton(text = "Select All", onClick = onSelectAllSourcePackages)
-                LESecondaryButton(text = "Clear All", onClick = onClearAllSourcePackages)
-            }
-        }
-
-        if (stage.availableSourcePackages.isEmpty()) {
-            Text(
-                "No other installed vocabulary packages found to reuse images from.",
-                style = LETypography.secondaryMetadata,
-                color = LEColors.textMuted
-            )
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 240.dp)
-                    .border(1.dp, LEColors.borderSubtle, RoundedCornerShape(8.dp))
-                    .padding(LESpacing.sm)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+        Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+            Text("Review Scope", style = LETypography.fieldLabel, color = LEColors.textSecondary)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
             ) {
-                stage.availableSourcePackages.forEach { pkg ->
-                    val isChecked = pkg.id in stage.selectedSourcePackageIds
-                    Row(
+                ImageReuseScope.values().forEach { scope ->
+                    val isSelected = stage.scope == scope
+                    Surface(
+                        color = if (isSelected) LEColors.primary.copy(alpha = 0.12f) else LEColors.surfaceElevated,
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = if (isSelected) 1.5.dp else 1.dp,
+                            color = if (isSelected) LEColors.primary else LEColors.borderSubtle
+                        ),
+                        shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(4.dp))
-                            .clickable { onToggleSourcePackage(pkg.id) }
-                            .padding(horizontal = LESpacing.sm, vertical = LESpacing.xs),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                            .weight(1f)
+                            .clickable { onScopeChanged(scope) }
                     ) {
-                        Checkbox(
-                            checked = isChecked,
-                            onCheckedChange = { onToggleSourcePackage(pkg.id) },
-                            colors = CheckboxDefaults.colors(checkedColor = LEColors.primary)
-                        )
-                        Text(pkg.name, style = LETypography.fieldValue, modifier = Modifier.weight(1f))
-                        if (pkg.version.isNotBlank()) {
-                            Text("v${pkg.version}", style = LETypography.caption, color = LEColors.textMuted)
+                        Row(
+                            modifier = Modifier.padding(LESpacing.md),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { onScopeChanged(scope) },
+                                colors = RadioButtonDefaults.colors(selectedColor = LEColors.primary)
+                            )
+                            Column {
+                                Text(scope.label, style = LETypography.fieldValueEmphasized)
+                                Text(scope.description, style = LETypography.caption, color = LEColors.textMuted)
+                            }
                         }
                     }
                 }
             }
         }
 
-        stage.scanError?.let { error ->
-            Text(error, style = LETypography.secondaryMetadata, color = LEColors.danger)
+        Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Source Packages to Scan (Read-Only)", style = LETypography.fieldLabel, color = LEColors.textSecondary)
+                Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
+                    TextButton(onClick = onSelectAllSourcePackages) {
+                        Text("Select All", style = LETypography.caption, color = LEColors.primary)
+                    }
+                    TextButton(onClick = onClearAllSourcePackages) {
+                        Text("Clear All", style = LETypography.caption, color = LEColors.textMuted)
+                    }
+                }
+            }
+
+            if (stage.availableSourcePackages.isEmpty()) {
+                Surface(
+                    color = LEColors.surfaceElevated,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(modifier = Modifier.padding(LESpacing.lg), contentAlignment = Alignment.Center) {
+                        Text(
+                            "No other installed packages available for image sourcing.",
+                            style = LETypography.secondaryMetadata,
+                            color = LEColors.textMuted
+                        )
+                    }
+                }
+            } else {
+                Surface(
+                    color = LEColors.surfaceElevated,
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, LEColors.borderSubtle),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(LESpacing.sm)) {
+                        stage.availableSourcePackages.forEach { sourcePkg ->
+                            val isSelected = sourcePkg.id in stage.selectedSourcePackageIds
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .clickable { onToggleSourcePackage(sourcePkg.id) }
+                                    .padding(horizontal = LESpacing.sm, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                            ) {
+                                Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = { onToggleSourcePackage(sourcePkg.id) },
+                                    colors = CheckboxDefaults.colors(checkedColor = LEColors.primary)
+                                )
+                                Text(sourcePkg.name, style = LETypography.fieldValue, modifier = Modifier.weight(1f))
+                                if (sourcePkg.version.isNotBlank()) {
+                                    Text(
+                                        text = "v${sourcePkg.version}",
+                                        style = LETypography.caption,
+                                        color = LEColors.textMuted
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage.scanError?.let { err ->
+            Text(text = err, style = LETypography.secondaryMetadata, color = LEColors.danger)
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Action Buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
@@ -358,18 +400,23 @@ private fun ImageReuseSetupView(
     }
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 private fun ImageReuseActiveReviewView(
     stage: ImageReuseReviewStage.Review,
     targetPackageName: String,
     thumbnailLoader: LessonThumbnailLoader,
     contentMediaStorage: ContentMediaStorage?,
-    onPreviousItem: () -> Unit,
+    onEditorFocusChanged: (Boolean) -> Unit,
+    onRegisterDraftProvider: (() -> ImageReuseTargetDraft) -> Unit,
+    onPreviousItem: (ImageReuseTargetDraft?) -> Unit,
     onUndoLastUse: () -> Unit,
-    onSkipCandidate: () -> Unit,
-    onSkipItem: () -> Unit,
-    onApplyAndNext: () -> Unit,
-    onClose: () -> Unit
+    onSkipCandidate: (ImageReuseTargetDraft?) -> Unit,
+    onSkipItem: (ImageReuseTargetDraft?) -> Unit,
+    onApplyAndNext: (ImageReuseTargetDraft?) -> Unit,
+    onReplaceTargetImage: (File) -> Unit,
+    onRemoveTargetImage: () -> Unit,
+    onClose: (ImageReuseTargetDraft?) -> Unit
 ) {
     val target = stage.currentTarget
     val candidate = stage.currentCandidate
@@ -382,16 +429,55 @@ private fun ImageReuseActiveReviewView(
         ) {
             Text("No remaining review items.", style = LETypography.fieldValue)
             Spacer(modifier = Modifier.height(LESpacing.md))
-            LEPrimaryButton(text = "Close", onClick = onClose)
+            LEPrimaryButton(text = "Close", onClick = { onClose(null) })
         }
         return
+    }
+
+    // Stable local editor draft initialized ONCE per targetContentId
+    var localDraft by remember(target.targetContentId) {
+        mutableStateOf(stage.effectiveTargetDraft)
+    }
+
+    // Register local draft provider to dialog container
+    LaunchedEffect(localDraft) {
+        onRegisterDraftProvider { localDraft }
+    }
+
+    // Sync external draft image intent updates (e.g. from replaceTargetImage callback)
+    LaunchedEffect(stage.targetDraft) {
+        stage.targetDraft?.let { externalDraft ->
+            if (externalDraft.targetContentId == target.targetContentId && externalDraft.imageIntent !is TargetImageIntent.Unchanged) {
+                localDraft = localDraft.copy(imageIntent = externalDraft.imageIntent)
+            }
+        }
+    }
+
+    var isTargetDragOver by remember { mutableStateOf(false) }
+    var focusedFieldsCount by remember { mutableStateOf(0) }
+
+    LaunchedEffect(focusedFieldsCount) {
+        onEditorFocusChanged(focusedFieldsCount > 0)
+    }
+
+    val isDirty = localDraft.isDirty(target)
+    val primaryButtonText = when {
+        stage.isApplying -> "Saving..."
+        isDirty -> "Save & Next"
+        else -> "Use Source Image & Next"
+    }
+
+    val effectiveTargetImageRef = when (val intent = localDraft.imageIntent) {
+        is TargetImageIntent.Unchanged -> target.currentImageRef
+        is TargetImageIntent.Replace -> intent.imageRef
+        is TargetImageIntent.Remove -> null
+        is TargetImageIntent.ReuseSource -> intent.imageRef
     }
 
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
     ) {
-        // Progress Bar & Counter
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -413,12 +499,10 @@ private fun ImageReuseActiveReviewView(
             Text("Error applying image: $err", style = LETypography.secondaryMetadata, color = LEColors.danger)
         }
 
-        // Split Comparison Area: Shared horizontal row comparison grid guaranteeing row-for-row alignment
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
         ) {
-            // Headers Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
@@ -429,9 +513,28 @@ private fun ImageReuseActiveReviewView(
                     border = androidx.compose.foundation.BorderStroke(1.dp, LEColors.borderSubtle),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = LESpacing.sm, vertical = 4.dp)) {
-                        Text("TARGET", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
-                        Text(targetPackageName, style = LETypography.secondaryMetadata, color = LEColors.textMuted, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = LESpacing.sm, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("TARGET (Editable)", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
+                            Text(targetPackageName, style = LETypography.secondaryMetadata, color = LEColors.textMuted, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        }
+                        if (isDirty) {
+                            Surface(
+                                color = LEColors.primary.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "Edited",
+                                    style = LETypography.caption,
+                                    color = LEColors.primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -446,30 +549,65 @@ private fun ImageReuseActiveReviewView(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("SOURCE CANDIDATE", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
+                        Text("SOURCE CANDIDATE (Read-Only)", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
                         Text(candidate.sourcePackageName, style = LETypography.secondaryMetadata, color = LEColors.textSecondary, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                 }
             }
 
-            // Shared Metadata Rows: Question, Answer, Translation, Example, POS
-            val comparisonRows = ImageReuseComparisonProjection.createRows(target, candidate)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                comparisonRows.forEach { row ->
-                    ComparisonRowItem(
-                        label = row.fieldName,
-                        targetValue = row.targetValue,
-                        sourceValue = row.sourceValue
-                    )
-                }
+                EditableComparisonRow(
+                    label = "Question",
+                    targetValue = localDraft.question,
+                    onTargetValueChange = { localDraft = localDraft.copy(question = it) },
+                    onFocusChanged = { focused ->
+                        focusedFieldsCount = if (focused) focusedFieldsCount + 1 else maxOf(0, focusedFieldsCount - 1)
+                    },
+                    sourceValue = candidate.question
+                )
+                EditableComparisonRow(
+                    label = "Answer",
+                    targetValue = localDraft.answer,
+                    onTargetValueChange = { localDraft = localDraft.copy(answer = it) },
+                    onFocusChanged = { focused ->
+                        focusedFieldsCount = if (focused) focusedFieldsCount + 1 else maxOf(0, focusedFieldsCount - 1)
+                    },
+                    sourceValue = candidate.answer
+                )
+                EditableComparisonRow(
+                    label = "Translation",
+                    targetValue = localDraft.translation,
+                    onTargetValueChange = { localDraft = localDraft.copy(translation = it) },
+                    onFocusChanged = { focused ->
+                        focusedFieldsCount = if (focused) focusedFieldsCount + 1 else maxOf(0, focusedFieldsCount - 1)
+                    },
+                    sourceValue = candidate.translation
+                )
+                EditableComparisonRow(
+                    label = "Example",
+                    targetValue = localDraft.exampleText,
+                    onTargetValueChange = { localDraft = localDraft.copy(exampleText = it) },
+                    onFocusChanged = { focused ->
+                        focusedFieldsCount = if (focused) focusedFieldsCount + 1 else maxOf(0, focusedFieldsCount - 1)
+                    },
+                    sourceValue = candidate.exampleText
+                )
+                EditableComparisonRow(
+                    label = "POS",
+                    targetValue = localDraft.partOfSpeech,
+                    onTargetValueChange = { localDraft = localDraft.copy(partOfSpeech = it) },
+                    onFocusChanged = { focused ->
+                        focusedFieldsCount = if (focused) focusedFieldsCount + 1 else maxOf(0, focusedFieldsCount - 1)
+                    },
+                    sourceValue = candidate.partOfSpeech
+                )
             }
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // Large Equal-Sized Image Previews Row
             Row(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
@@ -477,24 +615,142 @@ private fun ImageReuseActiveReviewView(
                 Surface(
                     color = LEColors.surfaceElevated,
                     shape = RoundedCornerShape(8.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, LEColors.borderSubtle),
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = if (isTargetDragOver) 2.dp else 1.dp,
+                        color = if (isTargetDragOver) LEColors.primary else LEColors.borderSubtle
+                    ),
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(LEColors.surface)
-                            .padding(LESpacing.xs),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        ReviewImagePreview(
-                            packageName = targetPackageName,
-                            reference = target.currentImageRef,
-                            contentMediaStorage = contentMediaStorage,
-                            thumbnailLoader = thumbnailLoader,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                    Column(modifier = Modifier.fillMaxSize().padding(LESpacing.xs)) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isTargetDragOver) LEColors.primary.copy(alpha = 0.08f) else LEColors.surface)
+                                .padding(LESpacing.xs)
+                                .dragAndDropTarget(
+                                    shouldStartDragAndDrop = { true },
+                                    target = remember {
+                                        object : DragAndDropTarget {
+                                            override fun onStarted(event: DragAndDropEvent) { isTargetDragOver = true }
+                                            override fun onEntered(event: DragAndDropEvent) { isTargetDragOver = true }
+                                            override fun onExited(event: DragAndDropEvent) { isTargetDragOver = false }
+                                            override fun onEnded(event: DragAndDropEvent) { isTargetDragOver = false }
+                                            override fun onDrop(event: DragAndDropEvent): Boolean {
+                                                isTargetDragOver = false
+                                                val transferable = event.awtTransferable
+                                                val files = DragDropUtils.extractFiles(transferable)
+                                                val imageFile = files.firstOrNull { DragDropUtils.isSupportedImage(it) }
+                                                if (imageFile != null) {
+                                                    onReplaceTargetImage(imageFile)
+                                                    return true
+                                                }
+                                                return false
+                                            }
+                                        }
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (localDraft.imageIntent is TargetImageIntent.Remove) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Image,
+                                        contentDescription = null,
+                                        tint = LEColors.textMuted,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Text(
+                                        text = "No image (Removed)",
+                                        style = LETypography.caption,
+                                        color = LEColors.danger
+                                    )
+                                }
+                            } else {
+                                ReviewImagePreview(
+                                    packageName = targetPackageName,
+                                    reference = effectiveTargetImageRef,
+                                    contentMediaStorage = contentMediaStorage,
+                                    thumbnailLoader = thumbnailLoader,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+
+                            when (val intent = localDraft.imageIntent) {
+                                is TargetImageIntent.Replace -> {
+                                    Surface(
+                                        color = LEColors.primary,
+                                        shape = RoundedCornerShape(4.dp),
+                                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Replaced",
+                                            style = LETypography.caption,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                is TargetImageIntent.Remove -> {
+                                    Surface(
+                                        color = LEColors.danger,
+                                        shape = RoundedCornerShape(4.dp),
+                                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Removed",
+                                            style = LETypography.caption,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                is TargetImageIntent.ReuseSource -> {
+                                    Surface(
+                                        color = LEColors.primary,
+                                        shape = RoundedCornerShape(4.dp),
+                                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Using Source",
+                                            style = LETypography.caption,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                TargetImageIntent.Unchanged -> {}
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                        ) {
+                            LESecondaryButton(
+                                text = "Replace",
+                                onClick = {
+                                    pickFile("Select Image", DragDropUtils.IMAGE_EXTENSIONS.toList()) { file ->
+                                        onReplaceTargetImage(file)
+                                    }
+                                },
+                                icon = LEIcons.Replace,
+                                modifier = Modifier.weight(1f)
+                            )
+                            LESecondaryButton(
+                                text = "Remove",
+                                onClick = {
+                                    localDraft = localDraft.copy(imageIntent = TargetImageIntent.Remove)
+                                    onRemoveTargetImage()
+                                },
+                                icon = LEIcons.Remove,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
 
@@ -524,18 +780,19 @@ private fun ImageReuseActiveReviewView(
             }
         }
 
-        // Bottom Shortcut Guidance & Actions
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val availableWidth = maxWidth
             if (availableWidth >= 1150.dp) {
-                // Wide layout: Shortcut guidance on the left, all 6 buttons in 1 row on the right
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Enter: Use & Next  ·  Space/→: Skip Candidate  ·  N: Skip Item  ·  ←: Prev Item  ·  Ctrl+Z: Undo  ·  Esc: Close",
+                        text = if (isDirty)
+                            "Enter: Save & Next  ·  Space/→: Skip Candidate  ·  N: Skip Item  ·  ←: Prev Item  ·  Ctrl+Z: Undo  ·  Esc: Close"
+                        else
+                            "Enter: Use & Next  ·  Space/→: Skip Candidate  ·  N: Skip Item  ·  ←: Prev Item  ·  Ctrl+Z: Undo  ·  Esc: Close",
                         style = LETypography.caption,
                         color = LEColors.textMuted,
                         modifier = Modifier.weight(1f, fill = false).padding(end = LESpacing.sm)
@@ -547,7 +804,7 @@ private fun ImageReuseActiveReviewView(
                     ) {
                         LESecondaryButton(
                             text = "Previous Item",
-                            onClick = onPreviousItem,
+                            onClick = { onPreviousItem(localDraft) },
                             enabled = stage.canGoPrevious
                         )
                         LESecondaryButton(
@@ -557,35 +814,33 @@ private fun ImageReuseActiveReviewView(
                         )
                         LESecondaryButton(
                             text = "Close",
-                            onClick = onClose,
+                            onClick = { onClose(localDraft) },
                             enabled = !stage.isApplying
                         )
                         Spacer(modifier = Modifier.width(LESpacing.xs))
                         LESecondaryButton(
                             text = "Skip Candidate",
-                            onClick = onSkipCandidate,
+                            onClick = { onSkipCandidate(localDraft) },
                             enabled = !stage.isApplying
                         )
                         LESecondaryButton(
                             text = "Skip This Item",
-                            onClick = onSkipItem,
+                            onClick = { onSkipItem(localDraft) },
                             enabled = !stage.isApplying
                         )
                         LEPrimaryButton(
-                            text = if (stage.isApplying) "Saving..." else "Use Image & Next",
-                            onClick = onApplyAndNext,
+                            text = primaryButtonText,
+                            onClick = { onApplyAndNext(localDraft) },
                             enabled = !stage.isApplying
                         )
                     }
                 }
             } else {
-                // Stacked layout: action buttons in row(s) on top, shortcut help on bottom so they never compete
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
                 ) {
                     if (availableWidth >= 760.dp) {
-                        // 1 row for all 6 buttons: Secondary navigation on the left, Primary actions on the right
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -597,7 +852,7 @@ private fun ImageReuseActiveReviewView(
                             ) {
                                 LESecondaryButton(
                                     text = "Previous Item",
-                                    onClick = onPreviousItem,
+                                    onClick = { onPreviousItem(localDraft) },
                                     enabled = stage.canGoPrevious
                                 )
                                 LESecondaryButton(
@@ -607,83 +862,82 @@ private fun ImageReuseActiveReviewView(
                                 )
                                 LESecondaryButton(
                                     text = "Close",
-                                    onClick = onClose,
+                                    onClick = { onClose(localDraft) },
                                     enabled = !stage.isApplying
                                 )
                             }
+
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 LESecondaryButton(
                                     text = "Skip Candidate",
-                                    onClick = onSkipCandidate,
+                                    onClick = { onSkipCandidate(localDraft) },
                                     enabled = !stage.isApplying
                                 )
                                 LESecondaryButton(
                                     text = "Skip This Item",
-                                    onClick = onSkipItem,
+                                    onClick = { onSkipItem(localDraft) },
                                     enabled = !stage.isApplying
                                 )
                                 LEPrimaryButton(
-                                    text = if (stage.isApplying) "Saving..." else "Use Image & Next",
-                                    onClick = onApplyAndNext,
+                                    text = primaryButtonText,
+                                    onClick = { onApplyAndNext(localDraft) },
                                     enabled = !stage.isApplying
                                 )
                             }
                         }
                     } else {
-                        // Narrow width: 2 rows of buttons
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             LESecondaryButton(
                                 text = "Previous Item",
-                                onClick = onPreviousItem,
+                                onClick = { onPreviousItem(localDraft) },
                                 enabled = stage.canGoPrevious
                             )
-                            Spacer(modifier = Modifier.width(LESpacing.xs))
                             LESecondaryButton(
                                 text = "Undo Last Use",
                                 onClick = onUndoLastUse,
                                 enabled = stage.canUndo
                             )
-                            Spacer(modifier = Modifier.width(LESpacing.xs))
                             LESecondaryButton(
                                 text = "Close",
-                                onClick = onClose,
+                                onClick = { onClose(localDraft) },
                                 enabled = !stage.isApplying
                             )
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             LESecondaryButton(
                                 text = "Skip Candidate",
-                                onClick = onSkipCandidate,
+                                onClick = { onSkipCandidate(localDraft) },
                                 enabled = !stage.isApplying
                             )
-                            Spacer(modifier = Modifier.width(LESpacing.xs))
                             LESecondaryButton(
                                 text = "Skip This Item",
-                                onClick = onSkipItem,
+                                onClick = { onSkipItem(localDraft) },
                                 enabled = !stage.isApplying
                             )
-                            Spacer(modifier = Modifier.width(LESpacing.xs))
                             LEPrimaryButton(
-                                text = if (stage.isApplying) "Saving..." else "Use Image & Next",
-                                onClick = onApplyAndNext,
+                                text = primaryButtonText,
+                                onClick = { onApplyAndNext(localDraft) },
                                 enabled = !stage.isApplying
                             )
                         }
                     }
 
                     Text(
-                        text = "Enter: Use & Next  ·  Space/→: Skip Candidate  ·  N: Skip Item  ·  ←: Prev Item  ·  Ctrl+Z: Undo  ·  Esc: Close",
+                        text = if (isDirty)
+                            "Enter: Save & Next  ·  Space/→: Skip Candidate  ·  N: Skip Item  ·  ←: Prev Item  ·  Ctrl+Z: Undo  ·  Esc: Close"
+                        else
+                            "Enter: Use & Next  ·  Space/→: Skip Candidate  ·  N: Skip Item  ·  ←: Prev Item  ·  Ctrl+Z: Undo  ·  Esc: Close",
                         style = LETypography.caption,
                         color = LEColors.textMuted
                     )
@@ -817,13 +1071,14 @@ private fun ImageReuseCompleteView(
 }
 
 @Composable
-private fun ComparisonRowItem(
+private fun EditableComparisonRow(
     label: String,
     targetValue: String,
-    sourceValue: String
+    onTargetValueChange: (String) -> Unit,
+    sourceValue: String,
+    onFocusChanged: (Boolean) -> Unit = {}
 ) {
     val isQuestion = label == "Question"
-    val displayTarget = targetValue.ifBlank { "—" }
     val displaySource = sourceValue.ifBlank { "—" }
 
     Row(
@@ -831,7 +1086,6 @@ private fun ComparisonRowItem(
         horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Target Cell
         Surface(
             color = LEColors.surfaceElevated,
             border = androidx.compose.foundation.BorderStroke(1.dp, LEColors.borderSubtle.copy(alpha = 0.7f)),
@@ -848,16 +1102,21 @@ private fun ComparisonRowItem(
                     fontWeight = FontWeight.Bold,
                     color = LEColors.textMuted
                 )
-                Text(
-                    text = displayTarget,
-                    style = if (isQuestion) LETypography.fieldValueEmphasized else LETypography.fieldValue,
-                    fontWeight = if (isQuestion) FontWeight.Bold else FontWeight.Normal,
-                    color = if (displayTarget == "—") LEColors.textMuted else LEColors.textPrimary
+                BasicTextField(
+                    value = targetValue,
+                    onValueChange = onTargetValueChange,
+                    singleLine = true,
+                    maxLines = 1,
+                    textStyle = if (isQuestion) LETypography.fieldValueEmphasized.copy(color = LEColors.primaryText, fontWeight = FontWeight.Bold)
+                    else LETypography.fieldValue.copy(color = LEColors.primaryText),
+                    cursorBrush = SolidColor(LEColors.primary),
+                    modifier = Modifier
+                        .weight(1f)
+                        .onFocusChanged { onFocusChanged(it.isFocused) }
                 )
             }
         }
 
-        // Source Cell
         Surface(
             color = LEColors.surfaceElevated,
             border = androidx.compose.foundation.BorderStroke(1.dp, LEColors.primary.copy(alpha = 0.35f)),
@@ -878,9 +1137,27 @@ private fun ComparisonRowItem(
                     text = displaySource,
                     style = if (isQuestion) LETypography.fieldValueEmphasized else LETypography.fieldValue,
                     fontWeight = if (isQuestion) FontWeight.Bold else FontWeight.Normal,
-                    color = if (displaySource == "—") LEColors.textMuted else LEColors.textPrimary
+                    color = LEColors.textPrimary
                 )
             }
         }
     }
+}
+
+private fun pickFile(title: String, allowedExtensions: List<String>, onFileSelected: (File) -> Unit) {
+    try {
+        val dialog = FileDialog(null as Frame?, title, FileDialog.LOAD)
+        dialog.isVisible = true
+        val dir = dialog.directory
+        val fileName = dialog.file
+        if (dir != null && fileName != null) {
+            val selected = File(dir, fileName)
+            if (selected.exists() && selected.isFile) {
+                val ext = selected.extension.lowercase()
+                if (allowedExtensions.isEmpty() || ext in allowedExtensions) {
+                    onFileSelected(selected)
+                }
+            }
+        }
+    } catch (_: Exception) {}
 }

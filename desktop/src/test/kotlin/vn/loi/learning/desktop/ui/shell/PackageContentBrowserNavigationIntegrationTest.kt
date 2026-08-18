@@ -124,6 +124,70 @@ class PackageContentBrowserNavigationIntegrationTest {
         assertNull(viewModel.learningWorkspaceUiState)
     }
 
+    @Test
+    fun `Browse Lessons loads package and second call on same active package is idempotent`() {
+        val (appContext, instPkgId) = createFixture()
+        val packageBrowserFacade = PackageContentBrowserFacade(queryService = appContext.packageBrowserQuery)
+        val viewModel = ContentLibraryViewModel(
+            facade = ContentLibraryFacade(appContext),
+            lessonBrowserFacade = LessonBrowserFacade(appContext),
+            packageBrowserFacade = packageBrowserFacade
+        )
+
+        // First click
+        viewModel.browsePackageLessons(instPkgId, "Vocabulary Package")
+        assertNotNull(viewModel.packageBrowserUiState)
+        assertEquals("Vocabulary Package", viewModel.packageBrowserUiState?.packageName)
+
+        val firstState = viewModel.packageBrowserUiState
+
+        // Second click on same loaded package
+        viewModel.browsePackageLessons(instPkgId, "Vocabulary Package")
+        assertEquals(firstState, viewModel.packageBrowserUiState)
+    }
+
+    @Test
+    fun `Browse Lessons failure leaves packageBrowserUiState null and records error without opening Content Studio`() {
+        val (appContext, _) = createFixture()
+        val nonExistentPkgId = InstalledPackageId("non-existent-pkg")
+        val packageBrowserFacade = PackageContentBrowserFacade(queryService = appContext.packageBrowserQuery)
+        val viewModel = ContentLibraryViewModel(
+            facade = ContentLibraryFacade(appContext),
+            lessonBrowserFacade = LessonBrowserFacade(appContext),
+            packageBrowserFacade = packageBrowserFacade
+        )
+
+        viewModel.browsePackageLessons(nonExistentPkgId, "Non Existent Package")
+
+        assertNull(viewModel.packageBrowserUiState, "Must not enter Content Studio on failure")
+        assertNotNull(viewModel.uiState.loadError, "Error must be recorded in UI state")
+        assertTrue(viewModel.uiState.loadError!!.contains("not available in library") || viewModel.uiState.loadError!!.contains("Failed to load"))
+    }
+
+    @Test
+    fun `Browse Lessons does not mutate package or learning progress state`() {
+        val (appContext, instPkgId) = createFixture()
+        val beforePkg = appContext.installedPackageRepository!!.findById(instPkgId)
+        val beforeItems = appContext.learningItemRepository!!.findAll()
+
+        val packageBrowserFacade = PackageContentBrowserFacade(queryService = appContext.packageBrowserQuery)
+        val viewModel = ContentLibraryViewModel(
+            facade = ContentLibraryFacade(appContext),
+            lessonBrowserFacade = LessonBrowserFacade(appContext),
+            packageBrowserFacade = packageBrowserFacade
+        )
+
+        viewModel.browsePackageLessons(instPkgId, "Vocabulary Package")
+
+        val afterPkg = appContext.installedPackageRepository!!.findById(instPkgId)
+        val afterItems = appContext.learningItemRepository!!.findAll()
+
+        assertEquals(beforePkg?.state, afterPkg?.state)
+        assertEquals(beforePkg?.learningItemCount, afterPkg?.learningItemCount)
+        assertEquals(beforePkg?.contentCount, afterPkg?.contentCount)
+        assertEquals(beforeItems.map { it.id }, afterItems.map { it.id })
+    }
+
     private fun createFixture(): Pair<LearningApplicationContext, InstalledPackageId> {
         val appContext = LearningApplicationFactory.createInMemory()
 
