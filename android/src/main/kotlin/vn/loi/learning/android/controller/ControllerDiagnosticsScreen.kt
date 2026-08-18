@@ -330,6 +330,77 @@ fun ControllerDiagnosticsScreen(
                 }
             }
 
+            // Quick Voice Recorder Status Card
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Quick Voice Recorder",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = when (state.quickVoiceRecorderState) {
+                                    is vn.loi.learning.android.recording.QuickVoiceRecorderState.Recording -> MaterialTheme.colorScheme.errorContainer
+                                    is vn.loi.learning.android.recording.QuickVoiceRecorderState.Recorded -> MaterialTheme.colorScheme.primaryContainer
+                                    is vn.loi.learning.android.recording.QuickVoiceRecorderState.Replaying -> MaterialTheme.colorScheme.tertiaryContainer
+                                    else -> MaterialTheme.colorScheme.surface
+                                }
+                            ) {
+                                Text(
+                                    text = state.quickVoiceRecorderState::class.simpleName?.uppercase() ?: "IDLE",
+                                    color = when (state.quickVoiceRecorderState) {
+                                        is vn.loi.learning.android.recording.QuickVoiceRecorderState.Recording -> MaterialTheme.colorScheme.onErrorContainer
+                                        is vn.loi.learning.android.recording.QuickVoiceRecorderState.Recorded -> MaterialTheme.colorScheme.onPrimaryContainer
+                                        is vn.loi.learning.android.recording.QuickVoiceRecorderState.Replaying -> MaterialTheme.colorScheme.onTertiaryContainer
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        val lastFile = when (val s = state.quickVoiceRecorderState) {
+                            is vn.loi.learning.android.recording.QuickVoiceRecorderState.Recorded -> s.item.filename + " (${s.item.durationMs}ms)"
+                            is vn.loi.learning.android.recording.QuickVoiceRecorderState.Recording -> s.file.name + " (recording...)"
+                            is vn.loi.learning.android.recording.QuickVoiceRecorderState.Replaying -> s.item.filename + " (replaying...)"
+                            is vn.loi.learning.android.recording.QuickVoiceRecorderState.Idle -> s.latestRecording?.filename ?: "none"
+                            is vn.loi.learning.android.recording.QuickVoiceRecorderState.Error -> "Error: ${s.message}"
+                            else -> "none"
+                        }
+                        Text(
+                            text = "Latest Recording: $lastFile",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        val isGranted = vn.loi.learning.android.recording.QuickVoiceRecorderController.isPermissionGranted(context)
+                        Text(
+                            text = "Total Recordings: ${state.quickVoiceRecordingsCount} | Permission: ${if (isGranted) "GRANTED" else "REQUIRED"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             // Connected Devices Section
             item {
                 Text(

@@ -30,6 +30,7 @@ class ControllerGestureDetector(
     private val downTimestampByKey = mutableMapOf<ControllerPhysicalInput, Long>()
     private val longPressFiredByKey = mutableMapOf<ControllerPhysicalInput, Boolean>()
     private val doublePressFiredByKey = mutableMapOf<ControllerPhysicalInput, Boolean>()
+    private val pressFiredOnDownByKey = mutableMapOf<ControllerPhysicalInput, Boolean>()
 
     // Pending single press tracking for double-press arbitration
     private val pendingSinglePressTapTimeByKey = mutableMapOf<ControllerPhysicalInput, Long>()
@@ -93,6 +94,7 @@ class ControllerGestureDetector(
                 downTimestampByKey[currentInput] = now
                 longPressFiredByKey[currentInput] = false
                 doublePressFiredByKey[currentInput] = false
+                pressFiredOnDownByKey[currentInput] = false
             }
         }
 
@@ -183,6 +185,7 @@ class ControllerGestureDetector(
             } else {
                 // PRESS only (or unmapped): zero latency dispatch on initial down
                 if (activeModifier != null) chordFiredDuringModifierHold = true
+                pressFiredOnDownByKey[currentInput] = true
                 return ControllerGesture(
                     input = currentInput,
                     pressType = ControllerPressType.PRESS,
@@ -199,20 +202,25 @@ class ControllerGestureDetector(
             // If long press was already emitted during hold, consume UP without firing PRESS
             if (longPressFiredByKey[currentInput] == true) {
                 longPressFiredByKey[currentInput] = false
+                pressFiredOnDownByKey[currentInput] = false
                 return null
             }
 
             // If double press was already emitted on DOWN of 2nd tap, consume UP
             if (doublePressFiredByKey[currentInput] == true) {
                 doublePressFiredByKey[currentInput] = false
+                pressFiredOnDownByKey[currentInput] = false
                 return null
             }
+
+            val wasPressFiredOnDown = pressFiredOnDownByKey[currentInput] == true
+            pressFiredOnDownByKey[currentInput] = false
 
             val downTime = downTimestampByKey[currentInput] ?: now
             val downDuration = now - downTime
 
             // Long hold release
-            if (downDuration >= longPressTimeoutMs) {
+            if (downDuration >= longPressTimeoutMs && downTimestampByKey.containsKey(currentInput)) {
                 longPressFiredByKey[currentInput] = false
                 pendingSinglePressTapTimeByKey.remove(currentInput)
                 pendingSinglePressGestureByKey.remove(currentInput)
@@ -246,7 +254,7 @@ class ControllerGestureDetector(
                 // Released before long press threshold and no double mapping configured
                 if (activeModifier != null) chordFiredDuringModifierHold = true
                 val shouldEmitPress = hasExplicitPressMapping || !hasLongMapping
-                if (shouldEmitPress) {
+                if (shouldEmitPress && !wasPressFiredOnDown) {
                     return ControllerGesture(
                         input = currentInput,
                         pressType = ControllerPressType.PRESS,
@@ -256,7 +264,16 @@ class ControllerGestureDetector(
                 return null
             }
 
-            // PRESS-only already dispatched on ACTION_DOWN, UP produces null
+            // Fallback for PRESS-only: if ACTION_DOWN was already fired, UP produces null.
+            // If ACTION_DOWN was NOT fired (e.g. swallowed by IME/OEM stage), fire PRESS on ACTION_UP!
+            if (!wasPressFiredOnDown) {
+                if (activeModifier != null) chordFiredDuringModifierHold = true
+                return ControllerGesture(
+                    input = currentInput,
+                    pressType = ControllerPressType.PRESS,
+                    modifier = activeModifier
+                )
+            }
             return null
         }
 
@@ -302,6 +319,7 @@ class ControllerGestureDetector(
         downTimestampByKey.clear()
         longPressFiredByKey.clear()
         doublePressFiredByKey.clear()
+        pressFiredOnDownByKey.clear()
         pendingSinglePressTapTimeByKey.clear()
         pendingSinglePressGestureByKey.clear()
         isModifierHeld = false

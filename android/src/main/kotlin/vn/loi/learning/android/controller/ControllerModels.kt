@@ -117,6 +117,7 @@ enum class ControllerActionCategory(val label: String) {
     STUDY("Study & Review"),
     RATING("Rating"),
     NAVIGATION("Navigation"),
+    VOICE_RECORDING("Voice Recording"),
     SHADOWING("Shadowing (Future)")
 }
 
@@ -173,7 +174,9 @@ object ControllerActionPolicy {
             ControllerAction.MUTE_TOGGLE,
             ControllerAction.SYSTEM_VOLUME_UP,
             ControllerAction.SYSTEM_VOLUME_DOWN,
-            ControllerAction.LOCK_SCREEN -> true
+            ControllerAction.LOCK_SCREEN,
+            ControllerAction.TOGGLE_VOICE_RECORDING,
+            ControllerAction.REPLAY_LAST_RECORDING -> true
             ControllerAction.REPLAY_SENTENCE,
             ControllerAction.TOGGLE_LOOP,
             ControllerAction.SPEED_UP,
@@ -202,6 +205,10 @@ enum class ControllerAction(
     MUTE_TOGGLE("Mute / unmute app audio", "Mute or unmute all LearningEngine audio", ControllerActionCategory.PLAYBACK),
     START_AUTO_PLAY("Auto Play current session", "Launch Auto Play for current session/review items", ControllerActionCategory.PLAYBACK),
     STOP_AUTO_PLAY("Stop Auto Play", "Stop Auto Play session", ControllerActionCategory.PLAYBACK),
+
+    // Voice Recording (Global Quick Voice Recorder)
+    TOGGLE_VOICE_RECORDING("Start / stop voice recording", "Start or stop quick voice recording", ControllerActionCategory.VOICE_RECORDING),
+    REPLAY_LAST_RECORDING("Replay last voice recording", "Replay the latest recorded voice audio", ControllerActionCategory.VOICE_RECORDING),
 
     // Study & Review
     REVEAL_ANSWER("Show answer", "Reveal the answer for the current study item", ControllerActionCategory.STUDY),
@@ -385,15 +392,27 @@ data class ControllerDiagnosticsState(
     val activeStudyPlayback: ActiveStudyPlayback? = null,
     val systemVolumeStatus: vn.loi.learning.android.media.SystemVolumeStatus? = null,
     val lastVolumeAction: String? = null,
+    val quickVoiceRecorderState: vn.loi.learning.android.recording.QuickVoiceRecorderState = vn.loi.learning.android.recording.QuickVoiceRecorderState.Idle(),
+    val quickVoiceRecordingsCount: Int = 0,
+    val latestVoiceRecording: vn.loi.learning.android.recording.VoiceRecordingItem? = null,
     val connectedDevices: List<InputDeviceInfo> = emptyList(),
     val events: List<ControllerInputEvent> = emptyList(),
     val keyCounts: Map<String, Int> = emptyMap(),
     val runtimeTrace: List<ControllerRuntimeTraceEntry> = emptyList(),
     val audioTrace: List<StudyAudioTraceEntry> = emptyList(),
+    val quickVoiceTrace: List<QuickVoiceTraceEntry> = emptyList(),
     val lastEvent: ControllerInputEvent? = null,
     val lastDispatchedResult: ControllerActionResult? = null,
     val testingMode: TestingMode = TestingMode.MAPPED_ACTIONS
 )
+
+data class QuickVoiceTraceEntry(
+    val timestamp: Long = System.currentTimeMillis(),
+    val event: vn.loi.learning.android.recording.QuickVoiceTraceEvent,
+    val detail: String
+) {
+    fun toLogLine(): String = "[$timestamp][$event] $detail"
+}
 
 enum class StudyAudioReason {
     ITEM_ENTRY,

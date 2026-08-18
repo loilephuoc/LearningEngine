@@ -384,6 +384,7 @@ fun SettingsScreen(
     onContinuousSkim: (Boolean) -> Unit,
     onControllerSettings: () -> Unit = {},
     onControllerDiagnostics: () -> Unit = {},
+    onVoiceRecordings: () -> Unit = {},
     onAction: (AndroidOperationKind) -> Unit
 ) {
     LearningEngineScreenShell("Settings", "Appearance and local data",
@@ -424,12 +425,18 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-            Text("External Controller", style = LearningTextRole.sectionTitle)
+            Text("External Controller & Voice", style = LearningTextRole.sectionTitle)
             LearningEngineSettingsRow(
                 Icons.Default.Gamepad,
                 "8BitDo / Controller Settings",
                 "Configure button bindings, active profile, and modifier button",
                 onControllerSettings
+            )
+            LearningEngineSettingsRow(
+                Icons.Default.Mic,
+                "Quick Voice Recordings",
+                "Manage and listen to your practice voice recordings",
+                onVoiceRecordings
             )
             LearningEngineSettingsRow(
                 Icons.Default.BugReport,

@@ -20,6 +20,7 @@ class ControllerActionDispatcher(
     },
     private val audioPolicy: vn.loi.learning.android.media.LearningEngineAudioPolicy = vn.loi.learning.android.media.LearningEngineAudioPolicy,
     private val systemMediaVolumeController: vn.loi.learning.android.media.SystemMediaVolumeController = vn.loi.learning.android.media.AndroidSystemMediaVolumeController(appContext),
+    private val quickVoiceRecorder: vn.loi.learning.android.recording.QuickVoiceRecorderController = vn.loi.learning.android.recording.QuickVoiceRecorderController,
     private val systemVolumeAdjuster: ((Int) -> Boolean)? = null
 ) {
 
@@ -262,6 +263,57 @@ class ControllerActionDispatcher(
                     ControllerActionResult.Executed(action, "System: Screen Locked")
                 } else {
                     ControllerActionResult.UnavailableInContext(action, "Accessibility service not connected or device lock unavailable")
+                }
+            }
+
+            ControllerAction.TOGGLE_VOICE_RECORDING -> {
+                val opResult = quickVoiceRecorder.toggleRecording(appContext)
+                when (opResult) {
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.Starting -> {
+                        ControllerActionResult.Executed(action, "Voice: Starting (${opResult.file.name})")
+                    }
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.Started -> {
+                        ControllerActionResult.Executed(action, "Voice: Recording Started (${opResult.file.name})")
+                    }
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.Stopping -> {
+                        ControllerActionResult.Executed(action, "Voice: Stopping recording")
+                    }
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.Stopped -> {
+                        ControllerActionResult.Executed(action, "Voice: Recording Saved (${opResult.item.durationMs}ms)")
+                    }
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.PermissionRequired -> {
+                        ControllerActionResult.UnavailableInContext(action, opResult.message)
+                    }
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.BackgroundStartRestricted -> {
+                        ControllerActionResult.UnavailableInContext(action, opResult.reason)
+                    }
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.Unavailable -> {
+                        ControllerActionResult.UnavailableInContext(action, opResult.reason)
+                    }
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.Failed -> {
+                        ControllerActionResult.UnavailableInContext(action, "Recording failed: ${opResult.error}")
+                    }
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.Replaying -> {
+                        ControllerActionResult.Executed(action, "Voice: Replaying")
+                    }
+                }
+            }
+
+            ControllerAction.REPLAY_LAST_RECORDING -> {
+                val opResult = quickVoiceRecorder.replayLastRecording()
+                when (opResult) {
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.Replaying -> {
+                        ControllerActionResult.Executed(action, "Voice: Replaying (${opResult.item.filename})")
+                    }
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.Unavailable -> {
+                        ControllerActionResult.UnavailableInContext(action, opResult.reason)
+                    }
+                    is vn.loi.learning.android.recording.QuickVoiceOperationResult.Failed -> {
+                        ControllerActionResult.UnavailableInContext(action, "Replay failed: ${opResult.error}")
+                    }
+                    else -> {
+                        ControllerActionResult.UnavailableInContext(action, "Cannot replay voice recording")
+                    }
                 }
             }
 

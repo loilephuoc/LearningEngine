@@ -75,10 +75,17 @@ class ControllerAccessibilityDiagnosticService : AccessibilityService() {
         val dispatchResult = router.onKeyEvent(event, origin = EventOrigin.ACCESSIBILITY)
         val returnVal = isEnabled
 
-        Log.i(
-            ControllerInputDiagnostic.TAG,
-            "[NO_WAKE_AUDIT] ts=${System.currentTimeMillis()} isInteractive=$isInteractiveBefore device=${device?.name} vid=0x${device?.vendorId?.toString(16)} pid=0x${device?.productId?.toString(16)} key=${KeyEvent.keyCodeToString(event.keyCode)}(${event.keyCode}) scanCode=${event.scanCode} action=${if (event.action == KeyEvent.ACTION_DOWN) "DOWN" else "UP"} isEnabled=$isEnabled routerResult=$dispatchResult RETURN=$returnVal"
-        )
+        if (!isInteractiveBefore) {
+            Log.i(
+                ControllerInputDiagnostic.TAG,
+                "[SCREEN_OFF_FIRST_PRESS] ts=${System.currentTimeMillis()} isInteractiveBefore=false device=${device?.name} vid=0x${device?.vendorId?.toString(16)} pid=0x${device?.productId?.toString(16)} key=${KeyEvent.keyCodeToString(event.keyCode)}(${event.keyCode}) scanCode=${event.scanCode} action=${if (event.action == KeyEvent.ACTION_DOWN) "DOWN" else "UP"} isEnabled=$isEnabled routerResult=$dispatchResult RETURN=$returnVal"
+            )
+        } else {
+            Log.i(
+                ControllerInputDiagnostic.TAG,
+                "[NO_WAKE_AUDIT] ts=${System.currentTimeMillis()} isInteractive=$isInteractiveBefore device=${device?.name} vid=0x${device?.vendorId?.toString(16)} pid=0x${device?.productId?.toString(16)} key=${KeyEvent.keyCodeToString(event.keyCode)}(${event.keyCode}) scanCode=${event.scanCode} action=${if (event.action == KeyEvent.ACTION_DOWN) "DOWN" else "UP"} isEnabled=$isEnabled routerResult=$dispatchResult RETURN=$returnVal"
+            )
+        }
 
         return returnVal
     }

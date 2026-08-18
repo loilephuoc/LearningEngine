@@ -784,6 +784,170 @@ class ControllerPhase142RegressionTest {
             assertEquals(ControllerAction.PLAY_PAUSE, resolved, "Failed resolution for button $label ($keyCode)")
         }
     }
+
+    @Test
+    fun `BE - PRESS only with normal ACTION_DOWN emits on DOWN and suppresses duplicate on UP`() {
+        val detector = ControllerGestureDetector(clock = fakeClock)
+        val profile = ControllerProfile(
+            id = "test-press-only",
+            name = "Test",
+            mappings = listOf(
+                ControllerMapping(
+                    context = ControllerContext.GLOBAL,
+                    gesture = ControllerGesture(ControllerPhysicalInput(0x2dc8, 0x9021, KeyEvent.KEYCODE_F), ControllerPressType.PRESS),
+                    action = ControllerAction.REPLAY_LAST_RECORDING
+                )
+            )
+        )
+
+        // 1. ACTION_DOWN arrives normally
+        val downGesture = detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_DOWN, 0, EventOrigin.ACTIVITY, profile)
+        assertNotNull(downGesture, "DOWN must emit PRESS immediately for PRESS-only mapping")
+        assertEquals(ControllerPressType.PRESS, downGesture.pressType)
+        assertEquals(KeyEvent.KEYCODE_F, downGesture.input.keyCode)
+
+        // 2. ACTION_UP arrives later
+        currentTime += 50L
+        val upGesture = detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_UP, 0, EventOrigin.ACTIVITY, profile)
+        assertNull(upGesture, "UP must NOT emit duplicate PRESS when already emitted on DOWN")
+    }
+
+    @Test
+    fun `BF - PRESS only with swallowed ACTION_DOWN by IME reliably emits on ACTION_UP`() {
+        val detector = ControllerGestureDetector(clock = fakeClock)
+        val profile = ControllerProfile(
+            id = "test-press-only-swallowed-down",
+            name = "Test",
+            mappings = listOf(
+                ControllerMapping(
+                    context = ControllerContext.GLOBAL,
+                    gesture = ControllerGesture(ControllerPhysicalInput(0x2dc8, 0x9021, KeyEvent.KEYCODE_F), ControllerPressType.PRESS),
+                    action = ControllerAction.REPLAY_LAST_RECORDING
+                )
+            )
+        )
+
+        // Simulating scenario where system IME swallowed ACTION_DOWN, so ONLY ACTION_UP arrives at Activity
+        val upGesture = detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_UP, 0, EventOrigin.ACTIVITY, profile)
+        assertNotNull(upGesture, "UP must emit PRESS when ACTION_DOWN was not received")
+        assertEquals(ControllerPressType.PRESS, upGesture.pressType)
+        assertEquals(KeyEvent.KEYCODE_F, upGesture.input.keyCode)
+    }
+
+    @Test
+    fun `BG - Repeated standard DOWN+UP sequence emits exactly one PRESS per cycle`() {
+        val detector = ControllerGestureDetector(clock = fakeClock)
+        val profile = ControllerProfile(
+            id = "test-repeated-cycle",
+            name = "Test",
+            mappings = listOf(
+                ControllerMapping(
+                    context = ControllerContext.GLOBAL,
+                    gesture = ControllerGesture(ControllerPhysicalInput(0x2dc8, 0x9021, KeyEvent.KEYCODE_F), ControllerPressType.PRESS),
+                    action = ControllerAction.REPLAY_LAST_RECORDING
+                )
+            )
+        )
+
+        var emittedCount = 0
+
+        // Cycle 1
+        currentTime += 100L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_DOWN, 0, EventOrigin.ACTIVITY, profile)?.let { emittedCount++ }
+        currentTime += 50L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_UP, 0, EventOrigin.ACTIVITY, profile)?.let { emittedCount++ }
+
+        // Cycle 2
+        currentTime += 100L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_DOWN, 0, EventOrigin.ACTIVITY, profile)?.let { emittedCount++ }
+        currentTime += 50L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_UP, 0, EventOrigin.ACTIVITY, profile)?.let { emittedCount++ }
+
+        // Cycle 3
+        currentTime += 100L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_DOWN, 0, EventOrigin.ACTIVITY, profile)?.let { emittedCount++ }
+        currentTime += 50L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_UP, 0, EventOrigin.ACTIVITY, profile)?.let { emittedCount++ }
+
+        assertEquals(3, emittedCount, "3 standard DOWN+UP cycles must emit exactly 3 PRESS actions")
+    }
+
+    @Test
+    fun `BH - Mixed OEM sequence alternating DOWN+UP and UP-only produces exactly 4 actions`() {
+        val detector = ControllerGestureDetector(clock = fakeClock)
+        val profile = ControllerProfile(
+            id = "test-mixed-oem",
+            name = "Test",
+            mappings = listOf(
+                ControllerMapping(
+                    context = ControllerContext.GLOBAL,
+                    gesture = ControllerGesture(ControllerPhysicalInput(0x2dc8, 0x9021, KeyEvent.KEYCODE_F), ControllerPressType.PRESS),
+                    action = ControllerAction.REPLAY_LAST_RECORDING
+                )
+            )
+        )
+
+        val gestures = mutableListOf<ControllerGesture>()
+
+        // Press 1: DOWN + UP
+        currentTime += 100L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_DOWN, 0, EventOrigin.ACTIVITY, profile)?.let { gestures.add(it) }
+        currentTime += 50L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_UP, 0, EventOrigin.ACTIVITY, profile)?.let { gestures.add(it) }
+
+        // Press 2: UP only (DOWN swallowed by IME)
+        currentTime += 100L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_UP, 0, EventOrigin.ACTIVITY, profile)?.let { gestures.add(it) }
+
+        // Press 3: DOWN + UP
+        currentTime += 100L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_DOWN, 0, EventOrigin.ACTIVITY, profile)?.let { gestures.add(it) }
+        currentTime += 50L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_UP, 0, EventOrigin.ACTIVITY, profile)?.let { gestures.add(it) }
+
+        // Press 4: UP only (DOWN swallowed by IME)
+        currentTime += 100L
+        detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_UP, 0, EventOrigin.ACTIVITY, profile)?.let { gestures.add(it) }
+
+        assertEquals(4, gestures.size, "4 mixed presses must produce exactly 4 gestures")
+        assertTrue(gestures.all { it.pressType == ControllerPressType.PRESS && it.input.keyCode == KeyEvent.KEYCODE_F })
+    }
+
+    @Test
+    fun `BI - Long-press and double-press release safety does not emit extra plain PRESS on UP`() {
+        val detector = ControllerGestureDetector(clock = fakeClock)
+        val profile = ControllerProfile(
+            id = "test-gesture-safety",
+            name = "Test",
+            mappings = listOf(
+                ControllerMapping(
+                    context = ControllerContext.GLOBAL,
+                    gesture = ControllerGesture(ControllerPhysicalInput(0x2dc8, 0x9021, KeyEvent.KEYCODE_F), ControllerPressType.PRESS),
+                    action = ControllerAction.REPLAY_LAST_RECORDING
+                ),
+                ControllerMapping(
+                    context = ControllerContext.GLOBAL,
+                    gesture = ControllerGesture(ControllerPhysicalInput(0x2dc8, 0x9021, KeyEvent.KEYCODE_F), ControllerPressType.LONG_PRESS),
+                    action = ControllerAction.TOGGLE_VOICE_RECORDING
+                )
+            )
+        )
+
+        // 1. Initial DOWN at 1000ms: must not emit PRESS because LONG_PRESS exists
+        val down = detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_DOWN, 0, EventOrigin.ACTIVITY, profile)
+        assertNull(down)
+
+        // 2. Repeat at 1450ms (>=400ms): emits LONG_PRESS
+        currentTime += 450L
+        val longPress = detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_DOWN, 1, EventOrigin.ACTIVITY, profile)
+        assertNotNull(longPress)
+        assertEquals(ControllerPressType.LONG_PRESS, longPress.pressType)
+
+        // 3. Release at 1550ms: must NOT emit plain PRESS
+        currentTime += 100L
+        val up = detector.processRawKeyEvent(0x2dc8, 0x9021, KeyEvent.KEYCODE_F, KeyEvent.ACTION_UP, 0, EventOrigin.ACTIVITY, profile)
+        assertNull(up, "Release after long press must not emit duplicate PRESS")
+    }
 }
 
 // Helpers for test execution

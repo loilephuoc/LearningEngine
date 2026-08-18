@@ -17,7 +17,7 @@ class AndroidReleaseGraphQualificationTest {
     }
     @Test fun `release manifest contains no broad permissions or unsafe flags`() {
         val manifest=java.io.File("src/main/AndroidManifest.xml").readText()
-        listOf("MANAGE_EXTERNAL_STORAGE","READ_EXTERNAL_STORAGE","WRITE_EXTERNAL_STORAGE","INTERNET","RECORD_AUDIO","CAMERA","largeHeap","usesCleartextTraffic=\"true\"").forEach { assertFalse(manifest.contains(it),it) }
+        listOf("MANAGE_EXTERNAL_STORAGE","READ_EXTERNAL_STORAGE","WRITE_EXTERNAL_STORAGE","INTERNET","CAMERA","largeHeap","usesCleartextTraffic=\"true\"").forEach { assertFalse(manifest.contains(it),it) }
         assertTrue(manifest.contains("android:allowBackup=\"false\""));assertTrue(manifest.contains("android:exported=\"true\""))
     }
     @Test fun `release build declares minification shrinking and no signing secret`() {

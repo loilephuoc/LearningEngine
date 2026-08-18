@@ -448,6 +448,35 @@ object ControllerDiagnosticsHolder {
         }
     }
 
+    fun updateQuickVoiceRecorderDiagnostic(
+        state: vn.loi.learning.android.recording.QuickVoiceRecorderState,
+        recordingsCount: Int,
+        latestRecording: vn.loi.learning.android.recording.VoiceRecordingItem?
+    ) {
+        _state.update {
+            it.copy(
+                quickVoiceRecorderState = state,
+                quickVoiceRecordingsCount = recordingsCount,
+                latestVoiceRecording = latestRecording
+            )
+        }
+    }
+
+    fun recordQuickVoiceTrace(
+        event: vn.loi.learning.android.recording.QuickVoiceTraceEvent,
+        detail: String
+    ) {
+        val entry = QuickVoiceTraceEntry(
+            event = event,
+            detail = detail
+        )
+        Log.i(TRACE_TAG, entry.toLogLine())
+        _state.update { current ->
+            val newTrace = (current.quickVoiceTrace + entry).takeLast(MAX_TRACE_ENTRIES)
+            current.copy(quickVoiceTrace = newTrace)
+        }
+    }
+
     fun recordRuntimeTrace(entry: ControllerRuntimeTraceEntry) {
         Log.i(TRACE_TAG, entry.toLogLine())
         _state.update { current ->
@@ -475,10 +504,14 @@ object ControllerDiagnosticsHolder {
                 keyCounts = emptyMap(),
                 runtimeTrace = emptyList(),
                 audioTrace = emptyList(),
+                quickVoiceTrace = emptyList(),
                 lastEvent = null,
                 lastDispatchedResult = null,
                 activeStudyPlayback = null,
-                lastVolumeAction = null
+                lastVolumeAction = null,
+                quickVoiceRecorderState = vn.loi.learning.android.recording.QuickVoiceRecorderState.Idle(),
+                quickVoiceRecordingsCount = 0,
+                latestVoiceRecording = null
             )
         }
     }

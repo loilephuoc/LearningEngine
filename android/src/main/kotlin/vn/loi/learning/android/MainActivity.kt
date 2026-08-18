@@ -50,8 +50,18 @@ import vn.loi.learning.android.controller.ControllerDiagnosticsScreen
 import vn.loi.learning.android.controller.ControllerSettingsScreen
 import vn.loi.learning.android.controller.ControllerInputRouter
 import vn.loi.learning.android.controller.EventOrigin
+import android.Manifest
+import vn.loi.learning.android.recording.QuickVoiceRecorderController
+import vn.loi.learning.android.recording.QuickVoicePermissionBridge
+import vn.loi.learning.android.recording.QuickVoiceRecordingsScreen
 
 class MainActivity : ComponentActivity() {
+
+    private val recordAudioPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        QuickVoiceRecorderController.onPermissionResult(isGranted)
+    }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val dev = event.device ?: if (event.deviceId > 0) android.view.InputDevice.getDevice(event.deviceId) else null
@@ -97,11 +107,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        QuickVoicePermissionBridge.unregister()
         ControllerDiagnosticsHolder.setLifecycleState("DESTROYED")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        QuickVoiceRecorderController.initialize(this)
+        QuickVoicePermissionBridge.register {
+            recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
         enableEdgeToEdge()
         val app = application as LearningEngineAndroidApplication
         AndroidStartupTrace.mark("set_content_reached")
@@ -406,13 +421,19 @@ class MainActivity : ComponentActivity() {
                             continuousSkim,
                             app.studyPreferencesController::updateContinuousSkim,
                             onControllerSettings = { navController.navigate("controller_settings") { launchSingleTop = true } },
-                            onControllerDiagnostics = { navController.navigate("controller_diagnostics") { launchSingleTop = true } }
+                            onControllerDiagnostics = { navController.navigate("controller_diagnostics") { launchSingleTop = true } },
+                            onVoiceRecordings = { navController.navigate("voice_recordings") { launchSingleTop = true } }
                         ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
                     }
                     composable("controller_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         ControllerSettingsScreen(
                             onBack = { navController.popBackStack() },
                             onOpenDiagnostics = { navController.navigate("controller_diagnostics") { launchSingleTop = true } }
+                        )
+                    }
+                    composable("voice_recordings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        QuickVoiceRecordingsScreen(
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable("controller_diagnostics", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
