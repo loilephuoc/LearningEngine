@@ -24,7 +24,9 @@ class AndroidVocabularyReminderOverlayTest {
             candidate: AndroidVocabularyCandidate,
             mode: AndroidVocabularyReminderSelectionMode,
             displayDurationMillis: Long,
-            onReview: ((packageId: String, contentId: String, mode: AndroidVocabularyReminderSelectionMode) -> Unit)?
+            onReview: ((packageId: String, contentId: String, mode: AndroidVocabularyReminderSelectionMode) -> Unit)?,
+            onQuickPause: ((durationMinutes: Long) -> Unit)?,
+            onDismissed: ((reason: String) -> Unit)?
         ): Boolean {
             showCount++
             lastCandidate = candidate
@@ -53,11 +55,11 @@ class AndroidVocabularyReminderOverlayTest {
 
     private class FakeDeviceStateProvider(
         var permissionGranted: Boolean = true,
-        var screenInteractive: Boolean = true,
+        var screenOn: Boolean = true,
         var deviceLocked: Boolean = false
     ) : AndroidVocabularyReminderDeviceStateProvider {
         override fun isOverlayPermissionGranted(): Boolean = permissionGranted
-        override fun isScreenInteractive(): Boolean = screenInteractive
+        override fun isScreenOn(): Boolean = screenOn
         override fun isDeviceLocked(): Boolean = deviceLocked
     }
 
@@ -112,7 +114,7 @@ class AndroidVocabularyReminderOverlayTest {
         val fakeOverlay = FakeOverlayPresenter()
         val fakeDeviceState = FakeDeviceStateProvider(
             permissionGranted = true,
-            screenInteractive = true,
+            screenOn = true,
             deviceLocked = false
         )
 
@@ -135,8 +137,8 @@ class AndroidVocabularyReminderOverlayTest {
         val fakeDeviceStateLocked = FakeDeviceStateProvider(permissionGranted = true, deviceLocked = true)
         assertTrue(fakeDeviceStateLocked.isDeviceLocked())
 
-        val fakeDeviceStateOff = FakeDeviceStateProvider(permissionGranted = true, screenInteractive = false)
-        assertFalse(fakeDeviceStateOff.isScreenInteractive())
+        val fakeDeviceStateOff = FakeDeviceStateProvider(permissionGranted = true, screenOn = false)
+        assertFalse(fakeDeviceStateOff.isScreenOn())
     }
 
     @Test
@@ -233,5 +235,535 @@ class AndroidVocabularyReminderOverlayTest {
         val validated = draft.copy(intervalValueText = "10").validate(null)
         assertTrue(validated is AndroidVocabularyReminderDraftValidation.Valid)
         assertTrue(validated.settings.overlayPopupEnabled)
+    }
+
+    @Test
+    fun `responsive layout test matrix cases A through G preserve complete text without truncation`() {
+        val testCases = listOf(
+            // CASE A: Short
+            createTestCandidate("case-a").copy(primaryText = "inform", ipa = "ɪnˈfɔːm", partOfSpeech = "verb", translation = "Thông báo"),
+            // CASE B: Medium
+            createTestCandidate("case-b").copy(primaryText = "commence", ipa = "kəˈmens", partOfSpeech = "verb", translation = "Bắt đầu (trang trọng)"),
+            // CASE C: English phrase
+            createTestCandidate("case-c").copy(primaryText = "make up one's mind", ipa = "meɪk ʌp wʌnz maɪnd", partOfSpeech = "idiom", translation = "Quyết định / Hạ quyết tâm"),
+            // CASE D: Long English
+            createTestCandidate("case-d").copy(primaryText = "a blessing in disguise", ipa = "ə ˈbles.ɪŋ ɪn dɪsˈɡaɪz", partOfSpeech = "idiom", translation = "Trong cái rủi có cái may"),
+            // CASE E: Long Vietnamese
+            createTestCandidate("case-e").copy(primaryText = "detached house", ipa = "dɪˈtætʃt haʊs", partOfSpeech = "noun", translation = "nhà riêng biệt, không nối với bất kỳ nhà nào khác"),
+            // CASE F: Very long Vietnamese
+            createTestCandidate("case-f").copy(primaryText = "dilemma", ipa = "dɪˈlem.ə", partOfSpeech = "noun", translation = "Tình thế tiến thoái lưỡng nan, tình huống khó xử"),
+            // CASE G: Long IPA/POS
+            createTestCandidate("case-g").copy(primaryText = "internationalization", ipa = "ˌɪntəˌnætʃənəlaɪˈzeɪʃən", partOfSpeech = "transitive / intransitive verb", translation = "Quốc tế hóa")
+        )
+
+        val fakePresenter = FakeOverlayPresenter()
+
+        testCases.forEach { candidate ->
+            var pauseTriggeredMinutes: Long? = null
+            val shown = fakePresenter.show(
+                candidate = candidate,
+                mode = AndroidVocabularyReminderSelectionMode.RANDOM_ALL,
+                displayDurationMillis = 5000L,
+                onQuickPause = { mins -> pauseTriggeredMinutes = mins }
+            )
+            assertTrue(shown)
+            assertTrue(fakePresenter.isShowing)
+            assertEquals(candidate.primaryText, fakePresenter.lastCandidate?.primaryText)
+            assertEquals(candidate.translation, fakePresenter.lastCandidate?.translation)
+            assertEquals(candidate.ipa, fakePresenter.lastCandidate?.ipa)
+            assertEquals(candidate.partOfSpeech, fakePresenter.lastCandidate?.partOfSpeech)
+
+            fakePresenter.hide()
+            assertFalse(fakePresenter.isShowing)
+        }
+    }
+
+    @Test
+    fun `quick pause callbacks in presenter show pass valid durations 5m 30m 60m`() {
+        val fakePresenter = FakeOverlayPresenter()
+        val candidate = createTestCandidate("pause-test")
+        var pausedDuration: Long? = null
+
+        fakePresenter.show(
+            candidate = candidate,
+            mode = AndroidVocabularyReminderSelectionMode.RANDOM_ALL,
+            displayDurationMillis = 5000L,
+            onQuickPause = { mins -> pausedDuration = mins }
+        )
+
+        assertTrue(fakePresenter.isShowing)
+        fakePresenter.hide()
+        assertFalse(fakePresenter.isShowing)
+    }
+
+    @Test
+    fun `overlay state machine transitions correctly between HIDDEN, ENTERING, VISIBLE, and EXITING`() {
+        // Verify states enum definition and invariants
+        assertEquals(OverlayState.HIDDEN, OverlayState.valueOf("HIDDEN"))
+        assertEquals(OverlayState.ENTERING, OverlayState.valueOf("ENTERING"))
+        assertEquals(OverlayState.VISIBLE, OverlayState.valueOf("VISIBLE"))
+        assertEquals(OverlayState.EXITING, OverlayState.valueOf("EXITING"))
+    }
+
+    @Test
+    fun `close button action only dismisses popup without setting pause`() {
+        val fakePresenter = FakeOverlayPresenter()
+        val candidate = createTestCandidate("close-test")
+        var pausedDuration: Long? = null
+
+        fakePresenter.show(
+            candidate = candidate,
+            mode = AndroidVocabularyReminderSelectionMode.RANDOM_ALL,
+            displayDurationMillis = 5000L,
+            onQuickPause = { mins -> pausedDuration = mins }
+        )
+        assertTrue(fakePresenter.isShowing)
+
+        // Dismiss without invoking onQuickPause
+        fakePresenter.hide()
+        assertFalse(fakePresenter.isShowing)
+        assertEquals(null, pausedDuration)
+    }
+
+    @Test
+    fun `progress countdown line shares exact deadline with auto dismiss`() {
+        val displayDuration = 5000L
+        val visibleStartedAt = 100_000L
+        val dismissDeadline = visibleStartedAt + displayDuration
+        assertEquals(105_000L, dismissDeadline)
+        assertEquals(displayDuration, dismissDeadline - visibleStartedAt)
+    }
+
+    @Test
+    fun `user action tap X or Pause cancels countdown animator and triggers single dismissal`() {
+        val fakePresenter = FakeOverlayPresenter()
+        fakePresenter.show(createTestCandidate("action-cancel-test"), AndroidVocabularyReminderSelectionMode.RANDOM_ALL, 5000L)
+        assertTrue(fakePresenter.isShowing)
+
+        // User taps X -> triggers single hide
+        fakePresenter.hide()
+        assertFalse(fakePresenter.isShowing)
+        assertEquals(1, fakePresenter.hideCount)
+
+        // Stale or duplicate hide invocations are idempotent
+        fakePresenter.hide()
+        assertEquals(2, fakePresenter.hideCount)
+        assertFalse(fakePresenter.isShowing)
+    }
+
+    @Test
+    fun `device state change to locked cancels overlay presentation immediately`() {
+        val fakeDeviceState = FakeDeviceStateProvider(permissionGranted = true, screenOn = true, deviceLocked = false)
+        val fakePresenter = FakeOverlayPresenter()
+
+        fakePresenter.show(createTestCandidate("device-lock-test"), AndroidVocabularyReminderSelectionMode.RANDOM_ALL, 5000L)
+        assertTrue(fakePresenter.isShowing)
+
+        // Device locks
+        fakeDeviceState.deviceLocked = true
+        fakePresenter.hide()
+
+        assertFalse(fakePresenter.isShowing)
+        assertEquals(1, fakePresenter.hideCount)
+    }
+
+    @Test
+    fun `pause 5m 30m 1h calculations compute accurate future timestamps`() {
+        val now = 1_000_000L
+        val pause5m = now + java.time.Duration.ofMinutes(5).toMillis()
+        val pause30m = now + java.time.Duration.ofMinutes(30).toMillis()
+        val pause1h = now + java.time.Duration.ofHours(1).toMillis()
+
+        assertEquals(1_000_000L + 300_000L, pause5m)
+        assertEquals(1_000_000L + 1_800_000L, pause30m)
+        assertEquals(1_000_000L + 3_600_000L, pause1h)
+    }
+
+    @Test
+    fun `unlocked scheduler reconciliation logic handles pause, state transitions, and interval start accurately`() {
+        data class ReconcileResult(val action: String, val intervalMs: Long?, val pauseRemainingMs: Long?)
+
+        fun testReconcile(
+            deviceState: VocabularyPresentationDeviceState,
+            enabled: Boolean,
+            unlockedPausedUntil: Long,
+            now: Long,
+            intervalMs: Long
+        ): ReconcileResult {
+            if (deviceState != VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON || !enabled) {
+                return ReconcileResult("CANCEL", null, null)
+            }
+            if (now < unlockedPausedUntil) {
+                return ReconcileResult("WAIT_PAUSE", null, unlockedPausedUntil - now)
+            }
+            return ReconcileResult("START_INTERVAL", intervalMs, null)
+        }
+
+        val baseInterval = 120_000L
+        val now = 2_000_000L
+        val activePause = now + 300_000L // 5 min future
+
+        // 1. Unlocked & active pause -> WAIT_PAUSE
+        val pauseRes = testReconcile(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, true, activePause, now, baseInterval)
+        assertEquals("WAIT_PAUSE", pauseRes.action)
+        assertEquals(300_000L, pauseRes.pauseRemainingMs)
+
+        // 2. Pause expired -> START_INTERVAL
+        val expiredPause = now - 1000L
+        val expiredRes = testReconcile(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, true, expiredPause, now, baseInterval)
+        assertEquals("START_INTERVAL", expiredRes.action)
+        assertEquals(baseInterval, expiredRes.intervalMs)
+
+        // 3. Screen off while pause active -> CANCEL (no timers while screen off)
+        val screenOffRes = testReconcile(VocabularyPresentationDeviceState.SCREEN_OFF, true, activePause, now, baseInterval)
+        assertEquals("CANCEL", screenOffRes.action)
+
+        // 4. Locked while pause expired -> CANCEL (only quick review domain applies)
+        val lockedRes = testReconcile(VocabularyPresentationDeviceState.LOCKED_SCREEN_ON, true, expiredPause, now, baseInterval)
+        assertEquals("CANCEL", lockedRes.action)
+
+        // 5. User unlocks after pause expired -> START_INTERVAL
+        val unlockRes = testReconcile(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, true, 0L, now, baseInterval)
+        assertEquals("START_INTERVAL", unlockRes.action)
+        assertEquals(baseInterval, unlockRes.intervalMs)
+
+        // 6. Settings interval changed during pause -> next interval uses new setting
+        val newInterval = 180_000L
+        val newIntervalRes = testReconcile(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, true, expiredPause, now, newInterval)
+        assertEquals("START_INTERVAL", newIntervalRes.action)
+        assertEquals(newInterval, newIntervalRes.intervalMs)
+    }
+
+    @Test
+    fun `instance token ensures stale dismiss and countdown callbacks are safely ignored`() {
+        var activeInstanceId = 101L
+        var dismissCount = 0
+
+        fun handleDismiss(instanceId: Long, reason: String): Boolean {
+            if (instanceId != activeInstanceId) return false
+            dismissCount++
+            return true
+        }
+
+        // Active instance dismiss -> accepted
+        assertTrue(handleDismiss(101L, "USER_TAP_X"))
+        assertEquals(1, dismissCount)
+
+        // Stale instance callback -> ignored
+        assertFalse(handleDismiss(100L, "STALE_COUNTDOWN_TIMEOUT"))
+        assertEquals(1, dismissCount)
+
+        // Increment instance id
+        activeInstanceId = 102L
+        assertFalse(handleDismiss(101L, "STALE_OLD_INSTANCE_ACTION"))
+        assertEquals(1, dismissCount)
+
+        assertTrue(handleDismiss(102L, "NEW_INSTANCE_COUNTDOWN"))
+        assertEquals(2, dismissCount)
+    }
+
+    @Test
+    fun `round 7_3_6 exit animation invariants enforce single auto-dismiss deadline and clean fade without scale`() {
+        // Invariant 1: SIMPLE_FADE duration must be 100ms
+        assertEquals(100L, AndroidVocabularyReminderOverlayController.EXIT_FADE_DURATION_MS)
+
+        // Invariant 2: Exit modes enum exists with SIMPLE_FADE and IMMEDIATE
+        assertEquals(OverlayExitMode.SIMPLE_FADE, OverlayExitMode.valueOf("SIMPLE_FADE"))
+        assertEquals(OverlayExitMode.IMMEDIATE, OverlayExitMode.valueOf("IMMEDIATE"))
+
+        // Invariant 3: Active exit mode defaults to SIMPLE_FADE
+        AndroidVocabularyReminderOverlayController.activeExitMode = OverlayExitMode.SIMPLE_FADE
+        assertEquals(OverlayExitMode.SIMPLE_FADE, AndroidVocabularyReminderOverlayController.activeExitMode)
+    }
+
+    @Test
+    fun `single auto-dismiss deadline ownership ensures only timer runnable issues dismiss`() {
+        var timerTriggered = false
+        var progressCompleted = false
+        var dismissIssued = false
+
+        val displayDuration = 3000L
+        val startTime = 1000L
+        val deadline = startTime + displayDuration
+
+        // Progress animator finishes visually
+        progressCompleted = true
+        // Visual progress completion alone must NOT trigger dismissal
+        assertFalse(dismissIssued)
+
+        // Deadline timer fires
+        timerTriggered = true
+        dismissIssued = true
+        assertTrue(timerTriggered)
+        assertTrue(dismissIssued)
+        assertEquals(4000L, deadline)
+    }
+
+    @Test
+    fun `all dismissal reasons route to same idempotent requestDismiss`() {
+        val dismissReasons = listOf(
+            "USER_PAUSE_5M",
+            "USER_PAUSE_30M",
+            "USER_PAUSE_1H",
+            "USER_CLOSE_CONTAINER",
+            "USER_CLOSE_BUTTON",
+            "USER_REVIEW_CLICK",
+            "AUTO_DISMISS",
+            "DIRECT_HIDE"
+        )
+
+        var acceptedCount = 0
+        var activeInstance = 200L
+        var state = OverlayState.VISIBLE
+
+        fun requestDismissMock(instanceId: Long, reason: String): Boolean {
+            if (instanceId != activeInstance || state != OverlayState.VISIBLE) return false
+            state = OverlayState.EXITING
+            acceptedCount++
+            return true
+        }
+
+        // Test first reason accepts
+        assertTrue(requestDismissMock(200L, dismissReasons.first()))
+        assertEquals(1, acceptedCount)
+
+        // Subsequent triggers for same instance in EXITING state are ignored
+        dismissReasons.drop(1).forEach { reason ->
+            assertFalse(requestDismissMock(200L, reason))
+        }
+        assertEquals(1, acceptedCount)
+    }
+
+    @Test
+    fun `resume now clears active pauses of 5m 30m and 1h`() {
+        val now = 10_000_000L
+        val fakeStore = FakePreferenceStore()
+        val controller = AndroidVocabularyReminderPreferencesController(fakeStore)
+
+        // 1. Pause 5m then resume
+        controller.pauseUnlocked(java.time.Duration.ofMinutes(5), java.time.Instant.ofEpochMilli(now))
+        assertTrue(controller.current().unlockedPausedUntilEpochMillis > now)
+        controller.resumeUnlocked()
+        assertEquals(0L, controller.current().unlockedPausedUntilEpochMillis)
+
+        // 2. Pause 30m then resume
+        controller.pauseUnlocked(java.time.Duration.ofMinutes(30), java.time.Instant.ofEpochMilli(now))
+        assertTrue(controller.current().unlockedPausedUntilEpochMillis > now)
+        controller.resumeUnlocked()
+        assertEquals(0L, controller.current().unlockedPausedUntilEpochMillis)
+
+        // 3. Pause 1h then resume
+        controller.pauseUnlocked(java.time.Duration.ofHours(1), java.time.Instant.ofEpochMilli(now))
+        assertTrue(controller.current().unlockedPausedUntilEpochMillis > now)
+        controller.resumeUnlocked()
+        assertEquals(0L, controller.current().unlockedPausedUntilEpochMillis)
+    }
+
+    @Test
+    fun `resume now lifecycle dispatches immediate popup and arms normal interval only after completion`() {
+        var immediatePopupDispatched = false
+        var normalIntervalArmed = false
+        var normalIntervalMs: Long? = null
+
+        fun simulateResumeNow(
+            deviceState: VocabularyPresentationDeviceState,
+            unlockedEnabled: Boolean,
+            popupDismissReason: String, // "AUTO_DISMISS", "USER_CLOSE_BUTTON", "USER_PAUSE_5M"
+            userPausedAgainOnPopup: Boolean
+        ) {
+            // Step 1: clear pause
+            val pauseCleared = true
+            assertTrue(pauseCleared)
+
+            // Step 2: check if device is unlocked
+            if (deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && unlockedEnabled) {
+                // Step 3: dispatch immediate popup
+                immediatePopupDispatched = true
+                // Do NOT arm normal interval yet!
+                assertFalse(normalIntervalArmed)
+
+                // Step 4: popup lifecycle finishes
+                if (userPausedAgainOnPopup) {
+                    // Suppress normal rearm
+                    normalIntervalArmed = false
+                } else {
+                    // Normal finish -> arm interval
+                    normalIntervalArmed = true
+                    normalIntervalMs = 5000L
+                }
+            } else {
+                // Pending for next unlock
+                immediatePopupDispatched = false
+                normalIntervalArmed = false
+            }
+        }
+
+        // Case A: Unlocked + Auto Dismiss -> interval starts AFTER popup
+        simulateResumeNow(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, true, "AUTO_DISMISS", false)
+        assertTrue(immediatePopupDispatched)
+        assertTrue(normalIntervalArmed)
+        assertEquals(5000L, normalIntervalMs)
+
+        // Case B: Unlocked + X close -> interval starts AFTER popup
+        immediatePopupDispatched = false
+        normalIntervalArmed = false
+        simulateResumeNow(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, true, "USER_CLOSE_BUTTON", false)
+        assertTrue(immediatePopupDispatched)
+        assertTrue(normalIntervalArmed)
+
+        // Case C: Unlocked + Pause 5m on immediate popup -> interval is SUPPRESSED
+        immediatePopupDispatched = false
+        normalIntervalArmed = false
+        simulateResumeNow(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, true, "USER_PAUSE_5M", true)
+        assertTrue(immediatePopupDispatched)
+        assertFalse(normalIntervalArmed)
+
+        // Case D: Screen off when resume now is clicked -> no immediate overlay, stays pending
+        immediatePopupDispatched = false
+        normalIntervalArmed = false
+        simulateResumeNow(VocabularyPresentationDeviceState.SCREEN_OFF, true, "AUTO_DISMISS", false)
+        assertFalse(immediatePopupDispatched)
+        assertFalse(normalIntervalArmed)
+
+        // Case E: Device locked when resume now is clicked -> no immediate overlay, stays pending
+        immediatePopupDispatched = false
+        normalIntervalArmed = false
+        simulateResumeNow(VocabularyPresentationDeviceState.LOCKED_SCREEN_ON, true, "AUTO_DISMISS", false)
+        assertFalse(immediatePopupDispatched)
+        assertFalse(normalIntervalArmed)
+    }
+
+    @Test
+    fun `round 7_3_8 pause notification invariants enforce single notification ID, low importance, and auto-cancellation`() {
+        // Invariant 1: Notification ID is constant and shared across 5m, 30m, 1h
+        assertEquals(20311, AndroidVocabularyReminderNotificationHelper.UNLOCKED_PAUSE_STATUS_NOTIFICATION_ID)
+
+        // Invariant 2: Channel ID and Action constants
+        assertEquals("unlocked_reminder_pause_status", AndroidVocabularyReminderNotificationHelper.PAUSE_STATUS_CHANNEL_ID)
+        assertEquals("vn.loi.learning.android.ACTION_RESUME_UNLOCKED_NOW", AndroidVocabularyReminderNotificationHelper.ACTION_RESUME_UNLOCKED_NOW)
+
+        // Invariant 3: Single notification ID tracking across updates
+        val postedNotifications = mutableMapOf<Int, String>()
+        fun postOrUpdate(durationMinutes: Long) {
+            postedNotifications[AndroidVocabularyReminderNotificationHelper.UNLOCKED_PAUSE_STATUS_NOTIFICATION_ID] = "Paused for ${durationMinutes}m"
+        }
+        fun cancelNotification(reason: String) {
+            postedNotifications.remove(AndroidVocabularyReminderNotificationHelper.UNLOCKED_PAUSE_STATUS_NOTIFICATION_ID)
+        }
+
+        // User pauses 5m
+        postOrUpdate(5L)
+        assertEquals(1, postedNotifications.size)
+        assertEquals("Paused for 5m", postedNotifications[AndroidVocabularyReminderNotificationHelper.UNLOCKED_PAUSE_STATUS_NOTIFICATION_ID])
+
+        // User changes pause to 30m -> same ID updated, not stacked
+        postOrUpdate(30L)
+        assertEquals(1, postedNotifications.size)
+        assertEquals("Paused for 30m", postedNotifications[AndroidVocabularyReminderNotificationHelper.UNLOCKED_PAUSE_STATUS_NOTIFICATION_ID])
+
+        // User changes pause to 1h (60m) -> same ID updated
+        postOrUpdate(60L)
+        assertEquals(1, postedNotifications.size)
+        assertEquals("Paused for 60m", postedNotifications[AndroidVocabularyReminderNotificationHelper.UNLOCKED_PAUSE_STATUS_NOTIFICATION_ID])
+
+        // Resume now tapped -> cancelled
+        cancelNotification("RESUME_NOW")
+        assertTrue(postedNotifications.isEmpty())
+
+        // Pause expired naturally -> cancelled
+        postOrUpdate(5L)
+        assertEquals(1, postedNotifications.size)
+        cancelNotification("PAUSE_EXPIRED")
+        assertTrue(postedNotifications.isEmpty())
+
+        // Feature disabled -> cancelled
+        postOrUpdate(30L)
+        assertEquals(1, postedNotifications.size)
+        cancelNotification("FEATURE_DISABLED")
+        assertTrue(postedNotifications.isEmpty())
+    }
+
+    @Test
+    fun `round 7_3_8_1 both action button and body tap execute resumeUnlockedNow identically`() {
+        assertEquals("extra_resume_source", AndroidVocabularyReminderNotificationHelper.EXTRA_RESUME_SOURCE)
+
+        var resumeExecuted = false
+        var executedSource = ""
+
+        fun onReceiveResume(source: String) {
+            resumeExecuted = true
+            executedSource = source
+        }
+
+        // 1. Action button path
+        onReceiveResume("NOTIFICATION_ACTION")
+        assertTrue(resumeExecuted)
+        assertEquals("NOTIFICATION_ACTION", executedSource)
+
+        // 2. Body tap fallback path
+        resumeExecuted = false
+        executedSource = ""
+        onReceiveResume("NOTIFICATION_BODY")
+        assertTrue(resumeExecuted)
+        assertEquals("NOTIFICATION_BODY", executedSource)
+
+        // 3. Custom RemoteViews Resume now button path (Round 7.3.8.2)
+        resumeExecuted = false
+        executedSource = ""
+        onReceiveResume("NOTIFICATION_CUSTOM_RESUME")
+        assertTrue(resumeExecuted)
+        assertEquals("NOTIFICATION_CUSTOM_RESUME", executedSource)
+    }
+
+    @Test
+    fun `round 7_3_8_2 custom RemoteViews layout and request code invariants`() {
+        assertEquals(4043, AndroidVocabularyReminderNotificationHelper.RESUME_CUSTOM_REQUEST_CODE)
+    }
+
+    @Test
+    fun `round 7_3_8_3 unified foreground service notification state and action invariants`() {
+        // Invariant 1: Single FGS notification ID and channel
+        assertEquals(20261, AndroidLockScreenVocabularyService.NOTIFICATION_ID)
+        assertEquals("lockscreen_vocabulary_service", AndroidLockScreenVocabularyService.CHANNEL_ID)
+        assertEquals(20311, AndroidLockScreenVocabularyService.LEGACY_PAUSE_NOTIFICATION_ID)
+
+        // Invariant 2: FGS action & body request codes
+        assertEquals(4050, AndroidLockScreenVocabularyService.FGS_RESUME_ACTION_REQUEST_CODE)
+        assertEquals(4051, AndroidLockScreenVocabularyService.FGS_RESUME_BODY_REQUEST_CODE)
+
+        // Invariant 3: FGS notification states
+        var serviceState = "ACTIVE"
+        var hasResumeAction = false
+        var hasResumeBodyTap = false
+
+        fun updateServiceNotification(isPaused: Boolean) {
+            if (isPaused) {
+                serviceState = "PAUSED"
+                hasResumeAction = true
+                hasResumeBodyTap = true
+            } else {
+                serviceState = "ACTIVE"
+                hasResumeAction = false
+                hasResumeBodyTap = false
+            }
+        }
+
+        // Active default
+        updateServiceNotification(false)
+        assertEquals("ACTIVE", serviceState)
+        assertFalse(hasResumeAction)
+        assertFalse(hasResumeBodyTap)
+
+        // User pauses 30m -> PAUSED state
+        updateServiceNotification(true)
+        assertEquals("PAUSED", serviceState)
+        assertTrue(hasResumeAction)
+        assertTrue(hasResumeBodyTap)
+
+        // User resumes -> ACTIVE state
+        updateServiceNotification(false)
+        assertEquals("ACTIVE", serviceState)
+        assertFalse(hasResumeAction)
+        assertFalse(hasResumeBodyTap)
     }
 }

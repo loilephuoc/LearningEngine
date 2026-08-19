@@ -2,6 +2,7 @@ package vn.loi.learning.android.reminder
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalTime
@@ -12,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 interface AndroidVocabularyReminderPreferenceStore {
     fun load(): AndroidVocabularyReminderSettings
     fun save(settings: AndroidVocabularyReminderSettings): Boolean
+    fun loadLockScreen(): AndroidLockScreenVocabularySettings = AndroidLockScreenVocabularySettings()
+    fun saveLockScreen(settings: AndroidLockScreenVocabularySettings): Boolean = true
 }
 
 class SharedPreferencesVocabularyReminderPreferenceStore(
@@ -56,6 +59,9 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
         val pausedUntilMillis = if (prefs.contains(KEY_PAUSED_UNTIL)) prefs.getLong(KEY_PAUSED_UNTIL, -1L) else -1L
         val pausedUntil = if (pausedUntilMillis > 0) Instant.ofEpochMilli(pausedUntilMillis) else null
 
+        val quickPauseActionsEnabled = prefs.getBoolean(KEY_REMINDER_QUICK_PAUSE_ACTIONS_ENABLED, defaults.quickPauseActionsEnabled)
+        val unlockedPausedUntilEpochMillis = prefs.getLong(KEY_REMINDER_UNLOCKED_PAUSED_UNTIL, defaults.unlockedPausedUntilEpochMillis)
+
         return AndroidVocabularyReminderSettings(
             enabled = enabled,
             selectedPackageId = selectedPackageId,
@@ -66,7 +72,9 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
             displayDurationMillis = displayDurationMillis,
             autoPlayPronunciation = autoPlayPronunciation,
             overlayPopupEnabled = overlayPopupEnabled,
-            pausedUntil = pausedUntil
+            pausedUntil = pausedUntil,
+            quickPauseActionsEnabled = quickPauseActionsEnabled,
+            unlockedPausedUntilEpochMillis = unlockedPausedUntilEpochMillis
         )
     }
 
@@ -87,6 +95,77 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
             } else {
                 remove(KEY_PAUSED_UNTIL)
             }
+            putBoolean(KEY_REMINDER_QUICK_PAUSE_ACTIONS_ENABLED, settings.quickPauseActionsEnabled)
+            putLong(KEY_REMINDER_UNLOCKED_PAUSED_UNTIL, settings.unlockedPausedUntilEpochMillis)
+        }.commit()
+    }
+
+    override fun loadLockScreen(): AndroidLockScreenVocabularySettings {
+        val defaults = AndroidLockScreenVocabularySettings()
+        val enabled = prefs.getBoolean(KEY_LOCKSCREEN_ENABLED, defaults.enabled)
+        val selectedPackageId = prefs.getString(KEY_LOCKSCREEN_PACKAGE_ID, null)?.takeIf { it.isNotBlank() }
+        val modeName = prefs.getString(KEY_LOCKSCREEN_SELECTION_MODE, defaults.selectionMode.name)
+        val selectionMode = runCatching {
+            AndroidLockScreenVocabularyMode.valueOf(modeName ?: defaults.selectionMode.name)
+        }.getOrDefault(defaults.selectionMode)
+        val autoPlay = prefs.getBoolean(KEY_LOCKSCREEN_AUTOPLAY_PRONUNCIATION, defaults.autoPlayPronunciation)
+        val customBackgroundPath = prefs.getString(KEY_LOCKSCREEN_CUSTOM_BACKGROUND_PATH, null)?.takeIf { it.isNotBlank() }
+        val wordSizeName = prefs.getString(KEY_LOCKSCREEN_WORD_SIZE, defaults.wordSize.name)
+        val wordSize = runCatching {
+            LockWallpaperWordSize.valueOf(wordSizeName ?: defaults.wordSize.name)
+        }.getOrDefault(defaults.wordSize)
+        val vietnameseSizeName = prefs.getString(KEY_LOCKSCREEN_VIETNAMESE_SIZE, defaults.vietnameseSize.name)
+        val vietnameseSize = runCatching {
+            LockWallpaperVietnameseSize.valueOf(vietnameseSizeName ?: defaults.vietnameseSize.name)
+        }.getOrDefault(defaults.vietnameseSize)
+        val imageSizeName = prefs.getString(KEY_LOCKSCREEN_IMAGE_SIZE, defaults.imageSize.name)
+        val imageSize = runCatching {
+            LockWallpaperImageSize.valueOf(imageSizeName ?: defaults.imageSize.name)
+        }.getOrDefault(defaults.imageSize)
+        val opacity = if (prefs.contains(KEY_LOCKSCREEN_CARD_BACKGROUND_OPACITY)) {
+            prefs.getFloat(KEY_LOCKSCREEN_CARD_BACKGROUND_OPACITY, defaults.cardBackgroundOpacity)
+        } else {
+            defaults.cardBackgroundOpacity
+        }.coerceIn(0.20f, 1.00f)
+
+        val quickReviewIntervalMillis = prefs.getLong(KEY_LOCKSCREEN_QUICK_REVIEW_INTERVAL_MS, defaults.quickReviewIntervalMillis)
+        val screenOffPrepEnabled = prefs.getBoolean(KEY_LOCKSCREEN_SCREEN_OFF_PREP_ENABLED, defaults.screenOffPreparationEnabled)
+        val screenOffPrepareDelayMillis = prefs.getLong(KEY_LOCKSCREEN_SCREEN_OFF_PREPARE_DELAY_MS, defaults.screenOffPrepareDelayMillis)
+
+        return AndroidLockScreenVocabularySettings(
+            enabled = enabled,
+            selectedPackageId = selectedPackageId,
+            selectionMode = selectionMode,
+            autoPlayPronunciation = autoPlay,
+            customBackgroundPath = customBackgroundPath,
+            wordSize = wordSize,
+            vietnameseSize = vietnameseSize,
+            imageSize = imageSize,
+            cardBackgroundOpacity = opacity,
+            quickReviewIntervalMillis = quickReviewIntervalMillis,
+            screenOffPreparationEnabled = screenOffPrepEnabled,
+            screenOffPrepareDelayMillis = screenOffPrepareDelayMillis
+        )
+    }
+
+    override fun saveLockScreen(settings: AndroidLockScreenVocabularySettings): Boolean {
+        return prefs.edit().apply {
+            putBoolean(KEY_LOCKSCREEN_ENABLED, settings.enabled)
+            putString(KEY_LOCKSCREEN_PACKAGE_ID, settings.selectedPackageId)
+            putString(KEY_LOCKSCREEN_SELECTION_MODE, settings.selectionMode.name)
+            putBoolean(KEY_LOCKSCREEN_AUTOPLAY_PRONUNCIATION, settings.autoPlayPronunciation)
+            if (settings.customBackgroundPath != null) {
+                putString(KEY_LOCKSCREEN_CUSTOM_BACKGROUND_PATH, settings.customBackgroundPath)
+            } else {
+                remove(KEY_LOCKSCREEN_CUSTOM_BACKGROUND_PATH)
+            }
+            putString(KEY_LOCKSCREEN_WORD_SIZE, settings.wordSize.name)
+            putString(KEY_LOCKSCREEN_VIETNAMESE_SIZE, settings.vietnameseSize.name)
+            putString(KEY_LOCKSCREEN_IMAGE_SIZE, settings.imageSize.name)
+            putFloat(KEY_LOCKSCREEN_CARD_BACKGROUND_OPACITY, settings.clampedCardBackgroundOpacity)
+            putLong(KEY_LOCKSCREEN_QUICK_REVIEW_INTERVAL_MS, settings.quickReviewIntervalMillis)
+            putBoolean(KEY_LOCKSCREEN_SCREEN_OFF_PREP_ENABLED, settings.screenOffPreparationEnabled)
+            putLong(KEY_LOCKSCREEN_SCREEN_OFF_PREPARE_DELAY_MS, settings.screenOffPrepareDelayMillis)
         }.commit()
     }
 
@@ -103,6 +182,21 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
         private const val KEY_AUTOPLAY_PRONUNCIATION = "reminder.autoplay_pronunciation"
         private const val KEY_OVERLAY_POPUP_ENABLED = "reminder.overlay_popup_enabled"
         private const val KEY_PAUSED_UNTIL = "reminder.paused_until_epoch_millis"
+        private const val KEY_REMINDER_QUICK_PAUSE_ACTIONS_ENABLED = "reminder.quick_pause_actions_enabled"
+        private const val KEY_REMINDER_UNLOCKED_PAUSED_UNTIL = "reminder.unlocked_paused_until_epoch_millis"
+
+        private const val KEY_LOCKSCREEN_ENABLED = "lockscreen.enabled"
+        private const val KEY_LOCKSCREEN_PACKAGE_ID = "lockscreen.selected_package_id"
+        private const val KEY_LOCKSCREEN_SELECTION_MODE = "lockscreen.selection_mode"
+        private const val KEY_LOCKSCREEN_AUTOPLAY_PRONUNCIATION = "lockscreen.autoplay_pronunciation"
+        private const val KEY_LOCKSCREEN_CUSTOM_BACKGROUND_PATH = "lockscreen.custom_background_path"
+        private const val KEY_LOCKSCREEN_WORD_SIZE = "lockscreen.word_size"
+        private const val KEY_LOCKSCREEN_VIETNAMESE_SIZE = "lockscreen.vietnamese_size"
+        private const val KEY_LOCKSCREEN_IMAGE_SIZE = "lockscreen.image_size"
+        private const val KEY_LOCKSCREEN_CARD_BACKGROUND_OPACITY = "lockscreen.card_background_opacity"
+        private const val KEY_LOCKSCREEN_QUICK_REVIEW_INTERVAL_MS = "lockscreen.quick_review_interval_ms"
+        private const val KEY_LOCKSCREEN_SCREEN_OFF_PREP_ENABLED = "lockscreen.screen_off_prep_enabled"
+        private const val KEY_LOCKSCREEN_SCREEN_OFF_PREPARE_DELAY_MS = "lockscreen.screen_off_prepare_delay_ms"
     }
 }
 
@@ -112,12 +206,24 @@ class AndroidVocabularyReminderPreferencesController(
     private val mutableSettings = MutableStateFlow(store.load())
     val settings: StateFlow<AndroidVocabularyReminderSettings> = mutableSettings.asStateFlow()
 
+    private val mutableLockScreenSettings = MutableStateFlow(store.loadLockScreen())
+    val lockScreenSettings: StateFlow<AndroidLockScreenVocabularySettings> = mutableLockScreenSettings.asStateFlow()
+
     fun current(): AndroidVocabularyReminderSettings = mutableSettings.value
+    fun currentLockScreen(): AndroidLockScreenVocabularySettings = mutableLockScreenSettings.value
 
     fun updateSettings(newSettings: AndroidVocabularyReminderSettings): Boolean {
         val saved = store.save(newSettings)
         if (saved) {
             mutableSettings.value = newSettings
+        }
+        return saved
+    }
+
+    fun updateLockScreenSettings(newSettings: AndroidLockScreenVocabularySettings): Boolean {
+        val saved = store.saveLockScreen(newSettings)
+        if (saved) {
+            mutableLockScreenSettings.value = newSettings
         }
         return saved
     }
@@ -134,7 +240,22 @@ class AndroidVocabularyReminderPreferencesController(
     }
     fun resumeNow(): Boolean = updateSettings(mutableSettings.value.copy(pausedUntil = null))
 
+    fun pauseUnlocked(duration: Duration, now: Instant = Instant.now()): Boolean {
+        val untilEpoch = now.toEpochMilli() + duration.toMillis()
+        Log.i("UnlockedPause", "[UnlockedPause] duration=${duration.toMinutes()}m pausedUntil=$untilEpoch")
+        return updateSettings(mutableSettings.value.copy(unlockedPausedUntilEpochMillis = untilEpoch))
+    }
+
+    fun pauseUnlocked5Minutes(): Boolean = pauseUnlocked(Duration.ofMinutes(5))
+    fun pauseUnlocked30Minutes(): Boolean = pauseUnlocked(Duration.ofMinutes(30))
+    fun pauseUnlockedOneHour(): Boolean = pauseUnlocked(Duration.ofHours(1))
+    fun resumeUnlocked(): Boolean {
+        Log.i("UnlockedPause", "[UnlockedPause] duration=0m pausedUntil=0 (RESUME)")
+        return updateSettings(mutableSettings.value.copy(unlockedPausedUntilEpochMillis = 0L))
+    }
+
     private fun pauseFor(duration: Duration, now: Instant = Instant.now()): Boolean {
-        return updateSettings(mutableSettings.value.copy(pausedUntil = now.plus(duration)))
+        val until = now.plus(duration)
+        return updateSettings(mutableSettings.value.copy(pausedUntil = until))
     }
 }

@@ -7,6 +7,7 @@ import vn.loi.learning.android.ui.SharedPreferencesThemeStore
 import vn.loi.learning.android.study.AndroidStudyPreferencesController
 import vn.loi.learning.android.study.SharedPreferencesStudyPreferenceStore
 import vn.loi.learning.android.platform.AndroidStartupTrace
+import vn.loi.learning.android.reminder.AndroidLockScreenVocabularyService
 import vn.loi.learning.infrastructure.persistence.json.JsonPersistenceTrace
 
 class LearningEngineAndroidApplication : Application() {
@@ -17,8 +18,10 @@ class LearningEngineAndroidApplication : Application() {
         vn.loi.learning.android.media.LearningEngineAudioPolicy.init(this)
         vn.loi.learning.android.controller.ControllerDiagnosticsHolder.registerInputDeviceListener(this)
         reminderNotificationHelper.createNotificationChannel()
-        if (reminderPreferencesController.current().enabled) {
-            reminderRuntime.start()
+        val shouldStartService = reminderPreferencesController.current().enabled ||
+            reminderPreferencesController.currentLockScreen().enabled
+        if (shouldStartService) {
+            AndroidLockScreenVocabularyService.start(this)
         }
     }
 
@@ -43,22 +46,22 @@ class LearningEngineAndroidApplication : Application() {
         )
     }
     val reminderNotificationHelper: vn.loi.learning.android.reminder.AndroidVocabularyReminderNotificationHelper by lazy {
-        vn.loi.learning.android.reminder.AndroidVocabularyReminderNotificationHelper(
-            this,
-            resolveMedia = { ref -> graph.media.resolve(ref)?.toString() }
-        )
+        vn.loi.learning.android.reminder.AndroidVocabularyReminderNotificationHelper(this)
     }
     val reminderCandidateSelector: vn.loi.learning.android.reminder.AndroidVocabularyReminderCandidateSelector by lazy {
         vn.loi.learning.android.reminder.AndroidVocabularyReminderCandidateSelector(
             context = graph.engine,
             difficultMarkers = reminderDifficultStore,
-            resolveMedia = { ref -> graph.media.resolve(ref)?.toString() }
+            shuffleBagStore = vn.loi.learning.android.reminder.SharedPreferencesLockScreenShuffleBagStore(this)
         )
     }
     val reminderOverlayController: vn.loi.learning.android.reminder.AndroidVocabularyReminderOverlayPresenter by lazy {
         vn.loi.learning.android.reminder.AndroidVocabularyReminderOverlayController(
             this,
-            resolveMedia = { ref -> graph.media.resolve(ref)?.toString() }
+            resolveMedia = { ref -> graph.media.resolve(ref)?.toString() },
+            defaultQuickPauseHandler = { minutes ->
+                reminderPreferencesController.pauseUnlocked(java.time.Duration.ofMinutes(minutes))
+            }
         )
     }
     val reminderDeviceStateProvider: vn.loi.learning.android.reminder.AndroidVocabularyReminderDeviceStateProvider by lazy {
@@ -73,7 +76,17 @@ class LearningEngineAndroidApplication : Application() {
             overlayPresenter = reminderOverlayController,
             deviceStateProvider = reminderDeviceStateProvider,
             resolveMedia = { ref -> graph.media.resolve(ref)?.toString() }
-        ).also { it.start() }
+        )
+    }
+    val lockScreenVocabularyCoordinator: vn.loi.learning.android.reminder.AndroidLockScreenVocabularyCoordinator by lazy {
+        vn.loi.learning.android.reminder.AndroidLockScreenVocabularyCoordinator(
+            context = this,
+            preferencesController = reminderPreferencesController,
+            selector = reminderCandidateSelector,
+            resolveMedia = { ref -> graph.media.resolve(ref)?.toString() },
+            overlayPresenter = reminderOverlayController,
+            notificationHelper = reminderNotificationHelper
+        )
     }
 
     private val graphOwner by lazy {

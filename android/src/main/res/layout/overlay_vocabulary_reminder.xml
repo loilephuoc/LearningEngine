@@ -1,101 +1,244 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/overlay_card_root"
+    android:id="@+id/overlay_window_root"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="@drawable/bg_overlay_reminder_card"
-    android:elevation="12dp"
-    android:clipToOutline="true"
-    android:padding="8dp">
+    android:layout_height="wrap_content">
 
-    <LinearLayout
-        android:id="@+id/overlay_content_container"
+    <!-- Visual Card Container (Separated from WindowManager root for clean HyperOS compositor rendering) -->
+    <FrameLayout
+        android:id="@+id/overlay_card_root"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="165dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:background="@drawable/bg_overlay_reminder_card"
+        android:elevation="14dp"
+        android:clipToOutline="true"
+        android:paddingHorizontal="14dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp">
 
-        <ImageView
-            android:id="@+id/overlay_thumbnail"
-            android:layout_width="145dp"
-            android:layout_height="165dp"
-            android:scaleType="fitCenter"
-            android:adjustViewBounds="true"
-            android:visibility="gone"
-            android:contentDescription="Vocabulary image" />
-
+        <!-- Horizontal Content Container: Image (Left) + Text & Actions Column (Right) -->
         <LinearLayout
-            android:id="@+id/overlay_text_container"
-            android:layout_width="0dp"
+            android:id="@+id/overlay_content_container"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="16dp"
-            android:orientation="vertical"
+            android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <TextView
-                android:id="@+id/overlay_primary_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:maxLines="2"
-                android:ellipsize="end" />
+            <!-- Vocabulary Thumbnail -->
+            <ImageView
+                android:id="@+id/overlay_thumbnail"
+                android:layout_width="135dp"
+                android:layout_height="145dp"
+                android:scaleType="fitCenter"
+                android:adjustViewBounds="true"
+                android:visibility="gone"
+                android:contentDescription="Vocabulary illustration" />
 
+            <!-- Vocabulary Text & Compact Actions Column -->
             <LinearLayout
-                android:id="@+id/overlay_metadata_row"
-                android:layout_width="wrap_content"
+                android:id="@+id/overlay_text_container"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:visibility="gone">
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="12dp"
+                android:orientation="vertical"
+                android:gravity="center_vertical">
 
+                <!-- English Headword / Phrase -->
                 <TextView
-                    android:id="@+id/overlay_ipa"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/overlay_primary_text"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textSize="13sp"
-                    android:textColor="#A0A6B2"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/overlay_pos"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:background="@drawable/bg_overlay_pos_badge"
-                    android:paddingHorizontal="5dp"
-                    android:paddingVertical="1dp"
-                    android:textSize="11sp"
+                    android:textSize="26sp"
                     android:textStyle="bold"
-                    android:textColor="#B0B5C0"
-                    android:visibility="gone" />
+                    android:textColor="#FFFFFF"
+                    android:includeFontPadding="false"
+                    android:lineSpacingMultiplier="1.05" />
+
+                <!-- IPA + POS Badge Row -->
+                <LinearLayout
+                    android:id="@+id/overlay_metadata_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/overlay_ipa"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="13sp"
+                        android:textColor="#94A3B8"
+                        android:includeFontPadding="false"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/overlay_pos"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_overlay_pos_badge"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="1.5dp"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="#CBD5E1"
+                        android:includeFontPadding="false"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- Vietnamese Meaning -->
+                <TextView
+                    android:id="@+id/overlay_meaning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:textSize="17.5sp"
+                    android:textColor="#E2E8F0"
+                    android:includeFontPadding="false"
+                    android:lineSpacingMultiplier="1.1" />
+
+                <!-- Compact Equal-Weight Quick-Pause Row Directly Below Text Column -->
+                <LinearLayout
+                    android:id="@+id/overlay_quick_pause_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <!-- 5 min compact pill (weight=1) -->
+                    <LinearLayout
+                        android:id="@+id/overlay_pause_5m"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_overlay_pause_compact"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="4dp"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_overlay_pause_later"
+                            android:contentDescription="Pause 5m" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="3dp"
+                            android:text="5′"
+                            android:textSize="12.5sp"
+                            android:textStyle="bold"
+                            android:textColor="#93C5FD"
+                            android:includeFontPadding="false" />
+                    </LinearLayout>
+
+                    <!-- 30 min compact pill (weight=1) -->
+                    <LinearLayout
+                        android:id="@+id/overlay_pause_30m"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="5dp"
+                        android:background="@drawable/bg_overlay_pause_compact"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="4dp"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_overlay_pause_later"
+                            android:contentDescription="Pause 30m" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="3dp"
+                            android:text="30′"
+                            android:textSize="12.5sp"
+                            android:textStyle="bold"
+                            android:textColor="#93C5FD"
+                            android:includeFontPadding="false" />
+                    </LinearLayout>
+
+                    <!-- 1 hour compact pill (weight=1) -->
+                    <LinearLayout
+                        android:id="@+id/overlay_pause_1h"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="5dp"
+                        android:background="@drawable/bg_overlay_pause_compact"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="4dp"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_overlay_pause_later"
+                            android:contentDescription="Pause 1h" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="3dp"
+                            android:text="1h"
+                            android:textSize="12.5sp"
+                            android:textStyle="bold"
+                            android:textColor="#93C5FD"
+                            android:includeFontPadding="false" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/overlay_meaning"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="20sp"
-                android:textColor="#E2E4E9"
-                android:maxLines="2"
-                android:ellipsize="end" />
         </LinearLayout>
-    </LinearLayout>
 
-    <ImageView
-        android:id="@+id/overlay_close_button"
-        android:layout_width="26dp"
-        android:layout_height="26dp"
-        android:layout_gravity="top|end"
-        android:layout_margin="2dp"
-        android:padding="3dp"
-        android:src="@drawable/ic_overlay_close"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Close reminder overlay" />
+        <!-- Close Button (Top-Right, 44dp touch target) -->
+        <FrameLayout
+            android:id="@+id/overlay_close_container"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="top|end"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/overlay_close_button"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="2dp"
+                android:layout_marginEnd="2dp"
+                android:src="@drawable/ic_overlay_close"
+                android:contentDescription="Close reminder overlay" />
+        </FrameLayout>
+
+        <!-- Auto-Dismiss Countdown Progress Line (2.5dp height at bottom edge) -->
+        <FrameLayout
+            android:id="@+id/overlay_countdown_track"
+            android:layout_width="match_parent"
+            android:layout_height="2.5dp"
+            android:layout_gravity="bottom"
+            android:background="#1E293B"
+            android:visibility="gone">
+
+            <View
+                android:id="@+id/overlay_countdown_progress"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#60A5FA" />
+        </FrameLayout>
+    </FrameLayout>
 </FrameLayout>

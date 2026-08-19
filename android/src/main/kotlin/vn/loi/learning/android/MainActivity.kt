@@ -1,5 +1,6 @@
 package vn.loi.learning.android
 
+import android.content.ComponentName
 import android.os.Bundle
 import android.content.Intent
 import android.provider.OpenableColumns
@@ -102,6 +103,12 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         ControllerDiagnosticsHolder.setLifecycleState("STARTED")
+        val app = application as? LearningEngineAndroidApplication
+        val shouldStartService = app?.reminderPreferencesController?.current()?.enabled == true ||
+            app?.reminderPreferencesController?.currentLockScreen()?.enabled == true
+        if (shouldStartService) {
+            vn.loi.learning.android.reminder.AndroidLockScreenVocabularyService.start(this)
+        }
     }
 
     override fun onResume() {
@@ -134,14 +141,130 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleReminderIntent(intent)
+        if (intent.action == "vn.loi.learning.android.ACTION_TEST_WALLPAPER_DEBUG") {
+            vn.loi.learning.android.reminder.AndroidLockScreenWallpaperRenderer.renderDebugSafeZones()
+        } else if (intent.action == "vn.loi.learning.android.ACTION_TEST_WALLPAPER_APPLY") {
+            val caseId = intent.getStringExtra("CASE_ID") ?: "DEFAULT"
+            vn.loi.learning.android.reminder.AndroidLockScreenWallpaperAudit.applyTestCase(this, caseId)
+        } else if (intent.action == "vn.loi.learning.android.ACTION_UPDATE_LOCKSCREEN_SETTINGS") {
+            handleUpdateLockScreenSettingsIntent(intent)
+        } else if (intent.action == "vn.loi.learning.android.ACTION_SHOW_TEST_OVERLAY") {
+            handleShowTestOverlayIntent(intent)
+        } else if (intent.action == "vn.loi.learning.android.ACTION_RENDER_OVERLAY_AUDIT") {
+            handleRenderOverlayAuditIntent(intent)
+        } else if (intent.action == "vn.loi.learning.android.ACTION_RESUME_UNLOCKED_NOW") {
+            val app = application as? LearningEngineAndroidApplication
+            app?.lockScreenVocabularyCoordinator?.resumeUnlockedNow()
+        }
+    }
+
+    private fun handleRenderOverlayAuditIntent(intent: Intent?) {
+        if (intent == null) return
+        android.util.Log.i("OverlayAudit", "handleRenderOverlayAuditIntent extras=${intent.extras?.keySet()?.map { "$it=${intent.extras?.get(it)}" }}")
+        val headword = intent.getStringExtra("HEADWORD") ?: "inform"
+        val ipa = intent.getStringExtra("IPA")
+        val pos = intent.getStringExtra("POS")
+        val meaning = intent.getStringExtra("MEANING") ?: "Thông báo"
+        val fileName = (intent.getStringExtra("OUTPUT_PATH") ?: intent.getStringExtra("OUTPUT_FILE") ?: "overlay_audit.png").substringAfterLast('/')
+        val targetFile = java.io.File(filesDir, fileName)
+        val sampleImage = vn.loi.learning.android.reminder.AndroidLockScreenWallpaperAudit.createSampleImage(400, 400, headword)
+        vn.loi.learning.android.reminder.AndroidVocabularyReminderOverlayAudit.renderAndSaveOverlay(
+            this, headword, ipa, pos, meaning, sampleImage, targetFile.absolutePath
+        )
+    }
+
+    private fun handleShowTestOverlayIntent(intent: Intent?) {
+        if (intent == null) return
+        val app = application as? LearningEngineAndroidApplication ?: return
+        val headword = intent.getStringExtra("HEADWORD") ?: "inform"
+        val ipa = intent.getStringExtra("IPA") ?: "ɪnˈfɔːm"
+        val pos = intent.getStringExtra("POS") ?: "verb"
+        val meaning = intent.getStringExtra("MEANING") ?: "Thông báo"
+        val duration = intent.getLongExtra("DURATION", 15000L)
+        val imageRef = intent.getStringExtra("IMAGE_REF")
+
+        val candidate = vn.loi.learning.android.reminder.AndroidVocabularyCandidate(
+            contentId = vn.loi.learning.domain.content.model.ContentId("test-overlay-candidate"),
+            packageId = vn.loi.learning.domain.library.model.InstalledPackageId("test-pkg"),
+            packageName = "Test Package",
+            primaryText = headword,
+            answer = meaning,
+            translation = meaning,
+            ipa = ipa,
+            partOfSpeech = pos,
+            imageReference = imageRef,
+            primaryAudioReference = null
+        )
+
+        app.reminderOverlayController.show(
+            candidate = candidate,
+            mode = vn.loi.learning.android.reminder.AndroidVocabularyReminderSelectionMode.RANDOM_ALL,
+            displayDurationMillis = duration,
+            onQuickPause = { minutes ->
+                app.reminderPreferencesController.pauseUnlocked(java.time.Duration.ofMinutes(minutes))
+            }
+        )
+    }
+
+    private fun handleUpdateLockScreenSettingsIntent(intent: Intent?) {
+        if (intent == null) return
+        val app = application as? LearningEngineAndroidApplication ?: return
+        android.util.Log.i("MainActivity", "handleUpdateLockScreenSettingsIntent action=${intent.action} extras=${intent.extras?.keySet()?.joinToString()} QUICK_REVIEW_INTERVAL=${intent.getLongExtra("QUICK_REVIEW_INTERVAL", -1)}")
+        val current = app.reminderPreferencesController.currentLockScreen()
+        val opacity = if (intent.hasExtra("OPACITY")) intent.getFloatExtra("OPACITY", current.cardBackgroundOpacity) else current.cardBackgroundOpacity
+        val wordSizeStr = intent.getStringExtra("WORD_SIZE")
+        val vnSizeStr = intent.getStringExtra("VN_SIZE")
+        val imgSizeStr = intent.getStringExtra("IMG_SIZE")
+        val wordSize = runCatching { wordSizeStr?.let { vn.loi.learning.android.reminder.LockWallpaperWordSize.valueOf(it) } }.getOrNull() ?: current.wordSize
+        val vnSize = runCatching { vnSizeStr?.let { vn.loi.learning.android.reminder.LockWallpaperVietnameseSize.valueOf(it) } }.getOrNull() ?: current.vietnameseSize
+        val imgSize = runCatching { imgSizeStr?.let { vn.loi.learning.android.reminder.LockWallpaperImageSize.valueOf(it) } }.getOrNull() ?: current.imageSize
+        val quickReviewInterval = if (intent.hasExtra("QUICK_REVIEW_INTERVAL")) intent.getLongExtra("QUICK_REVIEW_INTERVAL", current.quickReviewIntervalMillis) else current.quickReviewIntervalMillis
+        val screenOffPrepEnabled = if (intent.hasExtra("SCREEN_OFF_PREP_ENABLED")) intent.getBooleanExtra("SCREEN_OFF_PREP_ENABLED", current.screenOffPreparationEnabled) else current.screenOffPreparationEnabled
+        val screenOffPrepareDelay = if (intent.hasExtra("SCREEN_OFF_PREPARE_DELAY")) intent.getLongExtra("SCREEN_OFF_PREPARE_DELAY", current.screenOffPrepareDelayMillis) else current.screenOffPrepareDelayMillis
+        val autoPlay = if (intent.hasExtra("AUTOPLAY")) intent.getBooleanExtra("AUTOPLAY", current.autoPlayPronunciation) else current.autoPlayPronunciation
+
+        val updated = current.copy(
+            cardBackgroundOpacity = opacity,
+            wordSize = wordSize,
+            vietnameseSize = vnSize,
+            imageSize = imgSize,
+            quickReviewIntervalMillis = quickReviewInterval,
+            screenOffPreparationEnabled = screenOffPrepEnabled,
+            screenOffPrepareDelayMillis = screenOffPrepareDelay,
+            autoPlayPronunciation = autoPlay
+        )
+        app.reminderPreferencesController.updateLockScreenSettings(updated)
+
+        if (intent.hasExtra("UNLOCKED_INTERVAL") || intent.hasExtra("UNLOCKED_ENABLED")) {
+            val curReminder = app.reminderPreferencesController.current()
+            val unlockedInterval = if (intent.hasExtra("UNLOCKED_INTERVAL")) intent.getLongExtra("UNLOCKED_INTERVAL", curReminder.intervalMillis) else curReminder.intervalMillis
+            val unlockedEnabled = if (intent.hasExtra("UNLOCKED_ENABLED")) intent.getBooleanExtra("UNLOCKED_ENABLED", curReminder.enabled) else curReminder.enabled
+            app.reminderPreferencesController.updateSettings(
+                curReminder.copy(
+                    intervalMillis = unlockedInterval,
+                    enabled = unlockedEnabled
+                )
+            )
+        }
+
+        val pauseAction = intent.getStringExtra("PAUSE_ACTION")
+        if (pauseAction != null) {
+            when (pauseAction) {
+                "PAUSE_5M" -> app.reminderPreferencesController.pauseUnlocked5Minutes()
+                "PAUSE_30M" -> app.reminderPreferencesController.pauseUnlocked30Minutes()
+                "PAUSE_1H" -> app.reminderPreferencesController.pauseUnlockedOneHour()
+                "RESUME" -> app.reminderPreferencesController.resumeUnlocked()
+            }
+        }
+
+        app.lockScreenVocabularyCoordinator.reRenderCurrentPresentation("SETTINGS_INTENT")
     }
 
     private fun handleReminderIntent(intent: Intent?) {
-        if (intent == null) return
-        val action = intent.action
-        val packageId = intent.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_PACKAGE_ID)
-        val contentId = intent.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_CONTENT_ID)
-        val mode = intent.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_REMINDER_MODE) ?: "AGAIN_HARD"
+        val action = intent?.action
+        val packageId = intent?.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_PACKAGE_ID)
+        val contentId = intent?.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_CONTENT_ID)
+        val mode = intent?.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_REMINDER_MODE) ?: "AGAIN_HARD"
         if (action == AndroidVocabularyReminderNotificationHelper.ACTION_REMINDER_REVIEW && packageId != null && contentId != null) {
             pendingReminderTarget.value = PendingReminderReviewTarget(packageId, contentId, mode)
         }
@@ -150,6 +273,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleReminderIntent(intent)
+        if (intent?.action == "vn.loi.learning.android.ACTION_TEST_WALLPAPER_DEBUG") {
+            vn.loi.learning.android.reminder.AndroidLockScreenWallpaperRenderer.renderDebugSafeZones()
+        } else if (intent?.action == "vn.loi.learning.android.ACTION_TEST_WALLPAPER_APPLY") {
+            val caseId = intent?.getStringExtra("CASE_ID") ?: "DEFAULT"
+            vn.loi.learning.android.reminder.AndroidLockScreenWallpaperAudit.applyTestCase(this, caseId)
+        } else if (intent?.action == "vn.loi.learning.android.ACTION_UPDATE_LOCKSCREEN_SETTINGS") {
+            handleUpdateLockScreenSettingsIntent(intent)
+        } else if (intent?.action == "vn.loi.learning.android.ACTION_SHOW_TEST_OVERLAY") {
+            handleShowTestOverlayIntent(intent)
+        } else if (intent?.action == "vn.loi.learning.android.ACTION_RENDER_OVERLAY_AUDIT") {
+            handleRenderOverlayAuditIntent(intent)
+        }
         QuickVoiceRecorderController.initialize(this)
         QuickVoicePermissionBridge.register {
             recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -493,12 +628,9 @@ class MainActivity : ComponentActivity() {
                         val packageId = backStackEntry.arguments?.getString("packageId") ?: return@composable
                         val contentId = backStackEntry.arguments?.getString("contentId") ?: return@composable
                         val modeName = backStackEntry.arguments?.getString("mode") ?: "AGAIN_HARD"
-                        val mode = runCatching {
-                            AndroidVocabularyReminderSelectionMode.valueOf(modeName)
-                        }.getOrDefault(AndroidVocabularyReminderSelectionMode.AGAIN_HARD)
 
-                        val session = remember(packageId, contentId, mode) {
-                            app.reminderCandidateSelector.getReminderReviewQueue(packageId, mode, contentId)
+                        val session = remember(packageId, contentId, modeName) {
+                            app.reminderCandidateSelector.getReviewQueue(packageId, modeName, contentId)
                         }
 
                         if (session != null) {

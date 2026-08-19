@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
 
     <application
         android:name=".LearningEngineAndroidApplication"
@@ -13,12 +15,24 @@
         android:label="Learning Engine"
         android:supportsRtl="true"
         android:theme="@style/Theme.LearningEngine">
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".reminder.AndroidLockScreenVocabularyService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Maintains the user-enabled lock-screen vocabulary feature so a vocabulary card can be presented when the device screen wakes." />
+        </service>
 
         <service
             android:name=".autoplay.AutoPlayPlaybackService"
@@ -46,5 +60,9 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/controller_accessibility_service_config" />
         </service>
+
+        <receiver
+            android:name=".reminder.AndroidVocabularyReminderResumeReceiver"
+            android:exported="false" />
     </application>
 </manifest>

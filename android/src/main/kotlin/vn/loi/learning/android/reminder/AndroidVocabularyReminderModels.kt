@@ -1,9 +1,17 @@
 package vn.loi.learning.android.reminder
 
+import android.graphics.Bitmap
 import java.time.Instant
 import java.time.LocalTime
+import java.util.concurrent.atomic.AtomicBoolean
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.InstalledPackageId
+
+enum class VocabularyPresentationDeviceState {
+    SCREEN_OFF,
+    LOCKED_SCREEN_ON,
+    UNLOCKED_SCREEN_ON
+}
 
 enum class AndroidVocabularyReminderSelectionMode {
     AGAIN_HARD,
@@ -28,10 +36,18 @@ data class AndroidVocabularyReminderSettings(
     val displayDurationMillis: Long = DEFAULT_DISPLAY_DURATION_MILLIS,
     val autoPlayPronunciation: Boolean = false,
     val overlayPopupEnabled: Boolean = false,
-    val pausedUntil: Instant? = null
+    val pausedUntil: Instant? = null,
+    val quickPauseActionsEnabled: Boolean = true,
+    val unlockedPausedUntilEpochMillis: Long = 0L
 ) {
     val intervalMinutes: Int
         get() = (intervalMillis / 60_000L).toInt().coerceAtLeast(1)
+
+    val unlockedReminderIntervalMillis: Long
+        get() = intervalMillis
+
+    val isUnlockedPaused: Boolean
+        get() = System.currentTimeMillis() < unlockedPausedUntilEpochMillis
 
     init {
         require(intervalMillis in MIN_INTERVAL_MILLIS..MAX_INTERVAL_MILLIS) {
@@ -84,7 +100,15 @@ sealed interface AndroidVocabularyCandidateSelectionResult {
         PACKAGE_NOT_SELECTED,
         PACKAGE_UNAVAILABLE,
         PACKAGE_EMPTY,
-        NO_ELIGIBLE_CANDIDATE
+        NO_ELIGIBLE_CANDIDATE;
+
+        fun userFacingMessage(): String = when (this) {
+            DISABLED -> "Vocabulary reminders are disabled."
+            PACKAGE_NOT_SELECTED -> "No vocabulary package selected."
+            PACKAGE_UNAVAILABLE -> "Selected vocabulary package is unavailable."
+            PACKAGE_EMPTY -> "Selected vocabulary package is empty."
+            NO_ELIGIBLE_CANDIDATE -> "No eligible vocabulary found for current mode."
+        }
     }
 }
 
@@ -106,9 +130,10 @@ data class AndroidVocabularyReminderDraft(
     val activeEndText: String,
     val displayDurationText: String,
     val autoPlayPronunciation: Boolean,
-    val overlayPopupEnabled: Boolean = false
+    val overlayPopupEnabled: Boolean = false,
+    val quickPauseActionsEnabled: Boolean = true
 ) {
-    fun validate(pausedUntil: Instant?): AndroidVocabularyReminderDraftValidation {
+    fun validate(pausedUntil: Instant?, unlockedPausedUntilEpochMillis: Long = 0L): AndroidVocabularyReminderDraftValidation {
         val intervalValue = intervalValueText.trim().toIntOrNull()
             ?: return AndroidVocabularyReminderDraftValidation.Invalid("Interval must be a valid positive number.")
         if (intervalValue <= 0) {
@@ -147,7 +172,9 @@ data class AndroidVocabularyReminderDraft(
                 displayDurationMillis = displayDurationMillis,
                 autoPlayPronunciation = autoPlayPronunciation,
                 overlayPopupEnabled = overlayPopupEnabled,
-                pausedUntil = pausedUntil
+                pausedUntil = pausedUntil,
+                quickPauseActionsEnabled = quickPauseActionsEnabled,
+                unlockedPausedUntilEpochMillis = unlockedPausedUntilEpochMillis
             )
         )
     }
@@ -181,7 +208,8 @@ data class AndroidVocabularyReminderDraft(
                 activeEndText = endStr,
                 displayDurationText = displaySecStr,
                 autoPlayPronunciation = settings.autoPlayPronunciation,
-                overlayPopupEnabled = settings.overlayPopupEnabled
+                overlayPopupEnabled = settings.overlayPopupEnabled,
+                quickPauseActionsEnabled = settings.quickPauseActionsEnabled
             )
         }
     }
@@ -195,4 +223,135 @@ sealed interface AndroidVocabularyReminderDraftValidation {
 sealed interface AndroidVocabularyReminderActionResult {
     data object Success : AndroidVocabularyReminderActionResult
     data class Failure(val message: String) : AndroidVocabularyReminderActionResult
+}
+
+enum class AndroidLockScreenVocabularyMode {
+    AGAIN_HARD,
+    DUE,
+    NEW_UNSEEN,
+    RANDOM_LEARNED,
+    MARKED_DIFFICULT,
+    RANDOM_ALL
+}
+
+enum class LockWallpaperWordSize {
+    SMALL,
+    MEDIUM,
+    LARGE,
+    EXTRA_LARGE,
+    HUGE
+}
+
+enum class LockWallpaperImageSize {
+    MEDIUM,
+    LARGE,
+    EXTRA_LARGE,
+    MAXIMUM
+}
+
+enum class LockWallpaperVietnameseSize {
+    SMALL,
+    MEDIUM,
+    LARGE,
+    EXTRA_LARGE,
+    HUGE
+}
+
+enum class LockScreenPresentationPhase {
+    SCREEN_ON_STABLE,
+    PREPARING_WHILE_OFF,
+    PREPARED_FOR_NEXT_WAKE
+}
+
+data class PreparedLockWallpaperPresentation(
+    val sessionToken: Long,
+    val candidate: AndroidVocabularyCandidate,
+    val audioSourcePath: String?,
+    val wallpaperBitmap: Bitmap? = null,
+    val isAudioPlayed: AtomicBoolean = AtomicBoolean(false)
+)
+
+data class LockScreenPresentationBuffer(
+    val visible: PreparedLockWallpaperPresentation? = null,
+    val nextReady: PreparedLockWallpaperPresentation? = null
+) {
+    fun withNextReady(ready: PreparedLockWallpaperPresentation): LockScreenPresentationBuffer =
+        copy(nextReady = ready)
+
+    fun activateNext(): LockScreenPresentationBuffer =
+        copy(visible = nextReady, nextReady = null)
+}
+
+data class AndroidLockScreenVocabularySettings(
+    val enabled: Boolean = false,
+    val selectedPackageId: String? = null,
+    val selectionMode: AndroidLockScreenVocabularyMode = AndroidLockScreenVocabularyMode.AGAIN_HARD,
+    val autoPlayPronunciation: Boolean = false,
+    val customBackgroundPath: String? = null,
+    val wordSize: LockWallpaperWordSize = LockWallpaperWordSize.EXTRA_LARGE,
+    val vietnameseSize: LockWallpaperVietnameseSize = LockWallpaperVietnameseSize.MEDIUM,
+    val imageSize: LockWallpaperImageSize = LockWallpaperImageSize.EXTRA_LARGE,
+    val cardBackgroundOpacity: Float = 0.72f,
+    val quickReviewIntervalMillis: Long = DEFAULT_QUICK_REVIEW_INTERVAL_MILLIS,
+    val screenOffPreparationEnabled: Boolean = true,
+    val screenOffPrepareDelayMillis: Long = DEFAULT_SCREEN_OFF_PREPARE_DELAY_MILLIS
+) {
+    val clampedCardBackgroundOpacity: Float
+        get() = cardBackgroundOpacity.coerceIn(0.20f, 1.00f)
+
+    companion object {
+        const val DEFAULT_QUICK_REVIEW_INTERVAL_MILLIS = 5_000L
+        const val DEFAULT_SCREEN_OFF_PREPARE_DELAY_MILLIS = 0L
+    }
+}
+
+data class AndroidLockScreenVocabularyDraft(
+    val enabled: Boolean,
+    val selectedPackageId: String?,
+    val selectionMode: AndroidLockScreenVocabularyMode,
+    val autoPlayPronunciation: Boolean,
+    val customBackgroundPath: String? = null,
+    val wordSize: LockWallpaperWordSize = LockWallpaperWordSize.EXTRA_LARGE,
+    val vietnameseSize: LockWallpaperVietnameseSize = LockWallpaperVietnameseSize.MEDIUM,
+    val imageSize: LockWallpaperImageSize = LockWallpaperImageSize.EXTRA_LARGE,
+    val cardBackgroundOpacity: Float = 0.72f,
+    val quickReviewIntervalMillis: Long = AndroidLockScreenVocabularySettings.DEFAULT_QUICK_REVIEW_INTERVAL_MILLIS,
+    val screenOffPreparationEnabled: Boolean = true,
+    val screenOffPrepareDelayMillis: Long = AndroidLockScreenVocabularySettings.DEFAULT_SCREEN_OFF_PREPARE_DELAY_MILLIS
+) {
+    fun toSettings(): AndroidLockScreenVocabularySettings {
+        return AndroidLockScreenVocabularySettings(
+            enabled = enabled,
+            selectedPackageId = selectedPackageId,
+            selectionMode = selectionMode,
+            autoPlayPronunciation = autoPlayPronunciation,
+            customBackgroundPath = customBackgroundPath,
+            wordSize = wordSize,
+            vietnameseSize = vietnameseSize,
+            imageSize = imageSize,
+            cardBackgroundOpacity = cardBackgroundOpacity.coerceIn(0.20f, 1.00f),
+            quickReviewIntervalMillis = quickReviewIntervalMillis,
+            screenOffPreparationEnabled = screenOffPreparationEnabled,
+            screenOffPrepareDelayMillis = screenOffPrepareDelayMillis
+        )
+    }
+
+    companion object {
+        fun from(settings: AndroidLockScreenVocabularySettings): AndroidLockScreenVocabularyDraft {
+            return AndroidLockScreenVocabularyDraft(
+                enabled = settings.enabled,
+                selectedPackageId = settings.selectedPackageId,
+                selectionMode = settings.selectionMode,
+                autoPlayPronunciation = settings.autoPlayPronunciation,
+                customBackgroundPath = settings.customBackgroundPath,
+                wordSize = settings.wordSize,
+                vietnameseSize = settings.vietnameseSize,
+                imageSize = settings.imageSize,
+                cardBackgroundOpacity = settings.cardBackgroundOpacity,
+                quickReviewIntervalMillis = settings.quickReviewIntervalMillis,
+                screenOffPreparationEnabled = settings.screenOffPreparationEnabled,
+                screenOffPrepareDelayMillis = settings.screenOffPrepareDelayMillis
+            )
+        }
+    }
 }
