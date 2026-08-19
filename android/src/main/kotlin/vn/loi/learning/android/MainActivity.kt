@@ -54,8 +54,27 @@ import android.Manifest
 import vn.loi.learning.android.recording.QuickVoiceRecorderController
 import vn.loi.learning.android.recording.QuickVoicePermissionBridge
 import vn.loi.learning.android.recording.QuickVoiceRecordingsScreen
+import vn.loi.learning.android.reminder.AndroidVocabularyReminderNotificationHelper
+import vn.loi.learning.android.reminder.AndroidVocabularyReminderSelectionMode
+import vn.loi.learning.android.reminder.ReminderReviewScreen
+import vn.loi.learning.android.reminder.ReminderSettingsScreen
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+
+data class PendingReminderReviewTarget(
+    val packageId: String,
+    val contentId: String,
+    val mode: String
+)
 
 class MainActivity : ComponentActivity() {
+
+    private val pendingReminderTarget = MutableStateFlow<PendingReminderReviewTarget?>(null)
 
     private val recordAudioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -111,8 +130,26 @@ class MainActivity : ComponentActivity() {
         ControllerDiagnosticsHolder.setLifecycleState("DESTROYED")
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleReminderIntent(intent)
+    }
+
+    private fun handleReminderIntent(intent: Intent?) {
+        if (intent == null) return
+        val action = intent.action
+        val packageId = intent.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_PACKAGE_ID)
+        val contentId = intent.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_CONTENT_ID)
+        val mode = intent.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_REMINDER_MODE) ?: "AGAIN_HARD"
+        if (action == AndroidVocabularyReminderNotificationHelper.ACTION_REMINDER_REVIEW && packageId != null && contentId != null) {
+            pendingReminderTarget.value = PendingReminderReviewTarget(packageId, contentId, mode)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleReminderIntent(intent)
         QuickVoiceRecorderController.initialize(this)
         QuickVoicePermissionBridge.register {
             recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -250,10 +287,23 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                val pendingReminder by pendingReminderTarget.collectAsStateWithLifecycle()
+                LaunchedEffect(pendingReminder) {
+                    val target = pendingReminder
+                    if (target != null) {
+                        pendingReminderTarget.value = null
+                        navController.navigate("reminder_review/${target.packageId}/${target.contentId}/${target.mode}") {
+                            launchSingleTop = true
+                        }
+                    }
+                }
                 val showRootNavigation = when {
                     currentRoute == "autoplay" -> false
                     currentRoute == "controller_diagnostics" -> false
                     currentRoute == "controller_settings" -> false
+                    currentRoute == "voice_recordings" -> false
+                    currentRoute == "reminder_settings" -> false
+                    currentRoute?.startsWith("reminder_review") == true -> false
                     currentRoute?.startsWith("package/") == true -> false
                     currentRoute == "library" -> libraryState is AndroidLibraryState.Root
                     currentRoute == "study" -> state is AndroidStudyState.Home
@@ -422,8 +472,48 @@ class MainActivity : ComponentActivity() {
                             app.studyPreferencesController::updateContinuousSkim,
                             onControllerSettings = { navController.navigate("controller_settings") { launchSingleTop = true } },
                             onControllerDiagnostics = { navController.navigate("controller_diagnostics") { launchSingleTop = true } },
-                            onVoiceRecordings = { navController.navigate("voice_recordings") { launchSingleTop = true } }
+                            onVoiceRecordings = { navController.navigate("voice_recordings") { launchSingleTop = true } },
+                            onReminderSettings = { navController.navigate("reminder_settings") { launchSingleTop = true } }
                         ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
+                    }
+                    composable("reminder_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        ReminderSettingsScreen(
+                            controller = app.reminderPreferencesController,
+                            runtime = app.reminderRuntime,
+                            selector = app.reminderCandidateSelector,
+                            notificationHelper = app.reminderNotificationHelper,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(
+                        "reminder_review/{packageId}/{contentId}/{mode}",
+                        enterTransition = { fadeIn() },
+                        exitTransition = { fadeOut() }
+                    ) { backStackEntry ->
+                        val packageId = backStackEntry.arguments?.getString("packageId") ?: return@composable
+                        val contentId = backStackEntry.arguments?.getString("contentId") ?: return@composable
+                        val modeName = backStackEntry.arguments?.getString("mode") ?: "AGAIN_HARD"
+                        val mode = runCatching {
+                            AndroidVocabularyReminderSelectionMode.valueOf(modeName)
+                        }.getOrDefault(AndroidVocabularyReminderSelectionMode.AGAIN_HARD)
+
+                        val session = remember(packageId, contentId, mode) {
+                            app.reminderCandidateSelector.getReminderReviewQueue(packageId, mode, contentId)
+                        }
+
+                        if (session != null) {
+                            ReminderReviewScreen(
+                                session = session,
+                                difficultMarkers = app.reminderDifficultStore,
+                                resolveMedia = { ref -> graph.media.resolve(ref)?.toString() },
+                                onBack = { navController.popBackStack() },
+                                runtime = app.reminderRuntime
+                            )
+                        } else {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("Vocabulary item is unavailable.", style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
                     }
                     composable("controller_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         ControllerSettingsScreen(

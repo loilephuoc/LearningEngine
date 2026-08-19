@@ -385,6 +385,7 @@ fun SettingsScreen(
     onControllerSettings: () -> Unit = {},
     onControllerDiagnostics: () -> Unit = {},
     onVoiceRecordings: () -> Unit = {},
+    onReminderSettings: () -> Unit = {},
     onAction: (AndroidOperationKind) -> Unit
 ) {
     LearningEngineScreenShell("Settings", "Appearance and local data",
@@ -407,6 +408,15 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+            Text("Notifications & Reminders", style = LearningTextRole.sectionTitle)
+            LearningEngineSettingsRow(
+                Icons.Default.Notifications,
+                "Vocabulary Reminder",
+                "Periodic vocabulary reminders, time windows, and review queue",
+                onReminderSettings
+            )
         }
         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
             Text("Study", style = LearningTextRole.sectionTitle)
