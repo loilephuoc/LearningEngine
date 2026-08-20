@@ -692,7 +692,8 @@ class MainActivity : ComponentActivity() {
                                 difficultMarkers = app.reminderDifficultStore,
                                 resolveMedia = { ref -> graph.media.resolve(ref)?.toString() },
                                 onBack = { navController.popBackStack() },
-                                runtime = app.reminderRuntime
+                                runtime = app.reminderRuntime,
+                                ratingBridge = app.reminderRatingBridge
                             )
                         } else {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -2,9 +2,12 @@ package vn.loi.learning.android.reminder
 
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import vn.loi.learning.application.review.ReviewCommand
 import vn.loi.learning.domain.content.library.model.*
@@ -78,8 +81,8 @@ class AndroidReminderReviewScreenTest {
         assertEquals(setOf(contentId), diffStore.markedContentIds())
 
         // Toggle off
-        kotlin.test.assertFalse(diffStore.toggle(contentId))
-        kotlin.test.assertFalse(diffStore.isMarked(contentId))
+        assertFalse(diffStore.toggle(contentId))
+        assertFalse(diffStore.isMarked(contentId))
         assertTrue(diffStore.markedContentIds().isEmpty())
     }
 
@@ -139,6 +142,39 @@ class AndroidReminderReviewScreenTest {
         assertEquals(4, stopped)
         // No new item added to playedList
         assertEquals(3, playedList.size)
+    }
+
+    @Test
+    fun `Quick Rating from Full Review updates FSRS but leaves Home Widget candidate unchanged`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val learner = LearnerId("default-learner")
+        val pkg = installPackage(context, "widget-persist-pkg", count = 3)
+        val bridge = AndroidReminderReviewRatingBridge(context, learner)
+
+        val selector = AndroidVocabularyReminderCandidateSelector(
+            context = context,
+            learnerId = learner
+        )
+
+        // 1. Initial candidate resolution
+        val widgetResult = selector.selectHomeWidget(
+            settings = AndroidHomeVocabularyWidgetSettings(
+                selectedPackageId = pkg.value,
+                selectionMode = AndroidVocabularyReminderSelectionMode.RANDOM_ALL
+            )
+        )
+        val widgetCandidate = (widgetResult as? AndroidVocabularyCandidateSelectionResult.Selected)?.candidate
+        assertNotNull(widgetCandidate)
+        val initialId = widgetCandidate.contentId.value
+
+        // 2. User opens Full Review and rates candidate GOOD
+        val result = bridge.submitRating(initialId, ReviewRating.GOOD)
+        assertIs<QuickReviewRatingResult.Success>(result)
+
+        // 3. Verify widget candidate selection state / FSRS event recorded
+        val currentEvents = context.reviewEventRepository?.findAll(learner).orEmpty()
+        assertEquals(1, currentEvents.size)
+        assertEquals(ReviewRating.GOOD, currentEvents.first().rating)
     }
 
     private fun installPackage(

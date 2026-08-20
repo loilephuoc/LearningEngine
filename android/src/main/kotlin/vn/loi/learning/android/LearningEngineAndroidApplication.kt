@@ -94,6 +94,11 @@ class LearningEngineAndroidApplication : Application() {
             resolveMedia = { ref -> graph.media.resolve(ref)?.toString() }
         )
     }
+    val reminderRatingBridge: vn.loi.learning.android.reminder.AndroidReminderReviewRatingBridge by lazy {
+        vn.loi.learning.android.reminder.AndroidReminderReviewRatingBridge(
+            context = graph.engine
+        )
+    }
 
     private val graphOwner by lazy {
         SingleInstanceOwner { AndroidApplicationGraph.create(this) }

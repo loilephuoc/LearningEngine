@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import vn.loi.learning.android.controller.ControllerContext
@@ -48,7 +49,8 @@ fun ReminderReviewScreen(
     difficultMarkers: AndroidVocabularyReminderDifficultMarkers?,
     resolveMedia: (String) -> String?,
     onBack: () -> Unit,
-    runtime: AndroidVocabularyReminderRuntime? = null
+    runtime: AndroidVocabularyReminderRuntime? = null,
+    ratingBridge: AndroidReminderReviewRatingBridge? = null
 ) {
     val items = session.items
     if (items.isEmpty()) {
@@ -81,6 +83,26 @@ fun ReminderReviewScreen(
         mutableStateOf(difficultMarkers?.isMarked(currentItem.contentId) == true)
     }
 
+    // Rating and preview state
+    var previewsByContentId by remember { mutableStateOf<Map<String, Map<ReviewRating, QuickReviewRatingPreview>>>(emptyMap()) }
+    var ratedCandidateIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var submissionState by remember { mutableStateOf(QuickReviewSubmissionState.IDLE) }
+    var successFeedback by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Asynchronous non-blocking preview loading for active candidate
+    LaunchedEffect(currentItem.contentId) {
+        errorMessage = null
+        if (ratingBridge != null && !previewsByContentId.containsKey(currentItem.contentId.value)) {
+            val previews = withContext(Dispatchers.IO) {
+                ratingBridge.previewRatings(currentItem.contentId.value)
+            }
+            if (previews != null) {
+                previewsByContentId = previewsByContentId + (currentItem.contentId.value to previews)
+            }
+        }
+    }
+
     // Play function that stops previous and plays new audio
     val playAudio: (String?) -> Unit = { audioRef ->
         audioController.stop()
@@ -92,12 +114,63 @@ fun ReminderReviewScreen(
         }
     }
 
+    // Canonical rating submission handler
+    val handleRate: (ReviewRating) -> Unit = { rating ->
+        if (ratingBridge != null &&
+            submissionState != QuickReviewSubmissionState.SUBMITTING &&
+            currentItem.contentId.value !in ratedCandidateIds
+        ) {
+            submissionState = QuickReviewSubmissionState.SUBMITTING
+            errorMessage = null
+            coroutineScope.launch {
+                val candidateId = currentItem.contentId.value
+                val result = withContext(Dispatchers.IO) {
+                    ratingBridge.submitRating(candidateId, rating)
+                }
+                when (result) {
+                    is QuickReviewRatingResult.Success -> {
+                        ratedCandidateIds = ratedCandidateIds + candidateId
+                        submissionState = QuickReviewSubmissionState.SUCCESS
+                        val intervalText = AndroidReminderReviewRatingBridge.formatTimeSpan(result.scheduledInterval)
+                        val ratingLabel = result.rating.name.lowercase().replaceFirstChar { it.uppercase() }
+                        successFeedback = "Rated $ratingLabel · $intervalText"
+
+                        // Auto-advance to next candidate if available
+                        if (pagerState.currentPage < items.size - 1) {
+                            delay(600L)
+                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                            submissionState = QuickReviewSubmissionState.IDLE
+                        }
+                    }
+                    is QuickReviewRatingResult.Failure -> {
+                        submissionState = QuickReviewSubmissionState.ERROR
+                        errorMessage = result.cause.message ?: "Rating submission failed"
+                    }
+                    QuickReviewRatingResult.NotFound,
+                    QuickReviewRatingResult.NotReviewable -> {
+                        submissionState = QuickReviewSubmissionState.ERROR
+                        errorMessage = "Item is not reviewable"
+                    }
+                    QuickReviewRatingResult.AlreadySubmitting -> {
+                        // Already submitting, do nothing
+                    }
+                }
+            }
+        }
+    }
+
     // Controller Bridge target integration
-    DisposableEffect(pagerState.currentPage, currentItem) {
+    DisposableEffect(pagerState.currentPage, currentItem, submissionState, ratedCandidateIds) {
         val target = object : StudyControllerTarget {
             override fun currentContext(): ControllerContext = ControllerContext.STUDY_REVEALED
             override suspend fun revealAnswer(): Boolean = false
-            override suspend fun rate(rating: ReviewRating): Boolean = false // Read-only!
+            override suspend fun rate(rating: ReviewRating): Boolean {
+                if (ratingBridge == null) return false
+                if (submissionState == QuickReviewSubmissionState.SUBMITTING) return false
+                if (currentItem.contentId.value in ratedCandidateIds) return false
+                handleRate(rating)
+                return true
+            }
             override suspend fun next(): Boolean {
                 if (pagerState.currentPage < items.size - 1) {
                     pagerState.animateScrollToPage(pagerState.currentPage + 1)
@@ -203,13 +276,13 @@ fun ReminderReviewScreen(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            if (pagerState.currentPage > 0) {
+                            if (pagerState.currentPage > 0 && submissionState != QuickReviewSubmissionState.SUBMITTING) {
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(pagerState.currentPage - 1)
                                 }
                             }
                         },
-                        enabled = pagerState.currentPage > 0
+                        enabled = pagerState.currentPage > 0 && submissionState != QuickReviewSubmissionState.SUBMITTING
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
@@ -224,13 +297,13 @@ fun ReminderReviewScreen(
 
                     Button(
                         onClick = {
-                            if (pagerState.currentPage < items.size - 1) {
+                            if (pagerState.currentPage < items.size - 1 && submissionState != QuickReviewSubmissionState.SUBMITTING) {
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(pagerState.currentPage + 1)
                                 }
                             }
                         },
-                        enabled = pagerState.currentPage < items.size - 1
+                        enabled = pagerState.currentPage < items.size - 1 && submissionState != QuickReviewSubmissionState.SUBMITTING
                     ) {
                         Text("Next")
                         Spacer(Modifier.width(6.dp))
@@ -242,15 +315,26 @@ fun ReminderReviewScreen(
     ) { innerPadding ->
         HorizontalPager(
             state = pagerState,
+            userScrollEnabled = submissionState != QuickReviewSubmissionState.SUBMITTING,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) { page ->
             val item = items[page]
+            val previews = previewsByContentId[item.contentId.value]
+            val isCurrentRated = item.contentId.value in ratedCandidateIds
+
             ReminderReviewItemContent(
                 item = item,
                 resolveMedia = resolveMedia,
-                onPlayAudio = playAudio
+                onPlayAudio = playAudio,
+                ratingBridge = ratingBridge,
+                previews = previews,
+                isSubmitting = submissionState == QuickReviewSubmissionState.SUBMITTING,
+                isCurrentRated = isCurrentRated,
+                successFeedback = if (item.contentId.value == currentItem.contentId.value) successFeedback else null,
+                errorMessage = if (item.contentId.value == currentItem.contentId.value) errorMessage else null,
+                onRate = handleRate
             )
         }
     }
@@ -260,25 +344,32 @@ fun ReminderReviewScreen(
 private fun ReminderReviewItemContent(
     item: AndroidVocabularyCandidate,
     resolveMedia: (String) -> String?,
-    onPlayAudio: (String?) -> Unit
+    onPlayAudio: (String?) -> Unit,
+    ratingBridge: AndroidReminderReviewRatingBridge? = null,
+    previews: Map<ReviewRating, QuickReviewRatingPreview>? = null,
+    isSubmitting: Boolean = false,
+    isCurrentRated: Boolean = false,
+    successFeedback: String? = null,
+    errorMessage: String? = null,
+    onRate: (ReviewRating) -> Unit = {}
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val availableHeight = maxHeight
         val hasImage = !item.imageReference.isNullOrBlank()
-        // Responsive allocation for image: ~44% of available height, bounded within 200..440dp
-        val targetImageHeight = (availableHeight * 0.44f).coerceIn(200.dp, 440.dp)
+        // Responsive allocation for image: ~40% of available height, bounded within 180..420dp
+        val targetImageHeight = (availableHeight * 0.40f).coerceIn(180.dp, 420.dp)
 
         // Adaptive headword typography
         val headwordFontSize = when {
-            item.primaryText.length <= 8 -> 44.sp
-            item.primaryText.length <= 16 -> 36.sp
-            item.primaryText.length <= 25 -> 28.sp
+            item.primaryText.length <= 8 -> 40.sp
+            item.primaryText.length <= 16 -> 34.sp
+            item.primaryText.length <= 25 -> 26.sp
             else -> 22.sp
         }
         val headwordLineHeight = when {
-            item.primaryText.length <= 8 -> 48.sp
-            item.primaryText.length <= 16 -> 40.sp
-            item.primaryText.length <= 25 -> 32.sp
+            item.primaryText.length <= 8 -> 44.sp
+            item.primaryText.length <= 16 -> 38.sp
+            item.primaryText.length <= 25 -> 30.sp
             else -> 26.sp
         }
 
@@ -448,6 +539,126 @@ private fun ReminderReviewItemContent(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+                    }
+                }
+            }
+
+            // 5. Four Quick FSRS Rating Controls
+            if (ratingBridge != null) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    tonalElevation = 1.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Quick Rating",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (isCurrentRated && successFeedback != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                ) {
+                                    Text(
+                                        text = successFeedback,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            } else if (isSubmitting) {
+                                Text(
+                                    text = "Saving...",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            } else if (!errorMessage.isNullOrBlank()) {
+                                Text(
+                                    text = errorMessage,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+
+                        // Four Buttons in Responsive Width Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val ratingItems = listOf(
+                                Triple(ReviewRating.AGAIN, "Again", vn.loi.learning.android.ui.StudyRatingColors.again),
+                                Triple(ReviewRating.HARD, "Hard", vn.loi.learning.android.ui.StudyRatingColors.hard),
+                                Triple(ReviewRating.GOOD, "Good", vn.loi.learning.android.ui.StudyRatingColors.good),
+                                Triple(ReviewRating.EASY, "Easy", vn.loi.learning.android.ui.StudyRatingColors.easy)
+                            )
+
+                            for ((rating, label, palette) in ratingItems) {
+                                val preview = previews?.get(rating)
+                                val intervalText = preview?.formattedInterval ?: "-"
+                                val isEnabled = !isSubmitting && !isCurrentRated && previews != null
+
+                                OutlinedButton(
+                                    onClick = { onRate(rating) },
+                                    enabled = isEnabled,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(min = 48.dp)
+                                        .semantics {
+                                            contentDescription = if (isEnabled) "$label, next review in $intervalText" else "$label unavailable"
+                                        },
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isEnabled) palette.border else MaterialTheme.colorScheme.outlineVariant
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = if (isEnabled) palette.background.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                        contentColor = palette.content,
+                                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                    )
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isEnabled) palette.content else androidx.compose.ui.graphics.Color.Unspecified,
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = intervalText,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (isEnabled) palette.content.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
