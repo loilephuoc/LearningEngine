@@ -334,10 +334,14 @@ class MainActivity : ComponentActivity() {
                 } else {
                 val studyViewModel = viewModel<AndroidStudyViewModel> {
                     AndroidStudyViewModel(
-                        AndroidStudyFacade(graph.engine, resolveMedia = { reference ->
-                            graph.media.resolve(reference)?.toString()
-                        }, dailyLimits = app.studyPreferencesController::current,
-                            continuousSkimEnabled = app.studyPreferencesController::continuousSkimEnabled),
+                        AndroidStudyFacade(
+                            graph.engine,
+                            resolveMedia = { reference -> graph.media.resolve(reference)?.toString() },
+                            dailyLimits = app.studyPreferencesController::current,
+                            continuousSkimEnabled = app.studyPreferencesController::continuousSkimEnabled,
+                            getInsightsScopePackageId = app.studyPreferencesController::insightsScopePackageId,
+                            onInsightsScopeChanged = app.studyPreferencesController::updateInsightsScopePackageId
+                        ),
                         createSavedStateHandle(),
                         typingViMutedInitially = app.studyPreferencesController.typingViMuted(),
                         onTypingViMutedChanged = app.studyPreferencesController::updateTypingViMuted

@@ -80,7 +80,8 @@ data class AndroidHomeUiModel(
     val accuracyPercent: Int?,
     val activeMemoryCount: Int,
     val totalMemoryCount: Int,
-    val dailyBudget: DailyStudyBudgetSnapshot? = null
+    val dailyBudget: DailyStudyBudgetSnapshot? = null,
+    val forecastInsights: vn.loi.learning.android.dashboard.AndroidForecastInsightsUiModel? = null
 ) {
     val hasContent: Boolean get() = installedPackageCount > 0
     val hasDueReview: Boolean get() = dueCount > 0
@@ -394,7 +395,9 @@ class AndroidStudyFacade(
     private val dailyLimits: () -> DailyStudyBudgetLimits = { DailyStudyBudgetLimits() },
     private val continuousSkimEnabled: () -> Boolean = { false },
     private val zoneId: () -> ZoneId = ZoneId::systemDefault,
-    private val onHomeQuery: () -> Unit = {}
+    private val onHomeQuery: () -> Unit = {},
+    private val getInsightsScopePackageId: () -> String? = { null },
+    private val onInsightsScopeChanged: (String?) -> Unit = {}
 ) {
     private data class PendingTypingCompletion(
         val result: RecallResult,
@@ -574,6 +577,33 @@ class AndroidStudyFacade(
         val primaryAction = selectHomePrimaryAction(
             active?.id?.value, dueCount, scope != null, daily?.hasEligibleWork ?: false
         )
+        val activePackageId = (active?.installedPackageId ?: scope?.installedPackageId)?.value
+        val persistedPackageId = getInsightsScopePackageId()
+        val selectedPackage = persistedPackageId?.let { pid -> packages.firstOrNull { it.id == pid } }
+        if (persistedPackageId != null && selectedPackage == null) {
+            onInsightsScopeChanged(null)
+        }
+        val currentInsightsScope = when {
+            selectedPackage != null -> vn.loi.learning.android.dashboard.AndroidInsightsScope.SpecificPackage(selectedPackage.id, selectedPackage.name)
+            else -> vn.loi.learning.android.dashboard.AndroidInsightsScope.AllPackages
+        }
+        val allPackagesOption = vn.loi.learning.android.dashboard.AndroidInsightsScopeOption(
+            scope = vn.loi.learning.android.dashboard.AndroidInsightsScope.AllPackages,
+            label = "All packages",
+            isActivePackage = false
+        )
+        val packageOptions = packages.map { pkg ->
+            vn.loi.learning.android.dashboard.AndroidInsightsScopeOption(
+                scope = vn.loi.learning.android.dashboard.AndroidInsightsScope.SpecificPackage(pkg.id, pkg.name),
+                label = pkg.name,
+                isActivePackage = pkg.id == activePackageId
+            )
+        }
+        val availableScopes = listOf(allPackagesOption) + packageOptions
+
+        val forecastInsights = AndroidStartupTrace.measured("study_home_forecast_insights") {
+            queryForecastInsights(learnerId, currentInsightsScope, availableScopes)
+        }
         return AndroidStudyState.Home(
             AndroidSessionEntryAvailability(
                 canStartReview = scope != null && active == null && daily != null && daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0,
@@ -607,7 +637,8 @@ class AndroidStudyFacade(
                 accuracyPercent = progress.accuracy?.let { (it * 100).toInt() },
                 activeMemoryCount = memories.activeMemories,
                 totalMemoryCount = memories.totalMemories,
-                dailyBudget = daily
+                dailyBudget = daily,
+                forecastInsights = forecastInsights
             )
         )
     }
@@ -1552,6 +1583,27 @@ class AndroidStudyFacade(
     private fun strategyContext(session: StudySession) =
         if (session.policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY)
             RecallStrategyContext.PRACTICE_ONLY else RecallStrategyContext.EVALUATIVE
+
+    fun updateInsightsScope(scope: vn.loi.learning.android.dashboard.AndroidInsightsScope) {
+        val packageId = when (scope) {
+            is vn.loi.learning.android.dashboard.AndroidInsightsScope.AllPackages -> null
+            is vn.loi.learning.android.dashboard.AndroidInsightsScope.SpecificPackage -> scope.packageId
+        }
+        onInsightsScopeChanged(packageId)
+    }
+
+    private fun queryForecastInsights(
+        learnerId: LearnerId,
+        scope: vn.loi.learning.android.dashboard.AndroidInsightsScope = vn.loi.learning.android.dashboard.AndroidInsightsScope.AllPackages,
+        availableScopes: List<vn.loi.learning.android.dashboard.AndroidInsightsScopeOption> = emptyList()
+    ) = vn.loi.learning.android.dashboard.AndroidForecastInsightsQueryService(
+        memoryStateRepository = context.memoryStateRepository,
+        reviewEventRepository = context.reviewEventRepository,
+        packageContentQuery = context.packageContentQuery,
+        learningItemRepository = context.learningItemRepository,
+        now = now,
+        zoneId = zoneId
+    ).query(learnerId, scope, availableScopes)
 }
 
 internal fun androidCompletionModeFamily(session: StudySession): String = when (session.policy.focusedPracticeKind) {

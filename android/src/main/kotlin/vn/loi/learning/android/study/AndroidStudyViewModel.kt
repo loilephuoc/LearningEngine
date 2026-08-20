@@ -49,6 +49,7 @@ sealed interface AndroidStudyEvent {
     data object ProjectHome : AndroidStudyEvent
     data object RefreshHomeIfIdle : AndroidStudyEvent
     data object RefreshHud : AndroidStudyEvent
+    data class ChangeInsightsScope(val scope: vn.loi.learning.android.dashboard.AndroidInsightsScope) : AndroidStudyEvent
 }
 
 class AndroidStudyViewModel(
@@ -395,6 +396,10 @@ class AndroidStudyViewModel(
                     if (current is AndroidStudyState.Home) facade.home() else current
                 AndroidStudyEvent.RefreshHud ->
                     (current as? AndroidStudyState.Runtime)?.let(facade::refreshHud) ?: current
+                is AndroidStudyEvent.ChangeInsightsScope -> {
+                    facade.updateInsightsScope(event.scope)
+                    facade.home()
+                }
             } } }.getOrElse { error ->
                     if (error is CancellationException) throw error
                     AndroidStartupTrace.write(false, "phase=study_event_failed event=${event.javaClass.simpleName} error=${error.javaClass.simpleName}")

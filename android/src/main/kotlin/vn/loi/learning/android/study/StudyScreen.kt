@@ -97,7 +97,8 @@ internal data class AndroidLearningLandingPresentation(
     val activeMemoryCount: Int,
     val totalMemoryCount: Int,
     val learningProgress: Float,
-    val dailyBudget: vn.loi.learning.application.study.DailyStudyBudgetSnapshot?
+    val dailyBudget: vn.loi.learning.application.study.DailyStudyBudgetSnapshot?,
+    val forecastInsights: vn.loi.learning.android.dashboard.AndroidForecastInsightsUiModel? = null
 )
 
 internal fun resolveLearningLandingPresentation(state: AndroidStudyState.Home) =
@@ -112,7 +113,8 @@ internal fun resolveLearningLandingPresentation(state: AndroidStudyState.Home) =
         activeMemoryCount = state.model.activeMemoryCount,
         totalMemoryCount = state.model.totalMemoryCount,
         learningProgress = state.model.learningProgress,
-        dailyBudget = state.model.dailyBudget
+        dailyBudget = state.model.dailyBudget,
+        forecastInsights = state.model.forecastInsights
     )
 
 @Composable
@@ -159,6 +161,24 @@ fun HomeScreen(
             item("autoplay") { AutoPlayCard(onAutoPlay) }
         }
         if (presentation.totalMemoryCount > 0) item("progress") { HomeLearningProgress(presentation) }
+        presentation.forecastInsights?.let { insights ->
+            if (presentation.totalMemoryCount > 0 || insights.forecast7Days.any { it.count > 0 } || insights.availableScopes.size > 1) {
+                if (insights.availableScopes.size > 1) {
+                    item("insights-scope") {
+                        vn.loi.learning.android.dashboard.InsightsScopeSelector(
+                            currentScope = insights.scope,
+                            availableScopes = insights.availableScopes,
+                            onScopeChange = { onEvent(AndroidStudyEvent.ChangeInsightsScope(it)) }
+                        )
+                    }
+                }
+                item("forecast") { vn.loi.learning.android.dashboard.ReviewForecastCard(insights.forecast7Days) }
+                item("memory-retention") { vn.loi.learning.android.dashboard.MemoryRetentionCard(insights.memoryDistribution) }
+            }
+            if (insights.todayRatings.totalCount > 0 || presentation.reviewedToday > 0) {
+                item("today-ratings") { vn.loi.learning.android.dashboard.TodayRatingsCard(insights.todayRatings) }
+            }
+        }
         if (!model.hasContent) item("empty") {
             LearningEngineEmptyState(
                 title = "Your library is ready for content",

@@ -23,17 +23,26 @@ class AndroidStudyPreferencesTest {
         assertFalse(recreated.continuousSkimEnabled())
         recreated.updateContinuousSkim(true)
         assertTrue(AndroidStudyPreferencesController(store).continuousSkimEnabled())
+
+        assertNull(recreated.insightsScopePackageId())
+        recreated.updateInsightsScopePackageId("pkg-123")
+        assertEquals("pkg-123", AndroidStudyPreferencesController(store).insightsScopePackageId())
+        recreated.updateInsightsScopePackageId(null)
+        assertNull(AndroidStudyPreferencesController(store).insightsScopePackageId())
     }
 
     private class FakeStore : AndroidStudyPreferenceStore {
         private var value = DailyStudyBudgetLimits()
         private var typingMuted = false
         private var continuousSkim = false
+        private var insightsPackageId: String? = null
         override fun load() = value
         override fun save(limits: DailyStudyBudgetLimits) { value = limits }
         override fun loadTypingViMuted() = typingMuted
         override fun saveTypingViMuted(muted: Boolean) { typingMuted = muted }
         override fun loadContinuousSkim() = continuousSkim
         override fun saveContinuousSkim(enabled: Boolean) { continuousSkim = enabled }
+        override fun loadInsightsScopePackageId() = insightsPackageId
+        override fun saveInsightsScopePackageId(packageId: String?) { insightsPackageId = packageId }
     }
 }

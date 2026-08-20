@@ -13,6 +13,8 @@ interface AndroidStudyPreferenceStore {
     fun saveTypingViMuted(muted: Boolean) = Unit
     fun loadContinuousSkim(): Boolean = false
     fun saveContinuousSkim(enabled: Boolean) = Unit
+    fun loadInsightsScopePackageId(): String? = null
+    fun saveInsightsScopePackageId(packageId: String?) = Unit
 }
 
 class AndroidStudyPreferencesController(private val store: AndroidStudyPreferenceStore) {
@@ -27,6 +29,10 @@ class AndroidStudyPreferencesController(private val store: AndroidStudyPreferenc
     fun updateContinuousSkim(enabled: Boolean) {
         store.saveContinuousSkim(enabled)
         mutableContinuousSkim.value = enabled
+    }
+    fun insightsScopePackageId(): String? = store.loadInsightsScopePackageId()
+    fun updateInsightsScopePackageId(packageId: String?) {
+        store.saveInsightsScopePackageId(packageId)
     }
     fun updateNew(value: Int): Boolean = update(value, mutableLimits.value.reviewPerDay)
     fun updateReview(value: Int): Boolean = update(mutableLimits.value.newPerDay, value)
@@ -54,11 +60,20 @@ class SharedPreferencesStudyPreferenceStore(context: Context) : AndroidStudyPref
     override fun saveContinuousSkim(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_CONTINUOUS_SKIM, enabled).apply()
     }
+    override fun loadInsightsScopePackageId(): String? = preferences.getString(KEY_INSIGHTS_SCOPE_PACKAGE_ID, null)
+    override fun saveInsightsScopePackageId(packageId: String?) {
+        if (packageId == null) {
+            preferences.edit().remove(KEY_INSIGHTS_SCOPE_PACKAGE_ID).apply()
+        } else {
+            preferences.edit().putString(KEY_INSIGHTS_SCOPE_PACKAGE_ID, packageId).apply()
+        }
+    }
     private companion object {
         const val FILE_NAME = "learning-engine-study"
         const val KEY_NEW = "daily.new"
         const val KEY_REVIEW = "daily.review"
         const val KEY_TYPING_VI_MUTED = "typing.vi-autoplay-muted"
         const val KEY_CONTINUOUS_SKIM = "study.continuous-skim"
+        const val KEY_INSIGHTS_SCOPE_PACKAGE_ID = "dashboard.insights.package_id"
     }
 }
