@@ -1,6 +1,7 @@
 package vn.loi.learning.android.ui
 
 import android.content.Context
+import vn.loi.learning.android.platform.coordinatedApply
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +43,7 @@ class SharedPreferencesThemeStore(context: Context) : AndroidThemePreferenceStor
             ?: AndroidThemeMode.FOLLOW_SYSTEM
 
     override fun save(mode: AndroidThemeMode) {
-        preferences.edit().putString(KEY_MODE, mode.name).apply()
+        preferences.edit().putString(KEY_MODE, mode.name).coordinatedApply()
     }
 
     private companion object {

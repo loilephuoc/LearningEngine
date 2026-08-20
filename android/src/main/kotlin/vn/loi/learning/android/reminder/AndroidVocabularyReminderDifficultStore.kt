@@ -2,6 +2,7 @@ package vn.loi.learning.android.reminder
 
 import android.content.Context
 import android.content.SharedPreferences
+import vn.loi.learning.android.platform.coordinatedApply
 import vn.loi.learning.domain.content.model.ContentId
 
 fun interface AndroidVocabularyReminderMarkedReadSource {
@@ -59,7 +60,7 @@ class SharedPreferencesVocabularyReminderDifficultStore(
     }
 
     private fun persist(set: Set<String>) {
-        prefs.edit().putStringSet(KEY_DIFFICULT_IDS, HashSet(set)).apply()
+        prefs.edit().putStringSet(KEY_DIFFICULT_IDS, HashSet(set)).coordinatedApply()
     }
 
     companion object {

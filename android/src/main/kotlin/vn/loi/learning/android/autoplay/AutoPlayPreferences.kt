@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import vn.loi.learning.android.platform.coordinatedApply
 
 interface AutoPlayPreferenceStore {
     fun load(): AutoPlayConfig
@@ -217,7 +218,7 @@ class SharedPreferencesAutoPlayPreferenceStore(
             editor.remove(KEY_SLEEP_TIMER_MINUTES)
         }
 
-        editor.apply()
+        editor.coordinatedApply()
     }
 
     private companion object {

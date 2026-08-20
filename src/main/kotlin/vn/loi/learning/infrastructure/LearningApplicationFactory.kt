@@ -344,8 +344,11 @@ object LearningApplicationFactory {
                 )
             )
 
+        val recoveryOperationGate = RecoveryOperationGate()
         val continuousReviewIntentRepository =
-            JsonContinuousReviewIntentRepository(continuousReviewIntentsPath)
+            JsonContinuousReviewIntentRepository(continuousReviewIntentsPath) { mutation ->
+                recoveryOperationGate.canonicalMutation(mutation)
+            }
         val learningTrajectoryRepository = StoreBackedLearningTrajectoryRepository(
             JsonLearningTrajectoryStore(learningTrajectoriesPath)
         )
@@ -378,7 +381,6 @@ object LearningApplicationFactory {
                 )
             )
 
-        val recoveryOperationGate = RecoveryOperationGate()
         val transactionRunner = RecoveryCoordinatedTransactionRunner(
             JsonFileTransactionRunner(
                 listOf(
@@ -394,6 +396,7 @@ object LearningApplicationFactory {
                     learningTrajectoriesPath,
                     studySessionsPath,
                     studyQueuesPath,
+                    continuousReviewIntentsPath,
                     contentPackagesPath,
                     packageCatalogsPath
                 )

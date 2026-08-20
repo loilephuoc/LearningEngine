@@ -2,6 +2,7 @@ package vn.loi.learning.android.controller
 
 import android.content.Context
 import android.content.SharedPreferences
+import vn.loi.learning.android.platform.coordinatedApply
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,7 +68,7 @@ class SharedPreferencesControllerPreferenceStore(context: Context) : ControllerP
 
     override fun save(config: ControllerConfig) {
         val jsonStr = encodeConfigJson(config)
-        preferences.edit().putString(KEY_CONFIG_JSON, jsonStr).apply()
+        preferences.edit().putString(KEY_CONFIG_JSON, jsonStr).coordinatedApply()
     }
 
     companion object {

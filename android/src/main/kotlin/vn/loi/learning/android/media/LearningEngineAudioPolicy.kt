@@ -1,6 +1,7 @@
 package vn.loi.learning.android.media
 
 import android.content.Context
+import vn.loi.learning.android.platform.coordinatedApply
 import android.content.SharedPreferences
 import java.util.Collections
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +37,7 @@ class SharedPreferencesAudioMutePreferenceStore(context: Context) : AudioMutePre
     }
 
     override fun saveMuted(muted: Boolean) {
-        prefs.edit().putBoolean(KEY_MUTED, muted).apply()
+        prefs.edit().putBoolean(KEY_MUTED, muted).coordinatedApply()
     }
 
     companion object {

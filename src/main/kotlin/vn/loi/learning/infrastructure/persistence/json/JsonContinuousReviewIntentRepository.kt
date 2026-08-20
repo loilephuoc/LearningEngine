@@ -15,20 +15,23 @@ import vn.loi.learning.infrastructure.persistence.record.ContinuousReviewIntentR
 
 class JsonContinuousReviewIntentRepository(
     private val filePath: Path,
-    private val json: Json = Json { prettyPrint = true; ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json: Json = Json { prettyPrint = true; ignoreUnknownKeys = true; encodeDefaults = true },
+    private val coordinateMutation: ((() -> Unit) -> Unit) = { it() }
 ) : ContinuousReviewIntentRepository {
     override fun findByLearner(learnerId: LearnerId): ContinuousReviewIntent? =
         loadAll().firstOrNull { it.learnerId == learnerId.value }?.toDomain()
 
     override fun save(intent: ContinuousReviewIntent) {
-        val current = loadAll()
-        val record = intent.toRecord()
-        JsonFileWriter.write(
-            filePath,
-            JsonPersistenceCodec.encode(current.filterNot { it.learnerId == record.learnerId } + record) {
-                json.encodeToString(it)
-            }
-        )
+        coordinateMutation {
+            val current = loadAll()
+            val record = intent.toRecord()
+            JsonFileWriter.write(
+                filePath,
+                JsonPersistenceCodec.encode(current.filterNot { it.learnerId == record.learnerId } + record) {
+                    json.encodeToString(it)
+                }
+            )
+        }
     }
 
     private fun loadAll(): List<ContinuousReviewIntentRecord> =

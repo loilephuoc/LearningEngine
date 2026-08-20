@@ -15,6 +15,9 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 import vn.loi.learning.infrastructure.persistence.json.InvalidJsonPersistenceException
 import vn.loi.learning.infrastructure.persistence.json.JsonContinuousReviewIntentRepository
 import vn.loi.learning.infrastructure.persistence.json.UnsupportedJsonPersistenceSchemaException
+import vn.loi.learning.application.port.RecoveryOperationBusyException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 
 class ContinuousReviewIntentPersistenceTest {
     private val learner = LearnerId("learner-1")
@@ -81,6 +84,36 @@ class ContinuousReviewIntentPersistenceTest {
                 JsonContinuousReviewIntentRepository(file).findByLearner(learner)
             }
             assertTrue(before.contentEquals(Files.readAllBytes(file)))
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `continuous review intent mutation cannot tear an exclusive backup snapshot`() {
+        val directory = Files.createTempDirectory("continuous-review-backup-gate")
+        try {
+            val context = LearningApplicationFactory.createPersisted(directory)
+            val gate = requireNotNull(context.recoveryOperationGate)
+            val entered = CountDownLatch(1)
+            val release = CountDownLatch(1)
+            val executor = Executors.newSingleThreadExecutor()
+            val backup = executor.submit {
+                gate.backup { entered.countDown(); release.await() }
+            }
+            entered.await()
+            try {
+                assertFailsWith<RecoveryOperationBusyException> {
+                    context.engine.enableContinuousReview(learner, packageId, topicId, Moment(10L))
+                }
+            } finally {
+                release.countDown()
+                backup.get()
+                executor.shutdownNow()
+            }
+            assertNull(context.engine.getContinuousReviewIntent(learner))
+            context.engine.enableContinuousReview(learner, packageId, topicId, Moment(20L))
+            assertEquals(Moment(20L), context.engine.getContinuousReviewIntent(learner)?.updatedAt)
         } finally {
             directory.toFile().deleteRecursively()
         }

@@ -9,6 +9,7 @@ import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import vn.loi.learning.android.platform.coordinatedCommit
 
 interface AndroidVocabularyReminderPreferenceStore {
     fun load(): AndroidVocabularyReminderSettings
@@ -100,7 +101,7 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
             }
             putBoolean(KEY_REMINDER_QUICK_PAUSE_ACTIONS_ENABLED, settings.quickPauseActionsEnabled)
             putLong(KEY_REMINDER_UNLOCKED_PAUSED_UNTIL, settings.unlockedPausedUntilEpochMillis)
-        }.commit()
+        }.coordinatedCommit()
     }
 
     override fun loadLockScreen(): AndroidLockScreenVocabularySettings {
@@ -171,7 +172,7 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
             putLong(KEY_LOCKSCREEN_QUICK_REVIEW_INTERVAL_MS, settings.quickReviewIntervalMillis)
             putBoolean(KEY_LOCKSCREEN_SCREEN_OFF_PREP_ENABLED, settings.screenOffPreparationEnabled)
             putLong(KEY_LOCKSCREEN_SCREEN_OFF_PREPARE_DELAY_MS, settings.screenOffPrepareDelayMillis)
-        }.commit()
+        }.coordinatedCommit()
     }
 
     override fun loadHomeWidget(): AndroidHomeVocabularyWidgetSettings {
@@ -237,7 +238,7 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
                 remove(KEY_HOME_WIDGET_CURRENT_CANDIDATE_ID)
             }
             putBoolean(KEY_HOME_WIDGET_AUTOAUDIO_ENABLED, settings.autoAudioEnabled)
-        }.commit()
+        }.coordinatedCommit()
     }
 
     companion object {

@@ -83,7 +83,7 @@ class AndroidContentOperations(
             val staging = Files.createTempFile(graph.directories.rootDirectory, ".android-backup-", ".lebak")
             try {
                 Files.delete(staging)
-                graph.recovery.createBackup(staging)
+                graph.createPortableBackup(staging)
                 open()?.use { output -> Files.newInputStream(staging).use { it.copyTo(output) } }
                     ?: return@executeOnce AndroidContentFailure.Unavailable()
                 "Backup created."

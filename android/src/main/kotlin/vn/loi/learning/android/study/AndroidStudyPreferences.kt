@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import vn.loi.learning.application.study.DailyStudyBudgetLimits
+import vn.loi.learning.android.platform.coordinatedApply
 
 interface AndroidStudyPreferenceStore {
     fun load(): DailyStudyBudgetLimits
@@ -50,22 +51,22 @@ class SharedPreferencesStudyPreferenceStore(context: Context) : AndroidStudyPref
         preferences.getInt(KEY_NEW, 20), preferences.getInt(KEY_REVIEW, 100)
     )
     override fun save(limits: DailyStudyBudgetLimits) {
-        preferences.edit().putInt(KEY_NEW, limits.newPerDay).putInt(KEY_REVIEW, limits.reviewPerDay).apply()
+        preferences.edit().putInt(KEY_NEW, limits.newPerDay).putInt(KEY_REVIEW, limits.reviewPerDay).coordinatedApply()
     }
     override fun loadTypingViMuted() = preferences.getBoolean(KEY_TYPING_VI_MUTED, false)
     override fun saveTypingViMuted(muted: Boolean) {
-        preferences.edit().putBoolean(KEY_TYPING_VI_MUTED, muted).apply()
+        preferences.edit().putBoolean(KEY_TYPING_VI_MUTED, muted).coordinatedApply()
     }
     override fun loadContinuousSkim() = preferences.getBoolean(KEY_CONTINUOUS_SKIM, false)
     override fun saveContinuousSkim(enabled: Boolean) {
-        preferences.edit().putBoolean(KEY_CONTINUOUS_SKIM, enabled).apply()
+        preferences.edit().putBoolean(KEY_CONTINUOUS_SKIM, enabled).coordinatedApply()
     }
     override fun loadInsightsScopePackageId(): String? = preferences.getString(KEY_INSIGHTS_SCOPE_PACKAGE_ID, null)
     override fun saveInsightsScopePackageId(packageId: String?) {
         if (packageId == null) {
-            preferences.edit().remove(KEY_INSIGHTS_SCOPE_PACKAGE_ID).apply()
+            preferences.edit().remove(KEY_INSIGHTS_SCOPE_PACKAGE_ID).coordinatedApply()
         } else {
-            preferences.edit().putString(KEY_INSIGHTS_SCOPE_PACKAGE_ID, packageId).apply()
+            preferences.edit().putString(KEY_INSIGHTS_SCOPE_PACKAGE_ID, packageId).coordinatedApply()
         }
     }
     private companion object {

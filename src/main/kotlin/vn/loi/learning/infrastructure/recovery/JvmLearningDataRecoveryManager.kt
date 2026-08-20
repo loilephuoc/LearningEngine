@@ -9,6 +9,12 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 import java.nio.file.StandardCopyOption
+import java.nio.channels.FileChannel
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.StandardOpenOption
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import vn.loi.learning.application.port.RecoveryOperationGate
 import vn.loi.learning.application.port.RecoveryOperationBusyException
 
@@ -81,6 +87,103 @@ class JvmLearningDataRecoveryManager(
         throw failure
     } catch (failure: Exception) {
         throw LearningDataRecoveryException("Could not create backup.", failure)
+    }
+
+    fun createPortableBackupV2(
+        target: Path,
+        descriptor: PortableBackupV2Descriptor,
+        contributor: PortableBackupV2SnapshotContributor? = null,
+        limits: PortableBackupV2Limits = PortableBackupV2Limits()
+    ): Path = try {
+        gate.backup {
+            failureHook("backup-v2-gate-acquired", null)
+            createPortableBackupV2Locked(target, descriptor, contributor, limits)
+        }
+    } catch (failure: RecoveryOperationBusyException) {
+        throw failure
+    } catch (failure: LearningDataRecoveryException) {
+        throw failure
+    } catch (failure: Exception) {
+        throw LearningDataRecoveryException("Could not create portable backup v2.", failure)
+    }
+
+    fun validatePortableBackupV2(
+        source: Path,
+        limits: PortableBackupV2Limits = PortableBackupV2Limits()
+    ): PortableBackupManifestV2 = try {
+        validatePortableBackupV2Internal(source, limits)
+    } catch (failure: Exception) {
+        throw LearningDataRecoveryException("Could not validate portable backup v2.", failure)
+    }
+
+    private fun createPortableBackupV2Locked(
+        target: Path,
+        descriptor: PortableBackupV2Descriptor,
+        contributor: PortableBackupV2SnapshotContributor?,
+        limits: PortableBackupV2Limits
+    ): Path {
+        val normalized = target.toAbsolutePath().normalize()
+        if (Files.exists(normalized)) throw LearningDataRecoveryException("Backup target already exists.")
+        Files.createDirectories(requireNotNull(normalized.parent))
+        var temporary: Path? = null
+        var staging: Path? = null
+        try {
+            temporary = Files.createTempFile(normalized.parent, ".learning-engine-backup-v2-", ".tmp")
+            staging = Files.createTempDirectory(normalized.parent, ".learning-engine-snapshot-v2-")
+            val canonical = portableInventory().map { (logical, source) ->
+                val staged = staging.resolve(logical).normalize().also { require(it.startsWith(staging)) }
+                Files.createDirectories(requireNotNull(staged.parent))
+                Files.copy(source, staged)
+                PortableBackupSupplementV2(logical, logical.substringBefore('/'), logicalType(logical), staged)
+            }
+            val supplements = contributor?.snapshot(staging) ?: emptyList()
+            val payloads = (canonical + supplements).sortedBy { it.logicalPath }
+            validatePayloadPlan(payloads, staging, limits)
+            val records = payloads.map { payload ->
+                PortableBackupEntryV2(
+                    logicalPath = payload.logicalPath,
+                    section = payload.section,
+                    logicalType = payload.logicalType,
+                    uncompressedSize = Files.size(payload.source),
+                    sha256 = sha256(payload.source, limits.ioBufferBytes)
+                )
+            }
+            val manifest = PortableBackupManifestV2(
+                appVersion = descriptor.appVersion,
+                versionCode = descriptor.versionCode,
+                createdAtUtc = clock.instant().toString(),
+                sourcePlatform = descriptor.sourcePlatform,
+                learnerIds = descriptor.learnerIds.distinct().sorted(),
+                includedSections = records.map { it.section }.distinct().sorted(),
+                counts = inferCounts(records, payloads),
+                bytes = PortableBackupBytesV2(
+                    mediaBytes = records.filter { it.section == "portable" && it.logicalType == "media" }.sumOf { it.uncompressedSize },
+                    recordingBytes = records.filter { it.logicalType == "recording" }.sumOf { it.uncompressedSize },
+                    totalExpandedBytes = records.sumOf { it.uncompressedSize }
+                ),
+                entries = records
+            )
+            val manifestBytes = V2_JSON.encodeToString(manifest).toByteArray(StandardCharsets.UTF_8)
+            if (manifestBytes.size.toLong() > limits.maxUncompressedBytesPerEntry) error("Backup manifest is oversized.")
+            ZipOutputStream(Files.newOutputStream(temporary)).use { zip ->
+                zip.putNextEntry(ZipEntry(V2_MANIFEST_ENTRY).apply { time = 0L })
+                zip.write(manifestBytes)
+                zip.closeEntry()
+                payloads.forEach { payload ->
+                    zip.putNextEntry(ZipEntry(payload.logicalPath).apply { time = 0L })
+                    Files.newInputStream(payload.source).buffered(limits.ioBufferBytes).use { it.copyTo(zip, limits.ioBufferBytes) }
+                    zip.closeEntry()
+                }
+            }
+            forceFile(temporary)
+            validatePortableBackupV2Internal(temporary, limits)
+            publishAtomically(temporary, normalized)
+            temporary = null
+            return normalized
+        } finally {
+            temporary?.let(Files::deleteIfExists)
+            staging?.let(::deleteTree)
+        }
     }
 
     private fun createBackupLocked(target: Path, scope: String): Path {
@@ -249,6 +352,157 @@ class JvmLearningDataRecoveryManager(
         }
     }
 
+    private fun portableInventory(): List<Pair<String, Path>> {
+        val claimed = linkedSetOf<Path>()
+        val output = mutableListOf<Pair<String, Path>>()
+        roots.entries.sortedByDescending { it.value.nameCount }.forEach { (rootName, root) ->
+            if (Files.notExists(root)) return@forEach
+            Files.walk(root).use { paths -> paths
+                .filter { Files.isRegularFile(it) && !it.startsWith(safetyDirectory) && !it.fileName.toString().endsWith(".tmp") }
+                .forEach { source ->
+                    val physical = source.toAbsolutePath().normalize()
+                    if (claimed.add(physical)) {
+                        val sectionPath = when (rootName) {
+                            "data" -> "portable/data"
+                            "media" -> "portable/media"
+                            else -> "portable/$rootName"
+                        }
+                        output += "$sectionPath/${root.relativize(source).toString().replace('\\', '/')}" to source
+                    }
+                }
+            }
+        }
+        return output.sortedBy { it.first }
+    }
+
+    private fun validatePayloadPlan(
+        payloads: List<PortableBackupSupplementV2>,
+        staging: Path,
+        limits: PortableBackupV2Limits
+    ) {
+        if (payloads.size + 1 > limits.maxArchiveEntryCount) error("Backup has too many entries.")
+        val names = payloads.map { it.logicalPath }
+        if (names.size != names.toSet().size || names.map(String::lowercase).size != names.map(String::lowercase).toSet().size) {
+            error("Backup contains duplicate or case-colliding paths.")
+        }
+        if (names.any(::unsafeV2Name)) error("Backup contains an unsafe logical path.")
+        var total = 0L
+        payloads.forEach {
+            val source = it.source.toAbsolutePath().normalize()
+            require(source.startsWith(staging.toAbsolutePath().normalize())) { "Contributor source escaped staging." }
+            val size = Files.size(source)
+            if (size > limits.maxUncompressedBytesPerEntry) error("Backup entry is oversized.")
+            total = Math.addExact(total, size)
+            if (total > limits.maxTotalExpandedBytes) error("Backup expanded size is oversized.")
+        }
+    }
+
+    private fun validatePortableBackupV2Internal(source: Path, limits: PortableBackupV2Limits): PortableBackupManifestV2 =
+        ZipFile(source.toFile()).use { zip ->
+            val zipEntries = zip.entries().asSequence().toList()
+            if (zipEntries.size > limits.maxArchiveEntryCount) error("Backup has too many entries.")
+            val names = zipEntries.map { it.name }
+            if (names.size != names.toSet().size || names.map(String::lowercase).size != names.map(String::lowercase).toSet().size) {
+                error("Backup contains duplicate or case-colliding paths.")
+            }
+            if (names.any { it != V2_MANIFEST_ENTRY && unsafeV2Name(it) }) error("Unsafe backup archive.")
+            val manifestEntry = zip.getEntry(V2_MANIFEST_ENTRY) ?: error("Backup v2 manifest is missing.")
+            if (manifestEntry.size < 0 || manifestEntry.size > limits.maxUncompressedBytesPerEntry) error("Invalid manifest size.")
+            val manifest = zip.getInputStream(manifestEntry).bufferedReader(StandardCharsets.UTF_8).use {
+                V2_JSON.decodeFromString<PortableBackupManifestV2>(it.readText())
+            }
+            if (manifest.backupSchemaVersion != 2) error("Unsupported backup schema version.")
+            val declared = manifest.entries
+            if (declared.map { it.logicalPath }.sorted() != names.filter { it != V2_MANIFEST_ENTRY }.sorted()) {
+                error("Backup inventory does not match manifest.")
+            }
+            if (declared.map { it.logicalPath }.distinct().size != declared.size) error("Duplicate manifest entry.")
+            var total = 0L
+            declared.forEach { record ->
+                if (unsafeV2Name(record.logicalPath)) error("Unsafe manifest path.")
+                val entry = zip.getEntry(record.logicalPath) ?: error("Declared entry is missing.")
+                if (entry.size != record.uncompressedSize || entry.size > limits.maxUncompressedBytesPerEntry) error("Backup size failed.")
+                total = Math.addExact(total, entry.size)
+                if (total > limits.maxTotalExpandedBytes) error("Backup expanded size is oversized.")
+                val compressed = entry.compressedSize
+                if ((entry.size > 0 && compressed == 0L) || (compressed > 0 && entry.size.toDouble() / compressed > limits.maxCompressionRatio)) {
+                    error("Backup compression ratio is unsafe.")
+                }
+                zip.getInputStream(entry).use { input ->
+                    if (sha256(input, limits.ioBufferBytes) != record.sha256) error("Backup checksum failed.")
+                }
+            }
+            if (total != manifest.bytes.totalExpandedBytes) error("Backup total expanded size failed.")
+            if (declared.none { it.logicalPath.startsWith("portable/data/") }) error("Canonical data section is missing.")
+            validateRecordingReferences(zip, declared)
+            manifest
+        }
+
+    private fun validateRecordingReferences(zip: ZipFile, records: List<PortableBackupEntryV2>) {
+        val index = records.singleOrNull { it.logicalPath == "android/recordings/index.json" } ?: return
+        val text = zip.getInputStream(zip.getEntry(index.logicalPath)).bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+        val paths = Regex("\\\"recordingFile\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"").findAll(text).map { it.groupValues[1] }.toList()
+        val names = records.map { it.logicalPath }.toSet()
+        if (paths.any { unsafeRelativeRecordingPath(it) || "android/recordings/$it" !in names }) {
+            error("Recording metadata does not resolve to an archive recording.")
+        }
+    }
+
+    private fun inferCounts(
+        records: List<PortableBackupEntryV2>,
+        payloads: List<PortableBackupSupplementV2>
+    ): PortableBackupCountsV2 {
+        fun countItems(vararg fileNames: String): Long {
+            for (fileName in fileNames) {
+                val payload = payloads.firstOrNull { it.logicalPath == "portable/data/$fileName" } ?: continue
+                try {
+                    val text = Files.newBufferedReader(payload.source, StandardCharsets.UTF_8).use { it.readText() }
+                    val element = V2_JSON.parseToJsonElement(text)
+                    if (element is kotlinx.serialization.json.JsonArray) return element.size.toLong()
+                    if (element is kotlinx.serialization.json.JsonObject) {
+                        val inner = element["data"] ?: element["items"] ?: element["records"]
+                        if (inner is kotlinx.serialization.json.JsonArray) return inner.size.toLong()
+                    }
+                } catch (_: Exception) {}
+            }
+            return 0L
+        }
+
+        return PortableBackupCountsV2(
+            packages = countItems("installed-packages.json", "content-packages.json"),
+            contents = countItems("contents.json"),
+            learningItems = countItems("learning-items.json"),
+            memoryStates = countItems("memory-states.json"),
+            reviewEvents = countItems("review-events.json"),
+            studySessions = countItems("study-sessions.json"),
+            mediaFiles = records.count { it.logicalType == "media" }.toLong(),
+            recordings = records.count { it.logicalType == "recording" }.toLong()
+        )
+    }
+
+    private fun logicalType(path: String): String = when {
+        path.startsWith("portable/media/") -> "media"
+        path.endsWith(".json") -> "canonical-json"
+        else -> "canonical-file"
+    }
+
+    private fun unsafeV2Name(name: String): Boolean = name.isBlank() || name.startsWith('/') || name.contains('\\') ||
+        DRIVE_PATH.matches(name) || name.substringBefore('/') !in V2_ROOTS ||
+        name.split('/').any { it.isBlank() || it == "." || it == ".." }
+
+    private fun unsafeRelativeRecordingPath(name: String): Boolean = name.isBlank() || name.startsWith('/') ||
+        name.contains('\\') || DRIVE_PATH.matches(name) || name.split('/').any { it.isBlank() || it == "." || it == ".." }
+
+    private fun publishAtomically(temporary: Path, target: Path) {
+        try {
+            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(temporary, target)
+        }
+    }
+
+    private fun forceFile(path: Path) = FileChannel.open(path, StandardOpenOption.WRITE).use { it.force(true) }
+
     private data class PhysicalTarget(val physicalTarget: Path, val logicalEntries: List<String>, val source: Path)
     private data class PhysicalByteTarget(val physicalTarget: Path, val logicalEntries: List<String>, val bytes: ByteArray)
 
@@ -296,17 +550,22 @@ class JvmLearningDataRecoveryManager(
 
     companion object {
         const val MANIFEST_ENTRY = "manifest.txt"
+        const val V2_MANIFEST_ENTRY = "manifest.json"
+        private val V2_ROOTS = setOf("portable", "android")
+        private val DRIVE_PATH = Regex("^[A-Za-z]:.*")
+        private val V2_JSON = Json { encodeDefaults = true; ignoreUnknownKeys = false; prettyPrint = true }
         private fun safeSegment(value: String) = value.isNotBlank() && '/' !in value && '\\' !in value && value !in setOf(".", "..")
         private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
-        private fun sha256(path: Path): String {
+        private fun sha256(path: Path, bufferSize: Int = DEFAULT_BUFFER_SIZE): String =
+            Files.newInputStream(path).use { sha256(it, bufferSize) }
+
+        private fun sha256(input: java.io.InputStream, bufferSize: Int): String {
             val digest = MessageDigest.getInstance("SHA-256")
-            Files.newInputStream(path).use { input ->
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    digest.update(buffer, 0, count)
-                }
+            val buffer = ByteArray(bufferSize)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
             }
             return digest.digest().joinToString("") { "%02x".format(it) }
         }

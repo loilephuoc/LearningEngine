@@ -9,6 +9,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.put
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlinx.coroutines.runBlocking
 
 /**
  * Thread-safe persistent repository managing voice recordings metadata and filesystem state.
@@ -75,6 +78,24 @@ class QuickVoiceRecordingRepository(
     suspend fun reconcile() {
         mutex.withLock {
             reconcileInternal()
+        }
+    }
+
+    /**
+     * Copies only indexed, completed recordings while holding the repository mutation lock.
+     * An active MediaRecorder output is not indexed until stop/save and is therefore excluded.
+     */
+    fun snapshotCompletedForBackup(targetFilesDirectory: Path): List<VoiceRecordingItem> = runBlocking {
+        mutex.withLock {
+            Files.createDirectories(targetFilesDirectory)
+            _recordings.value.filter { it.exists }.map { item ->
+                requireSafePortableFilename(item.filename)
+                val source = item.file.toPath().toAbsolutePath().normalize()
+                val recordingRoot = recordingsDir.toPath().toAbsolutePath().normalize()
+                require(source.parent == recordingRoot) { "Recording path escapes the managed recording root." }
+                Files.copy(source, targetFilesDirectory.resolve(item.filename))
+                item
+            }
         }
     }
 
@@ -180,4 +201,9 @@ class QuickVoiceRecordingRepository(
             return QuickVoiceRecordingRepository { rootDir }
         }
     }
+}
+
+private fun requireSafePortableFilename(filename: String) {
+    require(filename.isNotBlank() && filename != "." && filename != "..")
+    require('/' !in filename && '\\' !in filename && !Regex("^[A-Za-z]:.*").matches(filename))
 }

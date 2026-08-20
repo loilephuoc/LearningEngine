@@ -8,17 +8,31 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 import vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage
 import vn.loi.learning.infrastructure.recovery.JvmLearningDataRecoveryManager
+import vn.loi.learning.infrastructure.recovery.PortableBackupV2Descriptor
+import vn.loi.learning.android.BuildConfig
 
 /** Android composition root over the existing persisted engine and media/import authorities. */
 class AndroidApplicationGraph internal constructor(
     val engine: LearningApplicationContext,
     val media: ContentMediaStorage,
     val recovery: JvmLearningDataRecoveryManager,
-    val directories: AndroidPlatformDirectories
+    val directories: AndroidPlatformDirectories,
+    private val portableBackupSnapshot: AndroidPortableBackupSnapshot? = null
 ) {
     fun importPackages() =
         engine.packageImporter(directories.importDirectory)
             .importAllDetailed(PackageCatalogId("android-imports"))
+
+    fun createPortableBackup(target: Path): Path = recovery.createPortableBackupV2(
+        target = target,
+        descriptor = PortableBackupV2Descriptor(
+            appVersion = BuildConfig.VERSION_NAME,
+            versionCode = BuildConfig.VERSION_CODE.toLong(),
+            sourcePlatform = "android",
+            learnerIds = listOf("default-learner")
+        ),
+        contributor = portableBackupSnapshot
+    )
 
     companion object {
         fun create(context: Context): AndroidApplicationGraph {
@@ -48,7 +62,8 @@ class AndroidApplicationGraph internal constructor(
                         LearningApplicationFactory.validatePersisted(requireNotNull(roots["data"]))
                     }
                 ),
-                directories = directories
+                directories = directories,
+                portableBackupSnapshot = AndroidPortableBackupSnapshot(context.applicationContext)
             )
             }
         }

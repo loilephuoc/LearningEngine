@@ -75,7 +75,7 @@ class AndroidContentOperationsTest {
         }
     }
 
-    @Test fun `backup round trip restores persisted data`() = runTest {
+    @Test fun `v2 backup is not silently interpreted by production v1 restore`() = runTest {
         fixture().use { fixture ->
             val durable = fixture.directories.dataDirectory.resolve("content.json")
             Files.writeString(durable, "before")
@@ -84,12 +84,12 @@ class AndroidContentOperationsTest {
             assertIs<AndroidContentOperationState.Succeeded>(operations.backup(operations.newOperation(AndroidOperationKind.BACKUP)) { backup })
             Files.writeString(durable, "after")
             val restore = fixture.operations(StandardTestDispatcher(testScheduler))
-            assertIs<AndroidContentOperationState.Succeeded>(restore.restore(restore.newOperation(AndroidOperationKind.RESTORE)) { ByteArrayInputStream(backup.toByteArray()) })
-            assertEquals("before", Files.readString(durable))
+            assertIs<AndroidContentOperationState.Failed>(restore.restore(restore.newOperation(AndroidOperationKind.RESTORE)) { ByteArrayInputStream(backup.toByteArray()) })
+            assertEquals("after", Files.readString(durable))
         }
     }
 
-    @Test fun `Android recovery round trip prevalidates overlapping media aliases portably`() = runTest {
+    @Test fun `Android v2 backup inventories overlapping media once and restore remains v1 only`() = runTest {
         fixture().use { fixture ->
             val media = fixture.directories.mediaDirectory.resolve("package/large.bin")
             Files.createDirectories(media.parent)
@@ -103,10 +103,10 @@ class AndroidContentOperationsTest {
             Files.write(media, byteArrayOf(9))
 
             val restore = fixture.operations(StandardTestDispatcher(testScheduler))
-            assertIs<AndroidContentOperationState.Succeeded>(
+            assertIs<AndroidContentOperationState.Failed>(
                 restore.restore(restore.newOperation(AndroidOperationKind.RESTORE)) { ByteArrayInputStream(backup.toByteArray()) }
             )
-            assertContentEquals(expected, Files.readAllBytes(media))
+            assertContentEquals(byteArrayOf(9), Files.readAllBytes(media))
         }
     }
 
