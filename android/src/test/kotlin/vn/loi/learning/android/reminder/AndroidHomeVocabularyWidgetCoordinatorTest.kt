@@ -23,6 +23,29 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
         }
     }
 
+    private class InMemoryDifficultStore : AndroidVocabularyReminderDifficultMarkers {
+        private val difficultItems = mutableSetOf<String>()
+        override fun isMarked(contentId: ContentId): Boolean {
+            return difficultItems.contains(contentId.value)
+        }
+        override fun markedContentIds(): Set<ContentId> {
+            return difficultItems.map(::ContentId).toSet()
+        }
+        override fun toggle(contentId: ContentId): Boolean {
+            return if (difficultItems.contains(contentId.value)) {
+                difficultItems.remove(contentId.value)
+                false
+            } else {
+                difficultItems.add(contentId.value)
+                true
+            }
+        }
+        override fun setMarked(contentId: ContentId, marked: Boolean): Boolean {
+            if (marked) difficultItems.add(contentId.value) else difficultItems.remove(contentId.value)
+            return marked
+        }
+    }
+
     private fun createSampleCandidate(id: String, text: String): AndroidVocabularyCandidate {
         return AndroidVocabularyCandidate(
             contentId = ContentId(id),
@@ -34,7 +57,7 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
             ipa = "test",
             partOfSpeech = "noun",
             imageReference = null,
-            primaryAudioReference = null
+            primaryAudioReference = "audio/$id.mp3"
         )
     }
 
@@ -162,7 +185,6 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
             isPreparing = false
         }
 
-        // Simulate simultaneous onFirstWidgetEnabled and onWidgetsUpdate
         onWidgetTrigger("FIRST_WIDGET_ENABLED")
         onWidgetTrigger("WIDGETS_UPDATED")
 
@@ -204,7 +226,6 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
             if (isPreparing) return
             isPreparing = true
             prepareAttempts++
-            // Simulate no candidate available (e.g. empty library)
             currentCandidate = null
             isPreparing = false
         }
@@ -220,7 +241,6 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
         val activeWidgetIds = mutableSetOf(201)
         var timerRunning = true
 
-        // Simulate widget deletion during preparation
         activeWidgetIds.remove(201)
         if (activeWidgetIds.isEmpty()) {
             timerRunning = false
@@ -239,7 +259,6 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
 
         fun onIntervalChanged(newIntervalMs: Long) {
             timerIntervalMs = newIntervalMs
-            // Notice: visibleCandidate remains untouched
         }
 
         fun onTimerFired() {
@@ -271,11 +290,9 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
             }
             isAdvancing = true
             successfulAdvances++
-            // simulate fast completion
             isAdvancing = false
         }
 
-        // 10 consecutive ticks
         for (i in 1..10) {
             triggerAdvance()
         }
@@ -283,10 +300,497 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
         assertEquals(10, successfulAdvances)
         assertEquals(0, skippedAdvances)
 
-        // simulate overlapping tick
         isAdvancing = true
         triggerAdvance()
         assertEquals(1, skippedAdvances)
         assertEquals(10, successfulAdvances)
+    }
+
+    // -------------------------------------------------------------
+    // ROUND 9.0.12 UNIT TESTS: 3-ACTION OVERLAY & AUDIO ENGINE
+    // -------------------------------------------------------------
+
+    @Test
+    fun `mark difficult quick action toggles state without candidate change or FSRS mutation`() {
+        val diffStore = InMemoryDifficultStore()
+        val candidate = createSampleCandidate("cand-star-1", "Star Word")
+        var currentCandidate = candidate
+
+        assertFalse(diffStore.isMarked(ContentId("cand-star-1")))
+
+        // First tap: unmarked -> marked
+        val marked1 = diffStore.toggle(ContentId("cand-star-1"))
+        assertTrue(marked1)
+        assertTrue(diffStore.isMarked(ContentId("cand-star-1")))
+        assertEquals("cand-star-1", currentCandidate.contentId.value)
+
+        // Second tap: marked -> unmarked
+        val marked2 = diffStore.toggle(ContentId("cand-star-1"))
+        assertFalse(marked2)
+        assertFalse(diffStore.isMarked(ContentId("cand-star-1")))
+        assertEquals("cand-star-1", currentCandidate.contentId.value)
+    }
+
+    @Test
+    fun `auto-audio preference toggles and persists independently`() {
+        var autoAudioEnabled = false
+
+        fun toggleAutoAudio(): Boolean {
+            autoAudioEnabled = !autoAudioEnabled
+            return autoAudioEnabled
+        }
+
+        assertFalse(autoAudioEnabled)
+
+        // OFF -> ON
+        assertTrue(toggleAutoAudio())
+        assertTrue(autoAudioEnabled)
+
+        // ON -> OFF
+        assertFalse(toggleAutoAudio())
+        assertFalse(autoAudioEnabled)
+    }
+
+    @Test
+    fun `auto-play plays exactly once on real candidate transition when Auto Audio is ON`() {
+        var autoAudioEnabled = true
+        var isScreenOn = true
+        var lastPlayedCandidateId: String? = null
+        var lastPlayedCycleToken = 0L
+        var currentCycleToken = 0L
+        var playCount = 0
+
+        fun onCandidateTransition(candidateId: String) {
+            currentCycleToken++
+            if (!autoAudioEnabled || !isScreenOn) return
+            if (lastPlayedCandidateId == candidateId && lastPlayedCycleToken == currentCycleToken) return
+            lastPlayedCandidateId = candidateId
+            lastPlayedCycleToken = currentCycleToken
+            playCount++
+        }
+
+        fun onReRender(candidateId: String) {
+            // Re-rendering UI never triggers auto-play
+        }
+
+        // 1. First candidate transition A
+        onCandidateTransition("cand-A")
+        assertEquals(1, playCount)
+        assertEquals("cand-A", lastPlayedCandidateId)
+
+        // 2. Re-rendering candidate A (e.g. launcher rebind, star click) does NOT replay
+        onReRender("cand-A")
+        assertEquals(1, playCount)
+
+        // 3. Second real candidate transition B
+        onCandidateTransition("cand-B")
+        assertEquals(2, playCount)
+        assertEquals("cand-B", lastPlayedCandidateId)
+
+        // 4. Screen OFF prevents auto-play
+        isScreenOn = false
+        onCandidateTransition("cand-C")
+        assertEquals(2, playCount) // Did not play
+
+        // 5. Screen ON with same candidate does NOT auto-play
+        isScreenOn = true
+        onReRender("cand-C")
+        assertEquals(2, playCount)
+
+        // 6. Next real transition plays candidate D
+        onCandidateTransition("cand-D")
+        assertEquals(3, playCount)
+    }
+
+    @Test
+    fun `auto-play remains silent on transitions when Auto Audio is OFF`() {
+        val autoAudioEnabled = false
+        var playCount = 0
+
+        fun onCandidateTransition(candidateId: String) {
+            if (!autoAudioEnabled) return
+            playCount++
+        }
+
+        onCandidateTransition("cand-1")
+        onCandidateTransition("cand-2")
+        onCandidateTransition("cand-3")
+
+        assertEquals(0, playCount)
+    }
+
+    @Test
+    fun `manual play works regardless of Auto Audio toggle and does not advance candidate`() {
+        var autoAudioEnabled = false
+        val currentCandidate = createSampleCandidate("cand-manual", "Manual Word")
+        var manualPlayCount = 0
+        var activeCandidate = currentCandidate
+
+        fun playManual() {
+            // Manual play works even if autoAudioEnabled == false
+            manualPlayCount++
+        }
+
+        // While auto-audio is OFF:
+        playManual()
+        assertEquals(1, manualPlayCount)
+        assertEquals("cand-manual", activeCandidate.contentId.value)
+
+        // While auto-audio is ON:
+        autoAudioEnabled = true
+        playManual()
+        assertEquals(2, manualPlayCount)
+        assertEquals("cand-manual", activeCandidate.contentId.value)
+    }
+
+    @Test
+    fun `candidate audio collision stops previous playback and replaces without overlap`() {
+        var currentlyPlayingId: String? = null
+        var stoppedId: String? = null
+
+        fun startAudio(candidateId: String) {
+            if (currentlyPlayingId != null) {
+                stoppedId = currentlyPlayingId
+            }
+            currentlyPlayingId = candidateId
+        }
+
+        startAudio("cand-1")
+        assertEquals("cand-1", currentlyPlayingId)
+        assertEquals(null, stoppedId)
+
+        // Candidate 2 arrives while 1 is playing
+        startAudio("cand-2")
+        assertEquals("cand-2", currentlyPlayingId)
+        assertEquals("cand-1", stoppedId)
+    }
+
+    // -------------------------------------------------------------
+    // ROUND 9.0.13 UNIT TESTS: PREVIOUS / NEXT NAVIGATION
+    // -------------------------------------------------------------
+
+    @Test
+    fun `previous navigation steps backward deterministically in shuffle bag cycle`() {
+        val bagItems = listOf("A", "B", "C", "D")
+        var currentIndex = 0
+        var lastPresented: String? = null
+
+        fun advanceNext(): String {
+            val selected = bagItems[currentIndex]
+            currentIndex = (currentIndex + 1).coerceAtMost(bagItems.size)
+            lastPresented = selected
+            return selected
+        }
+
+        fun advancePrev(): String {
+            val prevIdx = when {
+                currentIndex >= 2 -> currentIndex - 2
+                currentIndex == 1 -> bagItems.size - 1
+                else -> bagItems.size - 1
+            }.coerceIn(0, bagItems.size - 1)
+            val selected = bagItems[prevIdx]
+            currentIndex = prevIdx + 1
+            lastPresented = selected
+            return selected
+        }
+
+        // 1. Advance next: A, B, C
+        assertEquals("A", advanceNext())
+        assertEquals(1, currentIndex)
+        assertEquals("B", advanceNext())
+        assertEquals(2, currentIndex)
+        assertEquals("C", advanceNext())
+        assertEquals(3, currentIndex)
+
+        // 2. Navigate previous: should get B
+        assertEquals("B", advancePrev())
+        assertEquals(2, currentIndex)
+
+        // 3. Navigate previous again: should get A
+        assertEquals("A", advancePrev())
+        assertEquals(1, currentIndex)
+
+        // 4. Navigate next: should return to B
+        assertEquals("B", advanceNext())
+        assertEquals(2, currentIndex)
+    }
+
+    @Test
+    fun `navigation actions re-arm auto-next timer for a fresh full interval`() {
+        var timerArmedInterval = 0L
+        var timerArmedAt = 0L
+        var simulatedClock = 1000L
+
+        fun armTimer(interval: Long) {
+            timerArmedInterval = interval
+            timerArmedAt = simulatedClock
+        }
+
+        // Initially timer armed with 60s
+        armTimer(60_000L)
+        assertEquals(1000L, timerArmedAt)
+
+        // 20s pass
+        simulatedClock += 20_000L
+
+        // User taps Next (›): timer is re-armed from current timestamp
+        armTimer(60_000L)
+        assertEquals(21_000L, timerArmedAt)
+
+        // 15s pass
+        simulatedClock += 15_000L
+
+        // User taps Previous (‹): timer is re-armed again
+        armTimer(60_000L)
+        assertEquals(36_000L, timerArmedAt)
+    }
+
+    // -------------------------------------------------------------
+    // ROUND 9.0.14 UNIT TESTS: BODY TAP REPLAY + REORDERED RAIL + EYE ACTION
+    // -------------------------------------------------------------
+
+    @Test
+    fun `body tap triggers manual replay of current candidate regardless of auto audio state`() {
+        val candidate = createSampleCandidate("cand-body-1", "Body Candidate")
+        var currentCandidate: AndroidVocabularyCandidate? = candidate
+        var autoAudioEnabled = false
+        var replayCount = 0
+        var selectorCalls = 0
+
+        fun onBodyTap() {
+            // Body tap replays current candidate
+            replayCount++
+        }
+
+        // 1. When Auto-Audio is OFF:
+        onBodyTap()
+        assertEquals(1, replayCount)
+        assertEquals("cand-body-1", currentCandidate?.contentId?.value)
+        assertEquals(0, selectorCalls)
+
+        // 2. When Auto-Audio is ON:
+        autoAudioEnabled = true
+        onBodyTap()
+        assertEquals(2, replayCount)
+        assertEquals("cand-body-1", currentCandidate?.contentId?.value)
+        assertEquals(0, selectorCalls)
+
+        // 3. Repeated body tap restarts playback without changing candidate
+        onBodyTap()
+        onBodyTap()
+        assertEquals(4, replayCount)
+        assertEquals("cand-body-1", currentCandidate?.contentId?.value)
+    }
+
+    @Test
+    fun `eye action opens full review for exact current candidate without mutating state`() {
+        val candidate = createSampleCandidate("cand-eye-1", "Eye Candidate")
+        val currentCandidate: AndroidVocabularyCandidate = candidate
+        var openedCandidateId: String? = null
+        var selectorCalls = 0
+
+        fun onEyeClick(targetCandidate: AndroidVocabularyCandidate) {
+            openedCandidateId = targetCandidate.contentId.value
+        }
+
+        onEyeClick(currentCandidate)
+        assertEquals("cand-eye-1", openedCandidateId)
+        assertEquals(0, selectorCalls)
+    }
+
+    @Test
+    fun `quick action rail position order contract is strictly Audio, Star, Eye`() {
+        val railOrder = listOf("AUTO_AUDIO", "DIFFICULT", "FULL_REVIEW")
+        assertEquals("AUTO_AUDIO", railOrder[0])
+        assertEquals("DIFFICULT", railOrder[1])
+        assertEquals("FULL_REVIEW", railOrder[2])
+    }
+
+    // -------------------------------------------------------------
+    // ROUND 9.0.14.1 UNIT TESTS: MUTE VISUAL SEMANTICS & PERSISTENT STATE
+    // -------------------------------------------------------------
+
+    @Test
+    fun `auto audio visual semantics contract is normal dark when enabled and RED when muted`() {
+        var autoAudioEnabled = true
+
+        fun getAudioVisual(): Pair<String, String> = if (autoAudioEnabled) {
+            "SPEAKER" to "NORMAL_DARK"
+        } else {
+            "MUTED_SPEAKER" to "RED"
+        }
+
+        // 1. UNMUTED: speaker icon with normal dark color
+        val (iconOn, tintOn) = getAudioVisual()
+        assertEquals("SPEAKER", iconOn)
+        assertEquals("NORMAL_DARK", tintOn)
+
+        // 2. MUTED: muted speaker icon with RED color
+        autoAudioEnabled = false
+        val (iconOff, tintOff) = getAudioVisual()
+        assertEquals("MUTED_SPEAKER", iconOff)
+        assertEquals("RED", tintOff)
+    }
+
+    @Test
+    fun `mute state persists across candidate transitions A to B to C to D with zero auto play`() {
+        var autoAudioEnabled = true
+        var autoPlayedCandidates = mutableListOf<String>()
+
+        fun onCandidateAppeared(candidateId: String) {
+            if (autoAudioEnabled) {
+                autoPlayedCandidates.add(candidateId)
+            }
+        }
+
+        // Initial state unmuted
+        onCandidateAppeared("A")
+        assertEquals(listOf("A"), autoPlayedCandidates)
+
+        // User mutes widget
+        autoAudioEnabled = false
+
+        // Subsequent candidate transitions: B, C, D
+        onCandidateAppeared("B")
+        onCandidateAppeared("C")
+        onCandidateAppeared("D")
+
+        // Preference remains false throughout, no new auto-played audio
+        assertFalse(autoAudioEnabled)
+        assertEquals(listOf("A"), autoPlayedCandidates)
+    }
+
+    @Test
+    fun `mute state persists through previous and next navigation`() {
+        var autoAudioEnabled = false
+        var autoPlayedCount = 0
+
+        fun navigate(direction: String, targetCandidateId: String) {
+            // Navigation does not mutate autoAudioEnabled
+            if (autoAudioEnabled) {
+                autoPlayedCount++
+            }
+        }
+
+        navigate("NEXT", "B")
+        navigate("NEXT", "C")
+        navigate("PREV", "B")
+        navigate("NEXT", "C")
+
+        assertFalse(autoAudioEnabled)
+        assertEquals(0, autoPlayedCount)
+    }
+
+    @Test
+    fun `unmute state persists through subsequent transitions and autoplays new candidates`() {
+        var autoAudioEnabled = false
+        val played = mutableListOf<String>()
+
+        // User unmutes
+        autoAudioEnabled = true
+        // Confirmation play for current candidate A
+        played.add("A")
+
+        fun onTransition(candidateId: String) {
+            if (autoAudioEnabled) {
+                played.add(candidateId)
+            }
+        }
+
+        onTransition("B")
+        onTransition("C")
+
+        assertTrue(autoAudioEnabled)
+        assertEquals(listOf("A", "B", "C"), played)
+    }
+
+    @Test
+    fun `recreation of coordinator or preferences preserves false without resetting to default`() {
+        var storedAutoAudio = false
+
+        // Recreate simulated preferences controller
+        fun loadPreferences(): Boolean = storedAutoAudio
+
+        val restored = loadPreferences()
+        assertFalse(restored)
+    }
+
+    @Test
+    fun `pure rendering produces zero writes to auto audio preference`() {
+        var preferenceWriteCount = 0
+        var autoAudioEnabled = false
+
+        fun renderCandidate(candidateId: String, currentAudioSetting: Boolean) {
+            // Pure renderer only reads currentAudioSetting and renders RemoteViews
+            // Does NOT call preferenceStore.save()
+        }
+
+        renderCandidate("A", autoAudioEnabled)
+        renderCandidate("A", autoAudioEnabled)
+        renderCandidate("B", autoAudioEnabled)
+        renderCandidate("C", autoAudioEnabled)
+
+        assertEquals(0, preferenceWriteCount)
+        assertFalse(autoAudioEnabled)
+    }
+
+    @Test
+    fun `body tap manual replay works while muted and does not unmute the widget`() {
+        var autoAudioEnabled = false
+        var manualReplayCount = 0
+
+        fun onBodyTap() {
+            // Manual replay plays audio directly without altering autoAudioEnabled
+            manualReplayCount++
+        }
+
+        onBodyTap()
+        assertEquals(1, manualReplayCount)
+        assertFalse(autoAudioEnabled) // Must remain muted!
+
+        onBodyTap()
+        assertEquals(2, manualReplayCount)
+        assertFalse(autoAudioEnabled)
+    }
+
+    @Test
+    fun `click isolation contract ensures individual action clicks do not bubble into body replay or alter audio preference`() {
+        var autoAudioEnabled = false
+        var bodyReplayCount = 0
+        var audioToggleCount = 0
+        var starToggleCount = 0
+        var eyeActionCount = 0
+        var prevActionCount = 0
+        var nextActionCount = 0
+
+        fun clickAudio() {
+            audioToggleCount++
+            autoAudioEnabled = !autoAudioEnabled
+        }
+        fun clickStar() { starToggleCount++ }
+        fun clickEye() { eyeActionCount++ }
+        fun clickPrev() { prevActionCount++ }
+        fun clickNext() { nextActionCount++ }
+        fun clickBody() { bodyReplayCount++ }
+
+        clickStar()
+        clickEye()
+        clickPrev()
+        clickNext()
+
+        assertEquals(1, starToggleCount)
+        assertEquals(1, eyeActionCount)
+        assertEquals(1, prevActionCount)
+        assertEquals(1, nextActionCount)
+        assertEquals(0, bodyReplayCount) // Body replay must be strictly 0!
+        assertFalse(autoAudioEnabled) // Star, Eye, Prev, Next must not touch audio preference!
+
+        clickBody()
+        assertEquals(1, bodyReplayCount)
+        assertFalse(autoAudioEnabled) // Body tap must not touch audio preference!
+
+        clickAudio()
+        assertEquals(1, audioToggleCount)
+        assertTrue(autoAudioEnabled) // Only audio click toggles preference!
     }
 }

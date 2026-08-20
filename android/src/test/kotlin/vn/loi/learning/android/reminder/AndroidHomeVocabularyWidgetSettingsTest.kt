@@ -44,6 +44,7 @@ class AndroidHomeVocabularyWidgetSettingsTest {
         assertEquals(LockWallpaperImageSize.LARGE, defaults.imageSize)
         assertEquals(0.92f, defaults.cardBackgroundOpacity)
         assertTrue(defaults.updateOnlyScreenOn)
+        assertFalse(defaults.autoAudioEnabled)
     }
 
     @Test
@@ -73,7 +74,8 @@ class AndroidHomeVocabularyWidgetSettingsTest {
             imageSize = LockWallpaperImageSize.MAXIMUM,
             cardBackgroundOpacity = 0.85f,
             updateOnlyScreenOn = false,
-            currentCandidateId = "content-101"
+            currentCandidateId = "content-101",
+            autoAudioEnabled = true
         )
 
         assertTrue(controller.updateHomeWidgetSettings(custom))
@@ -89,6 +91,7 @@ class AndroidHomeVocabularyWidgetSettingsTest {
         assertEquals(0.85f, loaded.cardBackgroundOpacity)
         assertFalse(loaded.updateOnlyScreenOn)
         assertEquals("content-101", loaded.currentCandidateId)
+        assertTrue(loaded.autoAudioEnabled)
     }
 
     @Test
@@ -153,7 +156,8 @@ class AndroidHomeVocabularyWidgetSettingsTest {
             imageSize = LockWallpaperImageSize.MEDIUM,
             cardBackgroundOpacity = 0.50f,
             updateOnlyScreenOn = true,
-            currentCandidateId = "cand-xyz"
+            currentCandidateId = "cand-xyz",
+            autoAudioEnabled = true
         )
 
         val draft = AndroidHomeVocabularyWidgetDraft.from(settings)
@@ -161,6 +165,7 @@ class AndroidHomeVocabularyWidgetSettingsTest {
         assertEquals(AndroidVocabularyReminderIntervalUnit.MINUTES, draft.intervalUnit)
         assertEquals(AndroidVocabularyReminderSelectionMode.AGAIN_HARD, draft.selectionMode)
         assertEquals(LockWallpaperWordSize.SMALL, draft.wordSize)
+        assertTrue(draft.autoAudioEnabled)
 
         val convertedBack = draft.toSettings("cand-xyz")
         assertEquals(settings, convertedBack)

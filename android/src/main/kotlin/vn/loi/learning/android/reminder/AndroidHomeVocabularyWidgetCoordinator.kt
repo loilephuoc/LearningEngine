@@ -6,11 +6,15 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
+import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +27,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
     private val context: Context,
     private val preferencesController: AndroidVocabularyReminderPreferencesController,
     private val selector: AndroidVocabularyReminderCandidateSelector,
+    private val difficultMarkers: AndroidVocabularyReminderDifficultMarkers,
     private val resolveMedia: (String) -> String? = { null }
 ) {
 
@@ -31,6 +36,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
     private val executor = Executors.newSingleThreadExecutor()
     private val started = AtomicBoolean(false)
     private val stateLock = Any()
+    private val audioLock = Any()
 
     private val activeWidgetIds = mutableSetOf<Int>()
     private var currentCandidate: AndroidVocabularyCandidate? = null
@@ -38,6 +44,12 @@ class AndroidHomeVocabularyWidgetCoordinator(
     private var isAdvancingCandidate: Boolean = false
     private var autoNextRunnable: Runnable? = null
     private var armedIntervalMs: Long = 0L
+
+    private var currentCycleToken: Long = 0L
+    private var lastAutoPlayedCandidateId: String? = null
+    private var lastAutoPlayedCycleToken: Long = 0L
+
+    private var mediaPlayer: MediaPlayer? = null
 
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, intent: Intent?) {
@@ -48,6 +60,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
                 }
                 Intent.ACTION_SCREEN_OFF -> {
                     Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] event=SCREEN_OFF action=SUSPEND_TIMER")
+                    stopAudioPlayback()
                     reconcileAutoNextTimer("SCREEN_OFF")
                 }
                 Intent.ACTION_USER_PRESENT -> {
@@ -106,6 +119,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
         if (!started.compareAndSet(true, false)) return
         runCatching { context.unregisterReceiver(screenStateReceiver) }
         cancelAutoNextTimer("COORDINATOR_STOP")
+        stopAudioPlayback()
     }
 
     fun onWidgetsUpdate(appWidgetIds: IntArray) {
@@ -143,6 +157,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
             }
             if (activeWidgetIds.isEmpty()) {
                 cancelAutoNextTimer("ALL_WIDGETS_REMOVED")
+                stopAudioPlayback()
             }
         }
     }
@@ -166,6 +181,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
             Log.i(TAG_WIDGET, "[HomeWidget] action=LAST_WIDGET_DISABLED")
             activeWidgetIds.clear()
             cancelAutoNextTimer("LAST_WIDGET_DISABLED")
+            stopAudioPlayback()
         }
     }
 
@@ -202,9 +218,11 @@ class AndroidHomeVocabularyWidgetCoordinator(
                 isPreparingCandidate = false
                 if (candidate != null) {
                     currentCandidate = candidate
+                    currentCycleToken++
+                    val currentSettings = preferencesController.currentHomeWidget()
                     preferencesController.updateHomeWidgetSettings(
-                        settings.copy(
-                            selectedPackageId = settings.selectedPackageId ?: candidate.packageId.value,
+                        currentSettings.copy(
+                            selectedPackageId = currentSettings.selectedPackageId ?: candidate.packageId.value,
                             currentCandidateId = candidate.contentId.value
                         )
                     )
@@ -214,6 +232,8 @@ class AndroidHomeVocabularyWidgetCoordinator(
                     if (activeWidgetIds.isNotEmpty()) {
                         reRenderWidgets(activeWidgetIds.toIntArray(), "FIRST_CANDIDATE_READY")
                     }
+
+                    checkAndTriggerAutoPlay(candidate, "FIRST_CANDIDATE_READY")
                 } else {
                     Log.i(TAG_INIT, "[HomeWidgetInit] widgetCount=${activeWidgetIds.size} currentCandidate=null action=FAIL reason=NO_CANDIDATE")
                 }
@@ -239,8 +259,10 @@ class AndroidHomeVocabularyWidgetCoordinator(
                 isAdvancingCandidate = false
                 currentCandidate = candidate
                 if (candidate != null) {
+                    currentCycleToken++
+                    val currentSettings = preferencesController.currentHomeWidget()
                     preferencesController.updateHomeWidgetSettings(
-                        settings.copy(currentCandidateId = candidate.contentId.value)
+                        currentSettings.copy(currentCandidateId = candidate.contentId.value)
                     )
                 }
 
@@ -248,6 +270,266 @@ class AndroidHomeVocabularyWidgetCoordinator(
                 if (activeWidgetIds.isNotEmpty()) {
                     reRenderWidgets(activeWidgetIds.toIntArray(), reason)
                 }
+
+                if (candidate != null) {
+                    checkAndTriggerAutoPlay(candidate, reason)
+                }
+            }
+        }
+    }
+
+    fun goToNextCandidate(reason: String) {
+        Log.i(TAG_NAV, "[HomeWidgetNavigation] action=NEXT reason=$reason")
+        advanceToNextCandidate(reason)
+        reconcileAutoNextTimer("USER_NAV_NEXT")
+    }
+
+    fun goToPreviousCandidate(reason: String) {
+        synchronized(stateLock) {
+            if (isAdvancingCandidate) {
+                Log.i(TAG_NAV, "[HomeWidgetNavigation] action=SKIP_OVERLAPPING_PREVIOUS reason=$reason")
+                return
+            }
+            isAdvancingCandidate = true
+        }
+
+        executor.execute {
+            val settings = preferencesController.currentHomeWidget()
+            val selection = selector.selectPreviousHomeWidget(settings)
+            val candidate = (selection as? AndroidVocabularyCandidateSelectionResult.Selected)?.candidate
+
+            synchronized(stateLock) {
+                isAdvancingCandidate = false
+                currentCandidate = candidate
+                if (candidate != null) {
+                    currentCycleToken++
+                    val currentSettings = preferencesController.currentHomeWidget()
+                    preferencesController.updateHomeWidgetSettings(
+                        currentSettings.copy(currentCandidateId = candidate.contentId.value)
+                    )
+                }
+
+                syncActiveWidgetIds()
+                if (activeWidgetIds.isNotEmpty()) {
+                    reRenderWidgets(activeWidgetIds.toIntArray(), reason)
+                }
+
+                Log.i(TAG_NAV, "[HomeWidgetNavigation] action=PREVIOUS candidateId=${candidate?.contentId?.value} reason=$reason")
+
+                if (candidate != null) {
+                    checkAndTriggerAutoPlay(candidate, reason)
+                }
+            }
+        }
+        reconcileAutoNextTimer("USER_NAV_PREVIOUS")
+    }
+
+    // -------------------------------------------------------------
+    // QUICK ACTION: MARK DIFFICULT (STAR)
+    // -------------------------------------------------------------
+    fun toggleDifficult(appWidgetId: Int, packageId: String?, contentId: String?) {
+        synchronized(stateLock) {
+            val candidate = currentCandidate
+            val targetContentId = contentId?.takeIf { it.isNotBlank() } ?: candidate?.contentId?.value
+
+            if (targetContentId == null) {
+                Log.w(TAG_ACTION, "[HomeWidgetQuickAction] appWidgetId=$appWidgetId action=TOGGLE_DIFFICULT status=IGNORED reason=NO_TARGET_CANDIDATE")
+                return
+            }
+
+            val contentIdObj = vn.loi.learning.domain.content.model.ContentId(targetContentId)
+            val markedBefore = difficultMarkers.isMarked(contentIdObj)
+            val markedAfter = difficultMarkers.toggle(contentIdObj)
+
+            Log.i(
+                TAG_ACTION,
+                "[HomeWidgetQuickAction] appWidgetId=$appWidgetId candidateId=$targetContentId action=TOGGLE_DIFFICULT markedBefore=$markedBefore markedAfter=$markedAfter fsrsMutation=false"
+            )
+
+            reRenderAllWidgets("TOGGLE_DIFFICULT")
+        }
+    }
+
+    // -------------------------------------------------------------
+    // QUICK ACTION: AUTO-AUDIO TOGGLE
+    // -------------------------------------------------------------
+    fun toggleAutoAudio(appWidgetId: Int, packageId: String?, contentId: String?) {
+        synchronized(stateLock) {
+            val settings = preferencesController.currentHomeWidget()
+            val enabledBefore = settings.autoAudioEnabled
+            val enabledAfter = !enabledBefore
+
+            preferencesController.updateHomeWidgetSettings(settings.copy(autoAudioEnabled = enabledAfter))
+
+            val candidate = currentCandidate
+            val targetContentId = contentId ?: candidate?.contentId?.value ?: "UNKNOWN"
+
+            Log.i(
+                TAG_AUDIO_PREF,
+                "[HomeWidgetAudioPreference] action=TOGGLE before=$enabledBefore after=$enabledAfter persisted=true visual=${if (enabledAfter) "UNMUTED_NORMAL" else "MUTED_RED"} appWidgetId=$appWidgetId candidateId=$targetContentId"
+            )
+
+            reRenderAllWidgets("TOGGLE_AUDIO")
+
+            if (enabledAfter && candidate != null) {
+                // Immediate confirmation playback
+                lastAutoPlayedCandidateId = candidate.contentId.value
+                lastAutoPlayedCycleToken = currentCycleToken
+                playCandidateAudio(candidate, "TOGGLE_AUDIO_CONFIRMATION", appWidgetId)
+            } else if (!enabledAfter) {
+                stopAudioPlayback()
+            }
+        }
+    }
+
+    // -------------------------------------------------------------
+    // QUICK ACTION / BODY TAP: MANUAL PLAY
+    // -------------------------------------------------------------
+    fun playManualAudio(appWidgetId: Int, packageId: String?, contentId: String?, trigger: String = "MANUAL_PLAY") {
+        synchronized(stateLock) {
+            val candidate = currentCandidate
+            val settings = preferencesController.currentHomeWidget()
+            if (candidate == null) {
+                Log.w(
+                    TAG_AUDIO_PLAY,
+                    "[HomeWidgetAudioPlayback] appWidgetId=$appWidgetId candidateId=NONE trigger=$trigger autoAudioEnabled=${settings.autoAudioEnabled} played=false reason=NO_CANDIDATE"
+                )
+                return
+            }
+
+            playCandidateAudio(candidate, trigger, appWidgetId)
+        }
+    }
+
+    // -------------------------------------------------------------
+    // AUDIO ENGINE IMPLEMENTATION
+    // -------------------------------------------------------------
+    private fun checkAndTriggerAutoPlay(candidate: AndroidVocabularyCandidate, reason: String) {
+        val settings = preferencesController.currentHomeWidget()
+        val candidateId = candidate.contentId.value
+        val cycle = currentCycleToken
+
+        if (!settings.autoAudioEnabled) {
+            Log.i(
+                TAG_AUDIO_PLAY,
+                "[HomeWidgetAudioPlayback] appWidgetId=0 candidateId=$candidateId trigger=CANDIDATE_TRANSITION autoAudioEnabled=false screenInteractive=${isScreenInteractive()} played=false skipReason=AUTO_AUDIO_DISABLED generation=$cycle"
+            )
+            return
+        }
+
+        if (!isScreenInteractive()) {
+            Log.i(
+                TAG_AUDIO_PLAY,
+                "[HomeWidgetAudioPlayback] appWidgetId=0 candidateId=$candidateId trigger=CANDIDATE_TRANSITION autoAudioEnabled=true screenInteractive=false played=false skipReason=SCREEN_NOT_INTERACTIVE generation=$cycle"
+            )
+            return
+        }
+
+        if (lastAutoPlayedCandidateId == candidateId && lastAutoPlayedCycleToken == cycle) {
+            Log.i(
+                TAG_AUDIO_PLAY,
+                "[HomeWidgetAudioPlayback] appWidgetId=0 candidateId=$candidateId trigger=CANDIDATE_TRANSITION autoAudioEnabled=true screenInteractive=true played=false skipReason=ALREADY_PLAYED_FOR_GENERATION generation=$cycle"
+            )
+            return
+        }
+
+        val audioRef = candidate.primaryAudioReference
+        val audioPath = audioRef?.let(resolveMedia)
+
+        if (audioPath == null || !File(audioPath).exists()) {
+            Log.i(
+                TAG_AUDIO_PLAY,
+                "[HomeWidgetAudioPlayback] appWidgetId=0 candidateId=$candidateId trigger=CANDIDATE_TRANSITION autoAudioEnabled=true screenInteractive=true played=false skipReason=NO_AUDIO generation=$cycle"
+            )
+            return
+        }
+
+        lastAutoPlayedCandidateId = candidateId
+        lastAutoPlayedCycleToken = cycle
+
+        Log.i(
+            TAG_AUDIO_PLAY,
+            "[HomeWidgetAudioPlayback] appWidgetId=0 candidateId=$candidateId trigger=CANDIDATE_TRANSITION autoAudioEnabled=true screenInteractive=true played=true skipReason=NONE generation=$cycle"
+        )
+
+        playCandidateAudio(candidate, "CANDIDATE_TRANSITION", 0)
+    }
+
+    private fun playCandidateAudio(
+        candidate: AndroidVocabularyCandidate,
+        trigger: String,
+        appWidgetId: Int
+    ) {
+        val candidateId = candidate.contentId.value
+        val audioRef = candidate.primaryAudioReference
+        val audioPath = audioRef?.let(resolveMedia)
+        val autoAudioEnabled = preferencesController.currentHomeWidget().autoAudioEnabled
+
+        if (audioPath == null || !File(audioPath).exists()) {
+            Log.i(
+                TAG_AUDIO_PLAY,
+                "[HomeWidgetAudioPlayback] appWidgetId=$appWidgetId candidateId=$candidateId trigger=$trigger autoAudioEnabled=$autoAudioEnabled played=false reason=NO_AUDIO"
+            )
+            return
+        }
+
+        synchronized(audioLock) {
+            stopAudioPlayback()
+
+            try {
+                val mp = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
+                            .build()
+                    )
+                    setDataSource(context, Uri.fromFile(File(audioPath)))
+                    setOnCompletionListener { player ->
+                        synchronized(audioLock) {
+                            if (mediaPlayer == player) {
+                                mediaPlayer?.release()
+                                mediaPlayer = null
+                            }
+                        }
+                    }
+                    setOnErrorListener { player, what, extra ->
+                        Log.e(TAG_AUDIO_PLAY, "[HomeWidgetAudioPlayback] error what=$what extra=$extra candidateId=$candidateId")
+                        synchronized(audioLock) {
+                            if (mediaPlayer == player) {
+                                mediaPlayer?.release()
+                                mediaPlayer = null
+                            }
+                        }
+                        true
+                    }
+                    prepare()
+                    start()
+                }
+                mediaPlayer = mp
+
+                Log.i(
+                    TAG_AUDIO_PLAY,
+                    "[HomeWidgetAudioPlayback] appWidgetId=$appWidgetId candidateId=$candidateId trigger=$trigger autoAudioEnabled=$autoAudioEnabled played=true reason=PLAYING"
+                )
+            } catch (t: Throwable) {
+                Log.e(TAG_AUDIO_PLAY, "[HomeWidgetAudioPlayback] playbackFailed candidateId=$candidateId error=${t.message}", t)
+            }
+        }
+    }
+
+    fun stopAudioPlayback() {
+        synchronized(audioLock) {
+            try {
+                mediaPlayer?.apply {
+                    if (isPlaying) {
+                        stop()
+                    }
+                    release()
+                }
+            } catch (_: Throwable) {
+            } finally {
+                mediaPlayer = null
             }
         }
     }
@@ -264,6 +546,15 @@ class AndroidHomeVocabularyWidgetCoordinator(
     private fun reRenderWidgets(widgetIds: IntArray, reason: String) {
         val settings = preferencesController.currentHomeWidget()
         val candidate = currentCandidate
+        val isDifficult = if (candidate != null) {
+            difficultMarkers.isMarked(candidate.contentId)
+        } else false
+
+        Log.i(
+            "HomeWidgetAudioState",
+            "[HomeWidgetAudioState] candidateId=${candidate?.contentId?.value ?: "EMPTY"} source=$reason persistedAutoAudioEnabled=${settings.autoAudioEnabled} renderedIcon=${if (settings.autoAudioEnabled) "SPEAKER" else "MUTED"} tint=${if (settings.autoAudioEnabled) "NORMAL" else "RED"} preferenceWrite=false"
+        )
+
         val manager = AppWidgetManager.getInstance(context)
         for (widgetId in widgetIds) {
             val views = AndroidHomeVocabularyWidgetRenderer.renderWidget(
@@ -272,7 +563,8 @@ class AndroidHomeVocabularyWidgetCoordinator(
                 settings = settings,
                 resolveMedia = resolveMedia,
                 widgetCount = widgetIds.size,
-                appWidgetId = widgetId
+                appWidgetId = widgetId,
+                isDifficult = isDifficult
             )
             manager.updateAppWidget(widgetId, views)
         }
@@ -352,5 +644,9 @@ class AndroidHomeVocabularyWidgetCoordinator(
         private const val TAG_WIDGET = "HomeWidget"
         private const val TAG_SCHEDULER = "HomeWidgetScheduler"
         private const val TAG_INIT = "HomeWidgetInit"
+        private const val TAG_ACTION = "HomeWidgetQuickAction"
+        private const val TAG_AUDIO_PREF = "HomeWidgetAudioPreference"
+        private const val TAG_AUDIO_PLAY = "HomeWidgetAudioPlayback"
+        private const val TAG_NAV = "HomeWidgetNavigation"
     }
 }

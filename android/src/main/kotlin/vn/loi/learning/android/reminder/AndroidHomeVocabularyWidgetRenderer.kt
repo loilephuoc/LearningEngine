@@ -34,6 +34,7 @@ object AndroidHomeVocabularyWidgetRenderer {
     private const val TAG_META_FIT = "HomeWidgetMetadataFit"
     private const val TAG_EXAMPLE_FIT = "HomeWidgetExampleFit"
     private const val TAG_TAP = "HomeWidgetTap"
+    private const val TAG_ACTION = "HomeWidgetQuickAction"
     const val WIDGET_CLICK_REQUEST_CODE = 4060
     private const val DEFAULT_BASE_COLOR_RGB = 0xF5F7FA
     const val TARGET_EFFECTIVE_OCCUPANCY = 0.985f
@@ -660,7 +661,8 @@ object AndroidHomeVocabularyWidgetRenderer {
         settings: AndroidHomeVocabularyWidgetSettings,
         resolveMedia: (String) -> String?,
         widgetCount: Int = 1,
-        appWidgetId: Int = 0
+        appWidgetId: Int = 0,
+        isDifficult: Boolean = false
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.home_vocabulary_widget)
 
@@ -704,12 +706,13 @@ object AndroidHomeVocabularyWidgetRenderer {
         // 4. Content-Driven Example Height Solving & Maximize Image Viewport
         val minImageHeightPx = (usableHeightPx * MIN_IMAGE_HEIGHT_RATIO).toInt()
         val maxSafeExampleHeightPx = usableHeightPx - minImageHeightPx - (5f * density).toInt()
+        val exampleTextWidthPx = (usableWidthPx - (44f * density).toInt()).coerceAtLeast((180f * density).toInt())
 
         val exampleSolution = if (hasExamples && maxSafeExampleHeightPx >= (14f * density).toInt()) {
             solveExampleLayout(
                 englishExample = engExample,
                 vietnameseExample = vnExample,
-                availableWidthPx = usableWidthPx,
+                availableWidthPx = exampleTextWidthPx,
                 availableHeightPx = maxSafeExampleHeightPx,
                 density = density
             )
@@ -740,7 +743,8 @@ object AndroidHomeVocabularyWidgetRenderer {
             (usableWidthPx * 0.28f).toInt(),
             maxSafeImageWPx
         )
-        val textWidthPx = usableWidthPx - imageBoxWPx - (12f * density).toInt()
+        val actionSafeRightInsetPx = (28f * density).toInt()
+        val textWidthPx = (usableWidthPx - imageBoxWPx - (12f * density).toInt() - actionSafeRightInsetPx).coerceAtLeast((110f * density).toInt())
         val imageHeightRatio = imageBoxHPx.toFloat() / usableHeightPx.toFloat()
         val viewportAreaRatio = (imageBoxWPx * imageBoxHPx).toFloat() / (usableWidthPx * mainAvailableHeightPx).toFloat()
 
@@ -767,7 +771,7 @@ object AndroidHomeVocabularyWidgetRenderer {
             views.setViewVisibility(R.id.widget_ipa_pos_row, View.GONE)
         } else {
             views.setViewVisibility(R.id.widget_ipa_pos_row, View.VISIBLE)
-            views.setViewPadding(R.id.widget_ipa_pos_row, 0, (primarySolution.gap1Dp * density).toInt(), 0, 0)
+            views.setViewPadding(R.id.widget_ipa_pos_row, 0, (primarySolution.gap1Dp * density).toInt(), (28f * density).toInt(), 0)
             if (ipa != null) {
                 views.setViewVisibility(R.id.widget_ipa, View.VISIBLE)
                 views.setTextViewText(R.id.widget_ipa, ipa)
@@ -790,7 +794,7 @@ object AndroidHomeVocabularyWidgetRenderer {
         views.setTextViewText(R.id.widget_meaning, meaning)
         views.setTextViewTextSize(R.id.widget_meaning, TypedValue.COMPLEX_UNIT_SP, primarySolution.vnSizeSp)
         views.setInt(R.id.widget_meaning, "setMaxLines", primarySolution.vnLines)
-        views.setViewPadding(R.id.widget_meaning, 0, (primarySolution.gap2Dp * density).toInt(), 0, 0)
+        views.setViewPadding(R.id.widget_meaning, 0, (primarySolution.gap2Dp * density).toInt(), (28f * density).toInt(), 0)
 
         // 10. Image Handling (Effective Semantic Smart Fill, 14dp rounded corners, subtle 1dp border)
         val finalImageBitmap = if (decodedSourceBitmap != null && semanticInfo != null) {
@@ -847,8 +851,69 @@ object AndroidHomeVocabularyWidgetRenderer {
             )
         }
 
-        // 12. Click Action: Open EXACT candidate in Full Vocabulary Review
-        val clickIntent = Intent(context, MainActivity::class.java).apply {
+        // 12. Main Body Click Action: REPLAY PRONUNCIATION OF CURRENT CANDIDATE
+        val bodyReplayIntent = Intent(context, AndroidHomeVocabularyWidgetProvider::class.java).apply {
+            action = AndroidHomeVocabularyWidgetProvider.ACTION_WIDGET_MANUAL_PLAY
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_APP_WIDGET_ID, appWidgetId)
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_PACKAGE_ID, candidate?.packageId?.value.orEmpty())
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_CONTENT_ID, candidateId)
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_TRIGGER, "BODY_TAP_REPLAY")
+        }
+        val bodyReplayPendingIntent = PendingIntent.getBroadcast(
+            context,
+            WIDGET_CLICK_REQUEST_CODE + appWidgetId,
+            bodyReplayIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_root, bodyReplayPendingIntent)
+
+        // 13. QUICK ACTIONS RAIL: TOP (AUDIO), MIDDLE (STAR), BOTTOM (EYE FULL REVIEW)
+        // TOP ACTION: AUTO AUDIO TOGGLE
+        val audioToggleIntent = Intent(context, AndroidHomeVocabularyWidgetProvider::class.java).apply {
+            action = AndroidHomeVocabularyWidgetProvider.ACTION_WIDGET_TOGGLE_AUDIO
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_APP_WIDGET_ID, appWidgetId)
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_PACKAGE_ID, candidate?.packageId?.value.orEmpty())
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_CONTENT_ID, candidateId)
+        }
+        val audioTogglePendingIntent = PendingIntent.getBroadcast(
+            context,
+            WIDGET_CLICK_REQUEST_CODE + 20000 + appWidgetId,
+            audioToggleIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_action_audio_toggle, audioTogglePendingIntent)
+        if (settings.autoAudioEnabled) {
+            views.setImageViewResource(R.id.widget_action_audio_toggle, R.drawable.ic_widget_audio_on)
+            views.setContentDescription(R.id.widget_action_audio_toggle, "Disable widget auto audio")
+        } else {
+            views.setImageViewResource(R.id.widget_action_audio_toggle, R.drawable.ic_widget_audio_off)
+            views.setContentDescription(R.id.widget_action_audio_toggle, "Enable widget auto audio")
+        }
+
+        // MIDDLE ACTION: MARK DIFFICULT (STAR)
+        val starIntent = Intent(context, AndroidHomeVocabularyWidgetProvider::class.java).apply {
+            action = AndroidHomeVocabularyWidgetProvider.ACTION_WIDGET_TOGGLE_DIFFICULT
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_APP_WIDGET_ID, appWidgetId)
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_PACKAGE_ID, candidate?.packageId?.value.orEmpty())
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_CONTENT_ID, candidateId)
+        }
+        val starPendingIntent = PendingIntent.getBroadcast(
+            context,
+            WIDGET_CLICK_REQUEST_CODE + 10000 + appWidgetId,
+            starIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_action_star, starPendingIntent)
+        if (isDifficult) {
+            views.setImageViewResource(R.id.widget_action_star, R.drawable.ic_widget_star_filled)
+            views.setContentDescription(R.id.widget_action_star, "Unmark difficult")
+        } else {
+            views.setImageViewResource(R.id.widget_action_star, R.drawable.ic_widget_star_outline)
+            views.setContentDescription(R.id.widget_action_star, "Mark difficult")
+        }
+
+        // BOTTOM ACTION: FULL REVIEW (EYE)
+        val fullReviewIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             if (candidate != null) {
                 action = AndroidVocabularyReminderNotificationHelper.ACTION_REMINDER_REVIEW
@@ -857,18 +922,62 @@ object AndroidHomeVocabularyWidgetRenderer {
                 putExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_REMINDER_MODE, "RANDOM_ALL")
             }
         }
-        val requestCode = WIDGET_CLICK_REQUEST_CODE + appWidgetId
-        val pendingIntent = PendingIntent.getActivity(
+        val fullReviewPendingIntent = PendingIntent.getActivity(
             context,
-            requestCode,
-            clickIntent,
+            WIDGET_CLICK_REQUEST_CODE + 30000 + appWidgetId,
+            fullReviewIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+        views.setOnClickPendingIntent(R.id.widget_action_full_review, fullReviewPendingIntent)
+        views.setImageViewResource(R.id.widget_action_full_review, R.drawable.ic_widget_eye)
+        views.setContentDescription(R.id.widget_action_full_review, "Open full review")
+
+        // 14. PREVIOUS / NEXT NAVIGATION OVERLAY (‹ and ›)
+        val prevIntent = Intent(context, AndroidHomeVocabularyWidgetProvider::class.java).apply {
+            action = AndroidHomeVocabularyWidgetProvider.ACTION_WIDGET_PREVIOUS
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_APP_WIDGET_ID, appWidgetId)
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_PACKAGE_ID, candidate?.packageId?.value.orEmpty())
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_CONTENT_ID, candidateId)
+        }
+        val prevPendingIntent = PendingIntent.getBroadcast(
+            context,
+            WIDGET_CLICK_REQUEST_CODE + 40000 + appWidgetId,
+            prevIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_action_prev, prevPendingIntent)
+        views.setImageViewResource(R.id.widget_action_prev, R.drawable.ic_widget_nav_prev)
+        views.setContentDescription(R.id.widget_action_prev, "Previous vocabulary")
+
+        val nextIntent = Intent(context, AndroidHomeVocabularyWidgetProvider::class.java).apply {
+            action = AndroidHomeVocabularyWidgetProvider.ACTION_WIDGET_NEXT
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_APP_WIDGET_ID, appWidgetId)
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_PACKAGE_ID, candidate?.packageId?.value.orEmpty())
+            putExtra(AndroidHomeVocabularyWidgetProvider.EXTRA_CONTENT_ID, candidateId)
+        }
+        val nextPendingIntent = PendingIntent.getBroadcast(
+            context,
+            WIDGET_CLICK_REQUEST_CODE + 50000 + appWidgetId,
+            nextIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_action_next, nextPendingIntent)
+        views.setImageViewResource(R.id.widget_action_next, R.drawable.ic_widget_nav_next)
+        views.setContentDescription(R.id.widget_action_next, "Next vocabulary")
 
         Log.i(
             TAG_TAP,
-            "[HomeWidgetTap] appWidgetId=$appWidgetId candidateId=$candidateId action=OPEN_FULL_REVIEW"
+            "[HomeWidgetTap] appWidgetId=$appWidgetId candidateId=$candidateId bodyAction=BODY_TAP_REPLAY isDifficult=$isDifficult autoAudioEnabled=${settings.autoAudioEnabled}"
+        )
+
+        Log.i(
+            "HomeWidgetQuickActionRender",
+            "[HomeWidgetQuickActionRender] appWidgetId=$appWidgetId candidateId=$candidateId autoAudioEnabled=${settings.autoAudioEnabled} autoAudioVisual=${if (settings.autoAudioEnabled) "UNMUTED_NORMAL" else "MUTED_RED"} autoAudioTint=${if (settings.autoAudioEnabled) "NORMAL" else "RED"} difficultMarked=$isDifficult"
+        )
+
+        Log.i(
+            TAG_ACTION,
+            "[HomeWidgetQuickAction] appWidgetId=$appWidgetId candidateId=$candidateId action=OPEN_FULL_REVIEW resolvedCurrentCandidate=${candidate != null}"
         )
 
         Log.i(

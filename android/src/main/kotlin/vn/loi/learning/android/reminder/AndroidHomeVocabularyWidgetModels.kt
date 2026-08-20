@@ -13,7 +13,8 @@ data class AndroidHomeVocabularyWidgetSettings(
     val imageSize: LockWallpaperImageSize = LockWallpaperImageSize.LARGE,
     val cardBackgroundOpacity: Float = 0.92f,
     val updateOnlyScreenOn: Boolean = true,
-    val currentCandidateId: String? = null
+    val currentCandidateId: String? = null,
+    val autoAudioEnabled: Boolean = false
 ) {
     val clampedCardBackgroundOpacity: Float
         get() = cardBackgroundOpacity.coerceIn(0.20f, 1.0f)
@@ -37,7 +38,8 @@ data class AndroidHomeVocabularyWidgetDraft(
     val vietnameseSize: LockWallpaperVietnameseSize = LockWallpaperVietnameseSize.MEDIUM,
     val imageSize: LockWallpaperImageSize = LockWallpaperImageSize.LARGE,
     val cardBackgroundOpacity: Float = 0.92f,
-    val updateOnlyScreenOn: Boolean = true
+    val updateOnlyScreenOn: Boolean = true,
+    val autoAudioEnabled: Boolean = false
 ) {
     val calculatedIntervalMillis: Long
         get() {
@@ -83,7 +85,8 @@ data class AndroidHomeVocabularyWidgetDraft(
             imageSize = imageSize,
             cardBackgroundOpacity = cardBackgroundOpacity.coerceIn(0.20f, 1.0f),
             updateOnlyScreenOn = updateOnlyScreenOn,
-            currentCandidateId = currentCandidateId
+            currentCandidateId = currentCandidateId,
+            autoAudioEnabled = autoAudioEnabled
         )
     }
 
@@ -104,7 +107,8 @@ data class AndroidHomeVocabularyWidgetDraft(
                 vietnameseSize = settings.vietnameseSize,
                 imageSize = settings.imageSize,
                 cardBackgroundOpacity = settings.clampedCardBackgroundOpacity,
-                updateOnlyScreenOn = settings.updateOnlyScreenOn
+                updateOnlyScreenOn = settings.updateOnlyScreenOn,
+                autoAudioEnabled = settings.autoAudioEnabled
             )
         }
     }

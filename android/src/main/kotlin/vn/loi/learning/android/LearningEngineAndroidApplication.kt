@@ -95,6 +95,7 @@ class LearningEngineAndroidApplication : Application() {
             context = this,
             preferencesController = reminderPreferencesController,
             selector = reminderCandidateSelector,
+            difficultMarkers = reminderDifficultStore,
             resolveMedia = { ref -> graph.media.resolve(ref)?.toString() }
         )
     }

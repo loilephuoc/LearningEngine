@@ -203,6 +203,7 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
             .coerceIn(0.20f, 1.0f)
         val updateOnlyScreenOn = prefs.getBoolean(KEY_HOME_WIDGET_UPDATE_ONLY_SCREEN_ON, defaults.updateOnlyScreenOn)
         val currentCandidateId = prefs.getString(KEY_HOME_WIDGET_CURRENT_CANDIDATE_ID, null)?.takeIf { it.isNotBlank() }
+        val autoAudioEnabled = prefs.getBoolean(KEY_HOME_WIDGET_AUTOAUDIO_ENABLED, defaults.autoAudioEnabled)
 
         return AndroidHomeVocabularyWidgetSettings(
             autoNextEnabled = autoNext,
@@ -214,7 +215,8 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
             imageSize = imageSize,
             cardBackgroundOpacity = opacity,
             updateOnlyScreenOn = updateOnlyScreenOn,
-            currentCandidateId = currentCandidateId
+            currentCandidateId = currentCandidateId,
+            autoAudioEnabled = autoAudioEnabled
         )
     }
 
@@ -234,6 +236,7 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
             } else {
                 remove(KEY_HOME_WIDGET_CURRENT_CANDIDATE_ID)
             }
+            putBoolean(KEY_HOME_WIDGET_AUTOAUDIO_ENABLED, settings.autoAudioEnabled)
         }.commit()
     }
 
@@ -276,6 +279,7 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
         private const val KEY_HOME_WIDGET_CARD_BACKGROUND_OPACITY = "home_widget.card_background_opacity"
         private const val KEY_HOME_WIDGET_UPDATE_ONLY_SCREEN_ON = "home_widget.update_only_screen_on"
         private const val KEY_HOME_WIDGET_CURRENT_CANDIDATE_ID = "home_widget.current_candidate_id"
+        private const val KEY_HOME_WIDGET_AUTOAUDIO_ENABLED = "home_widget.autoaudio_enabled"
     }
 }
 
