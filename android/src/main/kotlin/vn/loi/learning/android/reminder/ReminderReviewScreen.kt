@@ -169,8 +169,13 @@ fun ReminderReviewScreen(
                     IconButton(
                         onClick = {
                             difficultMarkers?.let { markers ->
+                                val markedBefore = markers.isMarked(currentItem.contentId)
                                 val updated = markers.toggle(currentItem.contentId)
                                 isDifficult = updated
+                                android.util.Log.i(
+                                    "WidgetReviewDifficult",
+                                    "[WidgetReviewDifficult] candidateId=${currentItem.contentId.value} markedBefore=$markedBefore markedAfter=$updated source=HOME_WIDGET_FULL_REVIEW"
+                                )
                             }
                         }
                     ) {

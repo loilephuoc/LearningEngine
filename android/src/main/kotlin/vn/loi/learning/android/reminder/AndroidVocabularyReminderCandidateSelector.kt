@@ -242,6 +242,147 @@ class AndroidVocabularyReminderCandidateSelector(
         return AndroidVocabularyCandidateSelectionResult.Selected(candidate)
     }
 
+    private val homeWidgetRecentContentIds = ArrayDeque<ContentId>()
+    private var lastHomeWidgetContextKey: String? = null
+    private val homeWidgetRecentLimit: Int = 8
+
+    fun resolveCandidate(packageIdStr: String, contentIdStr: String): AndroidVocabularyCandidate? {
+        val packageId = InstalledPackageId(packageIdStr)
+        val installedPackage = context.installedPackageRepository?.findById(packageId) ?: return null
+        if (installedPackage.state != PackageState.ACTIVE) return null
+        val contentId = ContentId(contentIdStr)
+        val content = context.contentRepository?.findById(contentId) ?: return null
+        return content.toCandidate(packageId, installedPackage.name.value)
+    }
+
+    fun selectHomeWidget(settings: AndroidHomeVocabularyWidgetSettings): AndroidVocabularyCandidateSelectionResult {
+        val packageIdStr = settings.selectedPackageId
+            ?: getAvailablePackages().firstOrNull()?.id
+            ?: return AndroidVocabularyCandidateSelectionResult.NoCandidate(
+                AndroidVocabularyCandidateSelectionResult.Reason.PACKAGE_NOT_SELECTED
+            )
+        val packageId = InstalledPackageId(packageIdStr)
+        val installedPackage = context.installedPackageRepository?.findById(packageId)
+            ?: return AndroidVocabularyCandidateSelectionResult.NoCandidate(
+                AndroidVocabularyCandidateSelectionResult.Reason.PACKAGE_UNAVAILABLE
+            )
+        if (installedPackage.state != PackageState.ACTIVE) {
+            return AndroidVocabularyCandidateSelectionResult.NoCandidate(
+                AndroidVocabularyCandidateSelectionResult.Reason.PACKAGE_UNAVAILABLE
+            )
+        }
+
+        val allContentIds = context.packageContentQuery?.getContentIdsForPackage(packageId)
+            ?: return AndroidVocabularyCandidateSelectionResult.NoCandidate(
+                AndroidVocabularyCandidateSelectionResult.Reason.PACKAGE_UNAVAILABLE
+            )
+        if (allContentIds.isEmpty()) {
+            return AndroidVocabularyCandidateSelectionResult.NoCandidate(
+                AndroidVocabularyCandidateSelectionResult.Reason.PACKAGE_EMPTY
+            )
+        }
+
+        val candidates = queryEligibleCandidates(packageId, installedPackage.name.value, allContentIds, settings.selectionMode.name)
+        if (candidates.isEmpty()) {
+            return AndroidVocabularyCandidateSelectionResult.NoCandidate(
+                AndroidVocabularyCandidateSelectionResult.Reason.NO_ELIGIBLE_CANDIDATE
+            )
+        }
+
+        val store = shuffleBagStore
+        val candidateMap = candidates.associateBy { it.contentId.value }
+        val eligibleIds = candidates.map { it.contentId.value }
+        val contextKey = "HOME_WIDGET:$packageIdStr:${settings.selectionMode.name}"
+
+        if (store == null) {
+            if (lastHomeWidgetContextKey != contextKey) {
+                lastHomeWidgetContextKey = contextKey
+                homeWidgetRecentContentIds.clear()
+            }
+            val filtered = candidates.filter { it.contentId !in homeWidgetRecentContentIds }
+            val available = filtered.ifEmpty {
+                homeWidgetRecentContentIds.clear()
+                candidates
+            }
+            val selected = available[random.nextInt(available.size)]
+            homeWidgetRecentContentIds.addLast(selected.contentId)
+            while (homeWidgetRecentContentIds.size > homeWidgetRecentLimit) {
+                homeWidgetRecentContentIds.removeFirst()
+            }
+            return AndroidVocabularyCandidateSelectionResult.Selected(selected)
+        }
+
+        var bagState = store.load(contextKey)
+
+        fun replenishBag(lastPresented: String?): LockScreenShuffleBagState {
+            val shuffled = eligibleIds.shuffled(kotlin.random.Random(random.nextLong())).toMutableList()
+            if (shuffled.size > 1 && shuffled[0] == lastPresented) {
+                val swapIndex = if (shuffled.size > 2) 1 else shuffled.lastIndex
+                val tmp = shuffled[0]
+                shuffled[0] = shuffled[swapIndex]
+                shuffled[swapIndex] = tmp
+            }
+            val newVersion = (bagState?.cycleVersion ?: 0) + 1
+            return LockScreenShuffleBagState(
+                cycleVersion = newVersion,
+                orderedCandidateIds = shuffled,
+                currentIndex = 0,
+                lastPresentedCandidateId = lastPresented
+            )
+        }
+
+        if (bagState == null || bagState.currentIndex >= bagState.orderedCandidateIds.size || bagState.orderedCandidateIds.isEmpty()) {
+            bagState = replenishBag(bagState?.lastPresentedCandidateId)
+        }
+
+        var candidate: AndroidVocabularyCandidate? = null
+        var bagIndex = bagState.currentIndex
+
+        while (bagIndex < bagState.orderedCandidateIds.size) {
+            val candId = bagState.orderedCandidateIds[bagIndex]
+            val matched = candidateMap[candId]
+            bagIndex++
+            if (matched != null) {
+                candidate = matched
+                break
+            }
+        }
+
+        if (candidate == null) {
+            bagState = replenishBag(bagState.lastPresentedCandidateId)
+            bagIndex = 0
+            while (bagIndex < bagState.orderedCandidateIds.size) {
+                val candId = bagState.orderedCandidateIds[bagIndex]
+                val matched = candidateMap[candId]
+                bagIndex++
+                if (matched != null) {
+                    candidate = matched
+                    break
+                }
+            }
+        }
+
+        if (candidate == null) {
+            return AndroidVocabularyCandidateSelectionResult.NoCandidate(
+                AndroidVocabularyCandidateSelectionResult.Reason.NO_ELIGIBLE_CANDIDATE
+            )
+        }
+
+        val oldIndex = bagState.currentIndex
+        val updatedState = bagState.copy(
+            currentIndex = bagIndex,
+            lastPresentedCandidateId = candidate.contentId.value
+        )
+        store.save(contextKey, updatedState)
+
+        Log.i(
+            "HomeWidgetCandidate",
+            "[HomeWidgetCandidate] action=ADVANCE cycleVersion=${updatedState.cycleVersion} packageId=$packageIdStr selectionMode=${settings.selectionMode.name} oldIndex=$oldIndex newIndex=$bagIndex candidateId=${candidate.contentId.value}"
+        )
+
+        return AndroidVocabularyCandidateSelectionResult.Selected(candidate)
+    }
+
     fun getReminderReviewQueue(
         packageIdStr: String,
         mode: AndroidVocabularyReminderSelectionMode,

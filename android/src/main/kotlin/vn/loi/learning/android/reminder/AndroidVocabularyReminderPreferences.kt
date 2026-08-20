@@ -15,6 +15,8 @@ interface AndroidVocabularyReminderPreferenceStore {
     fun save(settings: AndroidVocabularyReminderSettings): Boolean
     fun loadLockScreen(): AndroidLockScreenVocabularySettings = AndroidLockScreenVocabularySettings()
     fun saveLockScreen(settings: AndroidLockScreenVocabularySettings): Boolean = true
+    fun loadHomeWidget(): AndroidHomeVocabularyWidgetSettings = AndroidHomeVocabularyWidgetSettings()
+    fun saveHomeWidget(settings: AndroidHomeVocabularyWidgetSettings): Boolean = true
 }
 
 class SharedPreferencesVocabularyReminderPreferenceStore(
@@ -79,19 +81,20 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
     }
 
     override fun save(settings: AndroidVocabularyReminderSettings): Boolean {
+        val pausedUntilMillis = settings.pausedUntil?.toEpochMilli() ?: -1L
         return prefs.edit().apply {
             putBoolean(KEY_ENABLED, settings.enabled)
             putString(KEY_SELECTED_PACKAGE_ID, settings.selectedPackageId)
             putString(KEY_SELECTION_MODE, settings.selectionMode.name)
             putLong(KEY_INTERVAL_MILLIS, settings.intervalMillis)
-            remove(KEY_INTERVAL_MINUTES)
+            putInt(KEY_INTERVAL_MINUTES, (settings.intervalMillis / 60_000L).toInt().coerceAtLeast(1))
             putString(KEY_ACTIVE_START, settings.activeStart.toString())
             putString(KEY_ACTIVE_END, settings.activeEnd.toString())
             putLong(KEY_DISPLAY_DURATION_MILLIS, settings.displayDurationMillis)
             putBoolean(KEY_AUTOPLAY_PRONUNCIATION, settings.autoPlayPronunciation)
             putBoolean(KEY_OVERLAY_POPUP_ENABLED, settings.overlayPopupEnabled)
-            if (settings.pausedUntil != null) {
-                putLong(KEY_PAUSED_UNTIL, settings.pausedUntil.toEpochMilli())
+            if (pausedUntilMillis > 0) {
+                putLong(KEY_PAUSED_UNTIL, pausedUntilMillis)
             } else {
                 remove(KEY_PAUSED_UNTIL)
             }
@@ -108,25 +111,27 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
         val selectionMode = runCatching {
             AndroidLockScreenVocabularyMode.valueOf(modeName ?: defaults.selectionMode.name)
         }.getOrDefault(defaults.selectionMode)
+
         val autoPlay = prefs.getBoolean(KEY_LOCKSCREEN_AUTOPLAY_PRONUNCIATION, defaults.autoPlayPronunciation)
         val customBackgroundPath = prefs.getString(KEY_LOCKSCREEN_CUSTOM_BACKGROUND_PATH, null)?.takeIf { it.isNotBlank() }
+
         val wordSizeName = prefs.getString(KEY_LOCKSCREEN_WORD_SIZE, defaults.wordSize.name)
         val wordSize = runCatching {
             LockWallpaperWordSize.valueOf(wordSizeName ?: defaults.wordSize.name)
         }.getOrDefault(defaults.wordSize)
+
         val vietnameseSizeName = prefs.getString(KEY_LOCKSCREEN_VIETNAMESE_SIZE, defaults.vietnameseSize.name)
         val vietnameseSize = runCatching {
             LockWallpaperVietnameseSize.valueOf(vietnameseSizeName ?: defaults.vietnameseSize.name)
         }.getOrDefault(defaults.vietnameseSize)
+
         val imageSizeName = prefs.getString(KEY_LOCKSCREEN_IMAGE_SIZE, defaults.imageSize.name)
         val imageSize = runCatching {
             LockWallpaperImageSize.valueOf(imageSizeName ?: defaults.imageSize.name)
         }.getOrDefault(defaults.imageSize)
-        val opacity = if (prefs.contains(KEY_LOCKSCREEN_CARD_BACKGROUND_OPACITY)) {
-            prefs.getFloat(KEY_LOCKSCREEN_CARD_BACKGROUND_OPACITY, defaults.cardBackgroundOpacity)
-        } else {
-            defaults.cardBackgroundOpacity
-        }.coerceIn(0.20f, 1.00f)
+
+        val opacity = prefs.getFloat(KEY_LOCKSCREEN_CARD_BACKGROUND_OPACITY, defaults.cardBackgroundOpacity)
+            .coerceIn(0.0f, 1.0f)
 
         val quickReviewIntervalMillis = prefs.getLong(KEY_LOCKSCREEN_QUICK_REVIEW_INTERVAL_MS, defaults.quickReviewIntervalMillis)
         val screenOffPrepEnabled = prefs.getBoolean(KEY_LOCKSCREEN_SCREEN_OFF_PREP_ENABLED, defaults.screenOffPreparationEnabled)
@@ -169,6 +174,69 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
         }.commit()
     }
 
+    override fun loadHomeWidget(): AndroidHomeVocabularyWidgetSettings {
+        val defaults = AndroidHomeVocabularyWidgetSettings()
+        val autoNext = prefs.getBoolean(KEY_HOME_WIDGET_AUTONEXT_ENABLED, defaults.autoNextEnabled)
+        val interval = prefs.getLong(KEY_HOME_WIDGET_INTERVAL_MS, defaults.intervalMillis)
+        val selectedPackageId = prefs.getString(KEY_HOME_WIDGET_PACKAGE_ID, null)?.takeIf { it.isNotBlank() }
+        val modeName = prefs.getString(KEY_HOME_WIDGET_SELECTION_MODE, defaults.selectionMode.name)
+        val selectionMode = runCatching {
+            AndroidVocabularyReminderSelectionMode.valueOf(modeName ?: defaults.selectionMode.name)
+        }.getOrDefault(defaults.selectionMode)
+
+        val wordSizeName = prefs.getString(KEY_HOME_WIDGET_WORD_SIZE, defaults.wordSize.name)
+        val wordSize = runCatching {
+            LockWallpaperWordSize.valueOf(wordSizeName ?: defaults.wordSize.name)
+        }.getOrDefault(defaults.wordSize)
+
+        val vietnameseSizeName = prefs.getString(KEY_HOME_WIDGET_VIETNAMESE_SIZE, defaults.vietnameseSize.name)
+        val vietnameseSize = runCatching {
+            LockWallpaperVietnameseSize.valueOf(vietnameseSizeName ?: defaults.vietnameseSize.name)
+        }.getOrDefault(defaults.vietnameseSize)
+
+        val imageSizeName = prefs.getString(KEY_HOME_WIDGET_IMAGE_SIZE, defaults.imageSize.name)
+        val imageSize = runCatching {
+            LockWallpaperImageSize.valueOf(imageSizeName ?: defaults.imageSize.name)
+        }.getOrDefault(defaults.imageSize)
+
+        val opacity = prefs.getFloat(KEY_HOME_WIDGET_CARD_BACKGROUND_OPACITY, defaults.cardBackgroundOpacity)
+            .coerceIn(0.20f, 1.0f)
+        val updateOnlyScreenOn = prefs.getBoolean(KEY_HOME_WIDGET_UPDATE_ONLY_SCREEN_ON, defaults.updateOnlyScreenOn)
+        val currentCandidateId = prefs.getString(KEY_HOME_WIDGET_CURRENT_CANDIDATE_ID, null)?.takeIf { it.isNotBlank() }
+
+        return AndroidHomeVocabularyWidgetSettings(
+            autoNextEnabled = autoNext,
+            intervalMillis = interval,
+            selectedPackageId = selectedPackageId,
+            selectionMode = selectionMode,
+            wordSize = wordSize,
+            vietnameseSize = vietnameseSize,
+            imageSize = imageSize,
+            cardBackgroundOpacity = opacity,
+            updateOnlyScreenOn = updateOnlyScreenOn,
+            currentCandidateId = currentCandidateId
+        )
+    }
+
+    override fun saveHomeWidget(settings: AndroidHomeVocabularyWidgetSettings): Boolean {
+        return prefs.edit().apply {
+            putBoolean(KEY_HOME_WIDGET_AUTONEXT_ENABLED, settings.autoNextEnabled)
+            putLong(KEY_HOME_WIDGET_INTERVAL_MS, settings.intervalMillis)
+            putString(KEY_HOME_WIDGET_PACKAGE_ID, settings.selectedPackageId)
+            putString(KEY_HOME_WIDGET_SELECTION_MODE, settings.selectionMode.name)
+            putString(KEY_HOME_WIDGET_WORD_SIZE, settings.wordSize.name)
+            putString(KEY_HOME_WIDGET_VIETNAMESE_SIZE, settings.vietnameseSize.name)
+            putString(KEY_HOME_WIDGET_IMAGE_SIZE, settings.imageSize.name)
+            putFloat(KEY_HOME_WIDGET_CARD_BACKGROUND_OPACITY, settings.clampedCardBackgroundOpacity)
+            putBoolean(KEY_HOME_WIDGET_UPDATE_ONLY_SCREEN_ON, settings.updateOnlyScreenOn)
+            if (settings.currentCandidateId != null) {
+                putString(KEY_HOME_WIDGET_CURRENT_CANDIDATE_ID, settings.currentCandidateId)
+            } else {
+                remove(KEY_HOME_WIDGET_CURRENT_CANDIDATE_ID)
+            }
+        }.commit()
+    }
+
     companion object {
         const val PREFS_NAME = "learning_engine_reminder_prefs"
         private const val KEY_ENABLED = "reminder.enabled"
@@ -197,6 +265,17 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
         private const val KEY_LOCKSCREEN_QUICK_REVIEW_INTERVAL_MS = "lockscreen.quick_review_interval_ms"
         private const val KEY_LOCKSCREEN_SCREEN_OFF_PREP_ENABLED = "lockscreen.screen_off_prep_enabled"
         private const val KEY_LOCKSCREEN_SCREEN_OFF_PREPARE_DELAY_MS = "lockscreen.screen_off_prepare_delay_ms"
+
+        private const val KEY_HOME_WIDGET_AUTONEXT_ENABLED = "home_widget.autonext_enabled"
+        private const val KEY_HOME_WIDGET_INTERVAL_MS = "home_widget.interval_ms"
+        private const val KEY_HOME_WIDGET_PACKAGE_ID = "home_widget.selected_package_id"
+        private const val KEY_HOME_WIDGET_SELECTION_MODE = "home_widget.selection_mode"
+        private const val KEY_HOME_WIDGET_WORD_SIZE = "home_widget.word_size"
+        private const val KEY_HOME_WIDGET_VIETNAMESE_SIZE = "home_widget.vietnamese_size"
+        private const val KEY_HOME_WIDGET_IMAGE_SIZE = "home_widget.image_size"
+        private const val KEY_HOME_WIDGET_CARD_BACKGROUND_OPACITY = "home_widget.card_background_opacity"
+        private const val KEY_HOME_WIDGET_UPDATE_ONLY_SCREEN_ON = "home_widget.update_only_screen_on"
+        private const val KEY_HOME_WIDGET_CURRENT_CANDIDATE_ID = "home_widget.current_candidate_id"
     }
 }
 
@@ -209,8 +288,12 @@ class AndroidVocabularyReminderPreferencesController(
     private val mutableLockScreenSettings = MutableStateFlow(store.loadLockScreen())
     val lockScreenSettings: StateFlow<AndroidLockScreenVocabularySettings> = mutableLockScreenSettings.asStateFlow()
 
+    private val mutableHomeWidgetSettings = MutableStateFlow(store.loadHomeWidget())
+    val homeWidgetSettings: StateFlow<AndroidHomeVocabularyWidgetSettings> = mutableHomeWidgetSettings.asStateFlow()
+
     fun current(): AndroidVocabularyReminderSettings = mutableSettings.value
     fun currentLockScreen(): AndroidLockScreenVocabularySettings = mutableLockScreenSettings.value
+    fun currentHomeWidget(): AndroidHomeVocabularyWidgetSettings = mutableHomeWidgetSettings.value
 
     fun updateSettings(newSettings: AndroidVocabularyReminderSettings): Boolean {
         val saved = store.save(newSettings)
@@ -224,6 +307,14 @@ class AndroidVocabularyReminderPreferencesController(
         val saved = store.saveLockScreen(newSettings)
         if (saved) {
             mutableLockScreenSettings.value = newSettings
+        }
+        return saved
+    }
+
+    fun updateHomeWidgetSettings(newSettings: AndroidHomeVocabularyWidgetSettings): Boolean {
+        val saved = store.saveHomeWidget(newSettings)
+        if (saved) {
+            mutableHomeWidgetSettings.value = newSettings
         }
         return saved
     }

@@ -266,6 +266,7 @@ class MainActivity : ComponentActivity() {
         val contentId = intent?.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_CONTENT_ID)
         val mode = intent?.getStringExtra(AndroidVocabularyReminderNotificationHelper.EXTRA_REMINDER_MODE) ?: "AGAIN_HARD"
         if (action == AndroidVocabularyReminderNotificationHelper.ACTION_REMINDER_REVIEW && packageId != null && contentId != null) {
+            android.util.Log.i("HomeWidgetReview", "[HomeWidgetReview] candidateId=$contentId resolved=true action=OPEN")
             pendingReminderTarget.value = PendingReminderReviewTarget(packageId, contentId, mode)
         }
     }
@@ -608,8 +609,16 @@ class MainActivity : ComponentActivity() {
                             onControllerSettings = { navController.navigate("controller_settings") { launchSingleTop = true } },
                             onControllerDiagnostics = { navController.navigate("controller_diagnostics") { launchSingleTop = true } },
                             onVoiceRecordings = { navController.navigate("voice_recordings") { launchSingleTop = true } },
-                            onReminderSettings = { navController.navigate("reminder_settings") { launchSingleTop = true } }
+                            onReminderSettings = { navController.navigate("reminder_settings") { launchSingleTop = true } },
+                            onHomeWidgetSettings = { navController.navigate("home_widget_settings") { launchSingleTop = true } }
                         ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
+                    }
+                    composable("home_widget_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        vn.loi.learning.android.reminder.HomeWidgetSettingsScreen(
+                            controller = app.reminderPreferencesController,
+                            selector = app.reminderCandidateSelector,
+                            onBack = { navController.popBackStack() }
+                        )
                     }
                     composable("reminder_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         ReminderSettingsScreen(

@@ -386,6 +386,7 @@ fun SettingsScreen(
     onControllerDiagnostics: () -> Unit = {},
     onVoiceRecordings: () -> Unit = {},
     onReminderSettings: () -> Unit = {},
+    onHomeWidgetSettings: () -> Unit = {},
     onAction: (AndroidOperationKind) -> Unit
 ) {
     LearningEngineScreenShell("Settings", "Appearance and local data",
@@ -416,6 +417,12 @@ fun SettingsScreen(
                 "Vocabulary Reminder",
                 "Periodic vocabulary reminders, time windows, and review queue",
                 onReminderSettings
+            )
+            LearningEngineSettingsRow(
+                Icons.Default.Widgets,
+                "Home-Screen Vocabulary Widget",
+                "Configure Home-screen vocabulary card, package, and auto-next",
+                onHomeWidgetSettings
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {

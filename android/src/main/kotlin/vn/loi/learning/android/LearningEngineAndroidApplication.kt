@@ -19,10 +19,12 @@ class LearningEngineAndroidApplication : Application() {
         vn.loi.learning.android.controller.ControllerDiagnosticsHolder.registerInputDeviceListener(this)
         reminderNotificationHelper.createNotificationChannel()
         val shouldStartService = reminderPreferencesController.current().enabled ||
-            reminderPreferencesController.currentLockScreen().enabled
+            reminderPreferencesController.currentLockScreen().enabled ||
+            (homeVocabularyWidgetCoordinator.hasActiveWidgets() && reminderPreferencesController.currentHomeWidget().autoNextEnabled)
         if (shouldStartService) {
             AndroidLockScreenVocabularyService.start(this)
         }
+        homeVocabularyWidgetCoordinator.start()
     }
 
     val themeController: AndroidThemeController by lazy {
@@ -86,6 +88,14 @@ class LearningEngineAndroidApplication : Application() {
             resolveMedia = { ref -> graph.media.resolve(ref)?.toString() },
             overlayPresenter = reminderOverlayController,
             notificationHelper = reminderNotificationHelper
+        )
+    }
+    val homeVocabularyWidgetCoordinator: vn.loi.learning.android.reminder.AndroidHomeVocabularyWidgetCoordinator by lazy {
+        vn.loi.learning.android.reminder.AndroidHomeVocabularyWidgetCoordinator(
+            context = this,
+            preferencesController = reminderPreferencesController,
+            selector = reminderCandidateSelector,
+            resolveMedia = { ref -> graph.media.resolve(ref)?.toString() }
         )
     }
 
