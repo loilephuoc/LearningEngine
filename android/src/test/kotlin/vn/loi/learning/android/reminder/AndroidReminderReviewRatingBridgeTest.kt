@@ -1,6 +1,8 @@
 package vn.loi.learning.android.reminder
 
 import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -31,6 +33,8 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.learning.model.LearningMode
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.LearningStage
+import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.RatingSource
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
@@ -486,6 +490,131 @@ class AndroidReminderReviewRatingBridgeTest {
         assertEquals("4d", AndroidReminderReviewRatingBridge.formatTimeSpan(TimeSpan(4 * 86_400_000L)))
         assertEquals("2mo", AndroidReminderReviewRatingBridge.formatTimeSpan(TimeSpan(60 * 86_400_000L)))
         assertEquals("1y", AndroidReminderReviewRatingBridge.formatTimeSpan(TimeSpan(365 * 86_400_000L)))
+    }
+
+    @Test
+    fun `23 inspector unreviewed item is read only New state with empty history`() {
+        val context = LearningApplicationFactory.createInMemory()
+        installPackage(context, "inspect-a", 1)
+        val model = AndroidReminderReviewFsrsInspectorQuery(context, learner, now = { 1_000L }).query("inspect-a-content-0")
+        assertTrue(model.hasFsrsData)
+        assertEquals("New", model.stage)
+        assertEquals(0, model.reviewCount)
+        assertEquals(0, model.lapseCount)
+        assertEquals("Never", model.lastReviewed)
+        assertTrue(model.history.isEmpty())
+        assertNull(context.memoryStateRepository!!.find(learner, LearningItemId("inspect-a-item-0")))
+        assertTrue(context.reviewEventRepository!!.findAll(learner).isEmpty())
+    }
+
+    @Test
+    fun `24 inspector maps canonical state and latest manual history`() {
+        val context = LearningApplicationFactory.createInMemory()
+        installPackage(context, "inspect-a", 1)
+        val bridge = AndroidReminderReviewRatingBridge(context, learner, now = { 2_000L })
+        assertIs<QuickReviewRatingResult.Success>(bridge.submitRating("inspect-a-content-0", ReviewRating.GOOD))
+        val model = AndroidReminderReviewFsrsInspectorQuery(context, learner, now = { 3_000L }, zoneId = ZoneId.of("UTC")).query("inspect-a-content-0")
+        assertEquals(1, model.reviewCount)
+        assertEquals(0, model.lapseCount)
+        assertTrue(model.difficulty.endsWith(" / 10"))
+        assertTrue(model.stability.isNotBlank())
+        assertEquals(ReviewRating.GOOD, model.history.first().rating)
+        assertEquals("Manual rating", model.history.first().source)
+    }
+
+    @Test
+    fun `25 inspector preserves RELEARNING and MASTERED actual stages`() {
+        val context = LearningApplicationFactory.createInMemory()
+        installPackage(context, "inspect-stage", 2)
+        fun state(id: String, stage: LearningStage) = MemoryState(
+            learner, LearningItemId(id), stage, 6.41, 18.7, Moment(50_000L), Moment(10_000L), 3, 1
+        )
+        context.memoryStateRepository!!.save(state("inspect-stage-item-0", LearningStage.RELEARNING))
+        context.memoryStateRepository!!.save(state("inspect-stage-item-1", LearningStage.MASTERED))
+        val query = AndroidReminderReviewFsrsInspectorQuery(context, learner, now = { 20_000L })
+        assertEquals("Relearning", query.query("inspect-stage-content-0").stage)
+        assertEquals("Mastered", query.query("inspect-stage-content-1").stage)
+    }
+
+    @Test
+    fun `26 inspector requires enabled meaning recognition and never falls back`() {
+        val context = LearningApplicationFactory.createInMemory()
+        installPackage(context, "inspect-mode", 1)
+        context.learningItemRepository!!.save(LearningItem(LearningItemId("dictation"), ContentId("inspect-mode-content-0"), LearningMode.DICTATION))
+        context.learningItemRepository!!.save(LearningItem(LearningItemId("inspect-mode-item-0"), ContentId("inspect-mode-content-0"), LearningMode.MEANING_RECOGNITION, isEnabled = false))
+        val model = AndroidReminderReviewFsrsInspectorQuery(context, learner).query("inspect-mode-content-0")
+        assertTrue(!model.hasFsrsData)
+    }
+
+    @Test
+    fun `27 inspector history is newest first scoped and initially limited to ten`() {
+        val context = LearningApplicationFactory.createInMemory()
+        installPackage(context, "inspect-a", 1)
+        installPackage(context, "inspect-b", 1)
+        var time = 10_000L
+        val bridge = AndroidReminderReviewRatingBridge(context, learner, now = { time })
+        repeat(12) { index ->
+            time += 10_000L
+            bridge.submitRating("inspect-a-content-0", ReviewRating.entries[index % 4])
+        }
+        AndroidReminderReviewRatingBridge(context, learner, now = { 500_000L }).submitRating("inspect-b-content-0", ReviewRating.EASY)
+        val model = AndroidReminderReviewFsrsInspectorQuery(context, learner, now = { 600_000L }).query("inspect-a-content-0")
+        assertEquals(12, model.history.size)
+        assertEquals(10, model.recentHistory.size)
+        assertTrue(model.hasMoreHistory)
+        assertEquals(ReviewRating.EASY, model.history.first().rating)
+        assertTrue(model.history.none { it.rating == ReviewRating.EASY && it.reviewedAt.contains("500") })
+    }
+
+    @Test
+    fun `28 source labels include study manual and safe future label`() {
+        assertEquals("Study", AndroidReminderReviewFsrsInspectorQuery.sourceLabel(RatingSource.STANDARD_REVIEW))
+        assertEquals("Manual rating", AndroidReminderReviewFsrsInspectorQuery.sourceLabel(RatingSource.MANUAL_USER))
+        assertEquals("Manual user override", AndroidReminderReviewFsrsInspectorQuery.sourceLabel(RatingSource.MANUAL_USER_OVERRIDE))
+    }
+
+    @Test
+    fun `29 stability and difficulty format retain useful precision`() {
+        assertEquals("5.4 hours", AndroidReminderReviewFsrsInspectorQuery.formatStability(0.225))
+        assertEquals("2.3 days", AndroidReminderReviewFsrsInspectorQuery.formatStability(2.3))
+        assertEquals("3.2 months", AndroidReminderReviewFsrsInspectorQuery.formatStability(96.0))
+        assertEquals("6.41", AndroidReminderReviewFsrsInspectorQuery.formatDifficultyValue(6.414))
+    }
+
+    @Test
+    fun `30 local calendar formatting handles midnight today yesterday tomorrow and overdue`() {
+        val zone = ZoneId.of("Asia/Ho_Chi_Minh")
+        fun millis(day: Int, hour: Int) = ZonedDateTime.of(2026, 8, day, hour, 0, 0, 0, zone).toInstant().toEpochMilli()
+        val formatter = AndroidFsrsInspectorFormatter(millis(20, 0), zone, java.util.Locale.US)
+        assertTrue(formatter.formatDue(Moment(millis(20, 22))).startsWith("Today"))
+        assertTrue(formatter.formatDue(Moment(millis(21, 8))).startsWith("Tomorrow"))
+        assertEquals("Overdue by 2 days", formatter.formatDue(Moment(millis(18, 23))))
+        assertTrue(formatter.formatCalendarTime(Moment(millis(19, 23))).startsWith("Yesterday"))
+    }
+
+    @Test
+    fun `31 repeated rating inspector query reads fresh canonical state and newest row`() {
+        val context = LearningApplicationFactory.createInMemory()
+        installPackage(context, "inspect-fresh", 1)
+        var time = 10_000L
+        val bridge = AndroidReminderReviewRatingBridge(context, learner, now = { time })
+        val query = AndroidReminderReviewFsrsInspectorQuery(context, learner, now = { time + 1 })
+        bridge.submitRating("inspect-fresh-content-0", ReviewRating.GOOD)
+        assertEquals(1, query.query("inspect-fresh-content-0").reviewCount)
+        time = 20_000L
+        bridge.submitRating("inspect-fresh-content-0", ReviewRating.AGAIN)
+        val refreshed = query.query("inspect-fresh-content-0")
+        assertEquals(2, refreshed.reviewCount)
+        assertEquals(ReviewRating.AGAIN, refreshed.history.first().rating)
+    }
+
+    @Test
+    fun `32 rating palettes retain Again Hard Good Easy semantic colors`() {
+        val colors = vn.loi.learning.android.ui.StudyRatingColors
+        assertTrue(colors.again.border != colors.hard.border)
+        assertTrue(colors.hard.border != colors.good.border)
+        assertTrue(colors.good.border != colors.easy.border)
+        assertTrue(colors.easy.border != colors.again.border)
     }
 
     private fun installPackage(

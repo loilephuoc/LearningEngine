@@ -604,7 +604,7 @@ private fun PackageContentRow(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = { row.audioRef?.let(onPlayAudio) ?: onClick() },
+                onClick = onClick,
                 onLongClick = onQuickEdit
             )
             .defaultMinSize(minHeight = LearningSpacing.touchTarget)
@@ -616,9 +616,14 @@ private fun PackageContentRow(
                     if (row.hasAudio) append(", has audio")
                     append(", status ${row.fsrsStatus.label}")
                     if (row.isDifficult) append(", marked difficult")
-                    append(". Chạm để nghe. Nhấn giữ để sửa.")
+                    append(". Chạm để mở xem đầy đủ. Nhấn giữ để sửa.")
                 }
-                customActions = listOf(CustomAccessibilityAction("Sửa từ") { onQuickEdit(); true })
+                customActions = buildList {
+                    row.audioRef?.let { reference ->
+                        add(CustomAccessibilityAction("Nghe từ") { onPlayAudio(reference); true })
+                    }
+                    add(CustomAccessibilityAction("Sửa từ") { onQuickEdit(); true })
+                }
                 role = Role.Button
             }
             .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),

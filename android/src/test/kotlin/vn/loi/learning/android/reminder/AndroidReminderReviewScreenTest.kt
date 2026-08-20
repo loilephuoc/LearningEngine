@@ -36,6 +36,18 @@ class AndroidReminderReviewScreenTest {
     }
 
     @Test
+    fun `FSRS details screen model exposes compact recent history and expandable remainder`() {
+        val rows = (1..12).map {
+            AndroidReviewHistoryRow(ReviewRating.GOOD, "Today, 18:42", "Study", "New → Review", "0.0 hours → 2.3 days", "5.00 → 4.10")
+        }
+        val model = AndroidFsrsInspectorUiModel(true, "Review", "Tomorrow, 08:15", "Today, 18:42", 12, 1, "4.10 / 10", "18.7 days", rows)
+        assertEquals(10, model.recentHistory.size)
+        assertTrue(model.hasMoreHistory)
+        assertEquals("Review", model.stage)
+        assertEquals("Tomorrow, 08:15", model.due)
+    }
+
+    @Test
     fun `26 and 27 and 28 Reminder Review queue resolves exact anchor from same package and mode`() {
         val context = LearningApplicationFactory.createInMemory()
         val learner = LearnerId("default-learner")

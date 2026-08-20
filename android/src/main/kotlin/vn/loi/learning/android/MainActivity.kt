@@ -555,6 +555,9 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             onSelectLearningPackage = packageViewModel::selectLearningPackage,
+                            onOpenContent = { contentId ->
+                                navController.navigate("reminder_review/$packageId/$contentId/RANDOM_ALL")
+                            },
                             onSaveQuickEdit = packageViewModel::saveQuickEdit,
                             onExport = { packageActionId = packageId; exportLauncher.launch("${packageId}.opd3") },
                             onVerify = { verifyLauncher.launch(arrayOf("application/zip","application/octet-stream")) },
@@ -706,7 +709,8 @@ class MainActivity : ComponentActivity() {
                                 resolveMedia = { ref -> graph.media.resolve(ref)?.toString() },
                                 onBack = { navController.popBackStack() },
                                 runtime = app.reminderRuntime,
-                                ratingBridge = app.reminderRatingBridge
+                                ratingBridge = app.reminderRatingBridge,
+                                fsrsInspectorQuery = app.reminderFsrsInspectorQuery
                             )
                         } else {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

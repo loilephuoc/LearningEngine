@@ -348,7 +348,8 @@ class AndroidPackageExperienceTest {
         val row = src.substringAfter("private fun PackageContentRow(").substringBefore("private fun PackageContentBody(")
         assertFalse(row.contains("lessonLabel"))
         assertFalse(row.contains("append(row.lesson)"))
-        assertTrue(row.contains("row.audioRef?.let(onPlayAudio) ?: onClick()"))
+        assertTrue(row.contains("onClick = onClick"))
+        assertTrue(row.contains("CustomAccessibilityAction(\"Nghe từ\")"))
     }
 
     @Test

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -50,7 +52,8 @@ fun ReminderReviewScreen(
     resolveMedia: (String) -> String?,
     onBack: () -> Unit,
     runtime: AndroidVocabularyReminderRuntime? = null,
-    ratingBridge: AndroidReminderReviewRatingBridge? = null
+    ratingBridge: AndroidReminderReviewRatingBridge? = null,
+    fsrsInspectorQuery: AndroidReminderReviewFsrsInspectorQuery? = null
 ) {
     val items = session.items
     if (items.isEmpty()) {
@@ -89,6 +92,7 @@ fun ReminderReviewScreen(
     var submissionState by remember { mutableStateOf(QuickReviewSubmissionState.IDLE) }
     var successFeedback by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var inspectorByContentId by remember { mutableStateOf<Map<String, AndroidFsrsInspectorUiModel>>(emptyMap()) }
 
     // Asynchronous non-blocking preview loading for active candidate
     LaunchedEffect(currentItem.contentId) {
@@ -100,6 +104,10 @@ fun ReminderReviewScreen(
             if (previews != null) {
                 previewsByContentId = previewsByContentId + (currentItem.contentId.value to previews)
             }
+        }
+        fsrsInspectorQuery?.let { query ->
+            val model = withContext(Dispatchers.IO) { query.query(currentItem.contentId.value) }
+            inspectorByContentId = inspectorByContentId + (currentItem.contentId.value to model)
         }
     }
 
@@ -129,6 +137,10 @@ fun ReminderReviewScreen(
                 }
                 when (result) {
                     is QuickReviewRatingResult.Success -> {
+                        fsrsInspectorQuery?.let { query ->
+                            val refreshed = withContext(Dispatchers.IO) { query.query(candidateId) }
+                            inspectorByContentId = inspectorByContentId + (candidateId to refreshed)
+                        }
                         ratedCandidateIds = ratedCandidateIds + candidateId
                         submissionState = QuickReviewSubmissionState.SUCCESS
                         val intervalText = AndroidReminderReviewRatingBridge.formatTimeSpan(result.scheduledInterval)
@@ -334,6 +346,8 @@ fun ReminderReviewScreen(
                 isCurrentRated = isCurrentRated,
                 successFeedback = if (item.contentId.value == currentItem.contentId.value) successFeedback else null,
                 errorMessage = if (item.contentId.value == currentItem.contentId.value) errorMessage else null,
+                inspector = inspectorByContentId[item.contentId.value],
+                inspectorEnabled = fsrsInspectorQuery != null,
                 onRate = handleRate
             )
         }
@@ -351,6 +365,8 @@ private fun ReminderReviewItemContent(
     isCurrentRated: Boolean = false,
     successFeedback: String? = null,
     errorMessage: String? = null,
+    inspector: AndroidFsrsInspectorUiModel? = null,
+    inspectorEnabled: Boolean = false,
     onRate: (ReviewRating) -> Unit = {}
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -663,6 +679,94 @@ private fun ReminderReviewItemContent(
                     }
                 }
             }
+
+            if (inspectorEnabled) {
+                FsrsInspectorSection(inspector)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FsrsInspectorSection(model: AndroidFsrsInspectorUiModel?) {
+    var showAll by remember(model) { mutableStateOf(false) }
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("FSRS details", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() })
+            when {
+                model == null -> CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                !model.hasFsrsData -> Text("No FSRS data", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else -> {
+                    InspectorFieldGrid(model)
+                    Text("Review history", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 4.dp).semantics { heading() })
+                    if (model.history.isEmpty()) {
+                        Text("No reviews yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        model.recentHistory.forEach { ReviewHistoryRow(it) }
+                        if (model.hasMoreHistory) {
+                            TextButton(onClick = { showAll = true }) { Text("Show all (${model.history.size})") }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (showAll && model != null) {
+        AlertDialog(
+            onDismissRequest = { showAll = false },
+            title = { Text("Review history") },
+            text = {
+                LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(model.history) { ReviewHistoryRow(it) }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showAll = false }) { Text("Close") } }
+        )
+    }
+}
+
+@Composable
+private fun InspectorFieldGrid(model: AndroidFsrsInspectorUiModel) {
+    val fields = listOf(
+        "Stage" to model.stage, "Due" to model.due, "Last reviewed" to model.lastReviewed,
+        "Reviews" to model.reviewCount.toString(), "Lapses" to model.lapseCount.toString(),
+        "Difficulty" to model.difficulty, "Stability" to model.stability
+    )
+    fields.forEach { (label, value) ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+        }
+    }
+    if (model.reviewCount == 0) Text("This item has not been reviewed yet.", style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant, fontStyle = FontStyle.Italic)
+}
+
+@Composable
+private fun ReviewHistoryRow(row: AndroidReviewHistoryRow) {
+    val palette = when (row.rating) {
+        ReviewRating.AGAIN -> vn.loi.learning.android.ui.StudyRatingColors.again
+        ReviewRating.HARD -> vn.loi.learning.android.ui.StudyRatingColors.hard
+        ReviewRating.GOOD -> vn.loi.learning.android.ui.StudyRatingColors.good
+        ReviewRating.EASY -> vn.loi.learning.android.ui.StudyRatingColors.easy
+    }
+    Surface(shape = RoundedCornerShape(10.dp), color = palette.background.copy(alpha = 0.3f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, palette.border.copy(alpha = 0.6f))) {
+        Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(row.rating.name, color = palette.content, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                Text(row.reviewedAt, style = MaterialTheme.typography.labelSmall)
+            }
+            Text(row.source, style = MaterialTheme.typography.bodySmall)
+            Text(row.stageTransition, style = MaterialTheme.typography.bodySmall)
+            Text("Stability ${row.stabilityTransition}", style = MaterialTheme.typography.labelSmall)
+            Text("Difficulty ${row.difficultyTransition}", style = MaterialTheme.typography.labelSmall)
         }
     }
 }

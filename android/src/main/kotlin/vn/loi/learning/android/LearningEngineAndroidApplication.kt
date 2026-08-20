@@ -99,6 +99,9 @@ class LearningEngineAndroidApplication : Application() {
             context = graph.engine
         )
     }
+    val reminderFsrsInspectorQuery: vn.loi.learning.android.reminder.AndroidReminderReviewFsrsInspectorQuery by lazy {
+        vn.loi.learning.android.reminder.AndroidReminderReviewFsrsInspectorQuery(context = graph.engine)
+    }
 
     private val graphOwner by lazy {
         SingleInstanceOwner { AndroidApplicationGraph.create(this) }
