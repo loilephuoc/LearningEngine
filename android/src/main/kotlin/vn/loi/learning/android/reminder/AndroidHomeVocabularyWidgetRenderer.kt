@@ -839,13 +839,13 @@ object AndroidHomeVocabularyWidgetRenderer {
                 views.setViewVisibility(R.id.widget_example_vietnamese, View.GONE)
             }
 
-            Log.i(
+            Log.d(
                 TAG_EXAMPLE_FIT,
                 "[HomeWidgetExampleFit] candidateId=$candidateId englishChars=${engExample?.length ?: 0} vietnameseChars=${vnExample?.length ?: 0} englishSizeSp=${exampleSolution.englishSizeSp} vietnameseSizeSp=${exampleSolution.vnSizeSp} englishLines=${exampleSolution.englishLines} vietnameseLines=${exampleSolution.vnLines} requiredHeight=$exampleRequiredHeightPx fullTextRendered=true exampleFitImpossible=false overflow=false"
             )
         } else {
             views.setViewVisibility(R.id.widget_example_zone, View.GONE)
-            Log.i(
+            Log.d(
                 TAG_EXAMPLE_FIT,
                 "[HomeWidgetExampleFit] candidateId=$candidateId englishChars=${engExample?.length ?: 0} vietnameseChars=${vnExample?.length ?: 0} englishSizeSp=0 vietnameseSizeSp=0 englishLines=0 vietnameseLines=0 requiredHeight=0 fullTextRendered=false exampleFitImpossible=true overflow=false"
             )
@@ -965,22 +965,22 @@ object AndroidHomeVocabularyWidgetRenderer {
         views.setImageViewResource(R.id.widget_action_next, R.drawable.ic_widget_nav_next)
         views.setContentDescription(R.id.widget_action_next, "Next vocabulary")
 
-        Log.i(
+        Log.d(
             TAG_TAP,
             "[HomeWidgetTap] appWidgetId=$appWidgetId candidateId=$candidateId bodyAction=BODY_TAP_REPLAY isDifficult=$isDifficult autoAudioEnabled=${settings.autoAudioEnabled}"
         )
 
-        Log.i(
+        Log.d(
             "HomeWidgetQuickActionRender",
             "[HomeWidgetQuickActionRender] appWidgetId=$appWidgetId candidateId=$candidateId autoAudioEnabled=${settings.autoAudioEnabled} autoAudioVisual=${if (settings.autoAudioEnabled) "UNMUTED_NORMAL" else "MUTED_RED"} autoAudioTint=${if (settings.autoAudioEnabled) "NORMAL" else "RED"} difficultMarked=$isDifficult"
         )
 
-        Log.i(
+        Log.d(
             TAG_ACTION,
             "[HomeWidgetQuickAction] appWidgetId=$appWidgetId candidateId=$candidateId action=OPEN_FULL_REVIEW resolvedCurrentCandidate=${candidate != null}"
         )
 
-        Log.i(
+        Log.d(
             TAG_META_FIT,
             "[HomeWidgetMetadataFit] candidateId=$candidateId ipaSizeSp=${primarySolution.metadata.ipaSizeSp} posSizeSp=${primarySolution.metadata.posSizeSp} posPaddingDp=${primarySolution.metadata.posPaddingDp} rowWidth=${primarySolution.metadata.totalWidthPx} availableWidth=$textWidthPx posWrapped=${primarySolution.metadata.isWrapped}"
         )
@@ -988,12 +988,12 @@ object AndroidHomeVocabularyWidgetRenderer {
         if (semanticInfo != null) {
             val effWLog = semanticInfo.effectiveRect.right - semanticInfo.effectiveRect.left
             val effHLog = semanticInfo.effectiveRect.bottom - semanticInfo.effectiveRect.top
-            Log.i(
+            Log.d(
                 TAG_SEMANTIC_RECT,
                 "[HomeWidgetEffectiveSemanticRect] candidateId=$candidateId sourceW=${semanticInfo.sourceW} sourceH=${semanticInfo.sourceH} rawAspect=${semanticInfo.rawAspect} effectiveLeft=${semanticInfo.effectiveRect.left} effectiveTop=${semanticInfo.effectiveRect.top} effectiveRight=${semanticInfo.effectiveRect.right} effectiveBottom=${semanticInfo.effectiveRect.bottom} effectiveW=$effWLog effectiveH=$effHLog effectiveAspect=${semanticInfo.effectiveAspect} trimLeftRatio=${semanticInfo.trimLeftRatio} trimTopRatio=${semanticInfo.trimTopRatio} trimRightRatio=${semanticInfo.trimRightRatio} trimBottomRatio=${semanticInfo.trimBottomRatio} detectionConfidence=${semanticInfo.detectionConfidence}"
             )
 
-            Log.i(
+            Log.d(
                 TAG_EFFECTIVE_VIEWPORT,
                 "[HomeWidgetEffectiveViewport] candidateId=$candidateId rawClassification=${semanticInfo.rawClassification.name} effectiveClassification=${semanticInfo.effectiveClassification.name} viewportAspect=$viewportAspect viewportW=$imageBoxWPx viewportH=$imageBoxHPx mainAreaW=$usableWidthPx mainAreaH=$mainAvailableHeightPx imageHeightRatio=$imageHeightRatio imageAreaRatio=$viewportAreaRatio protectedMinimumSatisfied=true"
             )
@@ -1104,7 +1104,7 @@ object AndroidHomeVocabularyWidgetRenderer {
                 decoded.recycle()
             }
 
-            Log.i(
+            Log.d(
                 TAG_EFFECTIVE_FILL,
                 "[HomeWidgetEffectiveSemanticFill] candidateId=$candidateId occupancyBefore=${occupancySol.occupancyBefore} targetOccupancy=0.985 requestedZoom=${occupancySol.requestedZoom} acceptedZoom=${occupancySol.acceptedZoom} occupancyAfter=${occupancySol.occupancyAfter} semanticCrop=false edgeExtensionUsed=true"
             )
