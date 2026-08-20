@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,10 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,8 +75,23 @@ fun PackageScreen(
     onVerify: () -> Unit = {},
     onUninstall: () -> Unit = {},
     resolveMedia: (String) -> String? = { null },
-    onDismissOperation: () -> Unit = {}
+    onDismissOperation: () -> Unit = {},
+    onSetFsrsFilter: (AndroidFsrsFilter) -> Unit = {},
+    onToggleDifficultFilter: () -> Unit = {},
+    onSetLessonFilter: (String?) -> Unit = {},
+    onSetMediaFilter: (BrowserMediaFilter) -> Unit = {},
+    onClearFilters: () -> Unit = {},
+    onToggleDifficult: (String) -> Unit = {},
+    onRefresh: () -> Unit = {}
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, onRefresh) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) onRefresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     Scaffold(
         topBar = {
             PackageTopBar(
@@ -161,7 +181,13 @@ fun PackageScreen(
                         onOpenContent = onOpenContent,
                         onSaveQuickEdit = onSaveQuickEdit,
                         resolveMedia = resolveMedia,
-                        onDismissOperation = onDismissOperation
+                        onDismissOperation = onDismissOperation,
+                        onSetFsrsFilter = onSetFsrsFilter,
+                        onToggleDifficultFilter = onToggleDifficultFilter,
+                        onSetLessonFilter = onSetLessonFilter,
+                        onSetMediaFilter = onSetMediaFilter,
+                        onClearFilters = onClearFilters,
+                        onToggleDifficult = onToggleDifficult
                     )
                 }
             }
@@ -408,14 +434,173 @@ private fun PackageSearchField(
 }
 
 @Composable
+private fun PackageFiltersRow(
+    filterSpec: AndroidPackageFilterSpec,
+    availableLessons: List<String>,
+    onSetFsrsFilter: (AndroidFsrsFilter) -> Unit,
+    onToggleDifficultFilter: () -> Unit,
+    onSetLessonFilter: (String?) -> Unit,
+    onSetMediaFilter: (BrowserMediaFilter) -> Unit,
+    onClearFilters: () -> Unit
+) {
+    var fsrsMenuExpanded by remember { mutableStateOf(false) }
+    var lessonMenuExpanded by remember { mutableStateOf(false) }
+    var mediaMenuExpanded by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 1. FSRS Filter Dropdown
+        Box {
+            FilterChip(
+                selected = filterSpec.fsrsFilter != AndroidFsrsFilter.ALL,
+                onClick = { fsrsMenuExpanded = true },
+                label = { Text("FSRS: ${filterSpec.fsrsFilter.label}") },
+                trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+                modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
+                    contentDescription = "FSRS filter, ${filterSpec.fsrsFilter.label}"
+                }
+            )
+            DropdownMenu(
+                expanded = fsrsMenuExpanded,
+                onDismissRequest = { fsrsMenuExpanded = false }
+            ) {
+                AndroidFsrsFilter.entries.forEach { filter ->
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (filter == filterSpec.fsrsFilter) {
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(8.dp))
+                                }
+                                Text(filter.label)
+                            }
+                        },
+                        onClick = {
+                            fsrsMenuExpanded = false
+                            onSetFsrsFilter(filter)
+                        }
+                    )
+                }
+            }
+        }
+
+        // 2. Difficult Filter Chip
+        FilterChip(
+            selected = filterSpec.difficultOnly,
+            onClick = onToggleDifficultFilter,
+            label = { Text("★ Difficult") },
+            leadingIcon = if (filterSpec.difficultOnly) {
+                { Icon(Icons.Filled.Star, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.tertiary) }
+            } else null,
+            modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
+                contentDescription = "Marked difficult, ${if (filterSpec.difficultOnly) "enabled" else "disabled"}"
+            }
+        )
+
+        // 3. Lesson Filter Dropdown (if multiple lessons available)
+        if (availableLessons.size > 1) {
+            Box {
+                FilterChip(
+                    selected = filterSpec.selectedLesson != null,
+                    onClick = { lessonMenuExpanded = true },
+                    label = { Text(filterSpec.selectedLesson?.let { "Lesson: $it" } ?: "All lessons") },
+                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
+                        contentDescription = "Lesson filter, ${filterSpec.selectedLesson ?: "All lessons"}"
+                    }
+                )
+                DropdownMenu(
+                    expanded = lessonMenuExpanded,
+                    onDismissRequest = { lessonMenuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (filterSpec.selectedLesson == null) {
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(8.dp))
+                                }
+                                Text("All lessons")
+                            }
+                        },
+                        onClick = {
+                            lessonMenuExpanded = false
+                            onSetLessonFilter(null)
+                        }
+                    )
+                    availableLessons.forEach { lesson ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (filterSpec.selectedLesson == lesson) {
+                                        Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(Modifier.width(8.dp))
+                                    }
+                                    Text(lesson)
+                                }
+                            },
+                            onClick = {
+                                lessonMenuExpanded = false
+                                onSetLessonFilter(lesson)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        Box {
+            FilterChip(
+                selected = filterSpec.mediaFilter != BrowserMediaFilter.ALL,
+                onClick = { mediaMenuExpanded = true },
+                label = { Text(filterSpec.mediaFilter.label) },
+                trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+                modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
+                    contentDescription = "Media filter, ${filterSpec.mediaFilter.label}"
+                }
+            )
+            DropdownMenu(expanded = mediaMenuExpanded, onDismissRequest = { mediaMenuExpanded = false }) {
+                BrowserMediaFilter.entries.forEach { filter ->
+                    DropdownMenuItem(
+                        text = { Text(filter.label) },
+                        onClick = {
+                            mediaMenuExpanded = false
+                            onSetMediaFilter(filter)
+                        }
+                    )
+                }
+            }
+        }
+
+        // 4. Clear Filters Action (if any filter is active)
+        if (filterSpec.isFiltered) {
+            AssistChip(
+                onClick = onClearFilters,
+                label = { Text("Clear filters") },
+                leadingIcon = { Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp)) },
+                modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
+                    contentDescription = "Clear all filters"
+                }
+            )
+        }
+    }
+}
+
+@Composable
 private fun PackageContentRow(
     row: AndroidPackageContentRow,
     resolveMedia: (String) -> String?,
     onQuickEdit: () -> Unit,
     onPlayAudio: (String) -> Unit,
+    onToggleDifficult: () -> Unit,
     onClick: () -> Unit
 ) {
-    Surface(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
@@ -429,68 +614,80 @@ private fun PackageContentRow(
                     if (row.answer.isNotBlank()) { append(", "); append(row.answer) }
                     if (row.hasImage) append(", has image")
                     if (row.hasAudio) append(", has audio")
+                    append(", status ${row.fsrsStatus.label}")
+                    if (row.isDifficult) append(", marked difficult")
                     append(". Chạm để nghe. Nhấn giữ để sửa.")
                 }
                 customActions = listOf(CustomAccessibilityAction("Sửa từ") { onQuickEdit(); true })
                 role = Role.Button
-            },
-        color = MaterialTheme.colorScheme.surface
+            }
+            .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
-            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small),
-            verticalAlignment = Alignment.Top
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Row(
+            Text(
+                row.question,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            normalizedIntroductionPronunciation(row.partOfSpeech, row.pronunciation)?.let { pronunciation ->
+                Text(
+                    pronunciation,
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
-                ) {
-                    Text(
-                        row.question,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    partOfSpeechPresentation(row.partOfSpeech)?.let { presentation ->
-                        PartOfSpeechBadge(presentation, compact = true)
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    softWrap = true,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (row.answer.isNotBlank()) {
+                Text(
+                    row.answer,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+        Column(
+            modifier = Modifier.width(68.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            partOfSpeechPresentation(row.partOfSpeech)?.let { presentation ->
+                PartOfSpeechBadge(presentation, compact = true)
+                Spacer(Modifier.height(6.dp))
+            }
+            IconButton(
+                onClick = onToggleDifficult,
+                modifier = Modifier
+                    .size(48.dp)
+                    .semantics {
+                        contentDescription = if (row.isDifficult) "Unmark as difficult" else "Mark as difficult"
                     }
-                }
-                normalizedIntroductionPronunciation(row.partOfSpeech, row.pronunciation)?.let { pronunciation ->
-                    Text(
-                        pronunciation,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        softWrap = true,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                if (row.answer.isNotBlank()) {
-                    Text(
-                        row.answer,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-            Column(
-                modifier = Modifier.width(76.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
             ) {
-                row.imageRef?.let { PackageThumbnail(it, resolveMedia) }
+                Icon(
+                    imageVector = if (row.isDifficult) Icons.Filled.Star else Icons.Filled.StarBorder,
+                    contentDescription = null,
+                    tint = if (row.isDifficult) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+        }
+        Box(
+            modifier = Modifier.width(96.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            row.imageRef?.let { PackageThumbnail(it, resolveMedia) }
         }
     }
     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
@@ -509,7 +706,13 @@ private fun PackageContentBody(
     onOpenContent: (String) -> Unit,
     resolveMedia: (String) -> String?,
     onSaveQuickEdit: (AndroidPackageQuickEditDraft, (Result<Unit>) -> Unit) -> Unit,
-    onDismissOperation: () -> Unit
+    onDismissOperation: () -> Unit,
+    onSetFsrsFilter: (AndroidFsrsFilter) -> Unit,
+    onToggleDifficultFilter: () -> Unit,
+    onSetLessonFilter: (String?) -> Unit,
+    onSetMediaFilter: (BrowserMediaFilter) -> Unit,
+    onClearFilters: () -> Unit,
+    onToggleDifficult: (String) -> Unit
 ) {
     val listState = rememberLazyListState()
     val audioController = remember { AndroidAudioController() }
@@ -559,6 +762,15 @@ private fun PackageContentBody(
                     verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
                 ) {
                     PackageSearchField(state.query, onSearch, onClearSearch)
+                    PackageFiltersRow(
+                        filterSpec = state.filterSpec,
+                        availableLessons = state.availableLessons,
+                        onSetFsrsFilter = onSetFsrsFilter,
+                        onToggleDifficultFilter = onToggleDifficultFilter,
+                        onSetLessonFilter = onSetLessonFilter,
+                        onSetMediaFilter = onSetMediaFilter,
+                        onClearFilters = onClearFilters
+                    )
                     Text(
                         "${state.visibleRows.size} of ${state.allRows.size} items",
                         style = MaterialTheme.typography.labelLarge,
@@ -569,13 +781,40 @@ private fun PackageContentBody(
             }
         }
 
-        // Empty search result
-        if (state.visibleRows.isEmpty() && state.query.isNotEmpty()) {
+        // Empty search/filter result
+        if (state.visibleRows.isEmpty()) {
             item("no-results") {
-                LearningEngineEmptyState(
-                    title = "No results",
-                    detail = "Try a different search term."
-                )
+                if (state.filterSpec.isFiltered) {
+                    val detailMsg = buildString {
+                        if (state.filterSpec.difficultOnly && state.filterSpec.fsrsFilter == AndroidFsrsFilter.DUE) {
+                            append("No difficult words are due")
+                        } else if (state.filterSpec.difficultOnly) {
+                            append("No difficult words found")
+                        } else if (state.filterSpec.fsrsFilter != AndroidFsrsFilter.ALL) {
+                            append("No words in ${state.filterSpec.fsrsFilter.label} status")
+                        } else {
+                            append("No words match the selected filters")
+                        }
+                        if (state.filterSpec.selectedLesson != null) {
+                            append(" in ${state.filterSpec.selectedLesson}")
+                        }
+                        if (state.filterSpec.query.isNotBlank()) {
+                            append(" matching \"${state.filterSpec.query}\"")
+                        }
+                        append(".")
+                    }
+                    LearningEngineEmptyState(
+                        title = "No matching words",
+                        detail = detailMsg,
+                        actionLabel = "Clear filters",
+                        onAction = onClearFilters
+                    )
+                } else {
+                    LearningEngineEmptyState(
+                        title = "No content",
+                        detail = "This package has no content yet."
+                    )
+                }
             }
         }
 
@@ -589,6 +828,7 @@ private fun PackageContentBody(
                 resolveMedia = resolveMedia,
                 onQuickEdit = { editing = row },
                 onPlayAudio = playWordAudio,
+                onToggleDifficult = { onToggleDifficult(row.contentId) },
                 onClick = { onOpenContent(row.contentId) }
             )
         }
@@ -605,7 +845,7 @@ private fun PackageContentBody(
 
 @Composable
 private fun PackageThumbnail(reference: String, resolveMedia: (String) -> String?) {
-    val targetPixels = with(LocalDensity.current) { 76.dp.roundToPx() }
+    val targetPixels = with(LocalDensity.current) { 96.dp.roundToPx() }
     val bitmap by produceState<android.graphics.Bitmap?>(null, reference, targetPixels) {
         value = withContext(Dispatchers.IO) {
             val path = resolveMedia(reference) ?: return@withContext null
@@ -620,7 +860,7 @@ private fun PackageThumbnail(reference: String, resolveMedia: (String) -> String
         }
     }
     bitmap?.let {
-        Surface(Modifier.size(76.dp), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant) {
+        Surface(Modifier.size(96.dp), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant) {
             Image(
                 it.asImageBitmap(),
                 "Content image",

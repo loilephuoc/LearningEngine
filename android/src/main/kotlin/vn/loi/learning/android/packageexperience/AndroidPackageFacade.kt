@@ -10,9 +10,18 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import java.util.UUID
 import vn.loi.learning.application.library.command.LibraryCommandResult
 import vn.loi.learning.application.study.DailyStudyBudgetLimits
+import vn.loi.learning.application.port.MemoryStateQuery
+import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
 import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.learning.model.LearningMode
 import java.time.ZoneId
 import vn.loi.learning.android.platform.AndroidStartupTrace
+
+import vn.loi.learning.domain.study.memory.model.LearningStage
+import vn.loi.learning.domain.study.memory.model.MemoryState
+import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.android.reminder.AndroidVocabularyReminderDifficultMarkers
+import java.time.Instant
 
 /**
  * Android presentation facade for Package Experience.
@@ -22,6 +31,7 @@ import vn.loi.learning.android.platform.AndroidStartupTrace
 class AndroidPackageFacade(
     private val context: LearningApplicationContext,
     private val dailyLimits: () -> DailyStudyBudgetLimits = { DailyStudyBudgetLimits() },
+    private val difficultMarkers: AndroidVocabularyReminderDifficultMarkers? = null,
     private val now: () -> Long = System::currentTimeMillis,
     private val zoneId: () -> ZoneId = ZoneId::systemDefault
 ) {
@@ -44,7 +54,10 @@ class AndroidPackageFacade(
      * - CTA: from active session query and scope.
      * Returns [AndroidPackageContentState] — never throws.
      */
-    fun openPackage(id: InstalledPackageId, query: String = ""): AndroidPackageContentState = AndroidStartupTrace.measured("package_detail_total") { runCatching {
+    fun openPackage(
+        id: InstalledPackageId,
+        filterSpec: AndroidPackageFilterSpec = AndroidPackageFilterSpec()
+    ): AndroidPackageContentState = AndroidStartupTrace.measured("package_detail_total") { runCatching {
         val libraryId = requireNotNull(context.defaultLibraryId) { "Library is unavailable." }
         val tree = AndroidStartupTrace.measured("package_detail_navigation_tree") {
             requireNotNull(context.libraryQuery).getNavigationTree(libraryId)
@@ -78,15 +91,130 @@ class AndroidPackageFacade(
             return AndroidPackageContentState.Empty(header = header, cta = cta)
         }
 
-        val visibleRows = applyQuery(allItems, query)
+        val memoryRepository = context.memoryStateRepository
+        val memoryStates = ((memoryRepository as? MemoryStateQuery)?.findAll(learnerId)
+            ?: memoryRepository?.findAll().orEmpty().filter { it.learnerId == learnerId })
+            .associateBy { it.learningItemId }
+        val markedIds = difficultMarkers?.markedContentIds() ?: emptySet()
+        val nowMillis = now()
+        val currentZone = zoneId()
+        val startOfToday = Instant.ofEpochMilli(nowMillis).atZone(currentZone).toLocalDate().atStartOfDay(currentZone).toInstant().toEpochMilli()
+
+        val allRows = allItems.map { item ->
+            // Full Review already defines MEANING_RECOGNITION as Android's authoritative mode.
+            // Never fall back to an unrelated mode or infer mode from an identifier.
+            val primaryItemId = item.learningItemIds.zip(item.learningModes)
+                .firstOrNull { (_, mode) -> mode == LearningMode.MEANING_RECOGNITION }
+                ?.first
+            val memState = primaryItemId?.let { memoryStates[it] }
+            val fsrsStatus = resolveFsrsStatus(memState, nowMillis, startOfToday)
+            val isDue = memState?.let { state ->
+                state.reviewCount > 0 && state.stage != LearningStage.SUSPENDED && state.dueAt.epochMillis <= nowMillis
+            } == true
+            val isOverdue = isDue && requireNotNull(memState).dueAt.epochMillis < startOfToday
+            val isDifficult = item.contentId in markedIds
+            item.toRow(
+                fsrsStatus = fsrsStatus,
+                fsrsStageFilter = resolveFsrsStageFilter(memState),
+                isDue = isDue,
+                isOverdue = isOverdue,
+                isDifficult = isDifficult
+            )
+        }
+
+        val availableLessons = allRows.map { it.lesson }.distinct().filter { it.isNotBlank() }
+        val visibleRows = applyFilters(allRows, filterSpec)
+
         AndroidPackageContentState.Content(
             header = header,
             cta = cta,
-            allRows = allItems.map { it.toRow() },
+            allRows = allRows,
             visibleRows = visibleRows,
-            query = query
+            query = filterSpec.query,
+            filterSpec = filterSpec,
+            availableLessons = availableLessons
         )
     }.getOrElse { AndroidPackageContentState.Failure(it.message ?: "Package could not be opened.") } }
+
+    /**
+     * Backward-compatible openPackage with query string.
+     */
+    fun openPackage(id: InstalledPackageId, query: String): AndroidPackageContentState =
+        openPackage(id, AndroidPackageFilterSpec(query = query))
+
+    fun applyFilters(
+        allRows: List<AndroidPackageContentRow>,
+        spec: AndroidPackageFilterSpec
+    ): List<AndroidPackageContentRow> {
+        val queryNormalized = if (spec.query.isNotBlank()) normalizeQuery(spec.query) else ""
+        return allRows.filter { row ->
+            // 1. Search Query
+            if (queryNormalized.isNotEmpty() && !row.searchableText.contains(queryNormalized)) {
+                return@filter false
+            }
+            // 2. Lesson filter
+            if (spec.selectedLesson != null && row.lesson != spec.selectedLesson) {
+                return@filter false
+            }
+            // 3. Difficult filter
+            if (spec.difficultOnly && !row.isDifficult) {
+                return@filter false
+            }
+            // 4. Existing browser media semantics
+            val mediaMatches = when (spec.mediaFilter) {
+                BrowserMediaFilter.ALL -> true
+                BrowserMediaFilter.HAS_IMAGE -> row.hasImage
+                BrowserMediaFilter.MISSING_IMAGE -> !row.hasImage
+                BrowserMediaFilter.HAS_AUDIO -> row.hasAudio
+                BrowserMediaFilter.MISSING_AUDIO -> !row.hasAudio
+            }
+            if (!mediaMatches) return@filter false
+            // 5. FSRS Filter
+            when (spec.fsrsFilter) {
+                AndroidFsrsFilter.ALL -> true
+                AndroidFsrsFilter.NEW -> row.fsrsStageFilter == AndroidFsrsFilter.NEW
+                AndroidFsrsFilter.LEARNING -> row.fsrsStageFilter == AndroidFsrsFilter.LEARNING
+                AndroidFsrsFilter.REVIEW -> row.fsrsStageFilter == AndroidFsrsFilter.REVIEW
+                AndroidFsrsFilter.DUE -> row.isDue
+                AndroidFsrsFilter.OVERDUE -> row.isOverdue
+            }
+        }
+    }
+
+    fun toggleDifficult(contentId: ContentId): Boolean {
+        return difficultMarkers?.toggle(contentId) ?: false
+    }
+
+    fun resolveFsrsStatus(
+        memoryState: MemoryState?,
+        nowMillis: Long = now(),
+        startOfToday: Long = Instant.ofEpochMilli(nowMillis).atZone(zoneId()).toLocalDate().atStartOfDay(zoneId()).toInstant().toEpochMilli()
+    ): AndroidContentFsrsStatus {
+        if (memoryState == null) return AndroidContentFsrsStatus.NEW
+        val isDue = memoryState.reviewCount > 0 && memoryState.stage != LearningStage.SUSPENDED &&
+            memoryState.dueAt.epochMillis <= nowMillis
+        if (isDue) {
+            // OVERDUE means due before the start of the current local calendar day.
+            return if (memoryState.dueAt.epochMillis < startOfToday) {
+                AndroidContentFsrsStatus.OVERDUE
+            } else {
+                AndroidContentFsrsStatus.DUE
+            }
+        }
+        return when (memoryState.stage) {
+            LearningStage.NEW -> AndroidContentFsrsStatus.NEW
+            LearningStage.LEARNING, LearningStage.RELEARNING -> AndroidContentFsrsStatus.LEARNING
+            LearningStage.REVIEW, LearningStage.MASTERED -> AndroidContentFsrsStatus.REVIEW
+            LearningStage.SUSPENDED -> AndroidContentFsrsStatus.REVIEW
+        }
+    }
+
+    private fun resolveFsrsStageFilter(memoryState: MemoryState?): AndroidFsrsFilter = when (memoryState?.stage) {
+        null, LearningStage.NEW -> AndroidFsrsFilter.NEW
+        LearningStage.LEARNING, LearningStage.RELEARNING -> AndroidFsrsFilter.LEARNING
+        LearningStage.REVIEW, LearningStage.MASTERED -> AndroidFsrsFilter.REVIEW
+        LearningStage.SUSPENDED -> AndroidFsrsFilter.ALL
+    }
 
     /**
      * Apply a package-local search query on pre-loaded items.
@@ -94,12 +222,9 @@ class AndroidPackageFacade(
      * No repository call — operates on cached allRows.
      */
     fun applySearch(current: AndroidPackageContentState.Content, query: String): AndroidPackageContentState.Content {
-        val allRows = current.allRows
-        val visible = if (query.isBlank()) allRows else {
-            val normalized = normalizeQuery(query)
-            allRows.filter { row -> row.searchableText.contains(normalized) }
-        }
-        return current.copy(visibleRows = visible, query = query)
+        val newSpec = current.filterSpec.copy(query = query)
+        val visible = applyFilters(current.allRows, newSpec)
+        return current.copy(visibleRows = visible, query = query, filterSpec = newSpec)
     }
 
     /**

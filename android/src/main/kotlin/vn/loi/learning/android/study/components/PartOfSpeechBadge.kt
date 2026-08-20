@@ -1,6 +1,7 @@
 package vn.loi.learning.android.study.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,7 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import vn.loi.learning.android.study.PartOfSpeechPresentation
 import vn.loi.learning.android.ui.StudyPartOfSpeechColors
 
@@ -44,7 +47,19 @@ internal fun PartOfSpeechBadge(
             presentation.canonicalLabel,
             style = textStyle,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier.padding(paddingValues),
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            autoSize = if (compact) {
+                TextAutoSize.StepBased(
+                    minFontSize = 9.sp,
+                    maxFontSize = textStyle.fontSize,
+                    stepSize = 0.5.sp
+                )
+            } else {
+                null
+            }
         )
     }
 }

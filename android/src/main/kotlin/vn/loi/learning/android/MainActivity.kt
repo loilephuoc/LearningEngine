@@ -528,7 +528,9 @@ class MainActivity : ComponentActivity() {
                         val packageId = backEntry.arguments?.getString("packageId") ?: return@composable
                         val packageViewModel = viewModel<AndroidPackageViewModel>(backEntry) {
                             AndroidPackageViewModel(AndroidPackageFacade(
-                                graph.engine, app.studyPreferencesController::current
+                                context = graph.engine,
+                                dailyLimits = app.studyPreferencesController::current,
+                                difficultMarkers = app.reminderDifficultStore
                             ), createSavedStateHandle())
                         }
                         LaunchedEffect(packageId) { packageViewModel.open(packageId) }
@@ -565,7 +567,14 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             resolveMedia = { reference -> graph.media.resolve(reference)?.toString() },
-                            onDismissOperation = packageViewModel::dismissOperation
+                            onDismissOperation = packageViewModel::dismissOperation,
+                            onSetFsrsFilter = packageViewModel::setFsrsFilter,
+                            onToggleDifficultFilter = packageViewModel::toggleDifficultFilter,
+                            onSetLessonFilter = packageViewModel::setLessonFilter,
+                            onSetMediaFilter = packageViewModel::setMediaFilter,
+                            onClearFilters = packageViewModel::clearFilters,
+                            onToggleDifficult = packageViewModel::toggleDifficult,
+                            onRefresh = packageViewModel::refresh
                         )
                     }
                     composable("study", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {

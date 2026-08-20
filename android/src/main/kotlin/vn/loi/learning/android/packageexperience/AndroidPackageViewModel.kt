@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
 
 /**
  * ViewModel for Package Experience.
@@ -50,13 +51,17 @@ class AndroidPackageViewModel(
     /** Open a package by canonical ID. Cancels any pending search. */
     fun open(packageId: String) {
         saved[KEY_PACKAGE] = packageId
+        val retainedSpec = (mutable.value as? AndroidPackageContentState.Content)
+            ?.takeIf { it.header.packageId == packageId }
+            ?.filterSpec
+            ?: AndroidPackageFilterSpec(query = saved[KEY_QUERY] ?: "")
         val generation = ++operationGeneration
         searchJob?.cancel()
         studyJob?.cancel()
         viewModelScope.launch {
             mutable.value = AndroidPackageContentState.Loading
             val result = withContext(workerDispatcher) {
-                facade.openPackage(InstalledPackageId(packageId), saved[KEY_QUERY] ?: "")
+                facade.openPackage(InstalledPackageId(packageId), retainedSpec)
             }
             if (generation == operationGeneration) mutable.value = result
         }
@@ -125,6 +130,63 @@ class AndroidPackageViewModel(
         viewModelScope.launch {
             val updated = withContext(workerDispatcher) {
                 facade.applySearch(current, "")
+            }
+            if (generation == operationGeneration) mutable.value = updated
+        }
+    }
+
+    fun setFsrsFilter(filter: AndroidFsrsFilter) {
+        val current = mutable.value as? AndroidPackageContentState.Content ?: return
+        if (current.filterSpec.fsrsFilter == filter) return
+        refreshWith(current.filterSpec.copy(fsrsFilter = filter))
+    }
+
+    fun toggleDifficultFilter() {
+        val current = mutable.value as? AndroidPackageContentState.Content ?: return
+        refreshWith(current.filterSpec.copy(difficultOnly = !current.filterSpec.difficultOnly))
+    }
+
+    fun setLessonFilter(lesson: String?) {
+        val current = mutable.value as? AndroidPackageContentState.Content ?: return
+        if (current.filterSpec.selectedLesson == lesson) return
+        refreshWith(current.filterSpec.copy(selectedLesson = lesson))
+    }
+
+    fun setMediaFilter(filter: BrowserMediaFilter) {
+        val current = mutable.value as? AndroidPackageContentState.Content ?: return
+        if (current.filterSpec.mediaFilter == filter) return
+        refreshWith(current.filterSpec.copy(mediaFilter = filter))
+    }
+
+    fun clearFilters() {
+        val current = mutable.value as? AndroidPackageContentState.Content ?: return
+        saved[KEY_QUERY] = ""
+        refreshWith(AndroidPackageFilterSpec())
+    }
+
+    fun toggleDifficult(contentId: String) {
+        val current = mutable.value as? AndroidPackageContentState.Content ?: return
+        val isNowDifficult = facade.toggleDifficult(vn.loi.learning.domain.content.model.ContentId(contentId))
+        val updatedAllRows = current.allRows.map { row ->
+            if (row.contentId == contentId) row.copy(isDifficult = isNowDifficult) else row
+        }
+        val visible = facade.applyFilters(updatedAllRows, current.filterSpec)
+        mutable.value = current.copy(allRows = updatedAllRows, visibleRows = visible)
+    }
+
+    /** Refresh time-sensitive FSRS projection while retaining this navigation session's filters. */
+    fun refresh() {
+        val current = mutable.value as? AndroidPackageContentState.Content ?: return
+        refreshWith(current.filterSpec)
+    }
+
+    private fun refreshWith(spec: AndroidPackageFilterSpec) {
+        val current = mutable.value as? AndroidPackageContentState.Content ?: return
+        val generation = ++operationGeneration
+        searchJob?.cancel()
+        viewModelScope.launch {
+            val updated = withContext(workerDispatcher) {
+                facade.openPackage(InstalledPackageId(current.header.packageId), spec)
             }
             if (generation == operationGeneration) mutable.value = updated
         }
