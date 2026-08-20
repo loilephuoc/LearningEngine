@@ -300,6 +300,7 @@ class AndroidVocabularyReminderPreferencesController(
     fun currentHomeWidget(): AndroidHomeVocabularyWidgetSettings = mutableHomeWidgetSettings.value
 
     fun updateSettings(newSettings: AndroidVocabularyReminderSettings): Boolean {
+        if (mutableSettings.value == newSettings) return true
         val saved = store.save(newSettings)
         if (saved) {
             mutableSettings.value = newSettings
@@ -308,6 +309,7 @@ class AndroidVocabularyReminderPreferencesController(
     }
 
     fun updateLockScreenSettings(newSettings: AndroidLockScreenVocabularySettings): Boolean {
+        if (mutableLockScreenSettings.value == newSettings) return true
         val saved = store.saveLockScreen(newSettings)
         if (saved) {
             mutableLockScreenSettings.value = newSettings
@@ -316,6 +318,7 @@ class AndroidVocabularyReminderPreferencesController(
     }
 
     fun updateHomeWidgetSettings(newSettings: AndroidHomeVocabularyWidgetSettings): Boolean {
+        if (mutableHomeWidgetSettings.value == newSettings) return true
         val saved = store.saveHomeWidget(newSettings)
         if (saved) {
             mutableHomeWidgetSettings.value = newSettings

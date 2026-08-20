@@ -76,7 +76,17 @@ class AndroidHomeVocabularyWidgetCoordinator(
             homeSurfaceState == HomeSurfaceState.VISIBLE
     }
 
-    fun resolveDefaultLauncherPackage(): String? {
+    @Volatile
+    private var cachedDefaultLauncherPackage: String? = null
+    @Volatile
+    private var lastLauncherResolveTimeMs: Long = 0L
+
+    fun resolveDefaultLauncherPackage(forceRefresh: Boolean = false): String? {
+        val now = System.currentTimeMillis()
+        val cached = cachedDefaultLauncherPackage
+        if (!forceRefresh && cached != null && (now - lastLauncherResolveTimeMs < LAUNCHER_CACHE_TTL_MS)) {
+            return cached
+        }
         val intent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
         }
@@ -89,7 +99,10 @@ class AndroidHomeVocabularyWidgetCoordinator(
             @Suppress("DEPRECATION")
             context.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
         }
-        return resolveInfo?.activityInfo?.packageName
+        val pkg = resolveInfo?.activityInfo?.packageName
+        cachedDefaultLauncherPackage = pkg
+        lastLauncherResolveTimeMs = now
+        return pkg
     }
 
     fun setHomeSurfaceState(state: HomeSurfaceState, reason: String) {
@@ -235,12 +248,18 @@ class AndroidHomeVocabularyWidgetCoordinator(
             }
         }
 
+        var lastObservedSettings: AndroidHomeVocabularyWidgetSettings? = preferencesController.currentHomeWidget()
+
         // Observe settings changes
         coordinatorScope.launch {
-            preferencesController.homeWidgetSettings.collectLatest { _ ->
-                synchronized(stateLock) {
-                    reconcileAutoNextTimer("SETTINGS_UPDATED")
-                    reRenderAllWidgets("SETTINGS_UPDATED")
+            preferencesController.homeWidgetSettings.collectLatest { newSettings ->
+                val prev = lastObservedSettings
+                lastObservedSettings = newSettings
+                if (prev == null || prev.hasVisualOrScheduleChanges(newSettings)) {
+                    synchronized(stateLock) {
+                        reconcileAutoNextTimer("SETTINGS_UPDATED")
+                        reRenderAllWidgets("SETTINGS_UPDATED")
+                    }
                 }
             }
         }
@@ -797,6 +816,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
     }
 
     companion object {
+        private const val LAUNCHER_CACHE_TTL_MS = 60_000L
         private const val TAG_WIDGET = "HomeWidget"
         private const val TAG_SCHEDULER = "HomeWidgetScheduler"
         private const val TAG_INIT = "HomeWidgetInit"

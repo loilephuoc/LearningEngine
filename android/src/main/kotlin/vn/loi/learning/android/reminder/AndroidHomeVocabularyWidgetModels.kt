@@ -22,6 +22,19 @@ data class AndroidHomeVocabularyWidgetSettings(
     val clampedIntervalMillis: Long
         get() = intervalMillis.coerceIn(MIN_INTERVAL_MILLIS, MAX_INTERVAL_MILLIS)
 
+    fun hasVisualOrScheduleChanges(other: AndroidHomeVocabularyWidgetSettings): Boolean {
+        return autoNextEnabled != other.autoNextEnabled ||
+            intervalMillis != other.intervalMillis ||
+            selectedPackageId != other.selectedPackageId ||
+            selectionMode != other.selectionMode ||
+            wordSize != other.wordSize ||
+            vietnameseSize != other.vietnameseSize ||
+            imageSize != other.imageSize ||
+            cardBackgroundOpacity != other.cardBackgroundOpacity ||
+            updateOnlyScreenOn != other.updateOnlyScreenOn ||
+            autoAudioEnabled != other.autoAudioEnabled
+    }
+
     companion object {
         const val MIN_INTERVAL_MILLIS = 2_000L // 2 seconds
         const val MAX_INTERVAL_MILLIS = 86_400_000L // 24 hours (1440 minutes)

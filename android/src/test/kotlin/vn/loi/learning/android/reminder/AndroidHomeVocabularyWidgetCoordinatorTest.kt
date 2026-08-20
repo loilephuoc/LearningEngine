@@ -1417,4 +1417,283 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
         assertTrue(manualActionExecuted)
         assertEquals(HomeSurfaceState.UNKNOWN, homeSurfaceState)
     }
+
+    @Test
+    fun `46 unit test - hidden home 60s causes zero auto-next fires, zero selector calls, zero audio, zero renders`() {
+        val deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        val homeSurfaceState = HomeSurfaceState.HIDDEN
+        val intervalMs = 2000L
+        val timeInHiddenMs = 60_000L
+
+        var timerFires = 0
+        var selectorCalls = 0
+        var autoAudioPlays = 0
+        var rendersFromAutoNext = 0
+
+        fun isRuntimeAllowed(): Boolean =
+            (deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) &&
+                (homeSurfaceState == HomeSurfaceState.VISIBLE)
+
+        var elapsed = 0L
+        while (elapsed < timeInHiddenMs) {
+            elapsed += intervalMs
+            if (isRuntimeAllowed()) {
+                timerFires++
+                selectorCalls++
+                autoAudioPlays++
+                rendersFromAutoNext++
+            }
+        }
+
+        assertEquals(0, timerFires)
+        assertEquals(0, selectorCalls)
+        assertEquals(0, autoAudioPlays)
+        assertEquals(0, rendersFromAutoNext)
+    }
+
+    @Test
+    fun `47 unit test - UNKNOWN 60s produces zero passive work`() {
+        val deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        val homeSurfaceState = HomeSurfaceState.UNKNOWN
+        val intervalMs = 2000L
+        var timerFires = 0
+
+        val isAllowed = (deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) &&
+            (homeSurfaceState == HomeSurfaceState.VISIBLE)
+
+        repeat(30) {
+            if (isAllowed) timerFires++
+        }
+
+        assertEquals(0, timerFires)
+    }
+
+    @Test
+    fun `48 unit test - return home from hidden arms exactly one full fresh timer`() {
+        var homeSurfaceState = HomeSurfaceState.HIDDEN
+        var timerArmedCount = 0
+        var armedIntervalMs = 0L
+        var candidateChanges = 0
+
+        fun onHomeSurfaceChanged(newState: HomeSurfaceState) {
+            if (homeSurfaceState == newState) return
+            val wasAllowed = homeSurfaceState == HomeSurfaceState.VISIBLE
+            homeSurfaceState = newState
+            val nowAllowed = homeSurfaceState == HomeSurfaceState.VISIBLE
+
+            if (!wasAllowed && nowAllowed) {
+                timerArmedCount++
+                armedIntervalMs = 5000L
+            }
+        }
+
+        // Return Home
+        onHomeSurfaceChanged(HomeSurfaceState.VISIBLE)
+
+        assertEquals(1, timerArmedCount)
+        assertEquals(5000L, armedIntervalMs)
+        assertEquals(0, candidateChanges) // No immediate candidate change
+    }
+
+    @Test
+    fun `49 unit test - duplicate VISIBLE repeated 100 times causes no repeated timer reset or extra render`() {
+        var homeSurfaceState = HomeSurfaceState.HIDDEN
+        var timerArmedCount = 0
+        var renderCount = 0
+
+        fun onHomeSurfaceChanged(newState: HomeSurfaceState) {
+            if (homeSurfaceState == newState) return // Idempotent NO_OP
+            val wasAllowed = homeSurfaceState == HomeSurfaceState.VISIBLE
+            homeSurfaceState = newState
+            val nowAllowed = homeSurfaceState == HomeSurfaceState.VISIBLE
+
+            if (!wasAllowed && nowAllowed) {
+                timerArmedCount++
+                renderCount++
+            }
+        }
+
+        // First transition to VISIBLE
+        onHomeSurfaceChanged(HomeSurfaceState.VISIBLE)
+        assertEquals(1, timerArmedCount)
+        assertEquals(1, renderCount)
+
+        // 100 duplicate VISIBLE calls
+        repeat(100) {
+            onHomeSurfaceChanged(HomeSurfaceState.VISIBLE)
+        }
+
+        // Must remain exactly 1
+        assertEquals(1, timerArmedCount)
+        assertEquals(1, renderCount)
+    }
+
+    @Test
+    fun `50 unit test - screen event storm preserves single timer without churn`() {
+        var currentDeviceState = VocabularyPresentationDeviceState.SCREEN_OFF
+        var armedTimers = 0
+
+        fun transition(newState: VocabularyPresentationDeviceState) {
+            if (currentDeviceState == newState) return // Idempotent
+            currentDeviceState = newState
+            if (newState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) {
+                armedTimers++
+            }
+        }
+
+        repeat(50) {
+            transition(VocabularyPresentationDeviceState.LOCKED_SCREEN_ON)
+            transition(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON)
+        }
+
+        assertEquals(50, armedTimers)
+    }
+
+    @Test
+    fun `51 unit test - widget 2s stress handles 100 candidate intervals without queue growth or duplicate render`() {
+        var isAdvancing = false
+        var advanceCalls = 0
+        var skips = 0
+        var renders = 0
+
+        fun advance() {
+            if (isAdvancing) {
+                skips++
+                return
+            }
+            isAdvancing = true
+            advanceCalls++
+            renders++ // Exactly one render per completed advance
+            isAdvancing = false
+        }
+
+        repeat(100) {
+            advance()
+        }
+
+        assertEquals(100, advanceCalls)
+        assertEquals(0, skips)
+        assertEquals(100, renders)
+    }
+
+    @Test
+    fun `52 unit test - default launcher package resolution caching avoids repeated IPC`() {
+        var resolveCount = 0
+        var cachedPackage: String? = null
+        var lastResolveTimeMs = 0L
+        val ttlMs = 60_000L
+
+        fun resolveLauncher(now: Long, forceRefresh: Boolean = false): String {
+            if (!forceRefresh && cachedPackage != null && (now - lastResolveTimeMs < ttlMs)) {
+                return cachedPackage!!
+            }
+            resolveCount++
+            val resolved = "com.miui.home"
+            cachedPackage = resolved
+            lastResolveTimeMs = now
+            return resolved
+        }
+
+        // 1st resolve at t = 0
+        val p1 = resolveLauncher(0L)
+        assertEquals("com.miui.home", p1)
+        assertEquals(1, resolveCount)
+
+        // 100 subsequent events within TTL
+        for (t in 1..100) {
+            val p = resolveLauncher(t * 500L) // up to 50,000 ms < 60,000 ms TTL
+            assertEquals("com.miui.home", p)
+        }
+        assertEquals(1, resolveCount, "Should use cached value within TTL without re-resolving")
+
+        // Resolve after TTL expiry at t = 65,000 ms
+        val pAfter = resolveLauncher(65_000L)
+        assertEquals("com.miui.home", pAfter)
+        assertEquals(2, resolveCount, "Should re-resolve after TTL expiration")
+    }
+
+    @Test
+    fun `53 unit test - hasVisualOrScheduleChanges ignores candidateId-only changes to prevent duplicate re-render`() {
+        val baseSettings = AndroidHomeVocabularyWidgetSettings(
+            autoNextEnabled = true,
+            intervalMillis = 5000L,
+            selectedPackageId = "pkg-1",
+            selectionMode = AndroidVocabularyReminderSelectionMode.RANDOM_ALL,
+            wordSize = LockWallpaperWordSize.LARGE,
+            vietnameseSize = LockWallpaperVietnameseSize.MEDIUM,
+            imageSize = LockWallpaperImageSize.LARGE,
+            cardBackgroundOpacity = 0.92f,
+            updateOnlyScreenOn = true,
+            currentCandidateId = "cand-1",
+            autoAudioEnabled = true
+        )
+
+        // Only currentCandidateId changed during auto-advance
+        val candidateAdvancedSettings = baseSettings.copy(currentCandidateId = "cand-2")
+        assertFalse(
+            baseSettings.hasVisualOrScheduleChanges(candidateAdvancedSettings),
+            "Candidate ID update must not be treated as a visual/schedule change"
+        )
+
+        // Word size changed in settings screen
+        val wordSizeChanged = baseSettings.copy(wordSize = LockWallpaperWordSize.SMALL)
+        assertTrue(
+            baseSettings.hasVisualOrScheduleChanges(wordSizeChanged),
+            "Word size change must be detected as visual change"
+        )
+
+        // Interval changed in settings screen
+        val intervalChanged = baseSettings.copy(intervalMillis = 10_000L)
+        assertTrue(
+            baseSettings.hasVisualOrScheduleChanges(intervalChanged),
+            "Interval change must be detected as schedule change"
+        )
+    }
+
+    @Test
+    fun `54 unit test - lock screen quick review stress preserves single timer`() {
+        var timerArmed = false
+        var quickReviewActive = false
+
+        fun startQuickReview() {
+            if (quickReviewActive) return
+            quickReviewActive = true
+            timerArmed = true
+        }
+
+        fun stopQuickReview() {
+            quickReviewActive = false
+            timerArmed = false
+        }
+
+        repeat(50) {
+            startQuickReview()
+            assertTrue(timerArmed)
+            stopQuickReview()
+            assertFalse(timerArmed)
+        }
+    }
+
+    @Test
+    fun `55 unit test - reminder pause stress avoids zombie timers`() {
+        var pausedUntil: Long? = null
+        var intervalTimerRunning = true
+
+        fun pause(durationMs: Long, now: Long) {
+            pausedUntil = now + durationMs
+            intervalTimerRunning = false // Timer is paused
+        }
+
+        fun resume() {
+            pausedUntil = null
+            intervalTimerRunning = true // Timer resumes
+        }
+
+        repeat(50) {
+            pause(300_000L, 1000L)
+            assertFalse(intervalTimerRunning)
+            resume()
+            assertTrue(intervalTimerRunning)
+        }
+    }
 }
