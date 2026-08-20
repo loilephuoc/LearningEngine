@@ -57,8 +57,11 @@ import vn.loi.learning.android.recording.QuickVoicePermissionBridge
 import vn.loi.learning.android.recording.QuickVoiceRecordingsScreen
 import vn.loi.learning.android.reminder.AndroidVocabularyReminderNotificationHelper
 import vn.loi.learning.android.reminder.AndroidVocabularyReminderSelectionMode
+import vn.loi.learning.android.reminder.HomeWidgetSettingsScreen
+import vn.loi.learning.android.reminder.LockScreenSettingsScreen
 import vn.loi.learning.android.reminder.ReminderReviewScreen
 import vn.loi.learning.android.reminder.ReminderSettingsScreen
+import vn.loi.learning.android.reminder.VocabularyRemindersHubScreen
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
@@ -112,6 +115,11 @@ class MainActivity : ComponentActivity() {
         ControllerDiagnosticsHolder.setForeground(true)
         ControllerDiagnosticsHolder.refreshDevices(this)
         vn.loi.learning.android.controller.StudyControllerBridge.onActivityForegroundChanged(true)
+        val app = application as? LearningEngineAndroidApplication
+        app?.homeVocabularyWidgetCoordinator?.setHomeSurfaceState(
+            vn.loi.learning.android.reminder.HomeSurfaceState.HIDDEN,
+            "LEARNING_ENGINE_FOREGROUND"
+        )
     }
 
     override fun onPause() {
@@ -124,6 +132,14 @@ class MainActivity : ComponentActivity() {
         ControllerDiagnosticsHolder.setLifecycleState("STOPPED")
         ControllerDiagnosticsHolder.setForeground(false)
         vn.loi.learning.android.controller.StudyControllerBridge.onActivityForegroundChanged(false)
+        val app = application as? LearningEngineAndroidApplication
+        val accessibilityActive = ControllerDiagnosticsHolder.state.value.isAccessibilityServiceConnected
+        if (!accessibilityActive) {
+            app?.homeVocabularyWidgetCoordinator?.setHomeSurfaceState(
+                vn.loi.learning.android.reminder.HomeSurfaceState.UNKNOWN,
+                "LEARNING_ENGINE_STOPPED_ACCESSIBILITY_DISCONNECTED"
+            )
+        }
     }
 
     override fun onDestroy() {
@@ -434,6 +450,10 @@ class MainActivity : ComponentActivity() {
                     currentRoute == "controller_diagnostics" -> false
                     currentRoute == "controller_settings" -> false
                     currentRoute == "voice_recordings" -> false
+                    currentRoute == "vocabulary_reminders" -> false
+                    currentRoute == "lock_screen_settings" -> false
+                    currentRoute == "unlocked_reminder_settings" -> false
+                    currentRoute == "home_widget_settings" -> false
                     currentRoute == "reminder_settings" -> false
                     currentRoute?.startsWith("reminder_review") == true -> false
                     currentRoute?.startsWith("package/") == true -> false
@@ -605,23 +625,51 @@ class MainActivity : ComponentActivity() {
                             onControllerSettings = { navController.navigate("controller_settings") { launchSingleTop = true } },
                             onControllerDiagnostics = { navController.navigate("controller_diagnostics") { launchSingleTop = true } },
                             onVoiceRecordings = { navController.navigate("voice_recordings") { launchSingleTop = true } },
-                            onReminderSettings = { navController.navigate("reminder_settings") { launchSingleTop = true } },
+                            onVocabularyReminders = { navController.navigate("vocabulary_reminders") { launchSingleTop = true } },
+                            onReminderSettings = { navController.navigate("vocabulary_reminders") { launchSingleTop = true } },
                             onHomeWidgetSettings = { navController.navigate("home_widget_settings") { launchSingleTop = true } }
                         ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
                     }
+                    composable("vocabulary_reminders", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        VocabularyRemindersHubScreen(
+                            controller = app.reminderPreferencesController,
+                            onLockScreenSettings = { navController.navigate("lock_screen_settings") { launchSingleTop = true } },
+                            onUnlockedReminderSettings = { navController.navigate("unlocked_reminder_settings") { launchSingleTop = true } },
+                            onHomeWidgetSettings = { navController.navigate("home_widget_settings") { launchSingleTop = true } },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("lock_screen_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        LockScreenSettingsScreen(
+                            controller = app.reminderPreferencesController,
+                            selector = app.reminderCandidateSelector,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("unlocked_reminder_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        ReminderSettingsScreen(
+                            controller = app.reminderPreferencesController,
+                            runtime = app.reminderRuntime,
+                            selector = app.reminderCandidateSelector,
+                            notificationHelper = app.reminderNotificationHelper,
+                            onLockScreenSettings = { navController.navigate("lock_screen_settings") { launchSingleTop = true } },
+                            onHomeWidgetSettings = { navController.navigate("home_widget_settings") { launchSingleTop = true } },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
                     composable("home_widget_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
-                        vn.loi.learning.android.reminder.HomeWidgetSettingsScreen(
+                        HomeWidgetSettingsScreen(
                             controller = app.reminderPreferencesController,
                             selector = app.reminderCandidateSelector,
                             onBack = { navController.popBackStack() }
                         )
                     }
                     composable("reminder_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
-                        ReminderSettingsScreen(
+                        VocabularyRemindersHubScreen(
                             controller = app.reminderPreferencesController,
-                            runtime = app.reminderRuntime,
-                            selector = app.reminderCandidateSelector,
-                            notificationHelper = app.reminderNotificationHelper,
+                            onLockScreenSettings = { navController.navigate("lock_screen_settings") { launchSingleTop = true } },
+                            onUnlockedReminderSettings = { navController.navigate("unlocked_reminder_settings") { launchSingleTop = true } },
+                            onHomeWidgetSettings = { navController.navigate("home_widget_settings") { launchSingleTop = true } },
                             onBack = { navController.popBackStack() }
                         )
                     }

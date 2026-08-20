@@ -32,12 +32,22 @@ class ControllerAccessibilityDiagnosticService : AccessibilityService() {
         ControllerSystemActionBridge.registerLockScreenHandler {
             performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
         }
+        val app = applicationContext as? vn.loi.learning.android.LearningEngineAndroidApplication
+        app?.homeVocabularyWidgetCoordinator?.setHomeSurfaceState(
+            vn.loi.learning.android.reminder.HomeSurfaceState.UNKNOWN,
+            "ACCESSIBILITY_SERVICE_CONNECTED"
+        )
         Log.d(ControllerInputDiagnostic.TAG, "[ACCESSIBILITY] Service connected and configured with FLAG_REQUEST_FILTER_KEY_EVENTS")
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         ControllerDiagnosticsHolder.setAccessibilityServiceConnected(false)
         ControllerSystemActionBridge.unregisterLockScreenHandler { false }
+        val app = applicationContext as? vn.loi.learning.android.LearningEngineAndroidApplication
+        app?.homeVocabularyWidgetCoordinator?.setHomeSurfaceState(
+            vn.loi.learning.android.reminder.HomeSurfaceState.UNKNOWN,
+            "ACCESSIBILITY_SERVICE_UNBOUND"
+        )
         Log.d(ControllerInputDiagnostic.TAG, "[ACCESSIBILITY] Service unbound")
         return super.onUnbind(intent)
     }
@@ -45,12 +55,36 @@ class ControllerAccessibilityDiagnosticService : AccessibilityService() {
     override fun onDestroy() {
         ControllerDiagnosticsHolder.setAccessibilityServiceConnected(false)
         ControllerSystemActionBridge.unregisterLockScreenHandler { false }
+        val app = applicationContext as? vn.loi.learning.android.LearningEngineAndroidApplication
+        app?.homeVocabularyWidgetCoordinator?.setHomeSurfaceState(
+            vn.loi.learning.android.reminder.HomeSurfaceState.UNKNOWN,
+            "ACCESSIBILITY_SERVICE_DESTROYED"
+        )
         Log.d(ControllerInputDiagnostic.TAG, "[ACCESSIBILITY] Service destroyed")
         super.onDestroy()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Intentionally no-op: We do NOT inspect window contents or UI events.
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val pkg = event.packageName?.toString() ?: return
+            val app = applicationContext as? vn.loi.learning.android.LearningEngineAndroidApplication ?: return
+            val coordinator = app.homeVocabularyWidgetCoordinator
+            val defaultLauncher = coordinator.resolveDefaultLauncherPackage()
+
+            // Filter out transient system overlays (IME keyboards, system UI volume/status bars)
+            val isTransientSystem = pkg == "com.android.systemui" ||
+                pkg.contains("inputmethod") ||
+                pkg.contains("keyboard")
+
+            if (!isTransientSystem && defaultLauncher != null) {
+                val state = if (pkg == defaultLauncher) {
+                    vn.loi.learning.android.reminder.HomeSurfaceState.VISIBLE
+                } else {
+                    vn.loi.learning.android.reminder.HomeSurfaceState.HIDDEN
+                }
+                coordinator.setHomeSurfaceState(state, "ACCESSIBILITY_WINDOW_STATE: $pkg")
+            }
+        }
     }
 
     override fun onInterrupt() {

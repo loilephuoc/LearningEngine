@@ -385,6 +385,7 @@ fun SettingsScreen(
     onControllerSettings: () -> Unit = {},
     onControllerDiagnostics: () -> Unit = {},
     onVoiceRecordings: () -> Unit = {},
+    onVocabularyReminders: () -> Unit = {},
     onReminderSettings: () -> Unit = {},
     onHomeWidgetSettings: () -> Unit = {},
     onAction: (AndroidOperationKind) -> Unit
@@ -411,18 +412,12 @@ fun SettingsScreen(
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-            Text("Notifications & Reminders", style = LearningTextRole.sectionTitle)
-            LearningEngineSettingsRow(
-                Icons.Default.Notifications,
-                "Vocabulary Reminder",
-                "Periodic vocabulary reminders, time windows, and review queue",
-                onReminderSettings
-            )
+            Text("Reminders & Surfaces", style = LearningTextRole.sectionTitle)
             LearningEngineSettingsRow(
                 Icons.Default.Widgets,
-                "Home-Screen Vocabulary Widget",
-                "Configure Home-screen vocabulary card, package, and auto-next",
-                onHomeWidgetSettings
+                "Vocabulary Reminders & Surfaces",
+                "Lock screen, popup reminders, and Home-screen widget",
+                if (onVocabularyReminders != {}) onVocabularyReminders else onReminderSettings
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {

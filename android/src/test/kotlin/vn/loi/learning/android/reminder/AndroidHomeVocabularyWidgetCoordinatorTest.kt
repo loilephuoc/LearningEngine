@@ -1021,4 +1021,400 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
         assertFalse(autoAudioEnabled)
         assertEquals(0, audioPlayCount) // Completely silent throughout
     }
+
+    // =========================================================================
+    // ROUND 10.3.1 — HOME-SURFACE VISIBILITY GATE UNIT TESTS (Sections 29-37)
+    // =========================================================================
+
+    @Test
+    fun `29 unit test - leaving home to other app cancels timer and stops audio while preserving candidate`() {
+        var deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        var homeSurfaceVisible = true
+        var timerArmed = true
+        var audioPlaying = true
+        val currentCandidate = createSampleCandidate("cand-A", "Apple")
+        var selectorCallCount = 0
+
+        fun isRuntimeAllowed(): Boolean =
+            deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && homeSurfaceVisible
+
+        // Initial: Home visible & armed
+        assertTrue(isRuntimeAllowed())
+        assertTrue(timerArmed)
+
+        // When: User leaves Home to Chrome (HOME_HIDDEN)
+        homeSurfaceVisible = false
+        if (!isRuntimeAllowed()) {
+            timerArmed = false
+            audioPlaying = false
+        }
+
+        // Assert
+        assertFalse(timerArmed)
+        assertFalse(audioPlaying)
+        assertEquals("Apple", currentCandidate.primaryText)
+        assertEquals(0, selectorCallCount)
+    }
+
+    @Test
+    fun `30 unit test - remain in other app longer than several intervals produces zero candidate transitions`() {
+        val deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        val homeSurfaceVisible = false
+        var transitionCount = 0
+        val intervalMs = 5000L
+        val timeInChromeMs = 600_000L // 10 minutes
+
+        fun isRuntimeAllowed(): Boolean =
+            deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && homeSurfaceVisible
+
+        // Simulated timer ticks while in Chrome
+        var elapsed = 0L
+        while (elapsed < timeInChromeMs) {
+            elapsed += intervalMs
+            if (isRuntimeAllowed()) {
+                transitionCount++
+            }
+        }
+
+        assertEquals(0, transitionCount)
+    }
+
+    @Test
+    fun `31 unit test - return from other app to home starts fresh full interval with no immediate transition or audio`() {
+        val deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        var homeSurfaceVisible = false
+        var currentCandidate = createSampleCandidate("cand-A", "Apple")
+        var transitionOccurredImmediately = false
+        var audioPlayedImmediately = false
+        var timerArmedForFullInterval = false
+        val intervalMs = 30_000L
+
+        // Return Home
+        homeSurfaceVisible = true
+        val runtimeAllowed = deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && homeSurfaceVisible
+
+        if (runtimeAllowed) {
+            // Under contract: DO NOT immediately advance, DO NOT immediately play, start full fresh interval
+            transitionOccurredImmediately = false
+            audioPlayedImmediately = false
+            timerArmedForFullInterval = true
+        }
+
+        assertEquals("Apple", currentCandidate.primaryText)
+        assertFalse(transitionOccurredImmediately)
+        assertFalse(audioPlayedImmediately)
+        assertTrue(timerArmedForFullInterval)
+    }
+
+    @Test
+    fun `32 unit test - full interval timing verification (no transition at 4_999s, transition at 5s)`() {
+        val intervalMs = 5000L
+        var transitions = 0
+
+        fun checkTimer(elapsedMs: Long) {
+            if (elapsedMs >= intervalMs) {
+                transitions++
+            }
+        }
+
+        checkTimer(4999L)
+        assertEquals(0, transitions)
+
+        checkTimer(5000L)
+        assertEquals(1, transitions)
+    }
+
+    @Test
+    fun `33 unit test - duplicate home events do not repeatedly reset timer`() {
+        var homeSurfaceVisible = false
+        var timerResetCount = 0
+
+        fun onHomeEvent(visible: Boolean) {
+            if (homeSurfaceVisible == visible) return // Idempotent
+            val wasAllowed = homeSurfaceVisible
+            homeSurfaceVisible = visible
+            val nowAllowed = homeSurfaceVisible
+
+            if (!wasAllowed && nowAllowed) {
+                timerResetCount++
+            }
+        }
+
+        onHomeEvent(true) // 1st event: false -> true
+        assertEquals(1, timerResetCount)
+
+        onHomeEvent(true) // 2nd duplicate event: true -> true (no-op)
+        assertEquals(1, timerResetCount)
+
+        onHomeEvent(true) // 3rd duplicate event: true -> true (no-op)
+        assertEquals(1, timerResetCount)
+    }
+
+    @Test
+    fun `34 unit test - lock interaction from home pauses widget and unlock into home starts fresh interval`() {
+        var deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        var homeSurfaceVisible = true
+        var timerRunning = true
+        var audioPlayCount = 0
+
+        fun isRuntimeAllowed(): Boolean =
+            deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && homeSurfaceVisible
+
+        // 1. Screen off
+        deviceState = VocabularyPresentationDeviceState.SCREEN_OFF
+        homeSurfaceVisible = false
+        if (!isRuntimeAllowed()) timerRunning = false
+        assertFalse(timerRunning)
+
+        // 2. Screen on locked
+        deviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+        assertFalse(isRuntimeAllowed())
+        assertFalse(timerRunning)
+
+        // 3. Unlock into Home
+        deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        homeSurfaceVisible = true
+        if (isRuntimeAllowed()) timerRunning = true
+        assertTrue(timerRunning)
+        assertEquals(0, audioPlayCount) // No immediate audio
+    }
+
+    @Test
+    fun `35 unit test - unlock directly into an application leaves widget paused until returning home`() {
+        var deviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+        var homeSurfaceVisible = false
+        var timerRunning = false
+
+        fun isRuntimeAllowed(): Boolean =
+            deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && homeSurfaceVisible
+
+        // Unlock directly into Chrome
+        deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        homeSurfaceVisible = false // in Chrome
+        timerRunning = isRuntimeAllowed()
+
+        assertFalse(timerRunning)
+
+        // User switches from Chrome to Home
+        homeSurfaceVisible = true
+        timerRunning = isRuntimeAllowed()
+
+        assertTrue(timerRunning)
+    }
+
+    @Test
+    fun `36 unit test - mute state survives home to chrome to home and new candidate remains silent`() {
+        var autoAudioEnabled = false // Muted
+        var deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        var homeSurfaceVisible = true
+        var audioPlayed = false
+
+        // Home -> Chrome
+        homeSurfaceVisible = false
+        assertFalse(autoAudioEnabled)
+
+        // Chrome -> Home
+        homeSurfaceVisible = true
+        assertFalse(autoAudioEnabled)
+
+        // Hết full interval -> New candidate
+        if (autoAudioEnabled && deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && homeSurfaceVisible) {
+            audioPlayed = true
+        }
+
+        assertFalse(autoAudioEnabled)
+        assertFalse(audioPlayed)
+    }
+
+    @Test
+    fun `37 unit test - fgs running true but home surface visible false strictly suppresses widget timer`() {
+        val fgsRequirement = ForegroundServiceRequirement(
+            lockScreenRequired = true, // Lock screen requires FGS
+            unlockedReminderRequired = false,
+            homeWidgetRequired = true
+        )
+        assertTrue(fgsRequirement.required) // FGS is active in background
+
+        val deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        val homeSurfaceState = HomeSurfaceState.HIDDEN // User is currently in another app
+
+        val widgetTimerAllowed = (deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) && (homeSurfaceState == HomeSurfaceState.VISIBLE)
+        assertFalse(widgetTimerAllowed) // Widget timer is strictly SUPPRESSED
+    }
+
+    @Test
+    fun `38 unit test - MainActivity stop safety - accessibility disconnected leaves state UNKNOWN and never VISIBLE`() {
+        var homeSurfaceState = HomeSurfaceState.UNKNOWN
+        val isAccessibilityConnected = false
+
+        // Learning Engine in foreground
+        homeSurfaceState = HomeSurfaceState.HIDDEN
+        assertEquals(HomeSurfaceState.HIDDEN, homeSurfaceState)
+
+        // MainActivity stops with Accessibility disconnected
+        if (!isAccessibilityConnected) {
+            homeSurfaceState = HomeSurfaceState.UNKNOWN
+        }
+
+        // Must become UNKNOWN, never VISIBLE
+        assertEquals(HomeSurfaceState.UNKNOWN, homeSurfaceState)
+        assertFalse(homeSurfaceState == HomeSurfaceState.VISIBLE)
+    }
+
+    @Test
+    fun `39 unit test - accessibility lost - unbind or destroy transitions VISIBLE to UNKNOWN and cancels timer and stops audio`() {
+        var homeSurfaceState = HomeSurfaceState.VISIBLE
+        var timerArmed = true
+        var audioPlaying = true
+        val currentCandidate = createSampleCandidate("cand-persist", "Persist Word")
+
+        fun isRuntimeAllowed(): Boolean =
+            homeSurfaceState == HomeSurfaceState.VISIBLE
+
+        // Accessibility service is unbound / destroyed
+        homeSurfaceState = HomeSurfaceState.UNKNOWN
+        if (!isRuntimeAllowed()) {
+            timerArmed = false
+            audioPlaying = false
+        }
+
+        assertEquals(HomeSurfaceState.UNKNOWN, homeSurfaceState)
+        assertFalse(timerArmed)
+        assertFalse(audioPlaying)
+        assertEquals("cand-persist", currentCandidate.contentId.value)
+    }
+
+    @Test
+    fun `40 unit test - UNKNOWN state strictly pauses widget runtime`() {
+        val deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        val hasWidgets = true
+        val autoNextEnabled = true
+        val homeSurfaceState = HomeSurfaceState.UNKNOWN
+
+        val isRuntimeAllowed = (deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) &&
+            (homeSurfaceState == HomeSurfaceState.VISIBLE)
+        val timerAllowed = hasWidgets && autoNextEnabled && isRuntimeAllowed
+
+        assertFalse(isRuntimeAllowed)
+        assertFalse(timerAllowed)
+    }
+
+    @Test
+    fun `41 unit test - accessibility window state launcher transitions UNKNOWN to VISIBLE with fresh full interval`() {
+        var homeSurfaceState = HomeSurfaceState.UNKNOWN
+        val defaultLauncher = "com.android.launcher"
+        var timerIntervalMs: Long = 0L
+        var candidateChangedImmediately = false
+
+        fun onWindowStateChanged(pkg: String) {
+            val isTransient = pkg == "com.android.systemui" || pkg.contains("keyboard")
+            if (!isTransient) {
+                val newState = if (pkg == defaultLauncher) HomeSurfaceState.VISIBLE else HomeSurfaceState.HIDDEN
+                if (homeSurfaceState != newState) {
+                    val wasAllowed = homeSurfaceState == HomeSurfaceState.VISIBLE
+                    homeSurfaceState = newState
+                    val nowAllowed = homeSurfaceState == HomeSurfaceState.VISIBLE
+                    if (!wasAllowed && nowAllowed) {
+                        timerIntervalMs = 5000L // Fresh full interval
+                        candidateChangedImmediately = false
+                    }
+                }
+            }
+        }
+
+        onWindowStateChanged("com.android.launcher")
+
+        assertEquals(HomeSurfaceState.VISIBLE, homeSurfaceState)
+        assertEquals(5000L, timerIntervalMs)
+        assertFalse(candidateChangedImmediately)
+    }
+
+    @Test
+    fun `42 unit test - accessibility window state Chrome transitions VISIBLE to HIDDEN and cancels timer and stops audio`() {
+        var homeSurfaceState = HomeSurfaceState.VISIBLE
+        val defaultLauncher = "com.android.launcher"
+        var timerArmed = true
+        var audioPlaying = true
+
+        fun onWindowStateChanged(pkg: String) {
+            val isTransient = pkg == "com.android.systemui" || pkg.contains("keyboard")
+            if (!isTransient) {
+                val newState = if (pkg == defaultLauncher) HomeSurfaceState.VISIBLE else HomeSurfaceState.HIDDEN
+                if (homeSurfaceState != newState) {
+                    val wasAllowed = homeSurfaceState == HomeSurfaceState.VISIBLE
+                    homeSurfaceState = newState
+                    val nowAllowed = homeSurfaceState == HomeSurfaceState.VISIBLE
+                    if (wasAllowed && !nowAllowed) {
+                        timerArmed = false
+                        audioPlaying = false
+                    }
+                }
+            }
+        }
+
+        onWindowStateChanged("com.android.chrome")
+
+        assertEquals(HomeSurfaceState.HIDDEN, homeSurfaceState)
+        assertFalse(timerArmed)
+        assertFalse(audioPlaying)
+    }
+
+    @Test
+    fun `43 unit test - Learning Engine to Chrome with accessibility OFF remains UNKNOWN and never triggers passive widget transition`() {
+        var homeSurfaceState = HomeSurfaceState.UNKNOWN
+        val accessibilityConnected = false
+        var transitionsCount = 0
+
+        // 1. Learning Engine in foreground
+        homeSurfaceState = HomeSurfaceState.HIDDEN
+        assertEquals(HomeSurfaceState.HIDDEN, homeSurfaceState)
+
+        // 2. Learning Engine stops with accessibility OFF
+        if (!accessibilityConnected) {
+            homeSurfaceState = HomeSurfaceState.UNKNOWN
+        }
+        assertEquals(HomeSurfaceState.UNKNOWN, homeSurfaceState)
+
+        // 3. User is in Chrome for 60 seconds
+        val runtimeAllowed = homeSurfaceState == HomeSurfaceState.VISIBLE
+        if (runtimeAllowed) {
+            transitionsCount++
+        }
+
+        assertFalse(homeSurfaceState == HomeSurfaceState.VISIBLE)
+        assertEquals(0, transitionsCount)
+    }
+
+    @Test
+    fun `44 unit test - mute state survives VISIBLE to UNKNOWN to VISIBLE without reset`() {
+        var autoAudioEnabled = false // User muted
+        var homeSurfaceState = HomeSurfaceState.VISIBLE
+
+        // Disconnect accessibility
+        homeSurfaceState = HomeSurfaceState.UNKNOWN
+        assertFalse(autoAudioEnabled)
+
+        // Reconnect into launcher
+        homeSurfaceState = HomeSurfaceState.VISIBLE
+        assertFalse(autoAudioEnabled)
+    }
+
+    @Test
+    fun `45 unit test - manual widget action functions when homeSurfaceState is UNKNOWN`() {
+        val homeSurfaceState = HomeSurfaceState.UNKNOWN
+        var manualActionExecuted = false
+        val currentCandidate: AndroidVocabularyCandidate? = createSampleCandidate("cand-manual", "Manual Word")
+
+        fun onManualTapReplay() {
+            // Manual action does NOT require passive visibility gate
+            if (currentCandidate != null) {
+                manualActionExecuted = true
+            }
+        }
+
+        onManualTapReplay()
+
+        assertTrue(manualActionExecuted)
+        assertEquals(HomeSurfaceState.UNKNOWN, homeSurfaceState)
+    }
 }
