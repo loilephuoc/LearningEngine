@@ -129,12 +129,7 @@ fun ReminderSettingsScreen(
         val validation = nextDraft.validate(settings.pausedUntil)
         if (validation is AndroidVocabularyReminderDraftValidation.Valid) {
             controller.updateSettings(validation.settings)
-            val shouldRunService = validation.settings.enabled || controller.currentLockScreen().enabled
-            if (shouldRunService) {
-                AndroidLockScreenVocabularyService.start(context)
-            } else {
-                AndroidLockScreenVocabularyService.stop(context)
-            }
+            AndroidLockScreenVocabularyService.reconcile(context, "REMINDER_SETTINGS_CHANGED")
         }
     }
 
@@ -713,14 +708,9 @@ fun ReminderSettingsScreen(
             val applyLockScreenDraft: (AndroidLockScreenVocabularyDraft) -> Unit = { nextDraft ->
                 lockScreenDraft = nextDraft
                 controller.updateLockScreenSettings(nextDraft.toSettings())
-                val shouldRunService = nextDraft.enabled || controller.current().enabled
-                if (shouldRunService) {
-                    AndroidLockScreenVocabularyService.start(context)
-                    if (nextDraft.enabled) {
-                        app?.lockScreenVocabularyCoordinator?.reRenderCurrentPresentation("SETTINGS_UPDATED")
-                    }
-                } else {
-                    AndroidLockScreenVocabularyService.stop(context)
+                AndroidLockScreenVocabularyService.reconcile(context, "LOCK_SCREEN_SETTINGS_CHANGED")
+                if (nextDraft.enabled) {
+                    app?.lockScreenVocabularyCoordinator?.reRenderCurrentPresentation("SETTINGS_UPDATED")
                 }
             }
 

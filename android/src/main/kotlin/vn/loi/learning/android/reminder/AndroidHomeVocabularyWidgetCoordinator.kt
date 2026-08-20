@@ -1,5 +1,6 @@
 package vn.loi.learning.android.reminder
 
+import android.app.KeyguardManager
 import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -51,24 +52,85 @@ class AndroidHomeVocabularyWidgetCoordinator(
 
     private var mediaPlayer: MediaPlayer? = null
 
+    var currentDeviceState: VocabularyPresentationDeviceState = VocabularyPresentationDeviceState.SCREEN_OFF
+        private set
+
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, intent: Intent?) {
             when (intent?.action) {
                 Intent.ACTION_SCREEN_ON -> {
-                    Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] event=SCREEN_ON action=RESUME_TIMER")
-                    reconcileAutoNextTimer("SCREEN_ON")
+                    val isLocked = isKeyguardLocked()
+                    val targetState = if (isLocked) {
+                        VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+                    } else {
+                        VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+                    }
+                    transitionDeviceState(targetState, "SCREEN_ON(isLocked=$isLocked)")
                 }
                 Intent.ACTION_SCREEN_OFF -> {
-                    Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] event=SCREEN_OFF action=SUSPEND_TIMER")
-                    stopAudioPlayback()
-                    reconcileAutoNextTimer("SCREEN_OFF")
+                    transitionDeviceState(VocabularyPresentationDeviceState.SCREEN_OFF, "SCREEN_OFF")
                 }
                 Intent.ACTION_USER_PRESENT -> {
-                    reconcileAutoNextTimer("USER_PRESENT")
+                    transitionDeviceState(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, "USER_PRESENT")
                 }
             }
         }
     }
+
+    fun transitionDeviceState(newState: VocabularyPresentationDeviceState, reason: String) {
+        synchronized(stateLock) {
+            val oldState = currentDeviceState
+            if (oldState == newState) {
+                return
+            }
+            currentDeviceState = newState
+
+            val actionDesc = when (newState) {
+                VocabularyPresentationDeviceState.SCREEN_OFF -> "CANCEL_TIMER_STOP_AUDIO"
+                VocabularyPresentationDeviceState.LOCKED_SCREEN_ON -> "KEEP_PAUSED"
+                VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON -> "START_FRESH_INTERVAL"
+            }
+
+            val settings = preferencesController.currentHomeWidget()
+            val interval = settings.clampedIntervalMillis
+
+            if (newState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) {
+                Log.i(
+                    TAG_SCHEDULER,
+                    "[HomeWidgetDeviceState] from=$oldState to=$newState reason=$reason action=$actionDesc intervalMs=$interval"
+                )
+            } else {
+                Log.i(
+                    TAG_SCHEDULER,
+                    "[HomeWidgetDeviceState] from=$oldState to=$newState reason=$reason action=$actionDesc"
+                )
+            }
+
+            when (newState) {
+                VocabularyPresentationDeviceState.SCREEN_OFF -> {
+                    cancelAutoNextTimer("SCREEN_OFF")
+                    stopAudioPlayback()
+                }
+                VocabularyPresentationDeviceState.LOCKED_SCREEN_ON -> {
+                    cancelAutoNextTimer("LOCKED_SCREEN_ON")
+                    stopAudioPlayback()
+                }
+                VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON -> {
+                    // Start a FULL FRESH interval upon unlock
+                    // DO NOT immediately advance candidate
+                    // DO NOT immediately play pronunciation
+                    reconcileAutoNextTimer("UNLOCKED_SCREEN_ON")
+                }
+            }
+        }
+    }
+
+    fun handleScreenOff() = transitionDeviceState(VocabularyPresentationDeviceState.SCREEN_OFF, "DIRECT_SCREEN_OFF")
+    fun handleScreenOn(isLocked: Boolean) = transitionDeviceState(
+        if (isLocked) VocabularyPresentationDeviceState.LOCKED_SCREEN_ON else VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON,
+        "DIRECT_SCREEN_ON"
+    )
+    fun handleUserPresent() = transitionDeviceState(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, "DIRECT_USER_PRESENT")
 
     fun start() {
         if (!started.compareAndSet(false, true)) return
@@ -79,6 +141,10 @@ class AndroidHomeVocabularyWidgetCoordinator(
             addAction(Intent.ACTION_USER_PRESENT)
         }
         context.registerReceiver(screenStateReceiver, filter)
+
+        // Evaluate initial device state
+        val initialState = resolveCurrentDeviceState()
+        transitionDeviceState(initialState, "START_INITIAL_EVALUATION")
 
         // Restore known active widgets from AppWidgetManager
         syncActiveWidgetIds()
@@ -158,6 +224,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
             if (activeWidgetIds.isEmpty()) {
                 cancelAutoNextTimer("ALL_WIDGETS_REMOVED")
                 stopAudioPlayback()
+                AndroidLockScreenVocabularyService.reconcile(context, "ALL_WIDGETS_REMOVED")
             }
         }
     }
@@ -173,6 +240,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
                 prepareCandidateIfNeeded("FIRST_WIDGET_ENABLED")
             }
             reconcileAutoNextTimer("FIRST_WIDGET_ENABLED")
+            AndroidLockScreenVocabularyService.reconcile(context, "FIRST_WIDGET_ENABLED")
         }
     }
 
@@ -182,6 +250,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
             activeWidgetIds.clear()
             cancelAutoNextTimer("LAST_WIDGET_DISABLED")
             stopAudioPlayback()
+            AndroidLockScreenVocabularyService.reconcile(context, "LAST_WIDGET_DISABLED")
         }
     }
 
@@ -417,10 +486,10 @@ class AndroidHomeVocabularyWidgetCoordinator(
             return
         }
 
-        if (!isScreenInteractive()) {
+        if (currentDeviceState != VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) {
             Log.i(
                 TAG_AUDIO_PLAY,
-                "[HomeWidgetAudioPlayback] appWidgetId=0 candidateId=$candidateId trigger=CANDIDATE_TRANSITION autoAudioEnabled=true screenInteractive=false played=false skipReason=SCREEN_NOT_INTERACTIVE generation=$cycle"
+                "[HomeWidgetAudioPlayback] candidateId=$candidateId trigger=CANDIDATE_TRANSITION played=false skipReason=DEVICE_NOT_UNLOCKED"
             )
             return
         }
@@ -575,10 +644,13 @@ class AndroidHomeVocabularyWidgetCoordinator(
             syncActiveWidgetIds()
             val settings = preferencesController.currentHomeWidget()
             val hasWidgets = activeWidgetIds.isNotEmpty()
-            val isScreenOn = isScreenInteractive()
-            val shouldRunTimer = hasWidgets && settings.autoNextEnabled && (!settings.updateOnlyScreenOn || isScreenOn)
+            val homeWidgetRuntimeAllowed = currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            val shouldRunTimer = hasWidgets && settings.autoNextEnabled && (!settings.updateOnlyScreenOn || homeWidgetRuntimeAllowed)
 
             if (!shouldRunTimer) {
+                if (currentDeviceState == VocabularyPresentationDeviceState.LOCKED_SCREEN_ON) {
+                    Log.i(TAG_SCHEDULER, "[HomeWidgetAutoNextTimer] state=LOCKED_SCREEN_ON action=SUPPRESSED")
+                }
                 cancelAutoNextTimer(reason)
                 return
             }
@@ -590,15 +662,15 @@ class AndroidHomeVocabularyWidgetCoordinator(
 
             cancelAutoNextTimer("RE_ARM")
             armedIntervalMs = interval
-            Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] action=START intervalMs=$interval reason=$reason")
+            Log.i(TAG_SCHEDULER, "[HomeWidgetAutoNextTimer] state=UNLOCKED_SCREEN_ON action=START intervalMs=$interval reason=$reason")
 
             val runnable = object : Runnable {
                 override fun run() {
                     synchronized(stateLock) {
                         if (activeWidgetIds.isNotEmpty()) {
                             val curSettings = preferencesController.currentHomeWidget()
-                            val curScreenOn = isScreenInteractive()
-                            if (curSettings.autoNextEnabled && (!curSettings.updateOnlyScreenOn || curScreenOn)) {
+                            val curRuntimeAllowed = currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+                            if (curSettings.autoNextEnabled && (!curSettings.updateOnlyScreenOn || curRuntimeAllowed)) {
                                 Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] action=FIRE intervalMs=$interval")
                                 advanceToNextCandidate("TIMER_FIRED")
                                 mainHandler.postDelayed(this, interval)
@@ -635,9 +707,24 @@ class AndroidHomeVocabularyWidgetCoordinator(
         }
     }
 
-    private fun isScreenInteractive(): Boolean {
+    fun isScreenInteractive(): Boolean {
         val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
         return pm?.isInteractive ?: true
+    }
+
+    fun isKeyguardLocked(): Boolean {
+        val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        return km?.isKeyguardLocked ?: false
+    }
+
+    fun resolveCurrentDeviceState(): VocabularyPresentationDeviceState {
+        val interactive = isScreenInteractive()
+        val locked = isKeyguardLocked()
+        return when {
+            !interactive -> VocabularyPresentationDeviceState.SCREEN_OFF
+            locked -> VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+            else -> VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        }
     }
 
     companion object {

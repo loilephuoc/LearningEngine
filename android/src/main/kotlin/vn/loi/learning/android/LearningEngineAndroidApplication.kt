@@ -18,12 +18,7 @@ class LearningEngineAndroidApplication : Application() {
         vn.loi.learning.android.media.LearningEngineAudioPolicy.init(this)
         vn.loi.learning.android.controller.ControllerDiagnosticsHolder.registerInputDeviceListener(this)
         reminderNotificationHelper.createNotificationChannel()
-        val shouldStartService = reminderPreferencesController.current().enabled ||
-            reminderPreferencesController.currentLockScreen().enabled ||
-            (homeVocabularyWidgetCoordinator.hasActiveWidgets() && reminderPreferencesController.currentHomeWidget().autoNextEnabled)
-        if (shouldStartService) {
-            AndroidLockScreenVocabularyService.start(this)
-        }
+        AndroidLockScreenVocabularyService.reconcile(this, "APPLICATION_ON_CREATE")
         homeVocabularyWidgetCoordinator.start()
     }
 

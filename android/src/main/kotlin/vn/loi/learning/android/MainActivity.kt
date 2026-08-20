@@ -103,12 +103,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         ControllerDiagnosticsHolder.setLifecycleState("STARTED")
-        val app = application as? LearningEngineAndroidApplication
-        val shouldStartService = app?.reminderPreferencesController?.current()?.enabled == true ||
-            app?.reminderPreferencesController?.currentLockScreen()?.enabled == true
-        if (shouldStartService) {
-            vn.loi.learning.android.reminder.AndroidLockScreenVocabularyService.start(this)
-        }
+        vn.loi.learning.android.reminder.AndroidLockScreenVocabularyService.reconcile(this, "MAIN_ACTIVITY_ON_START")
     }
 
     override fun onResume() {
@@ -258,6 +253,7 @@ class MainActivity : ComponentActivity() {
         }
 
         app.lockScreenVocabularyCoordinator.reRenderCurrentPresentation("SETTINGS_INTENT")
+        vn.loi.learning.android.reminder.AndroidLockScreenVocabularyService.reconcile(this, "SETTINGS_INTENT")
     }
 
     private fun handleReminderIntent(intent: Intent?) {

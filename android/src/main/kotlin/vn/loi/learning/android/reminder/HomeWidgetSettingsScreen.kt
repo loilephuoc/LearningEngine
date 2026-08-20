@@ -48,6 +48,7 @@ fun HomeWidgetSettingsScreen(
     val applyHomeWidgetDraft: (AndroidHomeVocabularyWidgetDraft) -> Unit = { nextDraft ->
         homeWidgetDraft = nextDraft
         controller.updateHomeWidgetSettings(nextDraft.toSettings(homeWidgetSettings.currentCandidateId))
+        AndroidLockScreenVocabularyService.reconcile(context, "HOME_WIDGET_SETTINGS_CHANGED")
         val app = context.applicationContext as? LearningEngineAndroidApplication
         app?.homeVocabularyWidgetCoordinator?.reconcileAutoNextTimer("SETTINGS_UPDATED")
         app?.homeVocabularyWidgetCoordinator?.reRenderAllWidgets("SETTINGS_UPDATED")

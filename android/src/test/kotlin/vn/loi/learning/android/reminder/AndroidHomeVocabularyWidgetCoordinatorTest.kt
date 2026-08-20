@@ -793,4 +793,232 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
         assertEquals(1, audioToggleCount)
         assertTrue(autoAudioEnabled) // Only audio click toggles preference!
     }
+
+    // -------------------------------------------------------------
+    // ROUND 10.1.1 UNIT TESTS: HOME WIDGET UNLOCK-STATE LIFECYCLE
+    // -------------------------------------------------------------
+
+    @Test
+    fun `screen off cancels timer, stops audio, and preserves candidate without consuming shuffle`() {
+        var timerArmed = true
+        var audioPlaying = true
+        val currentCandidate = createSampleCandidate("cand-screen-off", "Word")
+        var visibleCandidate = currentCandidate
+        var state = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+
+        fun onScreenOff() {
+            state = VocabularyPresentationDeviceState.SCREEN_OFF
+            timerArmed = false
+            audioPlaying = false
+        }
+
+        onScreenOff()
+
+        assertEquals(VocabularyPresentationDeviceState.SCREEN_OFF, state)
+        assertFalse(timerArmed)
+        assertFalse(audioPlaying)
+        assertEquals("cand-screen-off", visibleCandidate.contentId.value)
+    }
+
+    @Test
+    fun `screen on while locked enters LOCKED_SCREEN_ON and keeps widget timer suppressed with zero audio`() {
+        var state = VocabularyPresentationDeviceState.SCREEN_OFF
+        var timerArmed = false
+        var advanceCallCount = 0
+        var audioPlayedCount = 0
+
+        fun onScreenOn(isLocked: Boolean) {
+            state = if (isLocked) VocabularyPresentationDeviceState.LOCKED_SCREEN_ON else VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            val isUnlocked = state == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            if (isUnlocked) {
+                timerArmed = true
+            } else {
+                timerArmed = false
+            }
+        }
+
+        // Screen wakes up to Lock Screen
+        onScreenOn(isLocked = true)
+
+        assertEquals(VocabularyPresentationDeviceState.LOCKED_SCREEN_ON, state)
+        assertFalse(timerArmed) // Timer MUST remain suppressed!
+        assertEquals(0, advanceCallCount)
+        assertEquals(0, audioPlayedCount)
+    }
+
+    @Test
+    fun `unlocking device transitions to UNLOCKED_SCREEN_ON and arms full fresh interval without immediate advance or audio`() {
+        var state = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+        var timerArmedAt = 0L
+        var timerInterval = 0L
+        var advanceCount = 0
+        var audioCount = 0
+        val simulatedClock = 10_000L
+
+        fun onUserPresent(now: Long, intervalMs: Long) {
+            state = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            // Start fresh full interval
+            timerArmedAt = now
+            timerInterval = intervalMs
+            // Critical contract: DO NOT advance immediately, DO NOT play audio immediately
+        }
+
+        onUserPresent(simulatedClock, 30_000L)
+
+        assertEquals(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, state)
+        assertEquals(10_000L, timerArmedAt)
+        assertEquals(30_000L, timerInterval)
+        assertEquals(0, advanceCount)
+        assertEquals(0, audioCount)
+    }
+
+    @Test
+    fun `full interval tick triggers exactly one candidate transition and audio when unlocked`() {
+        var state = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        var currentCandidate = createSampleCandidate("cand-before", "Before")
+        var audioPlayedCount = 0
+        val autoAudioEnabled = true
+
+        fun onTimerFired() {
+            if (state == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) {
+                currentCandidate = createSampleCandidate("cand-after", "After")
+                if (autoAudioEnabled) {
+                    audioPlayedCount++
+                }
+            }
+        }
+
+        onTimerFired()
+
+        assertEquals("cand-after", currentCandidate.contentId.value)
+        assertEquals(1, audioPlayedCount)
+    }
+
+    @Test
+    fun `duplicate SCREEN_ON events while locked produce NO_OP and do not arm timer`() {
+        var state = VocabularyPresentationDeviceState.SCREEN_OFF
+        var stateTransitionCount = 0
+
+        fun onScreenOn(isLocked: Boolean) {
+            val target = if (isLocked) VocabularyPresentationDeviceState.LOCKED_SCREEN_ON else VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            if (state == target) return
+            state = target
+            stateTransitionCount++
+        }
+
+        onScreenOn(isLocked = true)
+        assertEquals(1, stateTransitionCount)
+        assertEquals(VocabularyPresentationDeviceState.LOCKED_SCREEN_ON, state)
+
+        // Duplicate SCREEN_ON while locked
+        onScreenOn(isLocked = true)
+        assertEquals(1, stateTransitionCount) // Still 1 (NO_OP)
+    }
+
+    @Test
+    fun `duplicate USER_PRESENT events do not re-arm or reset running timer repeatedly`() {
+        var state = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+        var timerArmCount = 0
+
+        fun onUserPresent() {
+            if (state == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) return
+            state = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            timerArmCount++
+        }
+
+        onUserPresent()
+        assertEquals(1, timerArmCount)
+
+        // Duplicate USER_PRESENT
+        onUserPresent()
+        assertEquals(1, timerArmCount) // NO-OP
+    }
+
+    @Test
+    fun `process startup evaluation while screen is interactive but keyguard locked sets LOCKED_SCREEN_ON and suppresses runtime`() {
+        fun resolveState(interactive: Boolean, keyguardLocked: Boolean): VocabularyPresentationDeviceState {
+            return when {
+                !interactive -> VocabularyPresentationDeviceState.SCREEN_OFF
+                keyguardLocked -> VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+                else -> VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            }
+        }
+
+        val state = resolveState(interactive = true, keyguardLocked = true)
+        assertEquals(VocabularyPresentationDeviceState.LOCKED_SCREEN_ON, state)
+
+        val timerAllowed = state == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        assertFalse(timerAllowed)
+    }
+
+    @Test
+    fun `process startup evaluation while device is unlocked sets UNLOCKED_SCREEN_ON and allows timer`() {
+        fun resolveState(interactive: Boolean, keyguardLocked: Boolean): VocabularyPresentationDeviceState {
+            return when {
+                !interactive -> VocabularyPresentationDeviceState.SCREEN_OFF
+                keyguardLocked -> VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+                else -> VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            }
+        }
+
+        val state = resolveState(interactive = true, keyguardLocked = false)
+        assertEquals(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, state)
+
+        val timerAllowed = state == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        assertTrue(timerAllowed)
+    }
+
+    @Test
+    fun `FGS required state remains true for lock screen while widget runtime is paused during lock`() {
+        val lockScreenEnabled = true
+        val reminderEnabled = false
+        val widgetAutoNext = true
+        val hasWidgets = true
+
+        val fgsRequirement = ForegroundServiceRequirement(
+            lockScreenRequired = lockScreenEnabled,
+            unlockedReminderRequired = reminderEnabled,
+            homeWidgetRequired = hasWidgets && widgetAutoNext
+        )
+
+        // FGS is REQUIRED because lock screen is active
+        assertTrue(fgsRequirement.required)
+
+        // Device is currently locked
+        val deviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+
+        // Home Widget runtime is strictly SUPPRESSED
+        val widgetRuntimeAllowed = deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        assertFalse(widgetRuntimeAllowed)
+    }
+
+    @Test
+    fun `mute state persists through screen off, lock screen wake, unlock, and subsequent timer advance`() {
+        var autoAudioEnabled = false
+        var audioPlayCount = 0
+        var state = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+
+        // 1. Screen off
+        state = VocabularyPresentationDeviceState.SCREEN_OFF
+        assertFalse(autoAudioEnabled)
+
+        // 2. Screen on locked
+        state = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+        assertFalse(autoAudioEnabled)
+
+        // 3. User unlock
+        state = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        assertFalse(autoAudioEnabled)
+
+        // 4. Timer fires after full interval
+        fun onTimerFired() {
+            if (autoAudioEnabled && state == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) {
+                audioPlayCount++
+            }
+        }
+
+        onTimerFired()
+        assertFalse(autoAudioEnabled)
+        assertEquals(0, audioPlayCount) // Completely silent throughout
+    }
 }

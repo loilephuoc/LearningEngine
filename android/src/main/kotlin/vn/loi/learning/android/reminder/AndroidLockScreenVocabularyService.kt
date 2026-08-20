@@ -20,11 +20,26 @@ import vn.loi.learning.android.LearningEngineAndroidApplication
 import vn.loi.learning.android.MainActivity
 import vn.loi.learning.android.R
 
+data class ForegroundServiceRequirement(
+    val lockScreenRequired: Boolean,
+    val unlockedReminderRequired: Boolean,
+    val homeWidgetRequired: Boolean
+) {
+    val required: Boolean
+        get() = lockScreenRequired || unlockedReminderRequired || homeWidgetRequired
+}
+
 class AndroidLockScreenVocabularyService : Service() {
 
     override fun onCreate() {
         super.onCreate()
         createServiceChannel()
+        val req = evaluateRequirement(this)
+        if (!req.required) {
+            Log.i(TAG, "[ReminderServiceLifecycle] reason=SERVICE_ON_CREATE required=false action=STOP_SELF")
+            stopSelf()
+            return
+        }
         if (startAsForeground()) {
             val app = application as? LearningEngineAndroidApplication
             app?.lockScreenVocabularyCoordinator?.start()
@@ -32,6 +47,13 @@ class AndroidLockScreenVocabularyService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val req = evaluateRequirement(this)
+        if (!req.required) {
+            Log.i(TAG, "[ReminderServiceLifecycle] reason=SERVICE_ON_START required=false action=STOP_SELF")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        Log.i(TAG, "[ReminderServiceLifecycle] reason=SERVICE_ON_START required=true action=CONTINUE")
         if (startAsForeground()) {
             val app = application as? LearningEngineAndroidApplication
             app?.lockScreenVocabularyCoordinator?.start()
@@ -106,6 +128,33 @@ class AndroidLockScreenVocabularyService : Service() {
 
         const val FGS_RESUME_ACTION_REQUEST_CODE = 4050
         const val FGS_RESUME_BODY_REQUEST_CODE = 4051
+
+        fun evaluateRequirement(context: Context): ForegroundServiceRequirement {
+            val app = context.applicationContext as? LearningEngineAndroidApplication
+            val lockRequired = app?.reminderPreferencesController?.currentLockScreen()?.enabled == true
+            val reminderRequired = app?.reminderPreferencesController?.current()?.enabled == true
+            val widgetRequired = (app?.homeVocabularyWidgetCoordinator?.hasActiveWidgets() == true) &&
+                (app?.reminderPreferencesController?.currentHomeWidget()?.autoNextEnabled == true)
+            return ForegroundServiceRequirement(
+                lockScreenRequired = lockRequired,
+                unlockedReminderRequired = reminderRequired,
+                homeWidgetRequired = widgetRequired
+            )
+        }
+
+        fun reconcile(context: Context, reason: String): ForegroundServiceRequirement {
+            val req = evaluateRequirement(context)
+            Log.i(
+                TAG,
+                "[ReminderServiceLifecycle] reason=$reason lockRequired=${req.lockScreenRequired} reminderRequired=${req.unlockedReminderRequired} widgetRequired=${req.homeWidgetRequired} required=${req.required} action=${if (req.required) "START" else "STOP"}"
+            )
+            if (req.required) {
+                start(context)
+            } else {
+                stop(context)
+            }
+            return req
+        }
 
         fun buildServiceNotification(
             context: Context,
