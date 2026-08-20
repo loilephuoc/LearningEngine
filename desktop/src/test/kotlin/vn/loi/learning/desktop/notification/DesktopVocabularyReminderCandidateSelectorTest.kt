@@ -211,6 +211,22 @@ class DesktopVocabularyReminderCandidateSelectorTest {
         assertEquals(b, fixture.select(DesktopVocabularyReminderSelectionMode.RANDOM_ALL).contentId)
     }
 
+    @Test
+    fun `selector projects translated audio reference from media translated audio and not example audio`() {
+        val fixture = Fixture()
+        val id = fixture.add(
+            name = "audio-test",
+            audio = "audio/primary.mp3",
+            translatedAudio = "audio/translated.mp3",
+            exampleAudio = "audio/example.mp3",
+            exampleTranslatedAudio = "audio/example_translated.mp3"
+        )
+        val candidate = fixture.select(DesktopVocabularyReminderSelectionMode.RANDOM_ALL)
+        assertEquals(id, candidate.contentId)
+        assertEquals("audio/primary.mp3", candidate.primaryAudioReference)
+        assertEquals("audio/translated.mp3", candidate.translatedAudioReference)
+    }
+
     private fun assertNoCandidate(result: DesktopVocabularyCandidateSelectionResult) {
         assertIs<DesktopVocabularyCandidateSelectionResult.NoCandidate>(result)
     }
@@ -266,7 +282,10 @@ class DesktopVocabularyReminderCandidateSelectorTest {
             pronunciation: String? = null,
             translation: String? = if (includeOptionalPresentation) "Meaning $name" else null,
             image: String? = if (includeOptionalPresentation) "images/$name.png" else null,
-            audio: String? = if (includeOptionalPresentation) "audio/$name.mp3" else null
+            audio: String? = if (includeOptionalPresentation) "audio/$name.mp3" else null,
+            translatedAudio: String? = null,
+            exampleAudio: String? = null,
+            exampleTranslatedAudio: String? = null
         ): ContentId {
             val contentId = ContentId(name)
             val item = LearningItem(LearningItemId("item-$name"), contentId, LearningMode.MEANING_RECOGNITION, enabled)
@@ -277,7 +296,13 @@ class DesktopVocabularyReminderCandidateSelectorTest {
                     contentId,
                     ContentType.WORD,
                     ContentText("Word $name", translation, pronunciation),
-                    ContentMedia(primaryAudio = audio, image = image),
+                    ContentMedia(
+                        primaryAudio = audio,
+                        translatedAudio = translatedAudio,
+                        image = image,
+                        exampleAudio = exampleAudio,
+                        exampleTranslatedAudio = exampleTranslatedAudio
+                    ),
                     ContentMetadata(section = "Section", lesson = "Lesson"),
                     ContentCustomFields(
                         definition?.let { setOf(ContentCustomField(ContentFieldId("definition"), it)) }.orEmpty()

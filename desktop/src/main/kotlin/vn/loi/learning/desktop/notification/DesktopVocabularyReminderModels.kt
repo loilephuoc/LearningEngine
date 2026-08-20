@@ -5,6 +5,11 @@ import java.time.LocalTime
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.InstalledPackageId
 
+enum class DesktopVocabularyReminderPopupLayout {
+    COMPACT,
+    LARGE_IMAGE_VERTICAL
+}
+
 enum class DesktopVocabularyReminderSelectionMode {
     AGAIN_HARD,
     DUE,
@@ -36,7 +41,12 @@ data class DesktopVocabularyReminderSettings(
     val displayDurationMillis: Long = DEFAULT_DISPLAY_DURATION_MILLIS,
     val autoPlayPronunciation: Boolean = false,
     val pausedUntil: Instant? = null,
-    val popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation()
+    val popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation(),
+    val popupLayout: DesktopVocabularyReminderPopupLayout = DesktopVocabularyReminderPopupLayout.COMPACT,
+    val playVietnameseAudio: Boolean = false,
+    val vietnameseAudioDelayMillis: Long = DEFAULT_VIETNAMESE_AUDIO_DELAY_MILLIS,
+    val englishTextFontSizeSp: Float = DEFAULT_ENGLISH_FONT_SIZE_SP,
+    val showPopupWhileAppForeground: Boolean = true
 ) {
     val intervalMinutes: Int
         get() = (intervalMillis / 60_000L).toInt().coerceAtLeast(1)
@@ -51,7 +61,12 @@ data class DesktopVocabularyReminderSettings(
         displayDurationMillis: Long = DEFAULT_DISPLAY_DURATION_MILLIS,
         autoPlayPronunciation: Boolean = false,
         pausedUntil: Instant? = null,
-        popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation()
+        popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation(),
+        popupLayout: DesktopVocabularyReminderPopupLayout = DesktopVocabularyReminderPopupLayout.COMPACT,
+        playVietnameseAudio: Boolean = false,
+        vietnameseAudioDelayMillis: Long = DEFAULT_VIETNAMESE_AUDIO_DELAY_MILLIS,
+        englishTextFontSizeSp: Float = DEFAULT_ENGLISH_FONT_SIZE_SP,
+        showPopupWhileAppForeground: Boolean = true
     ) : this(
         enabled = enabled,
         selectedPackageId = selectedPackageId,
@@ -62,7 +77,12 @@ data class DesktopVocabularyReminderSettings(
         displayDurationMillis = displayDurationMillis,
         autoPlayPronunciation = autoPlayPronunciation,
         pausedUntil = pausedUntil,
-        popupLocation = popupLocation
+        popupLocation = popupLocation,
+        popupLayout = popupLayout,
+        playVietnameseAudio = playVietnameseAudio,
+        vietnameseAudioDelayMillis = vietnameseAudioDelayMillis,
+        englishTextFontSizeSp = englishTextFontSizeSp,
+        showPopupWhileAppForeground = showPopupWhileAppForeground
     )
 
     init {
@@ -71,6 +91,12 @@ data class DesktopVocabularyReminderSettings(
         }
         require(displayDurationMillis in MIN_DISPLAY_DURATION_MILLIS..MAX_DISPLAY_DURATION_MILLIS) {
             "Reminder display duration must be between $MIN_DISPLAY_DURATION_MILLIS and $MAX_DISPLAY_DURATION_MILLIS milliseconds."
+        }
+        require(vietnameseAudioDelayMillis in MIN_VIETNAMESE_AUDIO_DELAY_MILLIS..MAX_VIETNAMESE_AUDIO_DELAY_MILLIS) {
+            "Vietnamese audio delay must be between $MIN_VIETNAMESE_AUDIO_DELAY_MILLIS and $MAX_VIETNAMESE_AUDIO_DELAY_MILLIS milliseconds."
+        }
+        require(englishTextFontSizeSp in MIN_ENGLISH_FONT_SIZE_SP..MAX_ENGLISH_FONT_SIZE_SP) {
+            "English text font size must be between $MIN_ENGLISH_FONT_SIZE_SP and $MAX_ENGLISH_FONT_SIZE_SP sp."
         }
     }
 
@@ -87,6 +113,14 @@ data class DesktopVocabularyReminderSettings(
         const val DEFAULT_DISPLAY_DURATION_MILLIS = 8_000L
         const val MIN_DISPLAY_DURATION_MILLIS = 1_500L
         const val MAX_DISPLAY_DURATION_MILLIS = 60_000L
+
+        const val DEFAULT_VIETNAMESE_AUDIO_DELAY_MILLIS = 2_000L
+        const val MIN_VIETNAMESE_AUDIO_DELAY_MILLIS = 0L
+        const val MAX_VIETNAMESE_AUDIO_DELAY_MILLIS = 30_000L
+
+        const val DEFAULT_ENGLISH_FONT_SIZE_SP = 22f
+        const val MIN_ENGLISH_FONT_SIZE_SP = 14f
+        const val MAX_ENGLISH_FONT_SIZE_SP = 48f
     }
 }
 
@@ -102,6 +136,7 @@ data class DesktopVocabularyCandidate(
     val partOfSpeech: String?,
     val imageReference: String?,
     val primaryAudioReference: String?,
+    val translatedAudioReference: String? = null,
     val lesson: String?,
     val section: String?
 )

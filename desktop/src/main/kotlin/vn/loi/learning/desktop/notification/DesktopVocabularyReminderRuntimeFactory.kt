@@ -66,6 +66,12 @@ object DesktopVocabularyReminderRuntimeFactory {
                 override fun current() = runtime.settings.autoPlayPronunciation
                 override fun update(enabled: Boolean) =
                     runtime.updateSettings(runtime.settings.copy(autoPlayPronunciation = enabled))
+            },
+            layoutAuthority = DesktopVocabularyReminderLayoutAuthority { layout ->
+                runtime.updateSettings(runtime.settings.copy(popupLayout = layout))
+            },
+            snoozeAuthority = DesktopVocabularyReminderSnoozeAuthority { durationMinutes ->
+                runtime.snooze(durationMinutes)
             }
         )
         runtime = DesktopVocabularyReminderRuntime(

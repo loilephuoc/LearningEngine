@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.material.icons.Icons
@@ -91,7 +92,7 @@ fun main() {
                 if (windowState.isMinimized && mainWindowVisible) {
                     mainWindowVisible = false
                     windowState.isMinimized = false
-                    runtime.vocabularyReminderRuntime?.setBackgroundMode(true)
+                    runtime.vocabularyReminderRuntime?.setAppForeground(false)
                 }
             }
 
@@ -102,14 +103,12 @@ fun main() {
                 onAction = {
                     mainWindowVisible = true
                     windowState.isMinimized = false
-                    runtime.vocabularyReminderRuntime?.setBackgroundMode(false)
                     mainFrame?.run { toFront(); requestFocus() }
                 },
                 menu = {
                     Item("Open Learning Engine", onClick = {
                         mainWindowVisible = true
                         windowState.isMinimized = false
-                        runtime.vocabularyReminderRuntime?.setBackgroundMode(false)
                         mainFrame?.run { toFront(); requestFocus() }
                     })
                     val paused = runtime.vocabularyReminderRuntime?.settings?.pausedUntil != null
@@ -159,6 +158,26 @@ fun main() {
                 SideEffect {
                     mainGraphicsConfiguration = window.graphicsConfiguration
                     mainFrame = window
+                }
+                DisposableEffect(window, mainWindowVisible) {
+                    if (!mainWindowVisible) {
+                        runtime.vocabularyReminderRuntime?.setAppForeground(false)
+                        return@DisposableEffect onDispose {}
+                    }
+                    val focusListener = object : java.awt.event.WindowFocusListener {
+                        override fun windowGainedFocus(e: java.awt.event.WindowEvent?) {
+                            runtime.vocabularyReminderRuntime?.setAppForeground(true)
+                        }
+                        override fun windowLostFocus(e: java.awt.event.WindowEvent?) {
+                            runtime.vocabularyReminderRuntime?.setAppForeground(false)
+                        }
+                    }
+                    window.addWindowFocusListener(focusListener)
+                    runtime.vocabularyReminderRuntime?.setAppForeground(window.isFocused)
+                    onDispose {
+                        window.removeWindowFocusListener(focusListener)
+                        runtime.vocabularyReminderRuntime?.setAppForeground(false)
+                    }
                 }
                 LearningApp(
                     applicationContext = runtime.applicationContext,

@@ -35,7 +35,12 @@ class DesktopVocabularyReminderSettingsStoreTest {
                     normalizedX = 0.75,
                     normalizedY = 0.85,
                     customPosition = true
-                )
+                ),
+                popupLayout = DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL,
+                playVietnameseAudio = true,
+                vietnameseAudioDelayMillis = 2_500L,
+                englishTextFontSizeSp = 26f,
+                showPopupWhileAppForeground = false
             )
             store.save(settings)
             assertEquals(settings, store.load())
@@ -54,6 +59,11 @@ popup.monitor.id=display-1
 popup.position.custom=true
 popup.position.x.normalized=0.75
 popup.position.y.normalized=0.85
+popup.layout=LARGE_IMAGE_VERTICAL
+audio.vietnamese.enabled=true
+audio.vietnamese.delay.millis=2500
+text.english.font.size.sp=26.0
+popup.show.while.app.foreground=false
 """,
                 file.readText()
             )
@@ -61,6 +71,51 @@ popup.position.y.normalized=0.85
                 files.noneMatch { it.fileName.toString().endsWith(".tmp") }
             })
         }
+
+    @Test
+    fun `legacy properties file without layout vietnamese audio and font settings safely loads defaults`() = withStore { store, file ->
+        file.writeText(
+            """enabled=true
+installed.package.id=test-pkg
+"""
+        )
+        val loaded = store.load()
+        assertEquals(DesktopVocabularyReminderPopupLayout.COMPACT, loaded.popupLayout)
+        assertFalse(loaded.playVietnameseAudio)
+        assertEquals(2_000L, loaded.vietnameseAudioDelayMillis)
+        assertEquals(22f, loaded.englishTextFontSizeSp)
+        assertTrue(loaded.showPopupWhileAppForeground)
+    }
+
+    @Test
+    fun `malformed popup layout delay font size and foreground visibility fall back to safe defaults`() = withStore { store, file ->
+        file.writeText(
+            """popup.layout=INVALID_LAYOUT_NAME
+audio.vietnamese.enabled=not-a-boolean
+audio.vietnamese.delay.millis=999999999
+text.english.font.size.sp=999.0
+popup.show.while.app.foreground=invalid-boolean
+"""
+        )
+        val loaded = store.load()
+        assertEquals(DesktopVocabularyReminderPopupLayout.COMPACT, loaded.popupLayout)
+        assertFalse(loaded.playVietnameseAudio)
+        assertEquals(2_000L, loaded.vietnameseAudioDelayMillis)
+        assertEquals(22f, loaded.englishTextFontSizeSp)
+        assertTrue(loaded.showPopupWhileAppForeground)
+    }
+
+    @Test
+    fun `english font size accepts values between 14sp and 48sp inclusive`() = withStore { store, file ->
+        listOf(14f, 18f, 22f, 36f, 40f, 44f, 48f).forEach { size ->
+            file.writeText("text.english.font.size.sp=$size\n")
+            assertEquals(size, store.load().englishTextFontSizeSp)
+        }
+        listOf(13.9f, 48.1f, -1f, 100f).forEach { invalid ->
+            file.writeText("text.english.font.size.sp=$invalid\n")
+            assertEquals(22f, store.load().englishTextFontSizeSp)
+        }
+    }
 
     @Test
     fun `equal active times survive round trip as 24 hour window`() = withStore { store, _ ->

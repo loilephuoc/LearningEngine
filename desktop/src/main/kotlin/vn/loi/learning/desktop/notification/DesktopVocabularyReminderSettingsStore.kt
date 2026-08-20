@@ -46,7 +46,25 @@ class DesktopVocabularyReminderSettingsStore(
                 defaults.autoPlayPronunciation
             ),
             pausedUntil = properties.optionalInstant(PAUSED_UNTIL_EPOCH_MILLIS),
-            popupLocation = popupLocation
+            popupLocation = popupLocation,
+            popupLayout = properties.enumOrDefault(POPUP_LAYOUT, defaults.popupLayout),
+            playVietnameseAudio = properties.booleanOrDefault(
+                AUDIO_VIETNAMESE_ENABLED,
+                defaults.playVietnameseAudio
+            ),
+            vietnameseAudioDelayMillis = properties.vietnameseDelayMillisOrDefault(
+                defaults.vietnameseAudioDelayMillis
+            ),
+            englishTextFontSizeSp = properties.floatOrDefault(
+                TEXT_ENGLISH_FONT_SIZE_SP,
+                defaults.englishTextFontSizeSp,
+                DesktopVocabularyReminderSettings.MIN_ENGLISH_FONT_SIZE_SP..
+                    DesktopVocabularyReminderSettings.MAX_ENGLISH_FONT_SIZE_SP
+            ),
+            showPopupWhileAppForeground = properties.booleanOrDefault(
+                POPUP_SHOW_WHILE_APP_FOREGROUND,
+                defaults.showPopupWhileAppForeground
+            )
         )
     }
 
@@ -86,6 +104,11 @@ class DesktopVocabularyReminderSettingsStore(
         appendLine("popup.position.custom=${settings.popupLocation.customPosition}")
         appendLine("popup.position.x.normalized=${settings.popupLocation.normalizedX?.toString().orEmpty()}")
         appendLine("popup.position.y.normalized=${settings.popupLocation.normalizedY?.toString().orEmpty()}")
+        appendLine("popup.layout=${settings.popupLayout.name}")
+        appendLine("audio.vietnamese.enabled=${settings.playVietnameseAudio}")
+        appendLine("audio.vietnamese.delay.millis=${settings.vietnameseAudioDelayMillis}")
+        appendLine("text.english.font.size.sp=${settings.englishTextFontSizeSp}")
+        appendLine("popup.show.while.app.foreground=${settings.showPopupWhileAppForeground}")
     }
 
     companion object {
@@ -103,6 +126,11 @@ class DesktopVocabularyReminderSettingsStore(
         private const val POPUP_POSITION_CUSTOM = "popup.position.custom"
         private const val POPUP_POSITION_X_NORMALIZED = "popup.position.x.normalized"
         private const val POPUP_POSITION_Y_NORMALIZED = "popup.position.y.normalized"
+        internal const val POPUP_LAYOUT = "popup.layout"
+        internal const val AUDIO_VIETNAMESE_ENABLED = "audio.vietnamese.enabled"
+        internal const val AUDIO_VIETNAMESE_DELAY_MILLIS = "audio.vietnamese.delay.millis"
+        internal const val TEXT_ENGLISH_FONT_SIZE_SP = "text.english.font.size.sp"
+        internal const val POPUP_SHOW_WHILE_APP_FOREGROUND = "popup.show.while.app.foreground"
     }
 }
 
@@ -140,6 +168,15 @@ private fun Properties.durationMillisOrLegacyDefault(default: Long): Long {
     } ?: default
 }
 
+private fun Properties.vietnameseDelayMillisOrDefault(default: Long): Long {
+    val canonical = value(DesktopVocabularyReminderSettingsStore.AUDIO_VIETNAMESE_DELAY_MILLIS)?.toLongOrNull()
+    val legacy = value("audio.vietnamese.delay.seconds")?.toDoubleOrNull()?.times(1_000.0)?.toLong()
+    return (canonical ?: legacy)?.takeIf {
+        it in DesktopVocabularyReminderSettings.MIN_VIETNAMESE_AUDIO_DELAY_MILLIS..
+            DesktopVocabularyReminderSettings.MAX_VIETNAMESE_AUDIO_DELAY_MILLIS
+    } ?: default
+}
+
 private fun Properties.timeOrDefault(key: String, default: LocalTime): LocalTime =
     value(key)?.let { runCatching { LocalTime.parse(it) }.getOrNull() } ?: default
 
@@ -148,3 +185,6 @@ private fun Properties.optionalInstant(key: String): Instant? =
 
 private fun Properties.optionalPackageId(key: String): InstalledPackageId? =
     value(key)?.let { runCatching { InstalledPackageId(it) }.getOrNull() }
+
+private fun Properties.floatOrDefault(key: String, default: Float, range: ClosedFloatingPointRange<Float>): Float =
+    value(key)?.toFloatOrNull()?.takeIf { it in range } ?: default

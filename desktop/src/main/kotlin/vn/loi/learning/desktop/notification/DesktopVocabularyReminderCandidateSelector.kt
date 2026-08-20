@@ -168,6 +168,7 @@ class DesktopVocabularyReminderCandidateSelector(
             partOfSpeech = PartOfSpeechExtractor.primary(this)?.value ?: pronunciation.partOfSpeech,
             imageReference = media.image,
             primaryAudioReference = media.primaryAudio,
+            translatedAudioReference = media.translatedAudio,
             lesson = metadata.lesson,
             section = metadata.section
         )

@@ -39,6 +39,31 @@ class ContentProblemProjectionTest {
     }
 
     @Test
+    fun `missing any audio triggers independently for each of the four audio slots`() {
+        val availability = MediaReferenceAvailability { ref -> ref != "broken.mp3" }
+
+        // Only Question audio missing
+        val qMissing = item(questionAudio = null, answerAudio = "a.mp3", exampleAudio = "e.mp3", translationAudio = "t.mp3")
+        assertTrue(ContentProblem.MISSING_ANY_AUDIO in ContentProblemDetector.detect(qMissing, availability))
+
+        // Only Answer / Vietnamese audio missing
+        val aMissing = item(questionAudio = "q.mp3", answerAudio = "", exampleAudio = "e.mp3", translationAudio = "t.mp3")
+        assertTrue(ContentProblem.MISSING_ANY_AUDIO in ContentProblemDetector.detect(aMissing, availability))
+
+        // Only Example English audio missing or broken
+        val eBroken = item(questionAudio = "q.mp3", answerAudio = "a.mp3", exampleAudio = "broken.mp3", translationAudio = "t.mp3")
+        assertTrue(ContentProblem.MISSING_ANY_AUDIO in ContentProblemDetector.detect(eBroken, availability))
+
+        // Only Example Vietnamese translation audio missing
+        val tMissing = item(questionAudio = "q.mp3", answerAudio = "a.mp3", exampleAudio = "e.mp3", translationAudio = null)
+        assertTrue(ContentProblem.MISSING_ANY_AUDIO in ContentProblemDetector.detect(tMissing, availability))
+
+        // All four present and available on disk
+        val allValid = item(questionAudio = "q.mp3", answerAudio = "a.mp3", exampleAudio = "e.mp3", translationAudio = "t.mp3")
+        assertFalse(ContentProblem.MISSING_ANY_AUDIO in ContentProblemDetector.detect(allValid, availability))
+    }
+
+    @Test
     fun `pos health distinguishes missing pos and unknown custom pos`() {
         val missingPosItem = item(
             questionAudio = "q.mp3", answerAudio = "a.mp3",

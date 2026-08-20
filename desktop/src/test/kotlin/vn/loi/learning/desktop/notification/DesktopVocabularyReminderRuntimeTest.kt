@@ -113,6 +113,137 @@ class DesktopVocabularyReminderRuntimeTest {
     }
 
     @Test
+    fun `snooze sets pausedUntil to exact minutes and resumeNow cancels snooze immediately and dispatches one reminder`() {
+        val fixture = RuntimeFixture(fixtureSettings().copy(intervalMillis = 300_000L))
+        fixture.runtime.start()
+        fixture.runtime.snooze(5)
+        assertEquals(fixture.clock.instant().plusSeconds(300), fixture.store.saved.last().pausedUntil)
+        assertEquals(0, fixture.sink.candidates.size)
+
+        fixture.runtime.snooze(30)
+        assertEquals(fixture.clock.instant().plusSeconds(1_800), fixture.store.saved.last().pausedUntil)
+
+        // Resume now immediately clears pausedUntil and dispatches one reminder
+        fixture.runtime.resumeNow()
+        assertEquals(null, fixture.store.saved.last().pausedUntil)
+        assertEquals(1, fixture.sink.candidates.size)
+
+        // Next scheduled reminder is one full interval later (300,000 ms)
+        assertEquals(listOf(300_000L), fixture.scheduler.activeDelays)
+        fixture.sink.active = false
+        fixture.scheduler.fireNext()
+        assertEquals(2, fixture.sink.candidates.size)
+    }
+
+    @Test
+    fun `resumeNow passes current layout, font, audio, delay and position settings to immediate dispatch`() {
+        var dispatchedLayout: DesktopVocabularyReminderPopupLayout? = null
+        var dispatchedFont: Float? = null
+        var dispatchedDelay: Long? = null
+        var dispatchedAudio: Boolean? = null
+        var dispatchedVietnamese: Boolean? = null
+        val customLoc = DesktopVocabularyReminderPopupLocation(monitorId = "mon-1", normalizedX = 0.3, normalizedY = 0.4, customPosition = true)
+
+        val fixture = RuntimeFixture(
+            fixtureSettings().copy(
+                popupLayout = DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL,
+                englishTextFontSizeSp = 36f,
+                vietnameseAudioDelayMillis = 3_500L,
+                autoPlayPronunciation = true,
+                playVietnameseAudio = true,
+                popupLocation = customLoc,
+                pausedUntil = Instant.parse("2026-08-14T00:00:00Z")
+            )
+        )
+        // Hook sink to capture parameters
+        val origSink = fixture.sink
+        val runtime = DesktopVocabularyReminderRuntime(
+            settingsRepository = fixture.store,
+            selector = fixture.selector,
+            sink = object : DesktopVocabularyReminderSink by origSink {
+                override fun dispatch(
+                    candidate: DesktopVocabularyCandidate,
+                    displayDurationMillis: Long,
+                    autoPlayPronunciation: Boolean,
+                    popupLocation: DesktopVocabularyReminderPopupLocation,
+                    popupLayout: DesktopVocabularyReminderPopupLayout,
+                    playVietnameseAudio: Boolean,
+                    vietnameseAudioDelayMillis: Long,
+                    englishTextFontSizeSp: Float
+                ) {
+                    dispatchedLayout = popupLayout
+                    dispatchedFont = englishTextFontSizeSp
+                    dispatchedDelay = vietnameseAudioDelayMillis
+                    dispatchedAudio = autoPlayPronunciation
+                    dispatchedVietnamese = playVietnameseAudio
+                    origSink.dispatch(
+                        candidate,
+                        displayDurationMillis,
+                        autoPlayPronunciation,
+                        popupLocation,
+                        popupLayout,
+                        playVietnameseAudio,
+                        vietnameseAudioDelayMillis,
+                        englishTextFontSizeSp
+                    )
+                }
+            },
+            delayScheduler = fixture.scheduler,
+            clock = fixture.clock,
+            zoneId = { ZoneOffset.UTC }
+        )
+        runtime.start()
+        runtime.resumeNow()
+
+        assertEquals(DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL, dispatchedLayout)
+        assertEquals(36f, dispatchedFont)
+        assertEquals(3_500L, dispatchedDelay)
+        assertEquals(true, dispatchedAudio)
+        assertEquals(true, dispatchedVietnamese)
+        assertEquals(1, origSink.candidates.size)
+    }
+
+    @Test
+    fun `resumeNow allows immediate confirmation when app is foreground even if foreground suppression is on`() {
+        val fixture = RuntimeFixture(
+            fixtureSettings().copy(
+                showPopupWhileAppForeground = false,
+                pausedUntil = Instant.parse("2026-08-14T00:00:00Z")
+            )
+        )
+        fixture.runtime.start()
+        fixture.runtime.setAppForeground(true)
+        assertEquals(0, fixture.sink.candidates.size)
+
+        // Explicit Resume now bypasses foreground gate for confirmation popup
+        fixture.runtime.resumeNow()
+        assertEquals(1, fixture.sink.candidates.size)
+
+        // While foreground with suppression on, no background task is scheduled
+        assertEquals(0, fixture.scheduler.activeCount)
+    }
+
+    @Test
+    fun `resumeNow does not dispatch if reminder is disabled or outside active hours`() {
+        val disabledFixture = RuntimeFixture(fixtureSettings().copy(enabled = false, pausedUntil = Instant.parse("2026-08-14T00:00:00Z")))
+        disabledFixture.runtime.start()
+        disabledFixture.runtime.resumeNow()
+        assertEquals(0, disabledFixture.sink.candidates.size)
+
+        val outsideActiveFixture = RuntimeFixture(
+            fixtureSettings().copy(
+                enabled = true,
+                activeStart = LocalTime.of(12, 0),
+                activeEnd = LocalTime.of(13, 0),
+                pausedUntil = Instant.parse("2026-08-14T00:00:00Z")
+            )
+        )
+        outsideActiveFixture.runtime.start()
+        outsideActiveFixture.runtime.resumeNow()
+        assertEquals(0, outsideActiveFixture.sink.candidates.size)
+    }
+
+    @Test
     fun `settings changes cancel prior delay and future selection receives new package mode and interval`() {
         val fixture = RuntimeFixture(fixtureSettings())
         fixture.runtime.start()
@@ -263,6 +394,77 @@ class DesktopVocabularyReminderRuntimeTest {
         }
     }
 
+    @Test
+    fun `foreground gate test A setting ON and app foreground allows scheduled popup`() {
+        val fixture = RuntimeFixture(fixtureSettings().copy(showPopupWhileAppForeground = true))
+        fixture.runtime.start()
+        fixture.runtime.setAppForeground(true)
+        fixture.scheduler.fireNext()
+        assertEquals(1, fixture.sink.candidates.size)
+    }
+
+    @Test
+    fun `foreground gate test B setting OFF and app foreground suppresses scheduled popup and candidate selection`() {
+        val fixture = RuntimeFixture(fixtureSettings().copy(showPopupWhileAppForeground = false))
+        fixture.runtime.start()
+        fixture.runtime.setAppForeground(true)
+        assertEquals(0, fixture.scheduler.activeCount)
+        assertEquals(0, fixture.selector.calls.size)
+        assertEquals(0, fixture.sink.candidates.size)
+    }
+
+    @Test
+    fun `foreground gate test C setting OFF and app background allows reminder`() {
+        val fixture = RuntimeFixture(fixtureSettings().copy(showPopupWhileAppForeground = false))
+        fixture.runtime.start()
+        fixture.runtime.setAppForeground(false)
+        fixture.scheduler.fireNext()
+        assertEquals(1, fixture.sink.candidates.size)
+    }
+
+    @Test
+    fun `foreground gate test D setting OFF and returning to background reschedules fresh interval without burst`() {
+        val fixture = RuntimeFixture(fixtureSettings().copy(showPopupWhileAppForeground = false, intervalMillis = 600_000L))
+        fixture.runtime.start()
+        fixture.runtime.setAppForeground(true)
+        assertEquals(0, fixture.scheduler.activeCount)
+        assertEquals(0, fixture.sink.candidates.size)
+
+        // Switch to background
+        fixture.runtime.setAppForeground(false)
+        assertEquals(listOf(600_000L), fixture.scheduler.activeDelays)
+        assertEquals(0, fixture.sink.candidates.size)
+
+        // Fires fresh interval
+        fixture.scheduler.fireNext()
+        assertEquals(1, fixture.sink.candidates.size)
+    }
+
+    @Test
+    fun `foreground gate test E popup already visible closes when app becomes foreground with setting OFF`() {
+        val fixture = RuntimeFixture(fixtureSettings().copy(showPopupWhileAppForeground = false))
+        fixture.runtime.start()
+        fixture.runtime.setAppForeground(false)
+        fixture.scheduler.fireNext()
+        assertEquals(1, fixture.sink.candidates.size)
+
+        // App becomes foreground
+        fixture.runtime.setAppForeground(true)
+        assertEquals(1, fixture.sink.invalidations)
+    }
+
+    @Test
+    fun `foreground gate test G and H foreground transitions do not create duplicate generations or mutate selector state`() {
+        val fixture = RuntimeFixture(fixtureSettings().copy(showPopupWhileAppForeground = false))
+        fixture.runtime.start()
+        repeat(5) {
+            fixture.runtime.setAppForeground(true)
+            fixture.runtime.setAppForeground(false)
+        }
+        assertEquals(1, fixture.scheduler.activeCount)
+        assertEquals(0, fixture.selector.calls.size)
+    }
+
     private class FakeSink : DesktopVocabularyReminderSink {
         var active = false
         val candidates = mutableListOf<DesktopVocabularyCandidate>()
@@ -275,7 +477,11 @@ class DesktopVocabularyReminderRuntimeTest {
             candidate: DesktopVocabularyCandidate,
             displayDurationMillis: Long,
             autoPlayPronunciation: Boolean,
-            popupLocation: DesktopVocabularyReminderPopupLocation
+            popupLocation: DesktopVocabularyReminderPopupLocation,
+            popupLayout: DesktopVocabularyReminderPopupLayout,
+            playVietnameseAudio: Boolean,
+            vietnameseAudioDelayMillis: Long,
+            englishTextFontSizeSp: Float
         ) {
             candidates += candidate
             displayDurations += displayDurationMillis
@@ -334,6 +540,7 @@ class DesktopVocabularyReminderRuntimeTest {
             InstalledPackageId("package"),
             "Package",
             "Word",
+            null,
             null,
             null,
             null,

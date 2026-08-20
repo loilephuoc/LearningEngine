@@ -20,7 +20,9 @@ sealed interface DesktopVocabularyReminderPopupState {
         val autoPlayPronunciation: Boolean,
         val markedDifficult: Boolean,
         val popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation(),
-        val dragging: Boolean = false
+        val dragging: Boolean = false,
+        val popupLayout: DesktopVocabularyReminderPopupLayout = DesktopVocabularyReminderPopupLayout.COMPACT,
+        val englishTextFontSizeSp: Float = DesktopVocabularyReminderSettings.DEFAULT_ENGLISH_FONT_SIZE_SP
     ) : DesktopVocabularyReminderPopupState
 
     data class FullImage(
@@ -52,13 +54,23 @@ interface DesktopVocabularyReminderAutoPlayAuthority {
     fun update(enabled: Boolean): Boolean
 }
 
+fun interface DesktopVocabularyReminderLayoutAuthority {
+    fun update(layout: DesktopVocabularyReminderPopupLayout): Boolean
+}
+
+fun interface DesktopVocabularyReminderSnoozeAuthority {
+    fun snooze(durationMinutes: Int): Boolean
+}
+
 class DesktopVocabularyReminderPopupController(
     private val uiDispatcher: DesktopVocabularyReminderUiDispatcher,
     private val clock: DesktopVocabularyReminderMonotonicClock,
     private val timer: DesktopVocabularyReminderPopupTimer,
     private val audio: DesktopVocabularyReminderAudioLifecycle = NoOpDesktopVocabularyReminderAudioLifecycle,
     private val difficultMarkers: DesktopVocabularyReminderDifficultMarkers? = null,
-    private val autoPlayAuthority: DesktopVocabularyReminderAutoPlayAuthority? = null
+    private val autoPlayAuthority: DesktopVocabularyReminderAutoPlayAuthority? = null,
+    private val layoutAuthority: DesktopVocabularyReminderLayoutAuthority? = null,
+    private val snoozeAuthority: DesktopVocabularyReminderSnoozeAuthority? = null
 ) : DesktopVocabularyReminderSink {
     private val active = AtomicBoolean(false)
     private val generation = AtomicLong()
@@ -79,7 +91,15 @@ class DesktopVocabularyReminderPopupController(
     private var autoPlayPronunciation = false
     private var markedDifficult = false
     private var currentPopupLocation = DesktopVocabularyReminderPopupLocation()
+    private var currentPopupLayout = DesktopVocabularyReminderPopupLayout.COMPACT
+    private var playVietnameseAudio = false
+    private var vietnameseAudioDelayMillis = DesktopVocabularyReminderSettings.DEFAULT_VIETNAMESE_AUDIO_DELAY_MILLIS
+    private var englishTextFontSizeSp = DesktopVocabularyReminderSettings.DEFAULT_ENGLISH_FONT_SIZE_SP
+    private var popupMuted = false
+    private var displayDeadlineExpired = false
+    private var pendingVietnamese = false
     private var hideTask: DesktopVocabularyReminderScheduledTask? = null
+    private var vietnameseTask: DesktopVocabularyReminderScheduledTask? = null
     private val audioRegistration = audio.listen { playing ->
         uiDispatcher.dispatch {
             synchronized(lock) {
@@ -90,6 +110,9 @@ class DesktopVocabularyReminderPopupController(
                 ) {
                     audioPlaying = playing
                     publishVisible()
+                    if (!playing && !pendingVietnamese && displayDeadlineExpired && !hovered && !dragging) {
+                        hide(currentGeneration)
+                    }
                 }
             }
         }
@@ -102,7 +125,11 @@ class DesktopVocabularyReminderPopupController(
         candidate: DesktopVocabularyCandidate,
         displayDurationMillis: Long,
         autoPlayPronunciation: Boolean,
-        popupLocation: DesktopVocabularyReminderPopupLocation
+        popupLocation: DesktopVocabularyReminderPopupLocation,
+        popupLayout: DesktopVocabularyReminderPopupLayout,
+        playVietnameseAudio: Boolean,
+        vietnameseAudioDelayMillis: Long,
+        englishTextFontSizeSp: Float
     ) {
         require(displayDurationMillis in DesktopVocabularyReminderSettings.MIN_DISPLAY_DURATION_MILLIS..
             DesktopVocabularyReminderSettings.MAX_DISPLAY_DURATION_MILLIS)
@@ -114,20 +141,112 @@ class DesktopVocabularyReminderPopupController(
                     active.set(false)
                     return@synchronized
                 }
+                vietnameseTask?.cancel()
+                vietnameseTask = null
+                pendingVietnamese = false
+                displayDeadlineExpired = false
                 currentCandidate = candidate
                 currentGeneration = token
                 remainingMillis = displayDurationMillis
                 hovered = false
                 dragging = false
+                popupMuted = false
                 currentPopupLocation = popupLocation
+                currentPopupLayout = popupLayout
+                this@DesktopVocabularyReminderPopupController.playVietnameseAudio = playVietnameseAudio
+                this@DesktopVocabularyReminderPopupController.vietnameseAudioDelayMillis = vietnameseAudioDelayMillis
+                this@DesktopVocabularyReminderPopupController.englishTextFontSizeSp = englishTextFontSizeSp
                 this@DesktopVocabularyReminderPopupController.autoPlayPronunciation = autoPlayPronunciation
                 audioPlaying = this@DesktopVocabularyReminderPopupController.autoPlayPronunciation &&
                     candidate.primaryAudioReference != null
                 markedDifficult = difficultMarkers?.isMarked(candidate.contentId) == true
                 publishVisible()
-                if (this@DesktopVocabularyReminderPopupController.autoPlayPronunciation) {
-                    candidate.primaryAudioReference?.let { reference -> audio.runCatching { start(reference) } }
+
+                fun scheduleVietnamese(targetToken: Long) {
+                    if (!this@DesktopVocabularyReminderPopupController.playVietnameseAudio ||
+                        candidate.translatedAudioReference == null ||
+                        popupMuted
+                    ) {
+                        pendingVietnamese = false
+                        if (displayDeadlineExpired && !audioPlaying && !hovered && !dragging) {
+                            hide(targetToken)
+                        }
+                        return
+                    }
+                    pendingVietnamese = true
+                    vietnameseTask?.cancel()
+                    vietnameseTask = timer.schedule(this@DesktopVocabularyReminderPopupController.vietnameseAudioDelayMillis) {
+                        uiDispatcher.dispatch {
+                            synchronized(lock) {
+                                if (!active.get() || currentGeneration != targetToken ||
+                                    popupMuted || closed ||
+                                    mutableState.value is DesktopVocabularyReminderPopupState.FullImage) {
+                                    pendingVietnamese = false
+                                    if (displayDeadlineExpired && !audioPlaying && !hovered && !dragging) {
+                                        hide(targetToken)
+                                    }
+                                    return@synchronized
+                                }
+                                val ref = candidate.translatedAudioReference
+                                if (ref != null) {
+                                    audio.runCatching {
+                                        start(ref) {
+                                            uiDispatcher.dispatch {
+                                                synchronized(lock) {
+                                                    pendingVietnamese = false
+                                                    audioPlaying = false
+                                                    if (active.get() && currentGeneration == targetToken && !closed) {
+                                                        if (displayDeadlineExpired && !hovered && !dragging) {
+                                                            hide(targetToken)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }.onFailure {
+                                        pendingVietnamese = false
+                                        audioPlaying = false
+                                        if (displayDeadlineExpired && !hovered && !dragging) {
+                                            hide(targetToken)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+
+                if (this@DesktopVocabularyReminderPopupController.autoPlayPronunciation &&
+                    candidate.primaryAudioReference != null) {
+                    val reference = candidate.primaryAudioReference
+                    audio.runCatching {
+                        start(reference) {
+                            uiDispatcher.dispatch {
+                                synchronized(lock) {
+                                    audioPlaying = false
+                                    if (active.get() && currentGeneration == token && !closed) {
+                                        scheduleVietnamese(token)
+                                    }
+                                }
+                            }
+                        }
+                    }.onFailure {
+                        audioPlaying = false
+                        publishVisible()
+                        if (this@DesktopVocabularyReminderPopupController.playVietnameseAudio &&
+                            candidate.translatedAudioReference != null) {
+                            scheduleVietnamese(token)
+                        } else {
+                            if (displayDeadlineExpired && !hovered && !dragging) {
+                                hide(token)
+                            }
+                        }
+                    }
+                } else if (this@DesktopVocabularyReminderPopupController.playVietnameseAudio &&
+                    candidate.translatedAudioReference != null) {
+                    scheduleVietnamese(token)
+                }
+
                 scheduleHide(token, remainingMillis)
             }
         }
@@ -150,7 +269,13 @@ class DesktopVocabularyReminderPopupController(
             dragging = false
             publishVisible()
             if (!hovered) {
-                if (remainingMillis <= 0L) hide(currentGeneration) else scheduleHide(currentGeneration, remainingMillis)
+                if (remainingMillis <= 0L) {
+                    displayDeadlineExpired = true
+                    if (!isAudioActiveOrPending()) hide(currentGeneration)
+                } else {
+                    displayDeadlineExpired = false
+                    scheduleHide(currentGeneration, remainingMillis)
+                }
             }
         }
     }
@@ -174,7 +299,13 @@ class DesktopVocabularyReminderPopupController(
             hovered = false
             publishVisible()
             if (!dragging) {
-                if (remainingMillis <= 0L) hide(currentGeneration) else scheduleHide(currentGeneration, remainingMillis)
+                if (remainingMillis <= 0L) {
+                    displayDeadlineExpired = true
+                    if (!isAudioActiveOrPending()) hide(currentGeneration)
+                } else {
+                    displayDeadlineExpired = false
+                    scheduleHide(currentGeneration, remainingMillis)
+                }
             }
         }
     }
@@ -186,19 +317,56 @@ class DesktopVocabularyReminderPopupController(
             val candidate = currentCandidate ?: return@synchronized
             val enable = !autoPlayPronunciation
             if (!enable) {
+                popupMuted = true
+                vietnameseTask?.cancel()
+                vietnameseTask = null
+                pendingVietnamese = false
                 audio.runCatching { stop() }
                 audioPlaying = false
-            }
-            val saved = autoPlayAuthority?.update(enable) ?: true
-            if (!saved) {
+                val saved = autoPlayAuthority?.update(false) ?: true
+                if (!saved) {
+                    publishVisible()
+                    return@synchronized
+                }
+                autoPlayPronunciation = false
                 publishVisible()
+                if (displayDeadlineExpired && !hovered && !dragging) {
+                    hide(currentGeneration)
+                }
                 return@synchronized
+            } else {
+                popupMuted = false
+                val saved = autoPlayAuthority?.update(true) ?: true
+                if (!saved) {
+                    publishVisible()
+                    return@synchronized
+                }
+                autoPlayPronunciation = true
+                candidate.primaryAudioReference?.let { reference ->
+                    audio.runCatching { start(reference) }.onSuccess { audioPlaying = true }
+                }
+                publishVisible()
             }
-            autoPlayPronunciation = enable
-            if (enable) candidate.primaryAudioReference?.let { reference ->
-                audio.runCatching { start(reference) }.onSuccess { audioPlaying = true }
+        }
+    }
+
+    fun toggleLayout() = uiDispatcher.dispatch {
+        synchronized(lock) {
+            val nextLayout = if (currentPopupLayout == DesktopVocabularyReminderPopupLayout.COMPACT) {
+                DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL
+            } else {
+                DesktopVocabularyReminderPopupLayout.COMPACT
             }
-            publishVisible()
+            currentPopupLayout = nextLayout
+            layoutAuthority?.update(nextLayout)
+            if (active.get()) publishVisible()
+        }
+    }
+
+    fun snooze(durationMinutes: Int = 5) = uiDispatcher.dispatch {
+        synchronized(lock) {
+            snoozeAuthority?.snooze(durationMinutes)
+            invalidate()
         }
     }
 
@@ -206,6 +374,10 @@ class DesktopVocabularyReminderPopupController(
         synchronized(lock) {
             autoPlayPronunciation = settings.autoPlayPronunciation
             currentPopupLocation = settings.popupLocation
+            currentPopupLayout = settings.popupLayout
+            playVietnameseAudio = settings.playVietnameseAudio
+            vietnameseAudioDelayMillis = settings.vietnameseAudioDelayMillis
+            englishTextFontSizeSp = settings.englishTextFontSizeSp
             if (active.get()) publishVisible()
         }
     }
@@ -226,6 +398,10 @@ class DesktopVocabularyReminderPopupController(
             }
             hideTask?.cancel()
             hideTask = null
+            vietnameseTask?.cancel()
+            vietnameseTask = null
+            pendingVietnamese = false
+            displayDeadlineExpired = false
             audio.runCatching { stop() }
             audioPlaying = false
             mutableState.value = DesktopVocabularyReminderPopupState.FullImage(candidate, currentGeneration)
@@ -254,22 +430,35 @@ class DesktopVocabularyReminderPopupController(
         audio.runCatching { close() }
     }
 
+    private fun isAudioActiveOrPending(): Boolean =
+        audioPlaying || pendingVietnamese
+
     private fun scheduleHide(token: Long, delayMillis: Long) {
         hideTask?.cancel()
         deadlineMillis = clock.nowMillis() + delayMillis
         hideTask = timer.schedule(delayMillis) {
             uiDispatcher.dispatch {
-                synchronized(lock) { hide(token) }
+                synchronized(lock) {
+                    if (currentGeneration != token || !active.get()) return@synchronized
+                    displayDeadlineExpired = true
+                    if (!isAudioActiveOrPending() && !hovered && !dragging) {
+                        hide(token)
+                    }
+                }
             }
         }
     }
 
     private fun hide(token: Long, force: Boolean = false) {
-        if (generation.get() != token) return
+        if (generation.get() != token && !force) return
         if (!force && mutableState.value is DesktopVocabularyReminderPopupState.FullImage) return
         if (!force && (token != currentGeneration || hovered || dragging)) return
         hideTask?.cancel()
         hideTask = null
+        vietnameseTask?.cancel()
+        vietnameseTask = null
+        pendingVietnamese = false
+        displayDeadlineExpired = false
         audio.runCatching { stop() }
         currentCandidate = null
         remainingMillis = 0L
@@ -293,7 +482,9 @@ class DesktopVocabularyReminderPopupController(
             autoPlayPronunciation = autoPlayPronunciation,
             markedDifficult = markedDifficult,
             popupLocation = currentPopupLocation,
-            dragging = dragging
+            dragging = dragging,
+            popupLayout = currentPopupLayout,
+            englishTextFontSizeSp = englishTextFontSizeSp
         )
     }
 }

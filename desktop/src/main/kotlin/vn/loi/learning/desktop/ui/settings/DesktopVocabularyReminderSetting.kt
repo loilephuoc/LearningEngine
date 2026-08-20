@@ -44,6 +44,8 @@ import androidx.compose.foundation.layout.Box
 import vn.loi.learning.desktop.notification.DesktopVocabularyReminderIntervalUnit
 import vn.loi.learning.desktop.notification.DesktopVocabularyReminderPopupPositioning
 
+import vn.loi.learning.desktop.notification.DesktopVocabularyReminderPopupLayout
+
 @Composable
 fun DesktopVocabularyReminderSetting(controller: DesktopVocabularyReminderSettingsController) {
     var configuration by remember(controller) { mutableStateOf(controller.load()) }
@@ -93,12 +95,14 @@ fun DesktopVocabularyReminderSetting(controller: DesktopVocabularyReminderSettin
         ReminderConfigurationDialog(
             draft = draft,
             packages = configuration.packages,
+            pausedUntil = configuration.settings.pausedUntil,
             feedback = feedback,
             onDraftChanged = { draft = it; feedback = null },
             onPreview = { feedback = controller.preview(draft).message("Preview displayed.") },
             onPause30 = { feedback = controller.pause30Minutes().message("Paused for 30 minutes."); configuration = controller.load() },
             onPauseHour = { feedback = controller.pauseOneHour().message("Paused for 1 hour."); configuration = controller.load() },
             onPauseToday = { feedback = controller.pauseToday().message("Paused until tomorrow."); configuration = controller.load() },
+            onResumeNow = { feedback = controller.resumeNow().message("Reminders resumed."); configuration = controller.load() },
             onApply = {
                 when (val result = controller.apply(draft)) {
                     DesktopVocabularyReminderActionResult.Success -> {
@@ -116,12 +120,14 @@ fun DesktopVocabularyReminderSetting(controller: DesktopVocabularyReminderSettin
 private fun ReminderConfigurationDialog(
     draft: DesktopVocabularyReminderDraft,
     packages: List<vn.loi.learning.application.contentpackaging.InstalledPackageItem>,
+    pausedUntil: Instant?,
     feedback: String?,
     onDraftChanged: (DesktopVocabularyReminderDraft) -> Unit,
     onPreview: () -> Unit,
     onPause30: () -> Unit,
     onPauseHour: () -> Unit,
     onPauseToday: () -> Unit,
+    onResumeNow: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -253,6 +259,91 @@ private fun ReminderConfigurationDialog(
                     }
                 }
 
+                Text("Popup layout", fontWeight = FontWeight.SemiBold)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        selected = draft.popupLayout == DesktopVocabularyReminderPopupLayout.COMPACT,
+                        onClick = { onDraftChanged(draft.copy(popupLayout = DesktopVocabularyReminderPopupLayout.COMPACT)) },
+                        label = { Text("Compact") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+                    FilterChip(
+                        selected = draft.popupLayout == DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL,
+                        onClick = { onDraftChanged(draft.copy(popupLayout = DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL)) },
+                        label = { Text("Large image") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+                }
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("English text size", fontWeight = FontWeight.SemiBold)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                val next = (draft.englishTextFontSizeSp - 1f).coerceIn(
+                                    vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettings.MIN_ENGLISH_FONT_SIZE_SP,
+                                    vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettings.MAX_ENGLISH_FONT_SIZE_SP
+                                )
+                                onDraftChanged(draft.copy(englishTextFontSizeSp = next))
+                            },
+                            enabled = draft.englishTextFontSizeSp > vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettings.MIN_ENGLISH_FONT_SIZE_SP
+                        ) {
+                            Text("-")
+                        }
+                        Text(
+                            "${kotlin.math.round(draft.englishTextFontSizeSp).toInt()} sp",
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                val next = (draft.englishTextFontSizeSp + 1f).coerceIn(
+                                    vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettings.MIN_ENGLISH_FONT_SIZE_SP,
+                                    vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettings.MAX_ENGLISH_FONT_SIZE_SP
+                                )
+                                onDraftChanged(draft.copy(englishTextFontSizeSp = next))
+                            },
+                            enabled = draft.englishTextFontSizeSp < vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettings.MAX_ENGLISH_FONT_SIZE_SP
+                        ) {
+                            Text("+")
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Reminder visibility", fontWeight = FontWeight.SemiBold)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Show popup while Learning Engine is active", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = draft.showPopupWhileAppForeground,
+                            onCheckedChange = { onDraftChanged(draft.copy(showPopupWhileAppForeground = it)) }
+                        )
+                    }
+                    Text(
+                        "When disabled, reminder popups and reminder audio are suppressed while the Learning Engine Desktop window is active. Reminders resume normally when you switch to another application.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(draft.activeStartText, { onDraftChanged(draft.copy(activeStartText = it)) }, Modifier.weight(1f), label = { Text("Active from (HH:mm)") }, singleLine = true)
                     OutlinedTextField(draft.activeEndText, { onDraftChanged(draft.copy(activeEndText = it)) }, Modifier.weight(1f), label = { Text("Active until (HH:mm)") }, singleLine = true)
@@ -269,7 +360,37 @@ private fun ReminderConfigurationDialog(
                         onCheckedChange = { onDraftChanged(draft.copy(autoPlayPronunciation = it)) }
                     )
                 }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Play Vietnamese meaning audio", modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = draft.playVietnameseAudio,
+                        onCheckedChange = { onDraftChanged(draft.copy(playVietnameseAudio = it)) }
+                    )
+                }
+                if (draft.playVietnameseAudio) {
+                    OutlinedTextField(
+                        value = draft.vietnameseAudioDelaySecondsText,
+                        onValueChange = { onDraftChanged(draft.copy(vietnameseAudioDelaySecondsText = it)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Delay after English audio (0.0–30.0 seconds)") },
+                        singleLine = true
+                    )
+                }
                 Button(onClick = onPreview) { Text("Preview notification") }
+                if (pausedUntil?.isAfter(Instant.now()) == true) {
+                    val formattedTime = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(pausedUntil)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Reminder status", fontWeight = FontWeight.SemiBold)
+                        Text("Snoozed until $formattedTime", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+                        Button(onClick = onResumeNow) {
+                            Text("Resume now")
+                        }
+                    }
+                }
                 Text("Pause reminders", fontWeight = FontWeight.SemiBold)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = onPause30) { Text("30 minutes") }

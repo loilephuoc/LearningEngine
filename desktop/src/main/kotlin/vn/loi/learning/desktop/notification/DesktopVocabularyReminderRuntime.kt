@@ -20,10 +20,23 @@ interface DesktopVocabularyReminderSink {
         candidate: DesktopVocabularyCandidate,
         displayDurationMillis: Long,
         autoPlayPronunciation: Boolean,
-        popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation()
+        popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation(),
+        popupLayout: DesktopVocabularyReminderPopupLayout = DesktopVocabularyReminderPopupLayout.COMPACT,
+        playVietnameseAudio: Boolean = false,
+        vietnameseAudioDelayMillis: Long = DesktopVocabularyReminderSettings.DEFAULT_VIETNAMESE_AUDIO_DELAY_MILLIS,
+        englishTextFontSizeSp: Float = DesktopVocabularyReminderSettings.DEFAULT_ENGLISH_FONT_SIZE_SP
     )
     fun dispatch(candidate: DesktopVocabularyCandidate, displayDurationMillis: Long, autoPlayPronunciation: Boolean) =
-        dispatch(candidate, displayDurationMillis, autoPlayPronunciation, DesktopVocabularyReminderPopupLocation())
+        dispatch(
+            candidate = candidate,
+            displayDurationMillis = displayDurationMillis,
+            autoPlayPronunciation = autoPlayPronunciation,
+            popupLocation = DesktopVocabularyReminderPopupLocation(),
+            popupLayout = DesktopVocabularyReminderPopupLayout.COMPACT,
+            playVietnameseAudio = false,
+            vietnameseAudioDelayMillis = DesktopVocabularyReminderSettings.DEFAULT_VIETNAMESE_AUDIO_DELAY_MILLIS,
+            englishTextFontSizeSp = DesktopVocabularyReminderSettings.DEFAULT_ENGLISH_FONT_SIZE_SP
+        )
 
     fun invalidate() = Unit
 
@@ -76,6 +89,7 @@ class DesktopVocabularyReminderRuntime(
     private var closed = false
     private var tickInFlight = false
     private var backgroundMode = true
+    private var isDesktopAppForeground = false
 
     @Synchronized
     fun start() {
@@ -85,12 +99,32 @@ class DesktopVocabularyReminderRuntime(
     }
 
     @Synchronized
+    fun setAppForeground(foreground: Boolean) {
+        if (closed || isDesktopAppForeground == foreground) return
+        val wasForeground = isDesktopAppForeground
+        isDesktopAppForeground = foreground
+        if (foreground && !settings.showPopupWhileAppForeground) {
+            backgroundMode = false
+            scheduledTask?.cancel()
+            scheduledTask = null
+            sink.invalidate()
+        } else {
+            backgroundMode = !foreground
+        }
+        if (wasForeground && !foreground) {
+            backgroundMode = true
+            if (started && settings.enabled) reschedule()
+        }
+    }
+
+    @Synchronized
     fun setBackgroundMode(background: Boolean) {
         if (closed || backgroundMode == background) return
         backgroundMode = background
+        isDesktopAppForeground = !background
         scheduledTask?.cancel()
         scheduledTask = null
-        if (!background) sink.invalidate() else if (started) reschedule()
+        if (!background) sink.invalidate() else if (started && settings.enabled) reschedule()
     }
 
     @Synchronized
@@ -105,7 +139,8 @@ class DesktopVocabularyReminderRuntime(
         if (
             !updated.enabled ||
             updated.selectedPackageId != previous.selectedPackageId ||
-            updated.selectionMode != previous.selectionMode
+            updated.selectionMode != previous.selectionMode ||
+            (isDesktopAppForeground && !updated.showPopupWhileAppForeground)
         ) {
             sink.invalidate()
         }
@@ -124,7 +159,17 @@ class DesktopVocabularyReminderRuntime(
         updateSettings(DesktopVocabularyReminderSchedule.pauseToday(settings, clock.instant(), zoneId()))
 
     @Synchronized
-    fun resumeNow() = updateSettings(settings.copy(pausedUntil = null))
+    fun snooze(durationMinutes: Int): Boolean =
+        pauseFor(Duration.ofMinutes(durationMinutes.toLong().coerceIn(1L, 1440L)))
+
+    @Synchronized
+    fun resumeNow(): Boolean {
+        val updated = updateSettings(settings.copy(pausedUntil = null))
+        if (started && updated) {
+            dispatchIfEligible(bypassForegroundGate = true)
+        }
+        return updated
+    }
 
     private fun pauseFor(duration: Duration) =
         updateSettings(DesktopVocabularyReminderSchedule.pauseFor(settings, clock.instant(), duration))
@@ -132,7 +177,7 @@ class DesktopVocabularyReminderRuntime(
     private fun reschedule() {
         scheduledTask?.cancel()
         scheduledTask = null
-        if (!closed && backgroundMode && settings.enabled) {
+        if (!closed && (backgroundMode || settings.showPopupWhileAppForeground) && settings.enabled) {
             scheduledTask = delayScheduler.schedule(settings.intervalMillis, ::tick)
         }
     }
@@ -140,7 +185,7 @@ class DesktopVocabularyReminderRuntime(
     @Synchronized
     private fun tick() {
         scheduledTask = null
-        if (closed || !started || !backgroundMode || !settings.enabled) return
+        if (closed || !started || (!backgroundMode && !settings.showPopupWhileAppForeground) || !settings.enabled) return
         if (!tickInFlight) {
             tickInFlight = true
             try {
@@ -151,12 +196,14 @@ class DesktopVocabularyReminderRuntime(
                 tickInFlight = false
             }
         }
-        if (!closed && started && backgroundMode && settings.enabled) reschedule()
+        if (!closed && started && (backgroundMode || settings.showPopupWhileAppForeground) && settings.enabled) reschedule()
     }
 
-    private fun dispatchIfEligible() {
+    private fun dispatchIfEligible(bypassForegroundGate: Boolean = false) {
+        if (!settings.enabled) return
         if (settings.selectedPackageId == null) return
         if (!DesktopVocabularyReminderSchedule.isActiveAt(settings, clock.instant(), zoneId())) return
+        if (!bypassForegroundGate && !settings.showPopupWhileAppForeground && isDesktopAppForeground) return
         if (sink.isReminderActive) return
         when (val result = selector.select(settings)) {
             is DesktopVocabularyCandidateSelectionResult.Selected ->
@@ -164,7 +211,11 @@ class DesktopVocabularyReminderRuntime(
                     result.candidate,
                     settings.displayDurationMillis,
                     settings.autoPlayPronunciation,
-                    settings.popupLocation
+                    settings.popupLocation,
+                    settings.popupLayout,
+                    settings.playVietnameseAudio,
+                    settings.vietnameseAudioDelayMillis,
+                    settings.englishTextFontSizeSp
                 )
             is DesktopVocabularyCandidateSelectionResult.NoCandidate -> Unit
         }
@@ -194,6 +245,10 @@ object NoOpDesktopVocabularyReminderSink : DesktopVocabularyReminderSink {
         candidate: DesktopVocabularyCandidate,
         displayDurationMillis: Long,
         autoPlayPronunciation: Boolean,
-        popupLocation: DesktopVocabularyReminderPopupLocation
+        popupLocation: DesktopVocabularyReminderPopupLocation,
+        popupLayout: DesktopVocabularyReminderPopupLayout,
+        playVietnameseAudio: Boolean,
+        vietnameseAudioDelayMillis: Long,
+        englishTextFontSizeSp: Float
     ) = Unit
 }

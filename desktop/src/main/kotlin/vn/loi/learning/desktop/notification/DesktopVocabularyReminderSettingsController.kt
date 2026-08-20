@@ -25,7 +25,12 @@ data class DesktopVocabularyReminderDraft(
     val activeEndText: String,
     val displayDurationText: String,
     val autoPlayPronunciation: Boolean,
-    val popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation()
+    val popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation(),
+    val popupLayout: DesktopVocabularyReminderPopupLayout = DesktopVocabularyReminderPopupLayout.COMPACT,
+    val playVietnameseAudio: Boolean = false,
+    val vietnameseAudioDelaySecondsText: String = "2.0",
+    val englishTextFontSizeSp: Float = DesktopVocabularyReminderSettings.DEFAULT_ENGLISH_FONT_SIZE_SP,
+    val showPopupWhileAppForeground: Boolean = true
 ) {
     val intervalText: String get() = intervalValueText
 
@@ -38,7 +43,12 @@ data class DesktopVocabularyReminderDraft(
         activeEndText: String,
         displayDurationText: String,
         autoPlayPronunciation: Boolean,
-        popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation()
+        popupLocation: DesktopVocabularyReminderPopupLocation = DesktopVocabularyReminderPopupLocation(),
+        popupLayout: DesktopVocabularyReminderPopupLayout = DesktopVocabularyReminderPopupLayout.COMPACT,
+        playVietnameseAudio: Boolean = false,
+        vietnameseAudioDelaySecondsText: String = "2.0",
+        englishTextFontSizeSp: Float = DesktopVocabularyReminderSettings.DEFAULT_ENGLISH_FONT_SIZE_SP,
+        showPopupWhileAppForeground: Boolean = true
     ) : this(
         enabled = enabled,
         selectedPackageId = selectedPackageId,
@@ -49,7 +59,12 @@ data class DesktopVocabularyReminderDraft(
         activeEndText = activeEndText,
         displayDurationText = displayDurationText,
         autoPlayPronunciation = autoPlayPronunciation,
-        popupLocation = popupLocation
+        popupLocation = popupLocation,
+        popupLayout = popupLayout,
+        playVietnameseAudio = playVietnameseAudio,
+        vietnameseAudioDelaySecondsText = vietnameseAudioDelaySecondsText,
+        englishTextFontSizeSp = englishTextFontSizeSp,
+        showPopupWhileAppForeground = showPopupWhileAppForeground
     )
 
     fun validate(pausedUntil: java.time.Instant?): DesktopVocabularyReminderDraftValidation {
@@ -79,10 +94,22 @@ data class DesktopVocabularyReminderDraft(
             ?.takeIf { it in DesktopVocabularyReminderSettings.MIN_DISPLAY_DURATION_MILLIS..
                 DesktopVocabularyReminderSettings.MAX_DISPLAY_DURATION_MILLIS }
             ?: return DesktopVocabularyReminderDraftValidation.Invalid("Popup duration must be from 1.5 to 60 seconds.")
+        val vietnameseDelaySeconds = vietnameseAudioDelaySecondsText.trim().toBigDecimalOrNull()
+            ?: return DesktopVocabularyReminderDraftValidation.Invalid("Vietnamese audio delay must be a number from 0.0 to 30.0 seconds.")
+        val vietnameseDelayMillis = runCatching { vietnameseDelaySeconds.movePointRight(3).longValueExact() }.getOrNull()
+            ?.takeIf { it in DesktopVocabularyReminderSettings.MIN_VIETNAMESE_AUDIO_DELAY_MILLIS..
+                DesktopVocabularyReminderSettings.MAX_VIETNAMESE_AUDIO_DELAY_MILLIS }
+            ?: return DesktopVocabularyReminderDraftValidation.Invalid("Vietnamese audio delay must be from 0.0 to 30.0 seconds.")
         val start = runCatching { LocalTime.parse(activeStartText.trim()) }.getOrNull()
             ?: return DesktopVocabularyReminderDraftValidation.Invalid("Active from must use HH:mm.")
         val end = runCatching { LocalTime.parse(activeEndText.trim()) }.getOrNull()
             ?: return DesktopVocabularyReminderDraftValidation.Invalid("Active until must use HH:mm.")
+        val fontSize = englishTextFontSizeSp.takeIf {
+            it in DesktopVocabularyReminderSettings.MIN_ENGLISH_FONT_SIZE_SP..
+                DesktopVocabularyReminderSettings.MAX_ENGLISH_FONT_SIZE_SP
+        } ?: return DesktopVocabularyReminderDraftValidation.Invalid(
+            "English text font size must be between ${DesktopVocabularyReminderSettings.MIN_ENGLISH_FONT_SIZE_SP} and ${DesktopVocabularyReminderSettings.MAX_ENGLISH_FONT_SIZE_SP} sp."
+        )
         return DesktopVocabularyReminderDraftValidation.Valid(
             DesktopVocabularyReminderSettings(
                 enabled = enabled,
@@ -94,7 +121,12 @@ data class DesktopVocabularyReminderDraft(
                 displayDurationMillis = durationMillis,
                 autoPlayPronunciation = autoPlayPronunciation,
                 pausedUntil = pausedUntil,
-                popupLocation = popupLocation
+                popupLocation = popupLocation,
+                popupLayout = popupLayout,
+                playVietnameseAudio = playVietnameseAudio,
+                vietnameseAudioDelayMillis = vietnameseDelayMillis,
+                englishTextFontSizeSp = fontSize,
+                showPopupWhileAppForeground = showPopupWhileAppForeground
             )
         )
     }
@@ -118,7 +150,12 @@ data class DesktopVocabularyReminderDraft(
                 activeEndText = settings.activeEnd.toString(),
                 displayDurationText = java.math.BigDecimal.valueOf(settings.displayDurationMillis, 3).stripTrailingZeros().toPlainString(),
                 autoPlayPronunciation = settings.autoPlayPronunciation,
-                popupLocation = settings.popupLocation
+                popupLocation = settings.popupLocation,
+                popupLayout = settings.popupLayout,
+                playVietnameseAudio = settings.playVietnameseAudio,
+                vietnameseAudioDelaySecondsText = java.math.BigDecimal.valueOf(settings.vietnameseAudioDelayMillis, 3).stripTrailingZeros().toPlainString(),
+                englishTextFontSizeSp = settings.englishTextFontSizeSp,
+                showPopupWhileAppForeground = settings.showPopupWhileAppForeground
             )
         }
     }
@@ -160,10 +197,14 @@ class DesktopVocabularyReminderSettingsController(
         return when (val result = previewSelector.select(settings)) {
             is DesktopVocabularyCandidateSelectionResult.Selected -> {
                 popupController.dispatch(
-                    result.candidate,
-                    settings.displayDurationMillis,
-                    settings.autoPlayPronunciation,
-                    settings.popupLocation
+                    candidate = result.candidate,
+                    displayDurationMillis = settings.displayDurationMillis,
+                    autoPlayPronunciation = settings.autoPlayPronunciation,
+                    popupLocation = settings.popupLocation,
+                    popupLayout = settings.popupLayout,
+                    playVietnameseAudio = settings.playVietnameseAudio,
+                    vietnameseAudioDelayMillis = settings.vietnameseAudioDelayMillis,
+                    englishTextFontSizeSp = settings.englishTextFontSizeSp
                 )
                 DesktopVocabularyReminderActionResult.Success
             }

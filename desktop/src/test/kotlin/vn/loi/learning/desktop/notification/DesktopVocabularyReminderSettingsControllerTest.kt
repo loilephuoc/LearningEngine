@@ -151,6 +151,85 @@ class DesktopVocabularyReminderSettingsControllerTest {
     }
 
     @Test
+    fun `draft from settings maps layout and vietnamese audio delay correctly`() {
+        val settings = DesktopVocabularyReminderSettings(
+            enabled = true,
+            popupLayout = DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL,
+            playVietnameseAudio = true,
+            vietnameseAudioDelayMillis = 2_500L
+        )
+        val draft = DesktopVocabularyReminderDraft.from(settings)
+        assertEquals(DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL, draft.popupLayout)
+        assertTrue(draft.playVietnameseAudio)
+        assertEquals("2.5", draft.vietnameseAudioDelaySecondsText)
+    }
+
+    @Test
+    fun `draft accepts valid decimal vietnamese delay and rejects out of bounds or invalid text`() {
+        listOf("0" to 0L, "0.0" to 0L, "0.5" to 500L, "2.0" to 2_000L, "2.5" to 2_500L, "30" to 30_000L, "30.0" to 30_000L).forEach { (text, millis) ->
+            val draft = DesktopVocabularyReminderDraft(
+                enabled = true,
+                selectedPackageId = null,
+                selectionMode = DesktopVocabularyReminderSelectionMode.RANDOM_ALL,
+                intervalValueText = "15",
+                intervalUnit = DesktopVocabularyReminderIntervalUnit.MINUTES,
+                activeStartText = "08:00",
+                activeEndText = "22:00",
+                displayDurationText = "8",
+                autoPlayPronunciation = false,
+                popupLayout = DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL,
+                playVietnameseAudio = true,
+                vietnameseAudioDelaySecondsText = text
+            )
+            val valid = assertIs<DesktopVocabularyReminderDraftValidation.Valid>(draft.validate(null))
+            assertEquals(millis, valid.settings.vietnameseAudioDelayMillis)
+            assertEquals(DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL, valid.settings.popupLayout)
+            assertTrue(valid.settings.playVietnameseAudio)
+        }
+
+        listOf("-0.1", "-1", "30.001", "35", "NaN", "Infinity", "invalid").forEach { invalidText ->
+            val draft = DesktopVocabularyReminderDraft(
+                enabled = true,
+                selectedPackageId = null,
+                selectionMode = DesktopVocabularyReminderSelectionMode.RANDOM_ALL,
+                intervalValueText = "15",
+                intervalUnit = DesktopVocabularyReminderIntervalUnit.MINUTES,
+                activeStartText = "08:00",
+                activeEndText = "22:00",
+                displayDurationText = "8",
+                autoPlayPronunciation = false,
+                popupLayout = DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL,
+                playVietnameseAudio = true,
+                vietnameseAudioDelaySecondsText = invalidText
+            )
+            assertIs<DesktopVocabularyReminderDraftValidation.Invalid>(draft.validate(null))
+        }
+    }
+
+    @Test
+    fun `preview forwards draft layout and vietnamese audio to popup controller`() {
+        val fixture = Fixture()
+        val draft = DesktopVocabularyReminderDraft(
+            enabled = true,
+            selectedPackageId = null,
+            selectionMode = DesktopVocabularyReminderSelectionMode.RANDOM_ALL,
+            intervalValueText = "15",
+            intervalUnit = DesktopVocabularyReminderIntervalUnit.MINUTES,
+            activeStartText = "08:00",
+            activeEndText = "22:00",
+            displayDurationText = "8",
+            autoPlayPronunciation = false,
+            popupLayout = DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL,
+            playVietnameseAudio = true,
+            vietnameseAudioDelaySecondsText = "3.5"
+        )
+        assertEquals(DesktopVocabularyReminderActionResult.Success, fixture.controller.preview(draft))
+        val visible = assertIs<DesktopVocabularyReminderPopupState.Visible>(fixture.popup.state.value)
+        assertEquals(DesktopVocabularyReminderPopupLayout.LARGE_IMAGE_VERTICAL, visible.popupLayout)
+        assertEquals(0, fixture.store.saves)
+    }
+
+    @Test
     fun `pause and resume persist without disabling`() {
         val fixture = Fixture()
         assertEquals(DesktopVocabularyReminderActionResult.Success, fixture.controller.pause30Minutes())
@@ -173,6 +252,40 @@ class DesktopVocabularyReminderSettingsControllerTest {
         fixture.popup.closePopup()
         assertEquals(DesktopVocabularyReminderActionResult.Success, fixture.controller.apply(enabledAudio))
         assertTrue(fixture.runtime.settings.autoPlayPronunciation)
+    }
+
+    @Test
+    fun `draft validates english font size bounds and apply persists english font size and foreground visibility`() {
+        val fixture = Fixture()
+        val validDraft = draft("7", "8").copy(
+            englishTextFontSizeSp = 28f,
+            showPopupWhileAppForeground = false
+        )
+        val valid = assertIs<DesktopVocabularyReminderDraftValidation.Valid>(validDraft.validate(null))
+        assertEquals(28f, valid.settings.englishTextFontSizeSp)
+        assertFalse(valid.settings.showPopupWhileAppForeground)
+
+        val belowMin = validDraft.copy(englishTextFontSizeSp = 13f)
+        assertIs<DesktopVocabularyReminderDraftValidation.Invalid>(belowMin.validate(null))
+
+        val atMax = validDraft.copy(englishTextFontSizeSp = 48f)
+        assertIs<DesktopVocabularyReminderDraftValidation.Valid>(atMax.validate(null))
+
+        val aboveMax = validDraft.copy(englishTextFontSizeSp = 49f)
+        assertIs<DesktopVocabularyReminderDraftValidation.Invalid>(aboveMax.validate(null))
+
+        // Preview receives draft font size immediately without persisting
+        assertEquals(DesktopVocabularyReminderActionResult.Success, fixture.controller.preview(validDraft))
+        assertEquals(0, fixture.store.saves)
+        val visible = assertIs<DesktopVocabularyReminderPopupState.Visible>(fixture.popup.state.value)
+        assertEquals(28f, visible.englishTextFontSizeSp)
+        fixture.popup.closePopup()
+
+        // Apply persists
+        assertEquals(DesktopVocabularyReminderActionResult.Success, fixture.controller.apply(validDraft))
+        assertEquals(1, fixture.store.saves)
+        assertEquals(28f, fixture.runtime.settings.englishTextFontSizeSp)
+        assertFalse(fixture.runtime.settings.showPopupWhileAppForeground)
     }
 
     @Test
@@ -200,7 +313,7 @@ class DesktopVocabularyReminderSettingsControllerTest {
         val store = Store()
         val scheduler = Scheduler()
         val audio = FakeAudio()
-        lateinit var runtime: DesktopVocabularyReminderRuntime
+        var runtime: DesktopVocabularyReminderRuntime
         val popup = DesktopVocabularyReminderPopupController(
             DesktopVocabularyReminderUiDispatcher { it() },
             DesktopVocabularyReminderMonotonicClock { 0L },
@@ -212,7 +325,7 @@ class DesktopVocabularyReminderSettingsControllerTest {
                     runtime.updateSettings(runtime.settings.copy(autoPlayPronunciation = enabled))
             }
         )
-        lateinit var controller: DesktopVocabularyReminderSettingsController
+        var controller: DesktopVocabularyReminderSettingsController
         init {
             runtime = DesktopVocabularyReminderRuntime(
                 store,
@@ -265,7 +378,7 @@ class DesktopVocabularyReminderSettingsControllerTest {
         )
         private fun candidate() = DesktopVocabularyCandidate(
             ContentId("content"), InstalledPackageId("package"), "Package", "Word",
-            null, null, null, null, null, "audio/ref", null, null
+            null, null, null, null, null, "audio/ref", null, null, null
         )
     }
 }
