@@ -16,9 +16,11 @@ import androidx.compose.ui.unit.dp
 import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
 import vn.loi.learning.application.contentpackaging.browser.BrowserSortOption
 import vn.loi.learning.application.port.ContentMediaStorage
+import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem
 import vn.loi.learning.desktop.tts.DesktopTtsAudioService
 import vn.loi.learning.desktop.tts.EdgeTtsEngine
 import vn.loi.learning.desktop.tts.TtsField
+import vn.loi.learning.desktop.tts.ui.BatchTtsDialog
 import vn.loi.learning.desktop.tts.ui.DesktopTtsDialog
 import vn.loi.learning.desktop.tts.ui.TtsDialogTarget
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
@@ -146,6 +148,25 @@ fun ContentStudioScreen(
         }
     }
 
+    var showBatchTtsDialog by remember { mutableStateOf(false) }
+    var batchTtsScopeItems by remember { mutableStateOf<List<PackageContentBrowserItem>>(emptyList()) }
+    var batchTtsTargetField by remember { mutableStateOf<TtsField?>(null) }
+    var batchTtsTitle by remember { mutableStateOf("Batch Generate Audio (TTS)") }
+
+    val handleRequestTtsBatch: (Set<String>) -> Unit = { selectedIds ->
+        batchTtsScopeItems = uiState.allItems.filter { it.contentId.value in selectedIds }
+        batchTtsTargetField = null
+        batchTtsTitle = "Batch Generate Audio (${selectedIds.size} Selected Items)"
+        showBatchTtsDialog = true
+    }
+
+    val handleGenerateAllMissing: () -> Unit = {
+        batchTtsScopeItems = uiState.allItems
+        batchTtsTargetField = null
+        batchTtsTitle = "Generate All Missing Audio"
+        showBatchTtsDialog = true
+    }
+
     LaunchedEffect(Unit) {
         screenFocusRequester.requestFocus()
     }
@@ -224,6 +245,7 @@ fun ContentStudioScreen(
             onImageReuseReviewClick = { onOpenImageReuseReview?.invoke() },
             onPosReviewClick = { onOpenPosReview?.invoke() },
             onExportJsonClick = { onOpenContentMaintenanceExport?.invoke() },
+            onGenerateAllMissingAudioClick = handleGenerateAllMissing,
             canUndoDelete = uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem,
             isCreateSubmitting = uiState.isCreateSubmitting,
             deleteTargetCount = uiState.selectedContentIds.size
@@ -273,7 +295,8 @@ fun ContentStudioScreen(
                     onDuplicateItem = onDuplicateItem,
                     onCopyQuestion = onCopyQuestion,
                     onCopyAnswer = onCopyAnswer,
-                    onRequestGenerateTts = handleRequestTts
+                    onRequestGenerateTts = handleRequestTts,
+                    onRequestGenerateTtsBatch = handleRequestTtsBatch
                 )
 
                 VerticalDivider(color = LEColors.borderSubtle)
@@ -596,6 +619,35 @@ fun ContentStudioScreen(
             )
         }
     }
+
+    if (showBatchTtsDialog) {
+        val resolvedTtsService = remember(contentMediaStorage, ttsAudioService) {
+            ttsAudioService ?: contentMediaStorage?.let { storage ->
+                DesktopTtsAudioService(
+                    ttsEngine = EdgeTtsEngine(),
+                    mediaStorage = storage
+                )
+            }
+        }
+        if (resolvedTtsService != null) {
+            BatchTtsDialog(
+                title = batchTtsTitle,
+                packageName = uiState.packageName,
+                itemsToScan = batchTtsScopeItems,
+                targetField = batchTtsTargetField,
+                ttsService = resolvedTtsService,
+                onApply = { contentId, field, audioRef ->
+                    if (onApplyTtsAudio != null) {
+                        onApplyTtsAudio(contentId, field, audioRef)
+                    }
+                },
+                onDismiss = {
+                    showBatchTtsDialog = false
+                    batchTtsScopeItems = emptyList()
+                }
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -617,6 +669,7 @@ private fun StudioTopBar(
     onImageReuseReviewClick: (() -> Unit)? = null,
     onPosReviewClick: (() -> Unit)? = null,
     onExportJsonClick: (() -> Unit)? = null,
+    onGenerateAllMissingAudioClick: (() -> Unit)? = null,
     canUndoDelete: Boolean,
     isCreateSubmitting: Boolean,
     deleteTargetCount: Int
@@ -750,6 +803,12 @@ private fun StudioTopBar(
                     text = "Keyboard Shortcuts",
                     onClick = {},
                     icon = LEIcons.Keyboard
+                )
+                LEIconButton(
+                    icon = LEIcons.Audio,
+                    onClick = { onGenerateAllMissingAudioClick?.invoke() },
+                    contentDescription = "Generate All Missing Audio",
+                    enabled = !isCreatingNewItem
                 )
                 LEIconButton(icon = LEIcons.Help, onClick = {}, contentDescription = "Help")
                 LEIconButton(icon = LEIcons.Settings, onClick = {}, contentDescription = "Settings")

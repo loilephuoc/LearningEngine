@@ -118,6 +118,7 @@ fun ContentExplorerPane(
     onCopyQuestion: ((String) -> Unit)? = null,
     onCopyAnswer: ((String) -> Unit)? = null,
     onRequestGenerateTts: ((contentId: String, field: vn.loi.learning.desktop.tts.TtsField?) -> Unit)? = null,
+    onRequestGenerateTtsBatch: ((contentIds: Set<String>) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val items = uiState.filteredItems
@@ -275,9 +276,15 @@ fun ContentExplorerPane(
                     onCheckSelectedMedia = onCheckSelectedMedia,
                     onPosReviewSelected = onPosReviewSelected,
                     onExportJsonSelected = onExportJsonSelected,
-                    onGenerateTts = if (uiState.selectedContentIds.size == 1 && onRequestGenerateTts != null) {
-                        { onRequestGenerateTts(uiState.selectedContentIds.first(), null) }
-                    } else null,
+                    onGenerateTts = when {
+                        onRequestGenerateTtsBatch != null -> {
+                            { onRequestGenerateTtsBatch(uiState.selectedContentIds) }
+                        }
+                        uiState.selectedContentIds.size == 1 && onRequestGenerateTts != null -> {
+                            { onRequestGenerateTts(uiState.selectedContentIds.first(), null) }
+                        }
+                        else -> null
+                    },
                     onClearSelection = onClearMultiSelection
                 )
             }
