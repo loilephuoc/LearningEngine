@@ -1364,4 +1364,33 @@ class PackageContentBrowserEditStateTest {
         assertTrue(vm.uiState.importError?.contains("Save failed: Disk full") == true)
         assertNotNull(state.draftEdits?.imageRef)
     }
+
+    @Test
+    fun `applyGeneratedTtsAudio updates only the target field and preserves all other fields`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, instId) = createViewModelWithPackageInContext(appContext, contentCount = 2)
+        vm.browsePackageLessons(instId, "Persist Package")
+        vm.attemptSelectRowAutoEdit("cnt-1")
+
+        // First assign question audio
+        vm.applyGeneratedTtsAudio("cnt-1", vn.loi.learning.desktop.tts.TtsField.QUESTION, "pkg/q_audio.mp3")
+
+        var state = vm.packageBrowserUiState!!
+        assertEquals("pkg/q_audio.mp3", state.selectedItemAnywhere?.questionAudioRef)
+        assertEquals("Question 1", state.selectedItemAnywhere?.questionText)
+        assertEquals("Answer 1", state.selectedItemAnywhere?.answerText)
+        assertNull(state.selectedItemAnywhere?.translationAudioRef)
+
+        // Then assign translation audio
+        vm.applyGeneratedTtsAudio("cnt-1", vn.loi.learning.desktop.tts.TtsField.TRANSLATION, "pkg/trans_audio.mp3")
+
+        state = vm.packageBrowserUiState!!
+        // Question audio must remain intact!
+        assertEquals("pkg/q_audio.mp3", state.selectedItemAnywhere?.questionAudioRef)
+        assertEquals("pkg/trans_audio.mp3", state.selectedItemAnywhere?.translationAudioRef)
+        assertEquals("Question 1", state.selectedItemAnywhere?.questionText)
+        assertEquals("Answer 1", state.selectedItemAnywhere?.answerText)
+        assertNull(state.selectedItemAnywhere?.answerAudioRef)
+        assertNull(state.selectedItemAnywhere?.exampleAudioRef)
+    }
 }

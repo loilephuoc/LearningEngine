@@ -16,6 +16,11 @@ import androidx.compose.ui.unit.dp
 import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
 import vn.loi.learning.application.contentpackaging.browser.BrowserSortOption
 import vn.loi.learning.application.port.ContentMediaStorage
+import vn.loi.learning.desktop.tts.DesktopTtsAudioService
+import vn.loi.learning.desktop.tts.EdgeTtsEngine
+import vn.loi.learning.desktop.tts.TtsField
+import vn.loi.learning.desktop.tts.ui.DesktopTtsDialog
+import vn.loi.learning.desktop.tts.ui.TtsDialogTarget
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.browser.ContentProblemFilter
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
@@ -120,6 +125,8 @@ fun ContentStudioScreen(
     onTargetExportFileNameChanged: ((String) -> Unit)? = null,
     onExecuteContentMaintenanceExport: (() -> Unit)? = null,
     onCloseContentMaintenanceExport: (() -> Unit)? = null,
+    ttsAudioService: DesktopTtsAudioService? = null,
+    onApplyTtsAudio: ((contentId: String, field: TtsField, audioRef: String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val playbackCoordinator = remember(contentMediaStorage) {
@@ -129,6 +136,15 @@ fun ContentStudioScreen(
     val screenFocusRequester = remember { FocusRequester() }
     // PLE-020: search field focus requester (passed down to ContentExplorerPane)
     val searchFocusRequester = remember { FocusRequester() }
+
+    var ttsDialogTarget by remember { mutableStateOf<TtsDialogTarget?>(null) }
+    val handleRequestTts: (String, TtsField?) -> Unit = { contentId, field ->
+        val targetItem = uiState.allItems.firstOrNull { it.contentId.value == contentId }
+            ?: uiState.selectedItemAnywhere
+        if (targetItem != null) {
+            ttsDialogTarget = TtsDialogTarget.fromBrowserItem(targetItem, field)
+        }
+    }
 
     LaunchedEffect(Unit) {
         screenFocusRequester.requestFocus()
@@ -256,7 +272,8 @@ fun ContentStudioScreen(
                     searchFocusRequester = searchFocusRequester,
                     onDuplicateItem = onDuplicateItem,
                     onCopyQuestion = onCopyQuestion,
-                    onCopyAnswer = onCopyAnswer
+                    onCopyAnswer = onCopyAnswer,
+                    onRequestGenerateTts = handleRequestTts
                 )
 
                 VerticalDivider(color = LEColors.borderSubtle)
@@ -319,7 +336,10 @@ fun ContentStudioScreen(
                             { reference: String ->
                                 storage.resolve(reference)?.fileName?.toString()
                             }
-                        }
+                        },
+                    onRequestGenerateTts = { field ->
+                        uiState.selectedContentId?.let { handleRequestTts(it, field) }
+                    }
                 )
             }
         }
@@ -541,6 +561,40 @@ fun ContentStudioScreen(
             onExecuteExport = { onExecuteContentMaintenanceExport?.invoke() },
             onDismiss = { onCloseContentMaintenanceExport?.invoke() }
         )
+    }
+
+    ttsDialogTarget?.let { target ->
+        val resolvedTtsService = remember(contentMediaStorage, ttsAudioService) {
+            ttsAudioService ?: contentMediaStorage?.let { storage ->
+                DesktopTtsAudioService(
+                    ttsEngine = EdgeTtsEngine(),
+                    mediaStorage = storage
+                )
+            }
+        }
+        if (resolvedTtsService != null) {
+            DesktopTtsDialog(
+                target = target,
+                packageName = uiState.packageName,
+                ttsService = resolvedTtsService,
+                contentMediaStorage = contentMediaStorage,
+                onApply = { contentId, field, audioRef ->
+                    if (onApplyTtsAudio != null) {
+                        onApplyTtsAudio(contentId, field, audioRef)
+                    } else {
+                        when (field) {
+                            TtsField.QUESTION -> onUpdateDraftQuestionAudioRef?.invoke(audioRef)
+                            TtsField.ANSWER -> onUpdateDraftAnswerAudioRef?.invoke(audioRef)
+                            TtsField.EXAMPLE -> onUpdateDraftExampleAudioRef?.invoke(audioRef)
+                            TtsField.TRANSLATION -> onUpdateDraftTranslationAudioRef?.invoke(audioRef)
+                        }
+                        onSaveEdit?.invoke()
+                    }
+                    ttsDialogTarget = null
+                },
+                onDismiss = { ttsDialogTarget = null }
+            )
+        }
     }
 }
 

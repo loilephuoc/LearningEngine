@@ -103,6 +103,7 @@ fun MediaInspectorPane(
     onOpenFullscreenImage: (() -> Unit)? = null,
     onShowImageInFolder: ((String) -> Unit)? = null,
     resolveImageFileName: ((String) -> String?)? = null,
+    onRequestGenerateTts: ((vn.loi.learning.desktop.tts.TtsField) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isCreating = uiState.isCreatingNewItem
@@ -154,45 +155,53 @@ fun MediaInspectorPane(
             AudioAssetSlotCard(
                 label = "Question Audio",
                 slotName = "question",
+                ttsField = vn.loi.learning.desktop.tts.TtsField.QUESTION,
                 audioRef = currentQuestionAudioRef,
                 playbackCoordinator = playbackCoordinator,
                 onPlayAudio = onPlayAudio,
                 onStopAudio = onStopAudio,
                 onUpdateDraftRef = onUpdateDraftQuestionAudioRef,
-                onImportMediaFile = onImportMediaFile
+                onImportMediaFile = onImportMediaFile,
+                onRequestGenerateTts = onRequestGenerateTts
             )
 
             AudioAssetSlotCard(
                 label = "Answer Audio",
                 slotName = "answer",
+                ttsField = vn.loi.learning.desktop.tts.TtsField.ANSWER,
                 audioRef = currentAnswerAudioRef,
                 playbackCoordinator = playbackCoordinator,
                 onPlayAudio = onPlayAudio,
                 onStopAudio = onStopAudio,
                 onUpdateDraftRef = onUpdateDraftAnswerAudioRef,
-                onImportMediaFile = onImportMediaFile
+                onImportMediaFile = onImportMediaFile,
+                onRequestGenerateTts = onRequestGenerateTts
             )
 
             AudioAssetSlotCard(
                 label = "Example Audio",
                 slotName = "example",
+                ttsField = vn.loi.learning.desktop.tts.TtsField.EXAMPLE,
                 audioRef = currentExampleAudioRef,
                 playbackCoordinator = playbackCoordinator,
                 onPlayAudio = onPlayAudio,
                 onStopAudio = onStopAudio,
                 onUpdateDraftRef = onUpdateDraftExampleAudioRef,
-                onImportMediaFile = onImportMediaFile
+                onImportMediaFile = onImportMediaFile,
+                onRequestGenerateTts = onRequestGenerateTts
             )
 
             AudioAssetSlotCard(
                 label = "Translation Audio",
                 slotName = "translation",
+                ttsField = vn.loi.learning.desktop.tts.TtsField.TRANSLATION,
                 audioRef = currentTranslationAudioRef,
                 playbackCoordinator = playbackCoordinator,
                 onPlayAudio = onPlayAudio,
                 onStopAudio = onStopAudio,
                 onUpdateDraftRef = onUpdateDraftTranslationAudioRef,
-                onImportMediaFile = onImportMediaFile
+                onImportMediaFile = onImportMediaFile,
+                onRequestGenerateTts = onRequestGenerateTts
             )
 
             HorizontalDivider(color = LEColors.borderSubtle)
@@ -576,12 +585,14 @@ private fun ImageAssetCard(
 private fun AudioAssetSlotCard(
     label: String,
     slotName: String,
+    ttsField: vn.loi.learning.desktop.tts.TtsField? = null,
     audioRef: String?,
     playbackCoordinator: PlaybackCoordinator?,
     onPlayAudio: ((String) -> Unit)?,
     onStopAudio: (() -> Unit)?,
     onUpdateDraftRef: ((String?) -> Unit)?,
-    onImportMediaFile: ((File, String) -> Unit)?
+    onImportMediaFile: ((File, String) -> Unit)?,
+    onRequestGenerateTts: ((vn.loi.learning.desktop.tts.TtsField) -> Unit)? = null
 ) {
     val isPresent = !audioRef.isNullOrBlank()
     val isPlaying = if (isPresent && audioRef != null && playbackCoordinator != null) {
@@ -711,17 +722,30 @@ private fun AudioAssetSlotCard(
             }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
-                LEPrimaryButton(
-                    text = "Browse Audio File",
-                    onClick = {
-                        pickFile("Select Audio File", AUDIO_EXTS.toList()) { file ->
-                            if (onImportMediaFile != null) onImportMediaFile(file, slotName)
-                            else onUpdateDraftRef?.invoke(file.name)
-                        }
-                    },
-                    icon = LEIcons.New,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                ) {
+                    LEPrimaryButton(
+                        text = "Browse Audio",
+                        onClick = {
+                            pickFile("Select Audio File", AUDIO_EXTS.toList()) { file ->
+                                if (onImportMediaFile != null) onImportMediaFile(file, slotName)
+                                else onUpdateDraftRef?.invoke(file.name)
+                            }
+                        },
+                        icon = LEIcons.New,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (ttsField != null && onRequestGenerateTts != null) {
+                        LESecondaryButton(
+                            text = "TTS",
+                            onClick = { onRequestGenerateTts(ttsField) },
+                            icon = LEIcons.Audio,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
 
                 // PLE-020: Real audio drag & drop zone
                 Box(

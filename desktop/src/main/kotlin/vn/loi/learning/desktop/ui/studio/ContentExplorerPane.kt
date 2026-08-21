@@ -117,6 +117,7 @@ fun ContentExplorerPane(
     onDuplicateItem: ((String) -> Unit)? = null,
     onCopyQuestion: ((String) -> Unit)? = null,
     onCopyAnswer: ((String) -> Unit)? = null,
+    onRequestGenerateTts: ((contentId: String, field: vn.loi.learning.desktop.tts.TtsField?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val items = uiState.filteredItems
@@ -243,7 +244,17 @@ fun ContentExplorerPane(
 
                 ImageStatusDropdownFilter(
                     selectedFilter = uiState.imageStatusFilter,
-                    onFilterSelected = onImageStatusFilterChanged
+                    selectedProblemFilter = uiState.problemFilter,
+                    onFilterSelected = { filter ->
+                        onImageStatusFilterChanged(filter)
+                        if (uiState.problemFilter == ContentProblemFilter.MISSING_ANY_AUDIO) {
+                            onProblemFilterChanged(ContentProblemFilter.NONE)
+                        }
+                    },
+                    onMissingAnyAudioSelected = {
+                        onImageStatusFilterChanged(ImageStatusFilter.ALL)
+                        onProblemFilterChanged(ContentProblemFilter.MISSING_ANY_AUDIO)
+                    }
                 )
             }
 
@@ -251,7 +262,8 @@ fun ContentExplorerPane(
                 uiState = uiState,
                 onFilterChanged = onProblemFilterChanged,
                 onPrevious = onPreviousProblem,
-                onNext = onNextProblem
+                onNext = onNextProblem,
+                onRequestGenerateTts = onRequestGenerateTts
             )
 
             if (uiState.selectedContentIds.isNotEmpty()) {
@@ -263,6 +275,9 @@ fun ContentExplorerPane(
                     onCheckSelectedMedia = onCheckSelectedMedia,
                     onPosReviewSelected = onPosReviewSelected,
                     onExportJsonSelected = onExportJsonSelected,
+                    onGenerateTts = if (uiState.selectedContentIds.size == 1 && onRequestGenerateTts != null) {
+                        { onRequestGenerateTts(uiState.selectedContentIds.first(), null) }
+                    } else null,
                     onClearSelection = onClearMultiSelection
                 )
             }
@@ -356,7 +371,8 @@ fun ContentExplorerPane(
                                     playbackCoordinator = playbackCoordinator,
                                     onDuplicateItem = onDuplicateItem,
                                     onCopyQuestion = onCopyQuestion,
-                                    onCopyAnswer = onCopyAnswer
+                                    onCopyAnswer = onCopyAnswer,
+                                    onRequestGenerateTts = onRequestGenerateTts
                                 )
                             }
                         } else {
@@ -385,7 +401,8 @@ fun ContentExplorerPane(
                                     playbackCoordinator = playbackCoordinator,
                                     onDuplicateItem = onDuplicateItem,
                                     onCopyQuestion = onCopyQuestion,
-                                    onCopyAnswer = onCopyAnswer
+                                    onCopyAnswer = onCopyAnswer,
+                                    onRequestGenerateTts = onRequestGenerateTts
                                 )
                             }
                         }
@@ -439,6 +456,7 @@ private fun MultiSelectionActions(
     onCheckSelectedMedia: () -> Unit,
     onPosReviewSelected: (() -> Unit)? = null,
     onExportJsonSelected: (() -> Unit)? = null,
+    onGenerateTts: (() -> Unit)? = null,
     onClearSelection: () -> Unit
 ) {
     Column(
@@ -483,6 +501,13 @@ private fun MultiSelectionActions(
                     modifier = Modifier.semantics { contentDescription = "Export JSON for $selectedCount selected items" }
                 ) { Text("Export JSON", style = LETypography.caption) }
             }
+            if (onGenerateTts != null) {
+                TextButton(
+                    onClick = onGenerateTts,
+                    contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
+                    modifier = Modifier.semantics { contentDescription = "Generate Audio" }
+                ) { Text("Generate Audio", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold) }
+            }
             TextButton(
                 onClick = onClearSelection,
                 contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)
@@ -497,7 +522,8 @@ private fun ProblemNavigationControls(
     uiState: PackageContentBrowserUiState,
     onFilterChanged: (ContentProblemFilter) -> Unit,
     onPrevious: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onRequestGenerateTts: ((contentId: String, field: vn.loi.learning.desktop.tts.TtsField?) -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
     val items = uiState.filteredItems
@@ -592,11 +618,50 @@ private fun ProblemNavigationControls(
             }
         }
 
-        // Right: Compact Previous / Next icon buttons
+        // Right: Compact Previous / Next icon buttons + Generate Audio action
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            val selectedItem = items.firstOrNull { it.contentId.value == uiState.selectedContentId }
+            val hasMissingAudio = selectedItem != null && (
+                selectedItem.questionAudioRef.isNullOrBlank() ||
+                selectedItem.answerAudioRef.isNullOrBlank() ||
+                selectedItem.exampleAudioRef.isNullOrBlank() ||
+                selectedItem.translationAudioRef.isNullOrBlank()
+            )
+            if (hasMissingAudio && onRequestGenerateTts != null && uiState.selectedContentId != null) {
+                Surface(
+                    shape = LERadius.xs,
+                    color = LEColors.primary,
+                    modifier = Modifier
+                        .height(26.dp)
+                        .clip(LERadius.xs)
+                        .clickable { onRequestGenerateTts(uiState.selectedContentId, null) }
+                        .semantics { contentDescription = "Generate Audio" }
+                        .testTag("explorer-generate-audio-button")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            imageVector = LEIcons.Audio,
+                            contentDescription = null,
+                            tint = LEColors.surface,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "Generate Audio",
+                            style = LETypography.caption,
+                            fontWeight = FontWeight.Bold,
+                            color = LEColors.surface
+                        )
+                    }
+                }
+            }
+
             TooltipArea(
                 tooltip = {
                     Surface(color = LEColors.textPrimary, shape = LERadius.xs) {
@@ -802,7 +867,8 @@ private fun ExplorerRowItem(
     playbackCoordinator: PlaybackCoordinator?,
     onDuplicateItem: ((String) -> Unit)? = null,
     onCopyQuestion: ((String) -> Unit)? = null,
-    onCopyAnswer: ((String) -> Unit)? = null
+    onCopyAnswer: ((String) -> Unit)? = null,
+    onRequestGenerateTts: ((contentId: String, field: vn.loi.learning.desktop.tts.TtsField?) -> Unit)? = null
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     var lastModifiedClickTime by remember { mutableStateOf(0L) }
@@ -825,9 +891,10 @@ private fun ExplorerRowItem(
     // PLE-020: Right-click context menu using ContextMenuArea (Compose Desktop)
     ContextMenuArea(
         items = {
-            listOf(
+            listOfNotNull(
                 ContextMenuItem(if (isHighlighted) "Remove Highlight" else "Highlight Item") { onToggleHighlight() },
                 ContextMenuItem("Edit") { onSelect() },
+                if (onRequestGenerateTts != null) ContextMenuItem("Generate Audio (TTS)") { onRequestGenerateTts(item.contentId.value, null) } else null,
                 ContextMenuItem("Duplicate") { onDuplicateItem?.invoke(item.contentId.value) },
                 ContextMenuItem("Delete") { /* handled by toolbar */ },
                 ContextMenuItem("Copy Question") { onCopyQuestion?.invoke(item.questionText) },
@@ -1054,18 +1121,22 @@ private fun ExplorerRowItem(
 @Composable
 private fun ImageStatusDropdownFilter(
     selectedFilter: ImageStatusFilter,
+    selectedProblemFilter: ContentProblemFilter,
     onFilterSelected: (ImageStatusFilter) -> Unit,
+    onMissingAnyAudioSelected: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val isMissingAnyAudio = selectedProblemFilter == ContentProblemFilter.MISSING_ANY_AUDIO
+    val isActive = selectedFilter != ImageStatusFilter.ALL || isMissingAnyAudio
 
     Box(modifier = modifier) {
         Surface(
-            color = if (selectedFilter != ImageStatusFilter.ALL) LEColors.primary.copy(alpha = 0.12f) else LEColors.surfaceElevated,
+            color = if (isActive) LEColors.primary.copy(alpha = 0.12f) else LEColors.surfaceElevated,
             shape = androidx.compose.foundation.shape.RoundedCornerShape(6.dp),
             border = androidx.compose.foundation.BorderStroke(
                 1.dp,
-                if (selectedFilter != ImageStatusFilter.ALL) LEColors.primary else LEColors.borderSubtle
+                if (isActive) LEColors.primary else LEColors.borderSubtle
             ),
             modifier = Modifier
                 .height(34.dp)
@@ -1077,27 +1148,31 @@ private fun ImageStatusDropdownFilter(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Icon(
-                    imageVector = LEIcons.Image,
-                    contentDescription = "Image filter",
-                    tint = if (selectedFilter != ImageStatusFilter.ALL) LEColors.primary else LEColors.textSecondary,
+                    imageVector = if (isMissingAnyAudio) LEIcons.Audio else LEIcons.Image,
+                    contentDescription = if (isMissingAnyAudio) "Missing audio filter" else "Content filter",
+                    tint = if (isActive) LEColors.primary else LEColors.textSecondary,
                     modifier = Modifier.size(15.dp)
                 )
                 Text(
-                    text = when (selectedFilter) {
-                        ImageStatusFilter.ALL -> "All"
-                        ImageStatusFilter.MISSING_IMAGE -> "Missing"
-                        ImageStatusFilter.DUPLICATE_IMAGE -> "Dup Image"
-                        ImageStatusFilter.DUPLICATE_QUESTION -> "Dup Question"
-                        ImageStatusFilter.HAS_IMAGE -> "Has Image"
+                    text = if (isMissingAnyAudio) {
+                        "Missing Audio"
+                    } else {
+                        when (selectedFilter) {
+                            ImageStatusFilter.ALL -> "All"
+                            ImageStatusFilter.MISSING_IMAGE -> "Missing"
+                            ImageStatusFilter.DUPLICATE_IMAGE -> "Dup Image"
+                            ImageStatusFilter.DUPLICATE_QUESTION -> "Dup Question"
+                            ImageStatusFilter.HAS_IMAGE -> "Has Image"
+                        }
                     },
                     style = LETypography.caption,
-                    color = if (selectedFilter != ImageStatusFilter.ALL) LEColors.primary else LEColors.textSecondary,
+                    color = if (isActive) LEColors.primary else LEColors.textSecondary,
                     maxLines = 1
                 )
                 Icon(
                     imageVector = androidx.compose.material.icons.Icons.Default.ArrowDropDown,
                     contentDescription = null,
-                    tint = if (selectedFilter != ImageStatusFilter.ALL) LEColors.primary else LEColors.textSecondary,
+                    tint = if (isActive) LEColors.primary else LEColors.textSecondary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -1112,8 +1187,8 @@ private fun ImageStatusDropdownFilter(
                     text = {
                         Text(
                             text = filter.label,
-                            fontWeight = if (filter == selectedFilter) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
-                            color = if (filter == selectedFilter) LEColors.primary else LEColors.textPrimary
+                            fontWeight = if (!isMissingAnyAudio && filter == selectedFilter) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                            color = if (!isMissingAnyAudio && filter == selectedFilter) LEColors.primary else LEColors.textPrimary
                         )
                     },
                     onClick = {
@@ -1122,6 +1197,20 @@ private fun ImageStatusDropdownFilter(
                     }
                 )
             }
+            HorizontalDivider(color = LEColors.borderSubtle)
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = "Missing Any Audio",
+                        fontWeight = if (isMissingAnyAudio) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isMissingAnyAudio) LEColors.primary else LEColors.textPrimary
+                    )
+                },
+                onClick = {
+                    onMissingAnyAudioSelected()
+                    expanded = false
+                }
+            )
         }
     }
 }
@@ -1201,7 +1290,8 @@ private fun DuplicateGroupCard(
     playbackCoordinator: PlaybackCoordinator?,
     onDuplicateItem: ((String) -> Unit)?,
     onCopyQuestion: ((String) -> Unit)?,
-    onCopyAnswer: ((String) -> Unit)?
+    onCopyAnswer: ((String) -> Unit)?,
+    onRequestGenerateTts: ((contentId: String, field: vn.loi.learning.desktop.tts.TtsField?) -> Unit)? = null
 ) {
     Surface(
         color = LEColors.surfaceElevated,
@@ -1276,7 +1366,8 @@ private fun DuplicateGroupCard(
                     playbackCoordinator = playbackCoordinator,
                     onDuplicateItem = onDuplicateItem,
                     onCopyQuestion = onCopyQuestion,
-                    onCopyAnswer = onCopyAnswer
+                    onCopyAnswer = onCopyAnswer,
+                    onRequestGenerateTts = onRequestGenerateTts
                 )
             }
         }

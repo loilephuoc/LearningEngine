@@ -2030,6 +2030,37 @@ class ContentLibraryViewModel(
         }
     }
 
+    /**
+     * Applies generated TTS audio reference to the specified field and persists it.
+     */
+    fun applyGeneratedTtsAudio(contentId: String, field: vn.loi.learning.desktop.tts.TtsField, audioRef: String) {
+        val current = packageBrowserUiState ?: return
+        val item = current.allItems.firstOrNull { it.contentId.value == contentId }
+            ?: current.selectedItemAnywhere ?: return
+        val baseline = item.toDraftEdits()
+        val existingDraft = if (current.editingContentId == contentId && current.draftEdits != null) {
+            current.draftEdits
+        } else {
+            baseline
+        }
+
+        val updatedDraft = when (field) {
+            vn.loi.learning.desktop.tts.TtsField.QUESTION -> existingDraft.copy(questionAudioRef = audioRef)
+            vn.loi.learning.desktop.tts.TtsField.ANSWER -> existingDraft.copy(answerAudioRef = audioRef)
+            vn.loi.learning.desktop.tts.TtsField.EXAMPLE -> existingDraft.copy(exampleAudioRef = audioRef)
+            vn.loi.learning.desktop.tts.TtsField.TRANSLATION -> existingDraft.copy(translationAudioRef = audioRef)
+        }
+
+        val updatedState = current.copy(
+            editingContentId = contentId,
+            selectedContentId = contentId,
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
+        )
+        packageBrowserUiState = updatedState
+        persistDraft(updatedState, updatedDraft)
+    }
+
     private fun createDraftFromSelectedItem(current: vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState): vn.loi.learning.desktop.ui.browser.ContentDraftEdits {
         val item = current.selectedItemAnywhere
         return item?.toDraftEdits() ?: vn.loi.learning.desktop.ui.browser.ContentDraftEdits(contentId = "new_item_draft")

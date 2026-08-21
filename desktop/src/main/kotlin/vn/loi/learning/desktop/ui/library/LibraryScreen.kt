@@ -306,6 +306,7 @@ fun LibraryScreen(
                     onTargetExportFileNameChanged = contentLibraryViewModel::setExportFileName,
                     onExecuteContentMaintenanceExport = contentLibraryViewModel::executeContentMaintenanceExport,
                     onCloseContentMaintenanceExport = contentLibraryViewModel::closeContentMaintenanceExport,
+                    onApplyTtsAudio = contentLibraryViewModel::applyGeneratedTtsAudio,
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 )
             } else {
