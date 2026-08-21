@@ -129,6 +129,8 @@ fun ContentStudioScreen(
     onCloseContentMaintenanceExport: (() -> Unit)? = null,
     ttsAudioService: DesktopTtsAudioService? = null,
     onApplyTtsAudio: ((contentId: String, field: TtsField, audioRef: String) -> Unit)? = null,
+    onApplyBatchTtsAudio: ((List<vn.loi.learning.desktop.tts.batch.BatchTtsJobResult>) -> Unit)? = null,
+    onUndoBatchTts: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val playbackCoordinator = remember(contentMediaStorage) {
@@ -242,11 +244,14 @@ fun ContentStudioScreen(
             onCancelNewItemClick = { onCancelNewItem?.invoke() },
             onDeleteClick = { onRequestDelete?.invoke() },
             onUndoDeleteClick = { onUndoDelete?.invoke() },
+            onUndoBatchTtsClick = { onUndoBatchTts?.invoke() },
             onImageReuseReviewClick = { onOpenImageReuseReview?.invoke() },
             onPosReviewClick = { onOpenPosReview?.invoke() },
             onExportJsonClick = { onOpenContentMaintenanceExport?.invoke() },
             onGenerateAllMissingAudioClick = handleGenerateAllMissing,
             canUndoDelete = uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem,
+            canUndoBatchTts = uiState.canUndoBatchTts && !uiState.isDirty && !uiState.isCreatingNewItem,
+            undoBatchTtsLabel = uiState.undoBatchTtsLabel,
             isCreateSubmitting = uiState.isCreateSubmitting,
             deleteTargetCount = uiState.selectedContentIds.size
         )
@@ -636,10 +641,11 @@ fun ContentStudioScreen(
                 itemsToScan = batchTtsScopeItems,
                 targetField = batchTtsTargetField,
                 ttsService = resolvedTtsService,
-                onApply = { contentId, field, audioRef ->
-                    if (onApplyTtsAudio != null) {
-                        onApplyTtsAudio(contentId, field, audioRef)
-                    }
+                contentMediaStorage = contentMediaStorage,
+                onApplyBatch = { results ->
+                    onApplyBatchTtsAudio?.invoke(results)
+                    showBatchTtsDialog = false
+                    batchTtsScopeItems = emptyList()
                 },
                 onDismiss = {
                     showBatchTtsDialog = false
@@ -666,11 +672,14 @@ private fun StudioTopBar(
     onCancelNewItemClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onUndoDeleteClick: () -> Unit,
+    onUndoBatchTtsClick: (() -> Unit)? = null,
     onImageReuseReviewClick: (() -> Unit)? = null,
     onPosReviewClick: (() -> Unit)? = null,
     onExportJsonClick: (() -> Unit)? = null,
     onGenerateAllMissingAudioClick: (() -> Unit)? = null,
     canUndoDelete: Boolean,
+    canUndoBatchTts: Boolean = false,
+    undoBatchTtsLabel: String? = null,
     isCreateSubmitting: Boolean,
     deleteTargetCount: Int
 ) {
@@ -729,6 +738,14 @@ private fun StudioTopBar(
                         icon = LEIcons.Undo,
                         enabled = canUndoDelete
                     )
+                    if (canUndoBatchTts) {
+                        LESecondaryButton(
+                            text = undoBatchTtsLabel ?: "Undo TTS",
+                            onClick = { onUndoBatchTtsClick?.invoke() },
+                            icon = LEIcons.Undo,
+                            enabled = canUndoBatchTts
+                        )
+                    }
                     LESecondaryButton(
                         text = "Image Reuse Review",
                         onClick = { onImageReuseReviewClick?.invoke() },

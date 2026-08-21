@@ -2061,6 +2061,160 @@ class ContentLibraryViewModel(
         persistDraft(updatedState, updatedDraft)
     }
 
+    /**
+     * Applies a batch of generated TTS audio references atomically to content items and captures an undo snapshot.
+     */
+    fun applyBatchTtsAudio(results: List<vn.loi.learning.desktop.tts.batch.BatchTtsJobResult>) {
+        val current = packageBrowserUiState ?: return
+        val validResults = results.filter { it.status == vn.loi.learning.desktop.tts.batch.BatchTtsJobStatus.SUCCESS && it.assetRelativePath != null }
+        if (validResults.isEmpty()) return
+
+        val undoEntries = mutableListOf<vn.loi.learning.desktop.tts.batch.BatchTtsUndoEntry>()
+        val newlyCreatedPaths = validResults.mapNotNull { it.assetRelativePath }.toSet()
+
+        val byContentId = validResults.groupBy { it.job.contentId }
+
+        taskRunner.run(
+            work = {
+                val reloadedBefore = packageBrowserFacade.loadForPackage(current.installedPackageId, current.packageName)
+
+                for ((contentId, jobs) in byContentId) {
+                    val item = reloadedBefore.allItems.firstOrNull { it.contentId.value == contentId } ?: continue
+                    var draft = item.toDraftEdits()
+
+                    for (res in jobs) {
+                        val path = res.assetRelativePath ?: continue
+                        val previousRef = when (res.job.field) {
+                            vn.loi.learning.desktop.tts.TtsField.QUESTION -> item.questionAudioRef
+                            vn.loi.learning.desktop.tts.TtsField.ANSWER -> item.answerAudioRef
+                            vn.loi.learning.desktop.tts.TtsField.EXAMPLE -> item.exampleAudioRef
+                            vn.loi.learning.desktop.tts.TtsField.TRANSLATION -> item.translationAudioRef
+                        }
+                        undoEntries.add(
+                            vn.loi.learning.desktop.tts.batch.BatchTtsUndoEntry(
+                                contentId = contentId,
+                                field = res.job.field,
+                                previousAudioRef = previousRef,
+                                appliedAudioRef = path
+                            )
+                        )
+                        draft = when (res.job.field) {
+                            vn.loi.learning.desktop.tts.TtsField.QUESTION -> draft.copy(questionAudioRef = path)
+                            vn.loi.learning.desktop.tts.TtsField.ANSWER -> draft.copy(answerAudioRef = path)
+                            vn.loi.learning.desktop.tts.TtsField.EXAMPLE -> draft.copy(exampleAudioRef = path)
+                            vn.loi.learning.desktop.tts.TtsField.TRANSLATION -> draft.copy(translationAudioRef = path)
+                        }
+                    }
+
+                    packageBrowserFacade.persistEdit(
+                        draft = draft,
+                        installedPackageId = current.installedPackageId,
+                        packageName = current.packageName
+                    )
+                }
+
+                val snapshot = vn.loi.learning.desktop.tts.batch.BatchTtsUndoSnapshot(
+                    packageName = current.packageName,
+                    entries = undoEntries,
+                    newlyCreatedAssetPaths = newlyCreatedPaths
+                )
+
+                val reloaded = packageBrowserFacade.loadForPackage(current.installedPackageId, current.packageName)
+                withProblemProjection(reloaded) to snapshot
+            },
+            onSuccess = { (reloaded, snapshot) ->
+                packageBrowserUiState = reloaded.copy(
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    imageStatusFilter = current.imageStatusFilter,
+                    sortOption = current.sortOption,
+                    problemFilter = current.problemFilter,
+                    canUndoBatchTts = true,
+                    undoBatchTtsLabel = "Undo TTS (${snapshot.totalApplied})",
+                    lastBatchTtsUndoSnapshot = snapshot
+                )
+                uiState = uiState.copy(importMessage = "Applied ${snapshot.totalApplied} audio targets successfully.")
+            },
+            onFailure = { ex ->
+                uiState = uiState.copy(importError = "Failed to apply batch TTS: ${ex.message}")
+            }
+        )
+    }
+
+    /**
+     * Reverts the last applied TTS batch, restoring previous audio references and safely cleaning unreferenced assets.
+     */
+    fun undoLastBatchTts() {
+        val current = packageBrowserUiState ?: return
+        val snapshot = current.lastBatchTtsUndoSnapshot ?: return
+
+        taskRunner.run(
+            work = {
+                val byContentId = snapshot.entries.groupBy { it.contentId }
+                val reloadedBeforeUndo = packageBrowserFacade.loadForPackage(current.installedPackageId, current.packageName)
+
+                for ((contentId, entries) in byContentId) {
+                    val item = reloadedBeforeUndo.allItems.firstOrNull { it.contentId.value == contentId } ?: continue
+                    var draft = item.toDraftEdits()
+
+                    for (entry in entries) {
+                        draft = when (entry.field) {
+                            vn.loi.learning.desktop.tts.TtsField.QUESTION -> draft.copy(questionAudioRef = entry.previousAudioRef)
+                            vn.loi.learning.desktop.tts.TtsField.ANSWER -> draft.copy(answerAudioRef = entry.previousAudioRef)
+                            vn.loi.learning.desktop.tts.TtsField.EXAMPLE -> draft.copy(exampleAudioRef = entry.previousAudioRef)
+                            vn.loi.learning.desktop.tts.TtsField.TRANSLATION -> draft.copy(translationAudioRef = entry.previousAudioRef)
+                        }
+                    }
+
+                    packageBrowserFacade.persistEdit(
+                        draft = draft,
+                        installedPackageId = current.installedPackageId,
+                        packageName = current.packageName
+                    )
+                }
+
+                // Safe cleanup: only delete newly created files that are no longer referenced in the package
+                val reloadedAfterUndo = packageBrowserFacade.loadForPackage(current.installedPackageId, current.packageName)
+                val allActiveAudioRefs = reloadedAfterUndo.allItems.flatMap {
+                    listOfNotNull(it.questionAudioRef, it.answerAudioRef, it.exampleAudioRef, it.translationAudioRef, it.audioRef)
+                }.toSet()
+
+                val storage = contentMediaStorage
+                if (storage != null) {
+                    for (path in snapshot.newlyCreatedAssetPaths) {
+                        if (path !in allActiveAudioRefs) {
+                            try {
+                                storage.resolve(path)?.toFile()?.delete()
+                            } catch (_: Exception) {}
+                        }
+                    }
+                }
+
+                withProblemProjection(reloadedAfterUndo)
+            },
+            onSuccess = { reloaded ->
+                packageBrowserUiState = reloaded.copy(
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    imageStatusFilter = current.imageStatusFilter,
+                    sortOption = current.sortOption,
+                    problemFilter = current.problemFilter,
+                    canUndoBatchTts = false,
+                    undoBatchTtsLabel = null,
+                    lastBatchTtsUndoSnapshot = null
+                )
+                uiState = uiState.copy(importMessage = "TTS batch undone: ${snapshot.totalApplied} audio references restored.")
+            },
+            onFailure = { ex ->
+                uiState = uiState.copy(importError = "Failed to undo batch TTS: ${ex.message}")
+            }
+        )
+    }
+
     private fun createDraftFromSelectedItem(current: vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState): vn.loi.learning.desktop.ui.browser.ContentDraftEdits {
         val item = current.selectedItemAnywhere
         return item?.toDraftEdits() ?: vn.loi.learning.desktop.ui.browser.ContentDraftEdits(contentId = "new_item_draft")

@@ -22,23 +22,26 @@ object BatchTtsScanner {
         }
 
     /**
-     * Scans a collection of browser items for target fields.
-     *
-     * @param items List of package content browser items to scan.
-     * @param targetField Optional specific field filter; if null, scans all 4 fields.
-     * @param missingOnly When true, returns only candidates that lack audio.
+     * Performs comprehensive scan on items for given selected fields.
      */
-    fun scanTargets(
+    fun scanBatchScope(
         items: List<PackageContentBrowserItem>,
-        targetField: TtsField? = null,
-        missingOnly: Boolean = false
-    ): List<BatchTtsTarget> {
-        val targets = mutableListOf<BatchTtsTarget>()
+        selectedFields: Set<TtsField> = TtsField.entries.toSet()
+    ): BatchTtsScopeScan {
+        val validTargets = mutableListOf<BatchTtsTarget>()
+        val missingCountByField = mutableMapOf<TtsField, Int>()
+        for (f in TtsField.entries) {
+            missingCountByField[f] = 0
+        }
+
+        var existingSkipped = 0
+        var emptyTextSkipped = 0
+
+        var repEnglish: String? = null
+        var repVietnamese: String? = null
 
         for (item in items) {
-            val fieldsToInspect = if (targetField != null) listOf(targetField) else TtsField.entries
-
-            for (field in fieldsToInspect) {
+            for (field in TtsField.entries) {
                 val (text, audioRef) = when (field) {
                     TtsField.QUESTION -> item.questionText to item.questionAudioRef
                     TtsField.ANSWER -> item.answerText to item.answerAudioRef
@@ -48,24 +51,95 @@ object BatchTtsScanner {
 
                 val hasAudio = !audioRef.isNullOrBlank()
                 val isMissing = !hasAudio
+                val trimmedText = text.orEmpty().trim()
                 val language = defaultLanguageFor(field)
 
-                val target = BatchTtsTarget(
-                    contentId = item.contentId.value,
-                    field = field,
-                    text = text.orEmpty(),
-                    language = language,
-                    isMissing = isMissing,
-                    hasAudio = hasAudio
-                )
+                if (isMissing && trimmedText.isNotBlank()) {
+                    missingCountByField[field] = (missingCountByField[field] ?: 0) + 1
 
-                if (!missingOnly || target.canGenerate) {
-                    targets.add(target)
+                    if (language == TtsLanguage.ENGLISH && repEnglish == null) {
+                        repEnglish = trimmedText
+                    } else if (language == TtsLanguage.VIETNAMESE && repVietnamese == null) {
+                        repVietnamese = trimmedText
+                    }
+                }
+
+                // If user selected this field for generation:
+                if (field in selectedFields) {
+                    if (hasAudio) {
+                        existingSkipped++
+                    } else if (trimmedText.isBlank()) {
+                        emptyTextSkipped++
+                    } else {
+                        validTargets.add(
+                            BatchTtsTarget(
+                                contentId = item.contentId.value,
+                                field = field,
+                                text = trimmedText,
+                                language = language,
+                                isMissing = true,
+                                hasAudio = false,
+                                previousAudioRef = audioRef
+                            )
+                        )
+                    }
                 }
             }
         }
 
-        return targets
+        val englishCount = validTargets.count { it.language == TtsLanguage.ENGLISH }
+        val vietnameseCount = validTargets.count { it.language == TtsLanguage.VIETNAMESE }
+
+        return BatchTtsScopeScan(
+            totalSelectedItems = items.size,
+            selectedFields = selectedFields,
+            validTargets = validTargets,
+            missingCountByField = missingCountByField,
+            existingAudioSkippedCount = existingSkipped,
+            emptyTextSkippedCount = emptyTextSkipped,
+            englishTargetsCount = englishCount,
+            vietnameseTargetsCount = vietnameseCount,
+            representativeEnglishText = repEnglish ?: "Hello, this is a sample English preview sentence.",
+            representativeVietnameseText = repVietnamese ?: "Xin chào, đây là câu phát âm tiếng Việt mẫu."
+        )
+    }
+
+    /**
+     * Legacy helper scanning targets with optional field filter.
+     */
+    fun scanTargets(
+        items: List<PackageContentBrowserItem>,
+        targetField: TtsField? = null,
+        missingOnly: Boolean = false
+    ): List<BatchTtsTarget> {
+        val selectedFields = if (targetField != null) setOf(targetField) else TtsField.entries.toSet()
+        val scopeScan = scanBatchScope(items, selectedFields)
+        return if (missingOnly) scopeScan.validTargets else {
+            val all = mutableListOf<BatchTtsTarget>()
+            for (item in items) {
+                val fieldsToInspect = if (targetField != null) listOf(targetField) else TtsField.entries
+                for (field in fieldsToInspect) {
+                    val (text, audioRef) = when (field) {
+                        TtsField.QUESTION -> item.questionText to item.questionAudioRef
+                        TtsField.ANSWER -> item.answerText to item.answerAudioRef
+                        TtsField.EXAMPLE -> item.exampleText to item.exampleAudioRef
+                        TtsField.TRANSLATION -> item.exampleTranslation to item.translationAudioRef
+                    }
+                    all.add(
+                        BatchTtsTarget(
+                            contentId = item.contentId.value,
+                            field = field,
+                            text = text.orEmpty(),
+                            language = defaultLanguageFor(field),
+                            isMissing = audioRef.isNullOrBlank(),
+                            hasAudio = !audioRef.isNullOrBlank(),
+                            previousAudioRef = audioRef
+                        )
+                    )
+                }
+            }
+            all
+        }
     }
 
     /**
@@ -91,7 +165,8 @@ object BatchTtsScanner {
                     text = target.text,
                     language = target.language,
                     voice = voice,
-                    rate = rate
+                    rate = rate,
+                    previousAudioRef = target.previousAudioRef
                 )
             }
     }

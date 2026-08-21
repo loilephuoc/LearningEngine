@@ -54,6 +54,9 @@ data class PackageContentBrowserUiState(
     val pendingAction: PackageBrowserPendingAction? = null,
     val canUndoDelete: Boolean = false,
     val undoDeleteLabel: String? = null,
+    val canUndoBatchTts: Boolean = false,
+    val undoBatchTtsLabel: String? = null,
+    val lastBatchTtsUndoSnapshot: vn.loi.learning.desktop.tts.batch.BatchTtsUndoSnapshot? = null,
     val isCreateSubmitting: Boolean = false,
     val posReviewState: vn.loi.learning.desktop.ui.browser.posreview.PosBatchReviewState? = null,
     val contentMaintenanceExportState: vn.loi.learning.desktop.ui.browser.export.ContentMaintenanceExportState? = null

@@ -307,6 +307,8 @@ fun LibraryScreen(
                     onExecuteContentMaintenanceExport = contentLibraryViewModel::executeContentMaintenanceExport,
                     onCloseContentMaintenanceExport = contentLibraryViewModel::closeContentMaintenanceExport,
                     onApplyTtsAudio = contentLibraryViewModel::applyGeneratedTtsAudio,
+                    onApplyBatchTtsAudio = contentLibraryViewModel::applyBatchTtsAudio,
+                    onUndoBatchTts = contentLibraryViewModel::undoLastBatchTts,
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 )
             } else {

@@ -15,7 +15,7 @@ import vn.loi.learning.desktop.tts.TtsField
 
 /**
  * Sequential runner for batch TTS jobs with real-time progress, error isolation,
- * cancellation support, and friendly error classification.
+ * cancellation support, friendly error classification, and Generate != Apply boundary.
  */
 class BatchTtsRunner(
     private val ttsService: DesktopTtsAudioService,
@@ -40,13 +40,13 @@ class BatchTtsRunner(
      *
      * @param jobs The batch jobs to execute.
      * @param packageName Target package name.
-     * @param onApply Callback invoked upon each successful generation to persist the audio reference.
+     * @param onApply Optional callback to apply the audio reference immediately; if null, only files are generated.
      * @param onProgress Callback invoked on each state change / step.
      */
     fun runBatch(
         jobs: List<BatchTtsJob>,
         packageName: String,
-        onApply: (contentId: String, field: TtsField, audioRef: String) -> Unit,
+        onApply: ((contentId: String, field: TtsField, audioRef: String) -> Unit)? = null,
         onProgress: (BatchTtsSummary) -> Unit
     ): Job {
         cancelFlag.set(false)
@@ -117,8 +117,8 @@ class BatchTtsRunner(
                         rate = currentJob.rate
                     )
 
-                    // Apply audio reference
-                    onApply(currentJob.contentId, currentJob.field, asset.relativePath)
+                    // Apply audio reference if immediate apply is requested
+                    onApply?.invoke(currentJob.contentId, currentJob.field, asset.relativePath)
 
                     results.add(
                         BatchTtsJobResult(

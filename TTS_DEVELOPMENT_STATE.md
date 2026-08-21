@@ -1,18 +1,20 @@
 # Learning Engine — TTS Development State
 
-- **Current Active Phase**: Phase 7 Completed (All Phases 1 through 7 PASS)
+- **Current Active Milestone**: Batch Workflow Polish Completed (All Acceptance Criteria Met)
 - **Worktree**: `C:\Users\M72Q\IdeaProjects\LearningEngine-TTS`
 - **Branch**: `feat/desktop-tts`
-- **Head Checkpoint (Pre-Phase 3)**: `fe4953d8cb0958372b84684ca4ef2f06d591781b` (Phase 2 PASS)
-- **Android State**: HARD FROZEN (0 changes, untouched)
-- **Verified Test Count**: 4,957 tests, 0 failures, 0 errors, 0 skipped
-- **Build Status**: `BUILD SUCCESSFUL in 4m 2s`
+- **Previous Checkpoint**: `7e7a773c45f9ae96c5e0c349af8d971d0efa70b3`
+- **Android State**: HARD FROZEN (`git diff --name-only HEAD -- android` = 0 lines)
+- **Verified Test Count**: 4,962 tests, 0 failures, 0 errors, 0 skipped
+- **Build Status**: `BUILD SUCCESSFUL in 4m 30s`
 - **Known Blockers**: None
 - **Delivered Capabilities**:
-  - Phase 1: TTS Backend & Edge-TTS synthesis engine.
-  - Phase 2: Single-item Preview, Generate, Post-generate playback, Apply, Studio Explorer & Media Inspector integration.
-  - Phase 3: Batch TTS on selected items and missing fields with existing audio protection.
-  - Phase 4: Saved Voice Profiles for English & Vietnamese with preferences persistence and fallbacks.
-  - Phase 5: Batch queue runner with progress dialog, live counters, and safe cooperative cancellation.
-  - Phase 6: Friendly error classification and selective retry of failed items.
-  - Phase 7: Full package-scope "Generate All Missing Audio" with confirmation breakdown, progress, cancellation, retry, and persistence.
+  - Selected-item scope batch workflow.
+  - Audio field selection checkboxes (Question, Answer, Example, Translation) with live missing counts.
+  - Automatic language mapping (Q/A/Ex -> EN, Tr -> VI).
+  - English and Vietnamese voice profiles with rate and pre-generation preview.
+  - Fixed voice dropdown layout bug (wide dropdown menu, readable labels, no narrow column wrapping).
+  - Target-level batch generation with existing audio protection and empty text skip.
+  - Generate != Apply boundary: permanent assets synthesized before atomic apply.
+  - Atomic Batch Apply & Undo: captures `BatchTtsUndoSnapshot`, restores exact previous audio references upon Undo, safe cleanup of newly created unreferenced files, existing media files preserved.
+  - Full regression pass and Android freeze verified.

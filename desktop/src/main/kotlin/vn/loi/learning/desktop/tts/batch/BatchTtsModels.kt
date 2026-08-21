@@ -38,10 +38,30 @@ data class BatchTtsTarget(
     val text: String,
     val language: TtsLanguage,
     val isMissing: Boolean,
-    val hasAudio: Boolean
+    val hasAudio: Boolean,
+    val previousAudioRef: String? = null
 ) {
     val canGenerate: Boolean
         get() = isMissing && text.isNotBlank()
+}
+
+/**
+ * Comprehensive analysis of a selected item scope across chosen audio fields.
+ */
+data class BatchTtsScopeScan(
+    val totalSelectedItems: Int,
+    val selectedFields: Set<TtsField>,
+    val validTargets: List<BatchTtsTarget>,
+    val missingCountByField: Map<TtsField, Int>,
+    val existingAudioSkippedCount: Int,
+    val emptyTextSkippedCount: Int,
+    val englishTargetsCount: Int,
+    val vietnameseTargetsCount: Int,
+    val representativeEnglishText: String?,
+    val representativeVietnameseText: String?
+) {
+    val totalValidTargets: Int get() = validTargets.size
+    val hasTargets: Boolean get() = validTargets.isNotEmpty()
 }
 
 /**
@@ -54,6 +74,7 @@ data class BatchTtsJob(
     val language: TtsLanguage,
     val voice: TtsVoice,
     val rate: Int = 0,
+    val previousAudioRef: String? = null,
     val id: String = "${contentId}_${field.name.lowercase()}"
 )
 
@@ -86,6 +107,9 @@ data class BatchTtsSummary(
     val hasFailures: Boolean
         get() = failedCount > 0
 
+    val successfulResults: List<BatchTtsJobResult>
+        get() = jobResults.filter { it.status == BatchTtsJobStatus.SUCCESS && it.assetRelativePath != null }
+
     val failedResults: List<BatchTtsJobResult>
         get() = jobResults.filter { it.status == BatchTtsJobStatus.FAILED }
 
@@ -97,4 +121,27 @@ data class BatchTtsSummary(
                 skippedCount = skippedCount
             )
     }
+}
+
+/**
+ * Record of a single field change within an atomic TTS batch apply for undo.
+ */
+data class BatchTtsUndoEntry(
+    val contentId: String,
+    val field: TtsField,
+    val previousAudioRef: String?,
+    val appliedAudioRef: String
+)
+
+/**
+ * Snapshot of an applied batch TTS operation enabling full atomic undo and safe file cleanup.
+ */
+data class BatchTtsUndoSnapshot(
+    val packageName: String,
+    val entries: List<BatchTtsUndoEntry>,
+    val newlyCreatedAssetPaths: Set<String>,
+    val timestamp: Long = System.currentTimeMillis()
+) {
+    val totalApplied: Int get() = entries.size
+    val displayLabel: String get() = "Batch TTS ($totalApplied audio targets)"
 }

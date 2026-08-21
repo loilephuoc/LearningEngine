@@ -76,26 +76,86 @@ class BatchTtsScannerTest {
     }
 
     @Test
-    fun `scanTargets identifies missing fields and protects existing audio`() {
+    fun `1 item with 4 missing fields produces 4 independent audio targets`() {
         val item = createBrowserItem(
-            q = "genuine",
-            a = "authentic",
-            ex = "Genuine leather",
-            tr = "Da thật",
-            qAudio = "pkg/q.mp3", // Already has audio!
-            aAudio = null,
-            exAudio = null,
-            trAudio = null
+            id = "c100",
+            q = "apple",
+            a = "fruit",
+            ex = "Fresh apple",
+            tr = "Quả táo"
         )
 
-        val targets = BatchTtsScanner.scanTargets(listOf(item), missingOnly = true)
+        val scan = BatchTtsScanner.scanBatchScope(listOf(item), TtsField.entries.toSet())
 
-        // Question must be skipped because it already has audio!
-        assertEquals(3, targets.size)
-        assertFalse(targets.any { it.field == TtsField.QUESTION })
-        assertTrue(targets.any { it.field == TtsField.ANSWER })
-        assertTrue(targets.any { it.field == TtsField.EXAMPLE })
-        assertTrue(targets.any { it.field == TtsField.TRANSLATION })
+        assertEquals(1, scan.totalSelectedItems)
+        assertEquals(4, scan.totalValidTargets)
+        assertEquals(3, scan.englishTargetsCount)
+        assertEquals(1, scan.vietnameseTargetsCount)
+        assertEquals(0, scan.existingAudioSkippedCount)
+        assertEquals(0, scan.emptyTextSkippedCount)
+        assertEquals(1, scan.missingCountByField[TtsField.QUESTION])
+        assertEquals(1, scan.missingCountByField[TtsField.ANSWER])
+        assertEquals(1, scan.missingCountByField[TtsField.EXAMPLE])
+        assertEquals(1, scan.missingCountByField[TtsField.TRANSLATION])
+        assertEquals("apple", scan.representativeEnglishText)
+        assertEquals("Quả táo", scan.representativeVietnameseText)
+    }
+
+    @Test
+    fun `selected fields filter restricts generated targets while reporting per-field missing counts`() {
+        val item = createBrowserItem(
+            q = "banana",
+            a = "yellow fruit",
+            ex = "Sweet banana",
+            tr = "Quả chuối"
+        )
+
+        // Only select QUESTION and TRANSLATION
+        val scan = BatchTtsScanner.scanBatchScope(listOf(item), setOf(TtsField.QUESTION, TtsField.TRANSLATION))
+
+        assertEquals(2, scan.totalValidTargets)
+        assertEquals(1, scan.englishTargetsCount)
+        assertEquals(1, scan.vietnameseTargetsCount)
+        assertTrue(scan.validTargets.any { it.field == TtsField.QUESTION })
+        assertTrue(scan.validTargets.any { it.field == TtsField.TRANSLATION })
+        assertFalse(scan.validTargets.any { it.field == TtsField.ANSWER })
+        assertFalse(scan.validTargets.any { it.field == TtsField.EXAMPLE })
+
+        // But missing counts for all fields in selection are still computed
+        assertEquals(1, scan.missingCountByField[TtsField.ANSWER])
+        assertEquals(1, scan.missingCountByField[TtsField.EXAMPLE])
+    }
+
+    @Test
+    fun `scanBatchScope protects existing audio and skips empty text`() {
+        val item1 = createBrowserItem(
+            id = "item1",
+            q = "cat",
+            a = "feline",
+            ex = "A black cat",
+            tr = "Con mèo",
+            qAudio = "existing_cat_q.mp3",
+            exAudio = "existing_cat_ex.mp3"
+        )
+        val item2 = createBrowserItem(
+            id = "item2",
+            q = "dog",
+            a = "canine",
+            ex = "", // Empty example
+            tr = "   " // Whitespace translation
+        )
+
+        val scan = BatchTtsScanner.scanBatchScope(listOf(item1, item2), TtsField.entries.toSet())
+
+        assertEquals(2, scan.totalSelectedItems)
+        // Item1: ANSWER (missing), TRANSLATION (missing). QUESTION (existing -> skip), EXAMPLE (existing -> skip)
+        // Item2: QUESTION (missing), ANSWER (missing). EXAMPLE (empty -> skip), TRANSLATION (empty -> skip)
+        // Total valid targets = 2 + 2 = 4
+        assertEquals(4, scan.totalValidTargets)
+        assertEquals(2, scan.existingAudioSkippedCount)
+        assertEquals(2, scan.emptyTextSkippedCount)
+        assertEquals(3, scan.englishTargetsCount) // item1 ANSWER, item2 QUESTION, item2 ANSWER
+        assertEquals(1, scan.vietnameseTargetsCount) // item1 TRANSLATION
     }
 
     @Test
