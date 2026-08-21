@@ -61,6 +61,8 @@ import vn.loi.learning.domain.study.recall.StudyMode
 import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
 import vn.loi.learning.android.media.AndroidAudioPlaybackEvent
+import vn.loi.learning.android.R
+import androidx.compose.ui.res.stringResource
 import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.study.components.StudyActionDock
@@ -181,9 +183,9 @@ fun HomeScreen(
         }
         if (!model.hasContent) item("empty") {
             LearningEngineEmptyState(
-                title = "Your library is ready for content",
-                detail = "Import a learning package, then return here to start.",
-                actionLabel = "Import package",
+                title = stringResource(R.string.home_empty_title),
+                detail = stringResource(R.string.home_empty_detail),
+                actionLabel = stringResource(R.string.home_empty_action),
                 onAction = { onContentAction(AndroidOperationKind.IMPORT) }
             )
         }
@@ -194,9 +196,9 @@ fun HomeScreen(
 private fun AutoPlayCard(onAutoPlay: () -> Unit) {
     LearningEngineActionCard(
         icon = Icons.Default.PlayCircleOutline,
-        title = "Auto Play",
-        detail = "Passive listening and review without rating cards.",
-        actionLabel = "Open Auto Play",
+        title = stringResource(R.string.home_autoplay_title),
+        detail = stringResource(R.string.home_autoplay_desc),
+        actionLabel = stringResource(R.string.home_open_autoplay),
         onAction = onAutoPlay,
         modifier = Modifier.fillMaxWidth()
     )
@@ -205,8 +207,8 @@ private fun AutoPlayCard(onAutoPlay: () -> Unit) {
 @Composable
 private fun HomeHeader() {
     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-        Text("LEARNING ENGINE", style = LearningTextRole.brand, color = MaterialTheme.colorScheme.primary)
-        Text("Keep your learning moving", style = LearningTextRole.screenTitle,
+        Text(stringResource(R.string.home_header_brand), style = LearningTextRole.brand, color = MaterialTheme.colorScheme.primary)
+        Text(stringResource(R.string.home_header_title), style = LearningTextRole.screenTitle,
             maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
     }
 }
@@ -221,15 +223,15 @@ private fun ContinueLearningCard(
     onStudyLauncher: () -> Unit
 ) {
     val (title, detail, actionLabel) = when (model.primaryAction) {
-        is AndroidHomePrimaryAction.Resume -> Triple("Continue learning", "Resume exactly where you left off.", "Continue session")
-        AndroidHomePrimaryAction.ReviewDue -> Triple("Review is ready", "Choose Adaptive study or another explicit mode.", "Choose study mode")
-        AndroidHomePrimaryAction.StartLearning -> Triple("Start learning", "Choose Learn new, Adaptive study, or Typing practice.", "Choose study mode")
-        AndroidHomePrimaryAction.DailyComplete -> Triple("Today's study complete", "Your configured daily workload is complete.", "Open Library")
-        AndroidHomePrimaryAction.OpenLibrary -> Triple("Choose what to learn", "Add or open content in your Library.", "Open Library")
+        is AndroidHomePrimaryAction.Resume -> Triple(stringResource(R.string.home_continue_session), stringResource(R.string.study_resume_detail), stringResource(R.string.home_continue_session))
+        AndroidHomePrimaryAction.ReviewDue -> Triple(stringResource(R.string.home_adaptive_study), stringResource(R.string.study_review_due_detail), stringResource(R.string.home_adaptive_study))
+        AndroidHomePrimaryAction.StartLearning -> Triple(stringResource(R.string.home_learn_new), stringResource(R.string.study_start_learning_detail), stringResource(R.string.home_learn_new))
+        AndroidHomePrimaryAction.DailyComplete -> Triple(stringResource(R.string.home_open_library), stringResource(R.string.study_daily_complete_detail), stringResource(R.string.home_open_library))
+        AndroidHomePrimaryAction.OpenLibrary -> Triple(stringResource(R.string.home_choose_content), stringResource(R.string.study_open_library_detail), stringResource(R.string.home_open_library))
     }
     LearningEngineHeroCard(
         icon = if (presentation.hasActiveSession) Icons.Default.PlayArrow else Icons.Default.School,
-        eyebrow = if (presentation.hasActiveSession) "ACTIVE SESSION" else "NEXT STEP",
+        eyebrow = if (presentation.hasActiveSession) stringResource(R.string.home_active_learning) else stringResource(R.string.home_ready_to_study),
         title = model.contextTitle ?: title,
         detail = detail,
         actionLabel = actionLabel,
@@ -249,35 +251,39 @@ private fun ContinueLearningCard(
 @Composable
 private fun HomeDashboardStats(presentation: AndroidLearningLandingPresentation) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-        LearningEngineStatTile("Due", presentation.dueCount.toString(), Modifier.weight(1f))
-        LearningEngineStatTile("Active", presentation.activeMemoryCount.toString(), Modifier.weight(1f), "memories")
-        val recallValue = presentation.accuracyPercent?.let { "$it%" } ?: presentation.reviewedToday.toString()
-        val recallLabel = if (presentation.accuracyPercent != null) "Recall" else "Reviewed"
-        LearningEngineStatTile(recallLabel, recallValue, Modifier.weight(1f),
-            if (presentation.accuracyPercent != null) "today" else null)
+        LearningEngineStatTile(stringResource(R.string.home_due_label), presentation.dueCount.toString(), Modifier.weight(1f))
+        LearningEngineStatTile(stringResource(R.string.home_active_memories), presentation.activeMemoryCount.toString(), Modifier.weight(1f))
+        LearningEngineStatTile(stringResource(R.string.home_reviewed_today), presentation.reviewedToday.toString(), Modifier.weight(1f))
     }
 }
 
 @Composable
 private fun DueReviewCard(model: AndroidHomeUiModel, onReview: () -> Unit) {
-    val detail = if (model.overdueCount > 0) {
-        "${model.dueCount} waiting · ${model.overdueCount} overdue"
-    } else "${model.dueCount} item(s) ready now"
-    LearningEngineActionCard(Icons.Default.AutoStories, "Review due", detail, "Review", onReview, Modifier.fillMaxWidth())
+    val detail = stringResource(R.string.home_due_review_desc, model.dueCount)
+    LearningEngineActionCard(Icons.Default.AutoStories, stringResource(R.string.home_due_label), detail, stringResource(R.string.home_due_review_action), onReview, Modifier.fillMaxWidth())
 }
 
 @Composable
 private fun HomeLearningProgress(presentation: AndroidLearningLandingPresentation) {
     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-        LearningEngineSectionHeader("Learning progress")
+        LearningEngineSectionHeader(stringResource(R.string.home_progress_title))
         LearningEngineProgress(
             presentation.learningProgress,
-            "${presentation.activeMemoryCount} of ${presentation.totalMemoryCount} memories active"
+            stringResource(
+                R.string.home_active_memory_count,
+                presentation.activeMemoryCount,
+                presentation.totalMemoryCount
+            )
         )
         presentation.dailyBudget?.let { daily ->
             Text(
-                "Today · NEW ${daily.newCompletedToday}/${daily.limits.newPerDay} · " +
-                        "REVIEW ${daily.reviewCompletedToday}/${daily.limits.reviewPerDay}",
+                stringResource(
+                    R.string.home_daily_new_progress,
+                    daily.newCompletedToday,
+                    daily.limits.newPerDay,
+                    daily.reviewCompletedToday,
+                    daily.limits.reviewPerDay
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -752,7 +758,7 @@ private fun StudyRuntimeScreen(
         onEvent(event)
     }
     val submitIntroductionRating: (ReviewRating, IntroductionRatingFeedbackOrigin) -> Unit = { rating, origin ->
-        if (state is AndroidStudyState.Introduction && !state.historyPreview &&
+        if (state is AndroidStudyState.Introduction && (!state.historyPreview || state.navigation.canCorrectRating) &&
             !swipeRatingSubmitted && !quickReviewTransitionPending
         ) {
             swipeRatingSubmitted = true
@@ -806,12 +812,19 @@ private fun StudyRuntimeScreen(
         }
     }
 
-    LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen) {
-        if (state is AndroidStudyState.Introduction &&
-            !state.revealed && !state.resolvedMeaningAudio.isNullOrBlank()
-            && audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.MEANING)
+    LaunchedEffect(
+        itemKey,
+        audioOwnerToken,
+        autoplayGateOpen,
+        (state as? AndroidStudyState.Introduction)?.revealed,
+        (state as? AndroidStudyState.Introduction)?.historyPreview
+    ) {
+        val introduction = state as? AndroidStudyState.Introduction ?: return@LaunchedEffect
+        if (!introduction.revealed && !introduction.historyPreview && autoplayGateOpen &&
+            !introduction.resolvedMeaningAudio.isNullOrBlank() &&
+            audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.MEANING)
         ) {
-            restartAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
+            restartAudio(AudioRole.MEANING, introduction.resolvedMeaningAudio, false)
         }
     }
 
@@ -1040,12 +1053,7 @@ private fun StudyRuntimeScreen(
         }
         onEvent(AndroidStudyEvent.TypingSuccessAudioCompleted)
     }
-    LaunchedEffect(itemKey) {
-        val typing = state as? AndroidStudyState.Typing ?: return@LaunchedEffect
-        if (!typing.viAutoplayMuted && !typing.resolvedMeaningAudio.isNullOrBlank()) {
-            restartAudio(AudioRole.MEANING, typing.resolvedMeaningAudio, false)
-        }
-    }
+
 
     val isRevealed = when (state) {
         is AndroidStudyState.Introduction -> state.revealed
@@ -1168,7 +1176,7 @@ private fun StudyRuntimeScreen(
                 }
             },
             onIntroductionRating = {
-                if (state is AndroidStudyState.Introduction && !state.historyPreview) {
+                if (state is AndroidStudyState.Introduction && (!state.historyPreview || state.navigation.canCorrectRating)) {
                     submitIntroductionRating(it, IntroductionRatingFeedbackOrigin.MANUAL_BUTTON)
                 }
             },
@@ -1222,19 +1230,19 @@ private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
                 )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                HudInlineMetric("TOTAL", hud.totalLearned.toString())
-                HudInlineMetric("NEW", "${hud.newCompleted}/${hud.newTarget}", MaterialTheme.colorScheme.primary)
-                HudInlineMetric("REVIEW", "${hud.reviewCompleted}/${hud.reviewTarget}", MaterialTheme.colorScheme.secondary)
-                HudInlineMetric("DUE", hud.dueCount.toString())
+                HudInlineMetric(stringResource(R.string.hud_total), hud.totalLearned.toString())
+                HudInlineMetric(stringResource(R.string.hud_new), "${hud.newCompleted}/${hud.newTarget}", MaterialTheme.colorScheme.primary)
+                HudInlineMetric(stringResource(R.string.hud_review), "${hud.reviewCompleted}/${hud.reviewTarget}", MaterialTheme.colorScheme.secondary)
+                HudInlineMetric(stringResource(R.string.hud_due), hud.dueCount.toString())
             }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                HudRating("Again", hud.againCount, MaterialTheme.colorScheme.error)
-                HudRating("Hard", hud.hardCount, LearningEngineThemeTokens.semanticColors.warning)
-                HudRating("Good", hud.goodCount, LearningEngineThemeTokens.semanticColors.success)
-                HudRating("Easy", hud.easyCount, MaterialTheme.colorScheme.tertiary)
+                HudRating(stringResource(R.string.rating_again), hud.againCount, MaterialTheme.colorScheme.error)
+                HudRating(stringResource(R.string.rating_hard), hud.hardCount, LearningEngineThemeTokens.semanticColors.warning)
+                HudRating(stringResource(R.string.rating_good), hud.goodCount, LearningEngineThemeTokens.semanticColors.success)
+                HudRating(stringResource(R.string.rating_easy), hud.easyCount, MaterialTheme.colorScheme.tertiary)
             }
         }
     }
@@ -1248,8 +1256,8 @@ private fun DifficultPracticeHud(hud: AndroidStudySessionHud) {
         },
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        HudRating("Again", hud.againCount, MaterialTheme.colorScheme.error)
-        HudRating("Hard", hud.hardCount, LearningEngineThemeTokens.semanticColors.warning)
+        HudRating(stringResource(R.string.rating_again), hud.againCount, MaterialTheme.colorScheme.error)
+        HudRating(stringResource(R.string.rating_hard), hud.hardCount, LearningEngineThemeTokens.semanticColors.warning)
     }
 }
 
@@ -1267,16 +1275,16 @@ private fun LearnNewProgressHeader(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                CompactLearnMetric("Total", hud.totalLearned.toString())
-                CompactLearnMetric("New", "${hud.newCompleted}/${hud.newConfiguredTarget}")
-                CompactLearnMetric("Review", "${hud.reviewCompleted}/${hud.reviewConfiguredTarget}")
+                CompactLearnMetric(stringResource(R.string.hud_total), hud.totalLearned.toString())
+                CompactLearnMetric(stringResource(R.string.hud_new), "${hud.newCompleted}/${hud.newConfiguredTarget}")
+                CompactLearnMetric(stringResource(R.string.hud_review), "${hud.reviewCompleted}/${hud.reviewConfiguredTarget}")
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                CompactLearnMetric("Due", hud.dueCount.toString())
-                CompactLearnMetric("Again", displayedIntroductionRatingCount(hud, ReviewRating.AGAIN, pendingRating).toString(), MaterialTheme.colorScheme.error, pendingRating?.takeIf { it.rating == ReviewRating.AGAIN }?.feedbackId)
-                CompactLearnMetric("Hard", displayedIntroductionRatingCount(hud, ReviewRating.HARD, pendingRating).toString(), LearningEngineThemeTokens.semanticColors.warning, pendingRating?.takeIf { it.rating == ReviewRating.HARD }?.feedbackId)
-                CompactLearnMetric("Good", displayedIntroductionRatingCount(hud, ReviewRating.GOOD, pendingRating).toString(), LearningEngineThemeTokens.semanticColors.success, pendingRating?.takeIf { it.rating == ReviewRating.GOOD }?.feedbackId)
-                CompactLearnMetric("Easy", displayedIntroductionRatingCount(hud, ReviewRating.EASY, pendingRating).toString(), MaterialTheme.colorScheme.tertiary, pendingRating?.takeIf { it.rating == ReviewRating.EASY }?.feedbackId)
+                CompactLearnMetric(stringResource(R.string.hud_due), hud.dueCount.toString())
+                CompactLearnMetric(stringResource(R.string.rating_again), displayedIntroductionRatingCount(hud, ReviewRating.AGAIN, pendingRating).toString(), MaterialTheme.colorScheme.error, pendingRating?.takeIf { it.rating == ReviewRating.AGAIN }?.feedbackId)
+                CompactLearnMetric(stringResource(R.string.rating_hard), displayedIntroductionRatingCount(hud, ReviewRating.HARD, pendingRating).toString(), LearningEngineThemeTokens.semanticColors.warning, pendingRating?.takeIf { it.rating == ReviewRating.HARD }?.feedbackId)
+                CompactLearnMetric(stringResource(R.string.rating_good), displayedIntroductionRatingCount(hud, ReviewRating.GOOD, pendingRating).toString(), LearningEngineThemeTokens.semanticColors.success, pendingRating?.takeIf { it.rating == ReviewRating.GOOD }?.feedbackId)
+                CompactLearnMetric(stringResource(R.string.rating_easy), displayedIntroductionRatingCount(hud, ReviewRating.EASY, pendingRating).toString(), MaterialTheme.colorScheme.tertiary, pendingRating?.takeIf { it.rating == ReviewRating.EASY }?.feedbackId)
             }
         }
     }
@@ -1605,7 +1613,7 @@ private fun IntroductionLearningStage(
                     historyPreview = state.historyPreview,
                     interactionPending = quickReviewTransitionPending
                 ),
-                navigationEnabled = (state.revealed || focusedSkimUx) && !quickReviewTransitionPending,
+                navigationEnabled = (state.revealed || focusedSkimUx || state.navigation.canPrevious) && !quickReviewTransitionPending,
                 gatedUpwardNavigation = focusedSkimUx,
                 revealed = state.revealed,
                 historyPreview = state.historyPreview,
@@ -1679,88 +1687,94 @@ private fun IntroductionLearningStage(
                                 label = "Introduction coordinated reveal"
                             ) { revealed ->
                                 if (!revealed) {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    partOfSpeechPresentation(state.partOfSpeech)?.let { pos ->
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        PartOfSpeechBadge(pos, prominent = true)
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        partOfSpeechPresentation(state.partOfSpeech)?.let { pos ->
+                                            Spacer(modifier = Modifier.height(12.dp))
+                                            PartOfSpeechBadge(pos, prominent = true)
+                                        }
+
+                                        Spacer(modifier = Modifier.height(14.dp))
+
+                                        StudyAudioTextTarget(
+                                            text = meaning,
+                                            style = MaterialTheme.typography.headlineMedium.copy(
+                                                fontSize = introductionClueTextSizeSp(meaning.length).sp,
+                                                lineHeight = (introductionClueTextSizeSp(meaning.length) + 6).sp
+                                            ),
+                                            audioPath = null,
+                                            isPlaying = isPlayingMeaning,
+                                            isLooping = false,
+                                            onToggleAudio = null,
+                                            centered = true,
+                                            maxLines = 3,
+                                            headingSemantics = true,
+                                            interactionEnabled = false,
+                                            interaction = StudyTextInteraction.PASSIVE
+                                        )
+
+                                        Spacer(modifier = Modifier.height(14.dp))
+
+                                        IntroductionInteractionHint(
+                                            primary = if (difficultSkim) "Xem đáp án" else "Tap to reveal",
+                                            secondary = if (difficultSkim) "Ôn nhanh từ khó" else "Recall the English word",
+                                            emphasized = false
+                                        )
                                     }
-
-                                    Spacer(modifier = Modifier.height(14.dp))
-
-                                    StudyAudioTextTarget(
-                                        text = meaning,
-                                        style = MaterialTheme.typography.headlineMedium.copy(
-                                            fontSize = introductionClueTextSizeSp(meaning.length).sp,
-                                            lineHeight = (introductionClueTextSizeSp(meaning.length) + 6).sp
-                                        ),
-                                        audioPath = null,
-                                        isPlaying = isPlayingMeaning,
-                                        isLooping = false,
-                                        onToggleAudio = null,
-                                        centered = true,
-                                        maxLines = 3,
-                                        headingSemantics = true,
-                                        interactionEnabled = false,
-                                        interaction = StudyTextInteraction.PASSIVE
-                                    )
-
-                                    Spacer(modifier = Modifier.height(14.dp))
-
-                                    IntroductionInteractionHint(
-                                        primary = if (difficultSkim) "Xem đáp án" else "Tap to reveal",
-                                        secondary = if (difficultSkim) "Ôn nhanh từ khó" else "Recall the English word",
-                                        emphasized = false
-                                    )
-                                }
                                 } else {
-                                StudyAnswerSection(
-                                    englishAnswer = state.answer,
-                                    pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
-                                    partOfSpeech = partOfSpeechPresentation(state.partOfSpeech),
-                                    vietnameseAnswer = meaning,
-                                    englishExample = if (state.compactRatingExit) null else state.example,
-                                    vietnameseExample = if (state.compactRatingExit) null else state.translation,
-                                    answerAudioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                    englishExampleAudioPath = state.resolvedExampleEnglishAudio,
-                                    isPlayingAnswer = isPlayingExpected,
-                                    isPlayingVietnamese = isPlayingMeaning,
-                                    isPlayingEnglishExample = isPlayingExampleEng,
-                                    isPlayingVietnameseExample = isPlayingExampleVie,
-                                    onAnswerAudio = {
-                                        onGenericStageTap()
-                                    },
-                                    onEnglishExampleAudio = {
-                                        restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
-                                    },
-                                    modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.imageToAnswer),
-                                    answerHero = true,
-                                    swipeSuccessGlowActive = focusedPracticeHeadwordGlowActive(
-                                        focusedSkimUx = focusedSkimUx,
-                                        revealed = state.revealed,
-                                        transitionPending = quickReviewTransitionPending,
-                                        historyPreview = state.historyPreview
-                                    ),
-                                    interactionEnabled = !quickReviewTransitionPending
-                                )
+                                    StudyAnswerSection(
+                                        englishAnswer = state.answer,
+                                        pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
+                                        partOfSpeech = partOfSpeechPresentation(state.partOfSpeech),
+                                        vietnameseAnswer = meaning,
+                                        englishExample = if (state.compactRatingExit) null else state.example,
+                                        vietnameseExample = if (state.compactRatingExit) null else state.translation,
+                                        answerAudioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                                        englishExampleAudioPath = state.resolvedExampleEnglishAudio,
+                                        isPlayingAnswer = isPlayingExpected,
+                                        isPlayingVietnamese = isPlayingMeaning,
+                                        isPlayingEnglishExample = isPlayingExampleEng,
+                                        isPlayingVietnameseExample = isPlayingExampleVie,
+                                        onAnswerAudio = {
+                                            onGenericStageTap()
+                                        },
+                                        onEnglishExampleAudio = {
+                                            restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
+                                        },
+                                        modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.imageToAnswer),
+                                        vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio,
+                                        onVietnameseExampleAudio = {
+                                            restartAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)
+                                        },
+                                        answerHero = true,
+                                        swipeSuccessGlowActive = focusedPracticeHeadwordGlowActive(
+                                            focusedSkimUx = focusedSkimUx,
+                                            revealed = state.revealed,
+                                            transitionPending = quickReviewTransitionPending,
+                                            historyPreview = state.historyPreview
+                                        ),
+                                        interactionEnabled = !quickReviewTransitionPending
+                                    )
                                 }
                             }
-
                         }
                     }
                 }
+
                 if (!difficultSkim) {
                     if (!quickReview || state.revealed) {
                         StudyRatingBar(
                             onRating = onRating,
                             selectedRating = feedbackRating,
-                            underlinedRating = if (quickReview) state.latestEffectiveRating else null,
+                            underlinedRating = state.navigation.previousRating
+                                ?: (if (quickReview) state.latestEffectiveRating else null),
                             enabled = introductionRatingInputEnabled(
                                 revealed = state.revealed,
                                 historyPreview = state.historyPreview,
-                                interactionPending = quickReviewTransitionPending
+                                interactionPending = quickReviewTransitionPending,
+                                canCorrectRating = state.navigation.canCorrectRating
                             ),
                             modifier = Modifier.fillMaxWidth().padding(
                                 start = LearningSpacing.medium,
@@ -2031,6 +2045,10 @@ private fun StudyRevealAndFeedbackContent(
                 onEnglishExampleAudio = if (forcedTypingReveal) onTypingStageTap else {
                     { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) }
                 },
+                vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio,
+                onVietnameseExampleAudio = if (forcedTypingReveal) onTypingStageTap else {
+                    { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) }
+                },
                 answerHero = state is AndroidStudyState.Typing,
                 allowStandaloneVietnameseExample = forcedTypingReveal
             )
@@ -2052,13 +2070,13 @@ private fun StudyRevealAndFeedbackContent(
                         horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
                     ) {
                         LearningEnginePrimaryButton(
-                            label = "Continue",
+                            label = stringResource(R.string.action_continue),
                             onClick = { onEvent(AndroidStudyEvent.NextVisited) },
                             modifier = Modifier.weight(1f)
                         )
                         if (state.hud?.focusedPractice != true) {
                             LearningEngineSecondaryButton(
-                                label = "Undo",
+                                label = stringResource(R.string.action_undo),
                                 onClick = { onEvent(AndroidStudyEvent.Undo) },
                                 modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
                             )
@@ -2100,7 +2118,7 @@ private fun StudyRevealAndFeedbackContent(
             onClick = { onEvent(AndroidStudyEvent.Reveal()) },
             modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
         ) {
-            Text("Reveal answer")
+            Text(stringResource(R.string.study_reveal_answer))
         }
     }
 }
@@ -2114,7 +2132,7 @@ private fun Completion(state: AndroidStudyState.Completion, onEvent: (AndroidStu
         contentAlignment = Alignment.Center
     ) {
         LearningEngineCompletionCard(
-            title = "Session complete",
+            title = stringResource(R.string.study_session_complete),
             modeLabel = state.modeFamily,
             summary = completionResultDescription(
                 state.totalCompleted,
@@ -2149,7 +2167,7 @@ private fun StudyFailureState(
         contentAlignment = Alignment.Center
     ) {
         LearningEngineErrorState(
-            title = "Study session unavailable",
+            title = stringResource(R.string.study_session_unavailable),
             message = state.message,
             onRetry = if (state.retryable) { { onEvent(AndroidStudyEvent.Retry) } } else null
         )

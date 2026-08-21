@@ -71,6 +71,8 @@ internal fun StudyAnswerSection(
     onAnswerAudio: () -> Unit,
     onEnglishExampleAudio: () -> Unit,
     modifier: Modifier = Modifier,
+    vietnameseExampleAudioPath: String? = null,
+    onVietnameseExampleAudio: (() -> Unit)? = null,
     answerHero: Boolean = false,
     allowStandaloneVietnameseExample: Boolean = false,
     swipeSuccessGlowActive: Boolean = false,
@@ -163,12 +165,12 @@ internal fun StudyAnswerSection(
                         StudyExampleColors.vietnamese.background,
                         StudyExampleColors.vietnamese.border,
                         StudyExampleColors.vietnamese.content,
-                        null,
+                        vietnameseExampleAudioPath,
                         isPlayingVietnameseExample,
                         false,
-                        null,
-                        null,
-                        interactionEnabled = false
+                        onVietnameseExampleAudio,
+                        "Vietnamese example",
+                        interactionEnabled = interactionEnabled && onVietnameseExampleAudio != null
                     )
                 }
             }

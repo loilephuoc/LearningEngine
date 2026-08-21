@@ -39,22 +39,18 @@ class AndroidPassiveVietnameseStudyTextTest {
     }
 
     @Test
-    fun `revealed Vietnamese meaning and example have no audio callbacks or button contract`() {
+    fun `revealed Vietnamese meaning text remains passive while example has tap audio callback`() {
         val sectionContract = answerSection.substringAfter("internal fun StudyAnswerSection(")
             .substringBefore(") {")
         val meaning = answerSection.substringAfter("vietnameseAnswer?.takeIf")
             .substringBefore("if (!englishExample")
-        val vietnameseExample = answerSection.substringAfter("vietnameseExample?.takeIf")
-            .substringBefore("            }")
 
         assertFalse(sectionContract.contains("onVietnameseAudio"))
-        assertFalse(sectionContract.contains("onVietnameseExampleAudio"))
+        assertTrue(sectionContract.contains("onVietnameseExampleAudio"))
         assertFalse(sectionContract.contains("vietnameseAudioPath"))
-        assertFalse(sectionContract.contains("vietnameseExampleAudioPath"))
+        assertTrue(sectionContract.contains("vietnameseExampleAudioPath"))
         assertTrue(meaning.contains("interaction = StudyTextInteraction.PASSIVE"))
         assertTrue(meaning.contains("onToggleAudio") || meaning.contains("null,"))
-        assertTrue(vietnameseExample.contains("null"))
-        assertFalse(screen.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE"))
     }
 
     @Test

@@ -23,6 +23,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import vn.loi.learning.android.R
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -65,11 +67,11 @@ fun VocabularyRemindersHubScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                     Text(
-                        text = "Vocabulary Reminders & Surfaces",
+                        text = stringResource(R.string.settings_reminders_hub_label),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.semantics { heading() }
@@ -87,21 +89,21 @@ fun VocabularyRemindersHubScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Choose how and where you want to review vocabulary passively throughout your day.",
+                text = stringResource(R.string.reminder_hub_header_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             // 1. Lock Screen Vocabulary
             val lockStatus = if (lockScreenSettings.enabled) {
-                "ON"
+                stringResource(R.string.reminder_status_on)
             } else {
-                "OFF"
+                stringResource(R.string.reminder_status_off)
             }
             HubNavigationCard(
                 icon = Icons.Default.Lock,
-                title = "Lock Screen Vocabulary",
-                subtitle = "Show vocabulary on lock screen wallpaper when device is locked",
+                title = stringResource(R.string.lock_screen_settings_title),
+                subtitle = stringResource(R.string.reminder_hub_lock_desc),
                 statusText = lockStatus,
                 statusPositive = lockScreenSettings.enabled,
                 onClick = onLockScreenSettings
@@ -116,19 +118,19 @@ fun VocabularyRemindersHubScreen(
                 reminderSettings.pausedUntil?.toEpochMilli() ?: 0L
             }
             val reminderStatus = when {
-                !reminderSettings.enabled -> "OFF"
+                !reminderSettings.enabled -> stringResource(R.string.reminder_status_off)
                 isPaused && pausedUntilEpoch > 0L -> {
                     val timeStr = Instant.ofEpochMilli(pausedUntilEpoch)
                         .atZone(ZoneId.systemDefault())
                         .format(DateTimeFormatter.ofPattern("HH:mm"))
-                    "Paused until $timeStr"
+                    stringResource(R.string.reminder_status_paused_until, timeStr)
                 }
-                else -> "ON · Every ${reminderSettings.intervalMinutes}m"
+                else -> stringResource(R.string.reminder_status_every_minutes, reminderSettings.intervalMinutes)
             }
             HubNavigationCard(
                 icon = Icons.Default.NotificationsActive,
-                title = "Unlocked Reminder Popup",
-                subtitle = "Show periodic flashcard popups while using your phone",
+                title = stringResource(R.string.popup_settings_title),
+                subtitle = stringResource(R.string.reminder_hub_popup_desc),
                 statusText = reminderStatus,
                 statusPositive = reminderSettings.enabled && !isPaused,
                 statusWarning = isPaused,
@@ -143,15 +145,15 @@ fun VocabularyRemindersHubScreen(
                 "${widgetIntervalSeconds}s"
             }
             val widgetStatus = when {
-                activeWidgetCount == 0 -> "No widget added"
-                !homeWidgetSettings.autoNextEnabled -> "Active · Auto-next OFF"
-                !homeWidgetSettings.autoAudioEnabled -> "Active · Every $widgetIntervalLabel · Muted"
-                else -> "Active · Every $widgetIntervalLabel · Audio ON"
+                activeWidgetCount == 0 -> stringResource(R.string.reminder_status_widget_none)
+                !homeWidgetSettings.autoNextEnabled -> stringResource(R.string.reminder_status_widget_auto_off)
+                !homeWidgetSettings.autoAudioEnabled -> stringResource(R.string.reminder_status_widget_muted, widgetIntervalLabel)
+                else -> stringResource(R.string.reminder_status_widget_audio, widgetIntervalLabel)
             }
             HubNavigationCard(
                 icon = Icons.Default.Widgets,
-                title = "Home-Screen Vocabulary Widget",
-                subtitle = "Configure the vocabulary card and auto-rotation on your Home screen",
+                title = stringResource(R.string.widget_settings_title),
+                subtitle = stringResource(R.string.reminder_hub_widget_desc),
                 statusText = widgetStatus,
                 statusPositive = activeWidgetCount > 0 && homeWidgetSettings.autoNextEnabled,
                 onClick = onHomeWidgetSettings

@@ -41,9 +41,9 @@ class AndroidMockupFoundationTest {
     @Test
     fun `top level destinations consume shared shell and compact settings rows`() {
         val navigation = source("vn/loi/learning/android/ui/AndroidRootNavigation.kt")
-        assertTrue(navigation.contains("LearningEngineScreenShell(\"Study\""))
-        assertTrue(navigation.contains("LearningEngineScreenShell(\"Review\""))
-        assertTrue(navigation.contains("LearningEngineScreenShell(\"Settings\""))
+        assertTrue(navigation.contains("LearningEngineScreenShell(stringResource(R.string.study_hub_title)"))
+        assertTrue(navigation.contains("LearningEngineScreenShell(stringResource(R.string.review_hub_title)"))
+        assertTrue(navigation.contains("LearningEngineScreenShell(stringResource(R.string.nav_settings)"))
         assertTrue(navigation.contains("LearningEngineSettingsRow"))
         assertFalse(navigation.contains("Session Availability"))
         assertFalse(navigation.contains("Data Management"))
@@ -53,7 +53,7 @@ class AndroidMockupFoundationTest {
     fun `Home Library and Study runtime remove dominant legacy patterns`() {
         val study = source("vn/loi/learning/android/study/StudyScreen.kt")
         val library = source("vn/loi/learning/android/library/LibraryScreen.kt")
-        assertTrue(study.contains("Keep your learning moving"))
+        assertTrue(study.contains("home_header_title"))
         assertFalse(study.contains("Ready for your next step?"))
         assertTrue(library.contains("LearningTextRole.screenTitle"))
         assertTrue(library.contains("TextField("))

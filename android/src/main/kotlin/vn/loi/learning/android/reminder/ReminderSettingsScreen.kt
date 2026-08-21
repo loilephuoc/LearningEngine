@@ -27,11 +27,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import vn.loi.learning.android.R
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.ZoneId
@@ -54,6 +59,23 @@ fun ReminderSettingsScreen(
     val settings by controller.settings.collectAsState()
     var draft by remember(settings) {
         mutableStateOf(AndroidVocabularyReminderDraft.from(settings))
+    }
+    var intervalTextFieldValue by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = draft.intervalValueText,
+                selection = TextRange(draft.intervalValueText.length)
+            )
+        )
+    }
+
+    LaunchedEffect(draft.intervalValueText) {
+        if (intervalTextFieldValue.text != draft.intervalValueText) {
+            intervalTextFieldValue = TextFieldValue(
+                text = draft.intervalValueText,
+                selection = TextRange(draft.intervalValueText.length)
+            )
+        }
     }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -151,11 +173,11 @@ fun ReminderSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back from Unlocked Reminder Settings"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                     Text(
-                        text = "Unlocked Reminder Popup",
+                        text = stringResource(R.string.reminder_unlocked_popup_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.semantics { heading() }
@@ -194,13 +216,13 @@ fun ReminderSettingsScreen(
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Notification permission required",
+                                text = stringResource(R.string.reminder_permission_required),
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Text(
-                                text = "Grant permission to receive periodic vocabulary reminders.",
+                                text = stringResource(R.string.reminder_permission_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
@@ -213,7 +235,7 @@ fun ReminderSettingsScreen(
                                 containerColor = MaterialTheme.colorScheme.error
                             )
                         ) {
-                            Text("Grant")
+                            Text(stringResource(R.string.permission_grant))
                         }
                     }
                 }
@@ -246,12 +268,12 @@ fun ReminderSettingsScreen(
                         )
                         Column {
                             Text(
-                                text = "Enable Unlocked Reminders",
+                                text = stringResource(R.string.reminder_enable_unlocked),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = if (settings.enabled) "Reminders are actively scheduled" else "Reminders are paused/off",
+                                text = if (settings.enabled) stringResource(R.string.reminder_actively_scheduled) else stringResource(R.string.reminder_paused_or_off),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -304,13 +326,13 @@ fun ReminderSettingsScreen(
                             )
                             Column {
                                 Text(
-                                    text = "Paused ($remainingMinutes min remaining)",
+                                    text = stringResource(R.string.reminder_paused_remaining, remainingMinutes.toInt()),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer
                                 )
                                 Text(
-                                    text = "Paused until $pausedUntilTimeStr",
+                                    text = stringResource(R.string.reminder_paused_until_time, pausedUntilTimeStr),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.85f)
                                 )
@@ -325,7 +347,7 @@ fun ReminderSettingsScreen(
                                 containerColor = MaterialTheme.colorScheme.primary
                             )
                         ) {
-                            Text("Resume now")
+                            Text(stringResource(R.string.reminder_resume_now))
                         }
                     }
                 }
@@ -341,7 +363,7 @@ fun ReminderSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Learning Package",
+                        text = stringResource(R.string.reminder_learning_package_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -370,7 +392,7 @@ fun ReminderSettingsScreen(
                         ) {
                             if (availablePackages.isEmpty()) {
                                 DropdownMenuItem(
-                                    text = { Text("No active packages installed") },
+                                    text = { Text(stringResource(R.string.reminder_no_packages_installed)) },
                                     onClick = { packageDropdownExpanded = false }
                                 )
                             } else {
@@ -379,7 +401,7 @@ fun ReminderSettingsScreen(
                                         text = {
                                             Column {
                                                 Text(pkg.name, fontWeight = FontWeight.SemiBold)
-                                                Text("${pkg.totalItemCount} items", style = MaterialTheme.typography.bodySmall)
+                                                Text(stringResource(R.string.reminder_package_items_count, pkg.totalItemCount), style = MaterialTheme.typography.bodySmall)
                                             }
                                         },
                                         onClick = {
@@ -404,7 +426,7 @@ fun ReminderSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Reminder Mode",
+                        text = stringResource(R.string.reminder_mode_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -416,11 +438,11 @@ fun ReminderSettingsScreen(
                     ) {
                         AndroidVocabularyReminderSelectionMode.entries.forEach { mode ->
                             val label = when (mode) {
-                                AndroidVocabularyReminderSelectionMode.AGAIN_HARD -> "Again / Hard"
-                                AndroidVocabularyReminderSelectionMode.DUE -> "Due items"
-                                AndroidVocabularyReminderSelectionMode.RANDOM_LEARNED -> "Random learned"
-                                AndroidVocabularyReminderSelectionMode.RANDOM_ALL -> "Random all"
-                                AndroidVocabularyReminderSelectionMode.MARKED_DIFFICULT -> "Marked difficult"
+                                AndroidVocabularyReminderSelectionMode.AGAIN_HARD -> stringResource(R.string.reminder_mode_again_hard)
+                                AndroidVocabularyReminderSelectionMode.DUE -> stringResource(R.string.reminder_mode_due)
+                                AndroidVocabularyReminderSelectionMode.RANDOM_LEARNED -> stringResource(R.string.reminder_mode_random_learned)
+                                AndroidVocabularyReminderSelectionMode.RANDOM_ALL -> stringResource(R.string.reminder_mode_random_all)
+                                AndroidVocabularyReminderSelectionMode.MARKED_DIFFICULT -> stringResource(R.string.reminder_mode_marked_difficult)
                             }
                             FilterChip(
                                 selected = draft.selectionMode == mode,
@@ -445,7 +467,7 @@ fun ReminderSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Reminder Interval",
+                        text = stringResource(R.string.reminder_interval_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -457,13 +479,28 @@ fun ReminderSettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedTextField(
-                            value = draft.intervalValueText,
-                            onValueChange = { nextVal ->
-                                applyDraft(draft.copy(intervalValueText = nextVal))
+                            value = intervalTextFieldValue,
+                            onValueChange = { nextTfv ->
+                                val filteredText = nextTfv.text.filter { it.isDigit() }
+                                val newSelection = if (filteredText == nextTfv.text) {
+                                    nextTfv.selection
+                                } else {
+                                    TextRange(filteredText.length)
+                                }
+                                intervalTextFieldValue = nextTfv.copy(text = filteredText, selection = newSelection)
+                                applyDraft(draft.copy(intervalValueText = filteredText))
                             },
-                            label = { Text("Value") },
+                            label = { Text(stringResource(R.string.reminder_interval_value)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused) {
+                                        intervalTextFieldValue = intervalTextFieldValue.copy(
+                                            selection = TextRange(0, intervalTextFieldValue.text.length)
+                                        )
+                                    }
+                                }
                         )
 
                         Row(
@@ -474,21 +511,21 @@ fun ReminderSettingsScreen(
                                 onClick = {
                                     applyDraft(draft.copy(intervalUnit = AndroidVocabularyReminderIntervalUnit.SECONDS))
                                 },
-                                label = { Text("Sec") }
+                                label = { Text(stringResource(R.string.unit_sec)) }
                             )
                             FilterChip(
                                 selected = draft.intervalUnit == AndroidVocabularyReminderIntervalUnit.MINUTES,
                                 onClick = {
                                     applyDraft(draft.copy(intervalUnit = AndroidVocabularyReminderIntervalUnit.MINUTES))
                                 },
-                                label = { Text("Min") }
+                                label = { Text(stringResource(R.string.unit_min)) }
                             )
                         }
                     }
 
                     // Presets
                     Text(
-                        text = "Presets",
+                        text = stringResource(R.string.reminder_presets_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -531,7 +568,7 @@ fun ReminderSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Active Time Window & Duration",
+                        text = stringResource(R.string.reminder_active_time_window_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -544,14 +581,14 @@ fun ReminderSettingsScreen(
                         OutlinedTextField(
                             value = draft.activeStartText,
                             onValueChange = { applyDraft(draft.copy(activeStartText = it)) },
-                            label = { Text("Active from") },
+                            label = { Text(stringResource(R.string.reminder_active_from)) },
                             placeholder = { Text("08:00") },
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
                             value = draft.activeEndText,
                             onValueChange = { applyDraft(draft.copy(activeEndText = it)) },
-                            label = { Text("Active until") },
+                            label = { Text(stringResource(R.string.reminder_active_until)) },
                             placeholder = { Text("22:00") },
                             modifier = Modifier.weight(1f)
                         )
@@ -560,7 +597,7 @@ fun ReminderSettingsScreen(
                     OutlinedTextField(
                         value = draft.displayDurationText,
                         onValueChange = { applyDraft(draft.copy(displayDurationText = it)) },
-                        label = { Text("Notification duration (seconds)") },
+                        label = { Text(stringResource(R.string.reminder_notification_duration)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -571,7 +608,7 @@ fun ReminderSettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Play pronunciation on reminder",
+                            text = stringResource(R.string.reminder_play_pronunciation),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Switch(
@@ -589,12 +626,12 @@ fun ReminderSettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                             Text(
-                                text = "Large reminder popup",
+                                text = stringResource(R.string.reminder_large_popup_title),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Show a large vocabulary card over other apps when the screen is unlocked.",
+                                text = stringResource(R.string.reminder_large_popup_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -622,13 +659,13 @@ fun ReminderSettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                                     Text(
-                                        text = "Large popup permission required",
+                                        text = stringResource(R.string.reminder_large_popup_permission_title),
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
                                     Text(
-                                        text = "Grant 'Display over other apps' to allow large vocabulary popup cards.",
+                                        text = stringResource(R.string.reminder_large_popup_permission_desc),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
@@ -637,7 +674,7 @@ fun ReminderSettingsScreen(
                                     onClick = { openOverlaySettings() },
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                                 ) {
-                                    Text("Grant permission", style = MaterialTheme.typography.labelSmall)
+                                    Text(stringResource(R.string.permission_grant), style = MaterialTheme.typography.labelSmall)
                                 }
                             }
                         }
@@ -651,11 +688,11 @@ fun ReminderSettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                             Text(
-                                text = "Quick pause actions",
+                                text = stringResource(R.string.reminder_quick_pause_actions_title),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Show Pause 5m, 30m, 1h buttons on the unlocked reminder overlay card.",
+                                text = stringResource(R.string.reminder_quick_pause_actions_desc),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -680,7 +717,7 @@ fun ReminderSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Quick Pause Reminders",
+                        text = stringResource(R.string.reminder_quick_pause_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -694,21 +731,21 @@ fun ReminderSettingsScreen(
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
                         ) {
-                            Text("Pause 30m", style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.reminder_pause_30m), style = MaterialTheme.typography.labelSmall)
                         }
                         OutlinedButton(
                             onClick = { runtime.pauseOneHour() },
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
                         ) {
-                            Text("Pause 1h", style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.reminder_pause_1h), style = MaterialTheme.typography.labelSmall)
                         }
                         OutlinedButton(
                             onClick = { runtime.pauseToday() },
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
                         ) {
-                            Text("Pause today", style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.reminder_pause_today), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -731,12 +768,12 @@ fun ReminderSettingsScreen(
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Heads-up / Floating Banners",
+                            text = stringResource(R.string.reminder_floating_banners_title),
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "On Xiaomi / HyperOS, enable 'Floating notifications' (Thông báo nổi) in system channel settings for instant popups.",
+                            text = stringResource(R.string.reminder_floating_banners_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -756,12 +793,13 @@ fun ReminderSettingsScreen(
                             runCatching { context.startActivity(intent) }
                         }
                     ) {
-                        Text("Configure")
+                        Text(stringResource(R.string.reminder_configure_button))
                     }
                 }
             }
 
             // 8. Preview notification button
+            val previewSentMsg = stringResource(R.string.reminder_preview_sent)
             Button(
                 onClick = {
                     if (!hasPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -774,7 +812,7 @@ fun ReminderSettingsScreen(
                         }
                     } else {
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Preview notification sent.")
+                            snackbarHostState.showSnackbar(previewSentMsg)
                         }
                     }
                 },
@@ -782,13 +820,13 @@ fun ReminderSettingsScreen(
             ) {
                 Icon(Icons.Default.NotificationsActive, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Preview notification")
+                Text(stringResource(R.string.reminder_preview_button))
             }
 
             // 9. Other surfaces cross-navigation cards
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             Text(
-                text = "Other Vocabulary Surfaces",
+                text = stringResource(R.string.reminder_other_surfaces_title),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -808,8 +846,8 @@ fun ReminderSettingsScreen(
                 ) {
                     Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Lock Screen Vocabulary", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
-                        Text("Configure lock screen wallpaper cards", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.reminder_lock_screen_surface_title), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.reminder_lock_screen_surface_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -829,8 +867,8 @@ fun ReminderSettingsScreen(
                 ) {
                     Icon(Icons.Default.Widgets, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Home-Screen Vocabulary Widget", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
-                        Text("Configure Home screen widget card & auto-rotation", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.reminder_home_widget_surface_title), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.reminder_home_widget_surface_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

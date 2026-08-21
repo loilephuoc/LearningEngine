@@ -1,28 +1,27 @@
 package vn.loi.learning.android
 
 import android.content.ComponentName
-import android.os.Bundle
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.content.res.Resources
+import android.os.Bundle
 import android.provider.OpenableColumns
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.material3.Scaffold
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -118,6 +117,10 @@ class MainActivity : ComponentActivity() {
         ControllerDiagnosticsHolder.refreshDevices(this)
         vn.loi.learning.android.controller.StudyControllerBridge.onActivityForegroundChanged(true)
         val app = application as? LearningEngineAndroidApplication
+        app?.homeVocabularyWidgetCoordinator?.transitionDeviceState(
+            vn.loi.learning.android.reminder.VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON,
+            "MAIN_ACTIVITY_RESUMED"
+        )
         app?.homeVocabularyWidgetCoordinator?.setHomeSurfaceState(
             vn.loi.learning.android.reminder.HomeSurfaceState.HIDDEN,
             "LEARNING_ENGINE_FOREGROUND"
@@ -141,6 +144,16 @@ class MainActivity : ComponentActivity() {
                 vn.loi.learning.android.reminder.HomeSurfaceState.UNKNOWN,
                 "LEARNING_ENGINE_STOPPED_ACCESSIBILITY_DISCONNECTED"
             )
+        } else {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                val resolved = vn.loi.learning.android.controller.ControllerSystemActionBridge.reconcileHomeSurface()
+                if (resolved != vn.loi.learning.android.reminder.HomeSurfaceState.UNKNOWN) {
+                    app?.homeVocabularyWidgetCoordinator?.setHomeSurfaceState(
+                        resolved,
+                        "LEARNING_ENGINE_STOPPED"
+                    )
+                }
+            }, 100)
         }
     }
 
@@ -309,11 +322,32 @@ class MainActivity : ComponentActivity() {
         AndroidStartupTrace.mark("set_content_reached")
         setContent {
             val themeMode by app.themeController.mode.collectAsStateWithLifecycle()
+            val currentLanguage by vn.loi.learning.android.platform.AppLanguageManager.currentLanguage.collectAsStateWithLifecycle()
             val studyLimits by app.studyPreferencesController.limits.collectAsStateWithLifecycle()
             val continuousSkim by app.studyPreferencesController.continuousSkim.collectAsStateWithLifecycle()
-            LearningEngineTheme(mode = themeMode) {
-                LaunchedEffect(Unit){AndroidStartupTrace.mark("first_composition_reached");withFrameNanos{AndroidStartupTrace.mark("first_frame_committed")}}
-                var graphRetry by rememberSaveable { mutableIntStateOf(0) }
+
+            val locale = java.util.Locale(currentLanguage.code)
+            val currentConfig = LocalConfiguration.current
+            val localizedConfig = remember(currentLanguage, currentConfig) {
+                android.content.res.Configuration(currentConfig).apply {
+                    setLocale(locale)
+                    setLayoutDirection(locale)
+                }
+            }
+            val baseContext = LocalContext.current
+            val localizedContext = remember(currentLanguage, baseContext, localizedConfig) {
+                val configContext = baseContext.createConfigurationContext(localizedConfig)
+                LocalizedActivityContextWrapper(baseContext, configContext)
+            }
+
+            CompositionLocalProvider(
+                LocalConfiguration provides localizedConfig,
+                LocalContext provides localizedContext,
+                LocalActivityResultRegistryOwner provides this@MainActivity
+            ) {
+                LearningEngineTheme(mode = themeMode) {
+                    LaunchedEffect(Unit){AndroidStartupTrace.mark("first_composition_reached");withFrameNanos{AndroidStartupTrace.mark("first_frame_committed")}}
+                    var graphRetry by rememberSaveable { mutableIntStateOf(0) }
                 val rootState by produceState<AndroidRootState>(AndroidRootState.Bootstrapping, graphRetry) {
                     value=withContext(Dispatchers.IO) {
                         runCatching { AndroidRootState.Ready(app.graph) }
@@ -646,7 +680,9 @@ class MainActivity : ComponentActivity() {
                             onVocabularyReminders = { navController.navigate("vocabulary_reminders") { launchSingleTop = true } },
                             onReminderSettings = { navController.navigate("vocabulary_reminders") { launchSingleTop = true } },
                             onHomeWidgetSettings = { navController.navigate("home_widget_settings") { launchSingleTop = true } },
-                            onBackupRestore = { navController.navigate("backup_restore") { launchSingleTop = true } }
+                            onBackupRestore = { navController.navigate("backup_restore") { launchSingleTop = true } },
+                            currentLanguage = currentLanguage,
+                            onLanguage = { vn.loi.learning.android.platform.AppLanguageManager.setLanguage(this@MainActivity, it) }
                         ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
                     }
                     composable("backup_restore", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
@@ -764,6 +800,7 @@ class MainActivity : ComponentActivity() {
                     }
                 } } }
             }
+            }
         }
     }
 }
@@ -772,3 +809,10 @@ internal fun opensStudyFromExplicitEvent(event: AndroidStudyEvent): Boolean =
     event is AndroidStudyEvent.Start || event is AndroidStudyEvent.OpenSession || event == AndroidStudyEvent.Resume
 
 private fun AndroidPackageOperationResult.message()=when(this){is AndroidPackageOperationResult.Success->message;is AndroidPackageOperationResult.Failed->message;is AndroidPackageOperationResult.Verification->if(valid)"Package verification passed." else "Package verification failed: ${errors.joinToString()}"}
+
+private class LocalizedActivityContextWrapper(
+    base: Context,
+    private val localizedConfigurationContext: Context
+) : ContextWrapper(base) {
+    override fun getResources(): Resources = localizedConfigurationContext.resources
+}

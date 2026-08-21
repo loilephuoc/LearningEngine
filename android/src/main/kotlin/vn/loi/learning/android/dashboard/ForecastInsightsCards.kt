@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import vn.loi.learning.android.R
 import vn.loi.learning.android.ui.LearningSpacing
 import vn.loi.learning.android.ui.StudyRatingColors
 
@@ -39,7 +41,7 @@ fun InsightsScopeSelector(
     var expanded by remember { mutableStateOf(false) }
 
     val currentLabel = when (currentScope) {
-        is AndroidInsightsScope.AllPackages -> "All packages"
+        is AndroidInsightsScope.AllPackages -> stringResource(R.string.insights_all_packages)
         is AndroidInsightsScope.SpecificPackage -> currentScope.packageName
     }
 
@@ -49,7 +51,7 @@ fun InsightsScopeSelector(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Insights",
+            text = stringResource(R.string.insights_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.semantics { heading() }
@@ -105,7 +107,7 @@ fun InsightsScopeSelector(
                                 )
                                 if (option.isActivePackage) {
                                     Text(
-                                        text = "· Active",
+                                        text = stringResource(R.string.insights_scope_active),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -154,13 +156,13 @@ fun ReviewForecastCard(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Review forecast",
+                        stringResource(R.string.insights_forecast_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.semantics { heading() }
                     )
                     Text(
-                        if (totalDue7Days > 0) "$totalDue7Days cards due in next 7 days" else "No upcoming reviews in next 7 days",
+                        if (totalDue7Days > 0) stringResource(R.string.insights_forecast_subtitle, totalDue7Days) else stringResource(R.string.insights_forecast_no_reviews),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -177,6 +179,11 @@ fun ReviewForecastCard(
                 verticalAlignment = Alignment.Bottom
             ) {
                 forecast.forEach { bucket ->
+                    val bucketLabel = if (bucket.dayIndex == 1 || bucket.label == "Tomorrow") {
+                        stringResource(R.string.insights_forecast_tomorrow)
+                    } else {
+                        bucket.label
+                    }
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -214,7 +221,7 @@ fun ReviewForecastCard(
                         }
 
                         Text(
-                            text = bucket.label,
+                            text = bucketLabel,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1
@@ -257,13 +264,13 @@ fun MemoryRetentionCard(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Memory retention",
+                        stringResource(R.string.insights_retention_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.semantics { heading() }
                     )
                     Text(
-                        "${distribution.totalCount} total memories in scope",
+                        stringResource(R.string.insights_retention_subtitle, distribution.totalCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -321,14 +328,14 @@ fun MemoryRetentionCard(
                     horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
                 ) {
                     DistributionTile(
-                        label = "New",
+                        label = stringResource(R.string.insights_retention_new),
                         count = distribution.newCount,
                         percent = distribution.newPercent,
                         color = MaterialTheme.colorScheme.outlineVariant,
                         modifier = Modifier.weight(1f)
                     )
                     DistributionTile(
-                        label = "Learning",
+                        label = stringResource(R.string.insights_retention_learning),
                         count = distribution.learningCount,
                         percent = distribution.learningPercent,
                         color = StudyRatingColors.again.border,
@@ -340,14 +347,14 @@ fun MemoryRetentionCard(
                     horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
                 ) {
                     DistributionTile(
-                        label = "Young (≤21d)",
+                        label = stringResource(R.string.insights_retention_young),
                         count = distribution.youngCount,
                         percent = distribution.youngPercent,
                         color = StudyRatingColors.hard.border,
                         modifier = Modifier.weight(1f)
                     )
                     DistributionTile(
-                        label = "Retained (>21d)",
+                        label = stringResource(R.string.insights_retention_retained),
                         count = distribution.retainedCount,
                         percent = distribution.retainedPercent,
                         color = StudyRatingColors.good.border,
@@ -424,13 +431,13 @@ fun TodayRatingsCard(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Today's ratings",
+                        stringResource(R.string.insights_today_ratings_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.semantics { heading() }
                     )
                     Text(
-                        if (ratings.totalCount > 0) "${ratings.totalCount} reviews completed today" else "No reviews completed yet today",
+                        if (ratings.totalCount > 0) stringResource(R.string.insights_today_ratings_subtitle, ratings.totalCount) else stringResource(R.string.insights_today_ratings_none),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -442,7 +449,7 @@ fun TodayRatingsCard(
                 horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
             ) {
                 RatingTile(
-                    label = "Again",
+                    label = stringResource(R.string.rating_again),
                     count = ratings.againCount,
                     background = StudyRatingColors.again.background.copy(alpha = 0.5f),
                     border = StudyRatingColors.again.border,
@@ -450,7 +457,7 @@ fun TodayRatingsCard(
                     modifier = Modifier.weight(1f)
                 )
                 RatingTile(
-                    label = "Hard",
+                    label = stringResource(R.string.rating_hard),
                     count = ratings.hardCount,
                     background = StudyRatingColors.hard.background.copy(alpha = 0.5f),
                     border = StudyRatingColors.hard.border,
@@ -458,7 +465,7 @@ fun TodayRatingsCard(
                     modifier = Modifier.weight(1f)
                 )
                 RatingTile(
-                    label = "Good",
+                    label = stringResource(R.string.rating_good),
                     count = ratings.goodCount,
                     background = StudyRatingColors.good.background.copy(alpha = 0.5f),
                     border = StudyRatingColors.good.border,
@@ -466,7 +473,7 @@ fun TodayRatingsCard(
                     modifier = Modifier.weight(1f)
                 )
                 RatingTile(
-                    label = "Easy",
+                    label = stringResource(R.string.rating_easy),
                     count = ratings.easyCount,
                     background = StudyRatingColors.easy.background.copy(alpha = 0.5f),
                     border = StudyRatingColors.easy.border,

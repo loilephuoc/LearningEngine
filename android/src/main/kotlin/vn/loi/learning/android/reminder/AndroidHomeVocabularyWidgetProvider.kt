@@ -16,6 +16,13 @@ class AndroidHomeVocabularyWidgetProvider : AppWidgetProvider() {
         val app = context.applicationContext as? LearningEngineAndroidApplication ?: return
         val coordinator = app.homeVocabularyWidgetCoordinator
 
+        if (action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            Log.i(TAG, "[HomeWidgetBroadcast] action=MY_PACKAGE_REPLACED")
+            coordinator.reconcileRuntimeServiceLifetime("MY_PACKAGE_REPLACED")
+            coordinator.reconcileRuntimeClock("MY_PACKAGE_REPLACED")
+            return
+        }
+
         val appWidgetId = intent.getIntExtra(EXTRA_APP_WIDGET_ID, 0)
         val packageId = intent.getStringExtra(EXTRA_PACKAGE_ID)
         val contentId = intent.getStringExtra(EXTRA_CONTENT_ID)
@@ -50,6 +57,7 @@ class AndroidHomeVocabularyWidgetProvider : AppWidgetProvider() {
         Log.i(TAG, "[HomeWidget] action=UPDATE widgetCount=${appWidgetIds.size} ids=${appWidgetIds.joinToString()}")
         val app = context.applicationContext as? LearningEngineAndroidApplication
         app?.homeVocabularyWidgetCoordinator?.onWidgetsUpdate(appWidgetIds)
+        app?.homeVocabularyWidgetCoordinator?.reconcileRuntimeServiceLifetime("APPWIDGET_ON_UPDATE")
     }
 
     override fun onAppWidgetOptionsChanged(

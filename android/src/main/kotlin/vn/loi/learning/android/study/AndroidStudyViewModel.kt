@@ -115,7 +115,7 @@ class AndroidStudyViewModel(
 
         override suspend fun rate(rating: ReviewRating): Boolean {
             val s = mutableState.value
-            if (s is AndroidStudyState.Introduction && s.revealedStage && !s.historyPreview) {
+            if (s is AndroidStudyState.Introduction && s.revealedStage && (!s.historyPreview || s.navigation.canCorrectRating)) {
                 executeEventSync(AndroidStudyEvent.RateIntroduction(rating))
                 return true
             }
@@ -327,8 +327,27 @@ class AndroidStudyViewModel(
                 AndroidStudyEvent.RevealIntroduction ->
                     (current as? AndroidStudyState.Introduction)?.let(facade::revealIntroduction) ?: current
                 is AndroidStudyEvent.RateIntroduction ->
-                    (current as? AndroidStudyState.Introduction)?.takeIf { !it.historyPreview }?.let {
-                        facade.rateIntroduction(it, event.rating, deferHud = true)
+                    (current as? AndroidStudyState.Introduction)?.takeIf { !it.historyPreview || it.navigation.canCorrectRating }?.let { intro ->
+                        if (intro.navigation.canCorrectRating) {
+                            val undone = facade.undo(intro)
+                            val rated = if (undone is AndroidStudyState.Introduction) {
+                                facade.rateIntroduction(undone, event.rating, deferHud = true)
+                            } else {
+                                facade.rateIntroduction(intro, event.rating, deferHud = true)
+                            }
+                            if (reviewHistoryCursor >= 0 && reviewHistoryCursor < reviewHistory.size) {
+                                (undone as? AndroidStudyState.Introduction)?.let {
+                                    reviewHistory[reviewHistoryCursor] = it.copy(
+                                        revealedStage = true,
+                                        historyPreview = false
+                                    ).withNavigation(AndroidReviewNavigation())
+                                }
+                            }
+                            reviewHistoryCursor = reviewHistory.lastIndex
+                            rated
+                        } else {
+                            facade.rateIntroduction(intro, event.rating, deferHud = true)
+                        }
                     } ?: current
                 AndroidStudyEvent.Retry -> when (current) {
                     is AndroidStudyState.Typing -> current.copy(answer = "", evaluation = TypingAnswerEvaluationStatus.EMPTY)
@@ -518,6 +537,7 @@ class AndroidStudyViewModel(
 
     private fun previousVisited(current: AndroidStudyState): AndroidStudyState {
         if (current !is AndroidStudyState.Runtime || reviewHistoryCursor <= 0) return current
+        if (!current.navigation.canPrevious) return current
         reviewHistory[reviewHistoryCursor] = current.withNavigation(AndroidReviewNavigation())
         reviewHistoryCursor--
         return decorateHistoryState(reviewHistory[reviewHistoryCursor])
@@ -588,18 +608,7 @@ class AndroidStudyViewModel(
         val newItemKey = (state as? AndroidStudyState.Runtime)?.reviewItemKey()
         if (newItemKey != null) {
             if (newItemKey != previousItemKey) {
-                if (state is AndroidStudyState.Introduction && !state.revealedStage) {
-                    val entryAudio = state.resolvedMeaningAudio ?: state.resolvedPromptAudio
-                    if (!entryAudio.isNullOrBlank() && vn.loi.learning.android.controller.StudyControllerBridge.claimAutoplay(newItemKey, "MEANING")) {
-                        vn.loi.learning.android.controller.StudyControllerBridge.playAudio(
-                            itemKey = newItemKey,
-                            path = entryAudio,
-                            role = "MEANING",
-                            isLooping = false,
-                            reason = vn.loi.learning.android.controller.StudyAudioReason.ITEM_ENTRY
-                        )
-                    }
-                } else if (previousItemKey != null) {
+                if (previousItemKey != null) {
                     vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
                         vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
                     )
@@ -628,12 +637,33 @@ class AndroidStudyViewModel(
         }
     }
 
-    private fun decorateHistoryState(state: AndroidStudyState.Runtime): AndroidStudyState.Runtime =
-        state.withNavigation(AndroidReviewNavigation(
-            canPrevious = reviewHistoryCursor > 0,
-            canNext = reviewHistoryCursor < reviewHistory.lastIndex || reviewNavigationCanAdvance(state),
-            historyPreview = reviewHistoryCursor < reviewHistory.lastIndex
+    private fun decorateHistoryState(state: AndroidStudyState.Runtime): AndroidStudyState.Runtime {
+        val isHistory = reviewHistoryCursor < reviewHistory.lastIndex
+        val hasUndoableImmediateRating = !isHistory && reviewHistoryCursor > 0 && (state as? AndroidStudyState.Introduction)?.let {
+            val previousState = reviewHistory.getOrNull(reviewHistoryCursor - 1) as? AndroidStudyState.Introduction
+            previousState != null && facade.isSessionItemUndoable(previousState.sessionId, previousState.learningItemId)
+        } == true
+        val canPrevious = reviewHistoryCursor > 0 && (isHistory || reviewNavigationCanGoBack(state) || hasUndoableImmediateRating)
+        val canCorrect = (state as? AndroidStudyState.Introduction)?.let {
+            isEligibleForRatingCorrection(it)
+        } == true
+        val previousRating = if (canCorrect && state is AndroidStudyState.Introduction) {
+            facade.getUndoableSessionReviewRating(state.sessionId, state.learningItemId)
+        } else null
+        return state.withNavigation(AndroidReviewNavigation(
+            canPrevious = canPrevious,
+            canNext = isHistory || reviewNavigationCanAdvance(state),
+            historyPreview = isHistory,
+            canCorrectRating = canCorrect,
+            previousRating = previousRating
         ))
+    }
+
+    private fun isEligibleForRatingCorrection(state: AndroidStudyState.Introduction): Boolean {
+        if (!state.revealedStage) return false
+        if (reviewHistoryCursor != reviewHistory.lastIndex - 1 || reviewHistory.isEmpty()) return false
+        return facade.isSessionItemUndoable(state.sessionId, state.learningItemId)
+    }
 
     private fun rememberSession(state: AndroidStudyState) {
         savedState[SESSION_ID] = when (state) {
@@ -660,6 +690,13 @@ private fun AndroidStudyState.Runtime.reviewItemKey(): String =
 private fun reviewNavigationCanAdvance(state: AndroidStudyState.Runtime): Boolean = when (state) {
     is AndroidStudyState.Introduction -> state.revealed
     is AndroidStudyState.Typing -> state.completed && !state.completionPending
+    is AndroidStudyState.ExampleCompletion -> state.completed || state.revealed
+    else -> state.completed
+}
+
+private fun reviewNavigationCanGoBack(state: AndroidStudyState.Runtime): Boolean = when (state) {
+    is AndroidStudyState.Introduction -> state.revealed
+    is AndroidStudyState.Typing -> state.completed
     is AndroidStudyState.ExampleCompletion -> state.completed || state.revealed
     else -> state.completed
 }

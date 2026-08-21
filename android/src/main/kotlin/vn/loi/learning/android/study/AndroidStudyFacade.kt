@@ -383,7 +383,9 @@ private fun AndroidStudyState.withRuntimeIdentity(session: StudySession?): Andro
 data class AndroidReviewNavigation(
     val canPrevious: Boolean = false,
     val canNext: Boolean = false,
-    val historyPreview: Boolean = false
+    val historyPreview: Boolean = false,
+    val canCorrectRating: Boolean = false,
+    val previousRating: ReviewRating? = null
 )
 
 /** Thin platform facade: Shared Application owns planning, evaluation, learning and queue mutation. */
@@ -1316,6 +1318,19 @@ class AndroidStudyFacade(
                 load(sessionId.value)
             }
         }
+    }
+
+    fun isSessionItemUndoable(sessionId: String, learningItemId: String): Boolean {
+        val session = context.engine.getSession(SessionId(sessionId)) ?: return false
+        val undoable = session.undoableReview ?: return false
+        return undoable.learningItemId.value == learningItemId
+    }
+
+    fun getUndoableSessionReviewRating(sessionId: String, learningItemId: String): ReviewRating? {
+        val session = context.engine.getSession(SessionId(sessionId)) ?: return null
+        val undoable = session.undoableReview ?: return null
+        if (undoable.learningItemId.value != learningItemId) return null
+        return context.reviewEventRepository?.findAll(learnerId)?.find { it.id == undoable.reviewEventId }?.rating
     }
 
     internal fun present(plan: RecallPlan): AndroidStudyState {

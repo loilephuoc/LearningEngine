@@ -55,6 +55,70 @@ class AndroidHomeVocabularyWidgetCoordinator(
     private var autoNextRunnable: Runnable? = null
     private var armedIntervalMs: Long = 0L
 
+    @Volatile
+    private var runtimeClock: HomeWidgetRuntimeClock? = null
+
+    fun registerRuntimeClock(clock: HomeWidgetRuntimeClock) {
+        runtimeClock = clock
+    }
+
+    fun unregisterRuntimeClock(clock: HomeWidgetRuntimeClock) {
+        if (runtimeClock === clock) {
+            runtimeClock = null
+        }
+    }
+
+    fun shouldRuntimeServiceRun(): Boolean {
+        syncActiveWidgetIds()
+        val settings = preferencesController.currentHomeWidget()
+        return activeWidgetIds.isNotEmpty() && settings.autoNextEnabled
+    }
+
+    fun isAutoNextEnabled(): Boolean {
+        return preferencesController.currentHomeWidget().autoNextEnabled
+    }
+
+    fun getActiveWidgetCount(): Int {
+        return synchronized(stateLock) {
+            syncActiveWidgetIds()
+            activeWidgetIds.size
+        }
+    }
+
+    fun reconcileRuntimeServiceLifetime(reason: String) {
+        if (shouldRuntimeServiceRun()) {
+            if (runtimeClock == null && HomeVocabularyWidgetRuntimeService.instance == null) {
+                HomeVocabularyWidgetRuntimeService.ensureRunning(context)
+            }
+        } else {
+            HomeVocabularyWidgetRuntimeService.ensureStopped(context)
+        }
+    }
+
+    fun onRuntimeTick() {
+        synchronized(stateLock) {
+            syncActiveWidgetIds()
+            val settings = preferencesController.currentHomeWidget()
+            val hasWidgets = activeWidgetIds.isNotEmpty()
+            val runtimeAllowed = isHomeWidgetRuntimeAllowed()
+
+            if (!hasWidgets || !settings.autoNextEnabled || (settings.updateOnlyScreenOn && !runtimeAllowed)) {
+                Log.w(
+                    TAG_SCHEDULER,
+                    "[HOME_WIDGET_RUNTIME_GATE_REJECT] pid=${android.os.Process.myPid()} deviceState=$currentDeviceState homeSurfaceState=$homeSurfaceState widgetCount=${activeWidgetIds.size} autoNextEnabled=${settings.autoNextEnabled} runtimeAllowed=$runtimeAllowed"
+                )
+                return
+            }
+
+            Log.i(
+                TAG_SCHEDULER,
+                "[HOME_WIDGET_TIMER_FIRE] intervalMillis=${settings.clampedIntervalMillis} candidateId=${currentCandidate?.contentId?.value}"
+            )
+            Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] action=FIRE intervalMs=${settings.clampedIntervalMillis}")
+            advanceToNextCandidate("RUNTIME_SERVICE_TICK")
+        }
+    }
+
     private var currentCycleToken: Long = 0L
     private var lastAutoPlayedCandidateId: String? = null
     private var lastAutoPlayedCycleToken: Long = 0L
@@ -105,14 +169,19 @@ class AndroidHomeVocabularyWidgetCoordinator(
         return pkg
     }
 
+    fun isLauncherPackage(pkg: String?, defaultLauncher: String? = resolveDefaultLauncherPackage()): Boolean {
+        return Companion.isLauncherPackage(pkg, defaultLauncher)
+    }
+
+    fun isTransientSystemPackage(pkg: String?): Boolean {
+        return Companion.isTransientSystemPackage(pkg)
+    }
+
     fun setHomeSurfaceState(state: HomeSurfaceState, reason: String) {
         synchronized(stateLock) {
-            if (homeSurfaceState == state) {
-                return
-            }
             val oldState = homeSurfaceState
-            val wasAllowed = isHomeWidgetRuntimeAllowed()
             homeSurfaceState = state
+            val wasAllowed = (currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && oldState == HomeSurfaceState.VISIBLE)
             val nowAllowed = isHomeWidgetRuntimeAllowed()
 
             Log.i(
@@ -120,14 +189,17 @@ class AndroidHomeVocabularyWidgetCoordinator(
                 "[HomeWidgetHomeSurface] from=$oldState to=$state reason=$reason runtimeWasAllowed=$wasAllowed runtimeNowAllowed=$nowAllowed"
             )
 
-            if (!wasAllowed && nowAllowed) {
-                // Return to Home or Home becomes visible while unlocked: START FULL FRESH INTERVAL
-                reconcileAutoNextTimer("HOME_SURFACE_BECAME_VISIBLE")
-            } else if (wasAllowed && !nowAllowed) {
-                // Left Home to another app or uncertain: CANCEL TIMER AND STOP AUDIO IMMEDIATELY
-                cancelAutoNextTimer("HOME_SURFACE_BECAME_${state.name}")
+            val reasonTag = when (state) {
+                HomeSurfaceState.VISIBLE -> "HOME_VISIBLE"
+                HomeSurfaceState.HIDDEN -> "HOME_HIDDEN"
+                HomeSurfaceState.UNKNOWN -> "HOME_UNKNOWN"
+            }
+
+            if (wasAllowed && !nowAllowed) {
                 stopAudioPlayback()
             }
+
+            reconcileRuntimeClock("$reasonTag: $reason")
         }
     }
 
@@ -163,7 +235,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
     fun transitionDeviceState(newState: VocabularyPresentationDeviceState, reason: String) {
         synchronized(stateLock) {
             val oldState = currentDeviceState
-            if (oldState == newState) {
+            if (oldState == newState && newState != VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) {
                 return
             }
             currentDeviceState = newState
@@ -184,25 +256,37 @@ class AndroidHomeVocabularyWidgetCoordinator(
 
             when (newState) {
                 VocabularyPresentationDeviceState.SCREEN_OFF -> {
-                    homeSurfaceState = HomeSurfaceState.UNKNOWN
-                    cancelAutoNextTimer("SCREEN_OFF")
                     stopAudioPlayback()
+                    reconcileRuntimeClock("DEVICE_SCREEN_OFF: $reason")
                 }
                 VocabularyPresentationDeviceState.LOCKED_SCREEN_ON -> {
-                    homeSurfaceState = HomeSurfaceState.UNKNOWN
-                    cancelAutoNextTimer("LOCKED_SCREEN_ON")
                     stopAudioPlayback()
+                    reconcileRuntimeClock("DEVICE_LOCKED: $reason")
                 }
                 VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON -> {
-                    if (isHomeWidgetRuntimeAllowed()) {
-                        reconcileAutoNextTimer("UNLOCKED_SCREEN_ON")
-                    } else {
-                        cancelAutoNextTimer("UNLOCKED_NOT_HOME_SURFACE")
-                        stopAudioPlayback()
+                    val resolvedState = vn.loi.learning.android.controller.ControllerSystemActionBridge.reconcileHomeSurface()
+                    if (resolvedState != HomeSurfaceState.UNKNOWN) {
+                        homeSurfaceState = resolvedState
                     }
+                    reconcileRuntimeClock("DEVICE_UNLOCKED: $reason")
+                    reconcilePostUnlockHomeState()
                 }
             }
         }
+    }
+
+    fun reconcilePostUnlockHomeState() {
+        mainHandler.postDelayed({
+            synchronized(stateLock) {
+                if (currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) {
+                    val resolvedState = vn.loi.learning.android.controller.ControllerSystemActionBridge.reconcileHomeSurface()
+                    if (resolvedState != HomeSurfaceState.UNKNOWN) {
+                        homeSurfaceState = resolvedState
+                    }
+                    reconcileRuntimeClock("POST_UNLOCK_RECONCILE")
+                }
+            }
+        }, 150)
     }
 
     fun handleScreenOff() = transitionDeviceState(VocabularyPresentationDeviceState.SCREEN_OFF, "DIRECT_SCREEN_OFF")
@@ -436,7 +520,8 @@ class AndroidHomeVocabularyWidgetCoordinator(
     fun goToNextCandidate(reason: String) {
         Log.i(TAG_NAV, "[HomeWidgetNavigation] action=NEXT reason=$reason")
         advanceToNextCandidate(reason)
-        reconcileAutoNextTimer("USER_NAV_NEXT")
+        reconcileRuntimeServiceLifetime("MANUAL_NEXT")
+        reconcileRuntimeClock("USER_NAV_NEXT", freshInterval = true)
     }
 
     fun goToPreviousCandidate(reason: String) {
@@ -476,7 +561,8 @@ class AndroidHomeVocabularyWidgetCoordinator(
                 }
             }
         }
-        reconcileAutoNextTimer("USER_NAV_PREVIOUS")
+        reconcileRuntimeServiceLifetime("MANUAL_PREVIOUS")
+        reconcileRuntimeClock("USER_NAV_PREVIOUS", freshInterval = true)
     }
 
     // -------------------------------------------------------------
@@ -580,6 +666,21 @@ class AndroidHomeVocabularyWidgetCoordinator(
             return
         }
 
+        val isPopupActive = try {
+            val app = context.applicationContext as? vn.loi.learning.android.LearningEngineAndroidApplication
+            app?.reminderOverlayController?.isShowing == true
+        } catch (_: Throwable) {
+            false
+        }
+
+        if (isPopupActive) {
+            Log.i(
+                TAG_AUDIO_PLAY,
+                "[HomeWidgetAudioPlayback] appWidgetId=0 candidateId=$candidateId trigger=CANDIDATE_TRANSITION autoAudioEnabled=true played=false skipReason=POPUP_ACTIVE generation=$cycle"
+            )
+            return
+        }
+
         if (lastAutoPlayedCandidateId == candidateId && lastAutoPlayedCycleToken == cycle) {
             Log.i(
                 TAG_AUDIO_PLAY,
@@ -628,20 +729,15 @@ class AndroidHomeVocabularyWidgetCoordinator(
             return
         }
 
-        synchronized(audioLock) {
+        synchronized(stateLock) {
             stopAudioPlayback()
 
             try {
                 val mp = MediaPlayer().apply {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
-                            .build()
-                    )
-                    setDataSource(context, Uri.fromFile(File(audioPath)))
+                    setDataSource(audioPath)
+                    prepare()
                     setOnCompletionListener { player ->
-                        synchronized(audioLock) {
+                        synchronized(stateLock) {
                             if (mediaPlayer == player) {
                                 mediaPlayer?.release()
                                 mediaPlayer = null
@@ -650,7 +746,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
                     }
                     setOnErrorListener { player, what, extra ->
                         Log.e(TAG_AUDIO_PLAY, "[HomeWidgetAudioPlayback] error what=$what extra=$extra candidateId=$candidateId")
-                        synchronized(audioLock) {
+                        synchronized(stateLock) {
                             if (mediaPlayer == player) {
                                 mediaPlayer?.release()
                                 mediaPlayer = null
@@ -658,23 +754,19 @@ class AndroidHomeVocabularyWidgetCoordinator(
                         }
                         true
                     }
-                    prepare()
                     start()
                 }
                 mediaPlayer = mp
-
-                Log.i(
-                    TAG_AUDIO_PLAY,
-                    "[HomeWidgetAudioPlayback] appWidgetId=$appWidgetId candidateId=$candidateId trigger=$trigger autoAudioEnabled=$autoAudioEnabled played=true reason=PLAYING"
-                )
-            } catch (t: Throwable) {
-                Log.e(TAG_AUDIO_PLAY, "[HomeWidgetAudioPlayback] playbackFailed candidateId=$candidateId error=${t.message}", t)
+                Log.i(TAG_AUDIO_PLAY, "[HomeWidgetAudioPlayback] candidateId=$candidateId action=PLAY status=SUCCESS trigger=$trigger")
+            } catch (e: Throwable) {
+                Log.e(TAG_AUDIO_PLAY, "[HomeWidgetAudioPlayback] candidateId=$candidateId action=PLAY status=FAILED error=${e.message}", e)
+                stopAudioPlayback()
             }
         }
     }
 
     fun stopAudioPlayback() {
-        synchronized(audioLock) {
+        synchronized(stateLock) {
             try {
                 mediaPlayer?.apply {
                     if (isPlaying) {
@@ -725,13 +817,31 @@ class AndroidHomeVocabularyWidgetCoordinator(
         }
     }
 
-    fun reconcileAutoNextTimer(reason: String) {
+    fun reconcileRuntimeClock(reason: String, freshInterval: Boolean = false) {
         synchronized(stateLock) {
             syncActiveWidgetIds()
             val settings = preferencesController.currentHomeWidget()
             val hasWidgets = activeWidgetIds.isNotEmpty()
             val homeWidgetRuntimeAllowed = isHomeWidgetRuntimeAllowed()
             val shouldRunTimer = hasWidgets && settings.autoNextEnabled && (!settings.updateOnlyScreenOn || homeWidgetRuntimeAllowed)
+            val interval = settings.clampedIntervalMillis
+
+            val clockState = when {
+                !hasWidgets || !settings.autoNextEnabled -> "STOPPED"
+                !shouldRunTimer -> "PAUSED"
+                else -> "ARMED"
+            }
+
+            Log.i(
+                TAG_SCHEDULER,
+                "[HOME_WIDGET_FGS_STATE] pid=${android.os.Process.myPid()} serviceInstance=${HomeVocabularyWidgetRuntimeService.instance != null} clockState=$clockState scheduled=$shouldRunTimer intervalMs=${if (shouldRunTimer) interval else 0L} deviceState=$currentDeviceState homeSurfaceState=$homeSurfaceState hasWidgets=$hasWidgets autoNextEnabled=${settings.autoNextEnabled} runtimeAllowed=$homeWidgetRuntimeAllowed reason=$reason (fresh=$freshInterval)"
+            )
+            Log.i(
+                TAG_SCHEDULER,
+                "[HOME_WIDGET_RUNTIME] deviceState=$currentDeviceState homeSurfaceState=$homeSurfaceState hasWidgets=$hasWidgets autoNextEnabled=${settings.autoNextEnabled} intervalMillis=$interval runtimeAllowed=$homeWidgetRuntimeAllowed timerScheduled=${isTimerScheduled()} reason=$reason (fresh=$freshInterval)"
+            )
+
+            reconcileRuntimeServiceLifetime(reason)
 
             if (!shouldRunTimer) {
                 if (currentDeviceState == VocabularyPresentationDeviceState.LOCKED_SCREEN_ON) {
@@ -743,22 +853,36 @@ class AndroidHomeVocabularyWidgetCoordinator(
                 return
             }
 
-            val interval = settings.clampedIntervalMillis
-            if (autoNextRunnable != null && armedIntervalMs == interval) {
+            val clock = runtimeClock
+            if (clock != null) {
+                clock.schedule(interval, reason, freshInterval)
+                autoNextRunnable?.let { mainHandler.removeCallbacks(it) }
+                autoNextRunnable = null
+                armedIntervalMs = 0L
                 return
             }
 
-            cancelAutoNextTimer("RE_ARM")
+            if (!freshInterval && autoNextRunnable != null && armedIntervalMs == interval) {
+                return
+            }
+
+            cancelAutoNextTimer("RE_ARM (fresh=$freshInterval)")
             armedIntervalMs = interval
+            Log.i(TAG_SCHEDULER, "[HOME_WIDGET_TIMER_SCHEDULE] intervalMillis=$interval reason=$reason (fresh=$freshInterval)")
             Log.i(TAG_SCHEDULER, "[HomeWidgetAutoNextTimer] state=UNLOCKED_SCREEN_ON homeSurfaceState=$homeSurfaceState action=START intervalMs=$interval reason=$reason")
 
             val runnable = object : Runnable {
                 override fun run() {
                     synchronized(stateLock) {
+                        if (runtimeClock != null) {
+                            autoNextRunnable = null
+                            return
+                        }
                         if (activeWidgetIds.isNotEmpty()) {
                             val curSettings = preferencesController.currentHomeWidget()
                             val curRuntimeAllowed = isHomeWidgetRuntimeAllowed()
                             if (curSettings.autoNextEnabled && (!curSettings.updateOnlyScreenOn || curRuntimeAllowed)) {
+                                Log.i(TAG_SCHEDULER, "[HOME_WIDGET_TIMER_FIRE] intervalMillis=$interval candidateId=${currentCandidate?.contentId?.value}")
                                 Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] action=FIRE intervalMs=$interval")
                                 advanceToNextCandidate("TIMER_FIRED")
                                 mainHandler.postDelayed(this, interval)
@@ -774,11 +898,22 @@ class AndroidHomeVocabularyWidgetCoordinator(
         }
     }
 
+    fun reconcileAutoNextTimer(reason: String) = reconcileRuntimeClock(reason)
+
+    fun isTimerScheduled(): Boolean {
+        return runtimeClock?.isArmed() == true || autoNextRunnable != null
+    }
+
     private fun cancelAutoNextTimer(reason: String) {
+        val wasArmed = isTimerScheduled() || armedIntervalMs != 0L
+        runtimeClock?.cancel(reason)
         autoNextRunnable?.let {
             mainHandler.removeCallbacks(it)
-            autoNextRunnable = null
-            armedIntervalMs = 0L
+        }
+        autoNextRunnable = null
+        armedIntervalMs = 0L
+        if (wasArmed) {
+            Log.i(TAG_SCHEDULER, "[HOME_WIDGET_TIMER_CANCEL] reason=$reason")
             Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] action=CANCEL reason=$reason")
         }
     }
@@ -824,5 +959,36 @@ class AndroidHomeVocabularyWidgetCoordinator(
         private const val TAG_AUDIO_PREF = "HomeWidgetAudioPreference"
         private const val TAG_AUDIO_PLAY = "HomeWidgetAudioPlayback"
         private const val TAG_NAV = "HomeWidgetNavigation"
+
+        fun isTransientSystemPackage(pkg: String?): Boolean {
+            if (pkg.isNullOrBlank()) return false
+            val p = pkg.lowercase()
+            if (p == "android" || p.startsWith("android.") || p.startsWith("com.android.systemui") || p.startsWith("com.android.providers.")) return true
+            if (p.startsWith("miui.") || (p.startsWith("com.miui.") && p != "com.miui.home" && !p.contains("browser") && !p.contains("calculator") && !p.contains("notes"))) return true
+            if (p.startsWith("com.xiaomi.") && !p.contains("shop") && !p.contains("market")) return true
+            if (p.startsWith("com.mediatek.") || p.startsWith("com.qualcomm.")) return true
+            if (p.contains("inputmethod") || p.contains("keyboard") || p.contains("volumnbutton") || p.contains("volumebutton")) return true
+            if (p == "com.google.android.googlequicksearchbox" || p == "com.samsung.android.app.spage" || p == "com.samsung.android.app.cocktailbarservice") return true
+            return false
+        }
+
+        fun isLauncherPackage(pkg: String?, defaultLauncher: String? = null): Boolean {
+            if (pkg.isNullOrBlank()) return false
+            if (defaultLauncher != null && pkg == defaultLauncher) return true
+            val knownLaunchers = setOf(
+                "com.miui.home",
+                "com.mi.android.globallauncher",
+                "com.sec.android.app.launcher",
+                "com.google.android.apps.nexuslauncher",
+                "com.android.launcher3",
+                "com.android.launcher",
+                "com.oppo.launcher",
+                "com.huawei.android.launcher",
+                "com.transsion.launcher",
+                "com.oneplus.launcher"
+            )
+            if (pkg in knownLaunchers || pkg.endsWith(".launcher") || pkg.endsWith(".home")) return true
+            return false
+        }
     }
 }

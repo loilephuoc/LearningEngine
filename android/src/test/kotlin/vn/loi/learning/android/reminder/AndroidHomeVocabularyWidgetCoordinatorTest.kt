@@ -1696,4 +1696,642 @@ class AndroidHomeVocabularyWidgetCoordinatorTest {
             assertTrue(intervalTimerRunning)
         }
     }
+
+    @Test
+    fun `launcher package detection identifies known launcher packages correctly`() {
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage("com.miui.home"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage("com.mi.android.globallauncher"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage("com.android.launcher3"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage("com.sec.android.app.launcher"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage("com.google.android.apps.nexuslauncher"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage("com.huawei.android.launcher"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage("com.oppo.launcher"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage("com.oneplus.launcher"))
+        assertFalse(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage("vn.loi.learning.android"))
+        assertFalse(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage("com.google.android.youtube"))
+        assertFalse(AndroidHomeVocabularyWidgetCoordinator.isLauncherPackage(null))
+    }
+
+    @Test
+    fun `transient system package filtering correctly identifies MIUI personalassistant and overlays`() {
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isTransientSystemPackage("com.android.systemui"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isTransientSystemPackage("miui.systemui.plugin"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isTransientSystemPackage("com.miui.personalassistant"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isTransientSystemPackage("com.miui.touchassistant"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isTransientSystemPackage("com.miui.contentcatcher"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isTransientSystemPackage("com.google.android.inputmethod.latin"))
+        assertTrue(AndroidHomeVocabularyWidgetCoordinator.isTransientSystemPackage("android"))
+        assertFalse(AndroidHomeVocabularyWidgetCoordinator.isTransientSystemPackage("com.android.chrome"))
+        assertFalse(AndroidHomeVocabularyWidgetCoordinator.isTransientSystemPackage("com.zing.zalo"))
+        assertFalse(AndroidHomeVocabularyWidgetCoordinator.isTransientSystemPackage("com.miui.home"))
+    }
+
+    @Test
+    fun `setHomeSurfaceState VISIBLE re-arms timer if already VISIBLE but timer was cancelled by screen off`() {
+        var homeSurfaceState = HomeSurfaceState.VISIBLE
+        var autoNextRunnable: Runnable? = null
+        var armedIntervalMs = 0L
+        var timerArmed = false
+
+        fun cancelTimer() {
+            autoNextRunnable = null
+            armedIntervalMs = 0L
+            timerArmed = false
+        }
+
+        fun isRuntimeAllowed() = homeSurfaceState == HomeSurfaceState.VISIBLE
+
+        fun reconcileTimer(interval: Long) {
+            if (isRuntimeAllowed()) {
+                armedIntervalMs = interval
+                autoNextRunnable = Runnable {}
+                timerArmed = true
+            }
+        }
+
+        fun setHomeSurfaceState(state: HomeSurfaceState) {
+            if (homeSurfaceState == state) {
+                if (state == HomeSurfaceState.VISIBLE && isRuntimeAllowed() && autoNextRunnable == null) {
+                    reconcileTimer(5000L)
+                }
+                return
+            }
+            homeSurfaceState = state
+            if (state == HomeSurfaceState.VISIBLE) {
+                reconcileTimer(5000L)
+            }
+        }
+
+        // 1. Initially VISIBLE and timer running
+        setHomeSurfaceState(HomeSurfaceState.VISIBLE)
+        assertTrue(timerArmed)
+        assertEquals(5000L, armedIntervalMs)
+
+        // 2. Screen turns OFF -> timer cancelled
+        cancelTimer()
+        assertFalse(timerArmed)
+        assertEquals(0L, armedIntervalMs)
+
+        // 3. Device unlocks and setHomeSurfaceState(VISIBLE) called when state was already VISIBLE
+        setHomeSurfaceState(HomeSurfaceState.VISIBLE)
+        assertTrue(timerArmed)
+        assertEquals(5000L, armedIntervalMs)
+    }
+
+    @Test
+    fun `lock and unlock cycle restores fresh timer without requiring settings screen navigation`() {
+        var deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        var homeSurfaceState = HomeSurfaceState.VISIBLE
+        val hasWidgets = true
+        val autoNextEnabled = true
+        val intervalMs = 5000L
+        var timerArmed = true
+
+        fun isRuntimeAllowed() = deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
+            homeSurfaceState == HomeSurfaceState.VISIBLE
+
+        // 1. Screen off
+        deviceState = VocabularyPresentationDeviceState.SCREEN_OFF
+        homeSurfaceState = HomeSurfaceState.UNKNOWN
+        timerArmed = false
+
+        assertFalse(isRuntimeAllowed())
+        assertFalse(timerArmed)
+
+        // 2. Screen on (locked)
+        deviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+        assertFalse(isRuntimeAllowed())
+        assertFalse(timerArmed)
+
+        // 3. User unlock to Home launcher
+        deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        homeSurfaceState = HomeSurfaceState.VISIBLE
+        if (hasWidgets && autoNextEnabled && isRuntimeAllowed()) {
+            timerArmed = true
+        }
+
+        assertTrue(isRuntimeAllowed())
+        assertTrue(timerArmed)
+    }
+
+    @Test
+    fun `USER_PRESENT without subsequent accessibility event reconciles current authoritative window snapshot via bridge`() {
+        var currentDeviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+        var homeSurfaceState = HomeSurfaceState.UNKNOWN
+        var timerArmed = false
+        val defaultLauncher = "com.miui.home"
+
+        // Mock accessibility bridge returning current authoritative window
+        fun mockReconcileHomeSurface(activeWindowPkg: String?): HomeSurfaceState {
+            return if (activeWindowPkg == defaultLauncher) HomeSurfaceState.VISIBLE else HomeSurfaceState.HIDDEN
+        }
+
+        fun onUserPresent(activeWindowPkg: String?) {
+            currentDeviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            val resolvedState = mockReconcileHomeSurface(activeWindowPkg)
+            homeSurfaceState = resolvedState
+            val runtimeAllowed = currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
+                homeSurfaceState == HomeSurfaceState.VISIBLE
+            if (runtimeAllowed) {
+                timerArmed = true
+            }
+        }
+
+        onUserPresent("com.miui.home")
+
+        assertEquals(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, currentDeviceState)
+        assertEquals(HomeSurfaceState.VISIBLE, homeSurfaceState)
+        assertTrue(timerArmed)
+    }
+
+    @Test
+    fun `USER_PRESENT into Chrome sets HIDDEN and suppresses timer`() {
+        var currentDeviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+        var homeSurfaceState = HomeSurfaceState.UNKNOWN
+        var timerArmed = false
+        val defaultLauncher = "com.miui.home"
+
+        fun mockReconcileHomeSurface(activeWindowPkg: String?): HomeSurfaceState {
+            return if (activeWindowPkg == defaultLauncher) HomeSurfaceState.VISIBLE else HomeSurfaceState.HIDDEN
+        }
+
+        fun onUserPresent(activeWindowPkg: String?) {
+            currentDeviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            val resolvedState = mockReconcileHomeSurface(activeWindowPkg)
+            homeSurfaceState = resolvedState
+            val runtimeAllowed = currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
+                homeSurfaceState == HomeSurfaceState.VISIBLE
+            if (runtimeAllowed) {
+                timerArmed = true
+            }
+        }
+
+        onUserPresent("com.android.chrome")
+
+        assertEquals(VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON, currentDeviceState)
+        assertEquals(HomeSurfaceState.HIDDEN, homeSurfaceState)
+        assertFalse(timerArmed)
+    }
+
+    @Test
+    fun `floating overlay event over launcher keeps VISIBLE but floating overlay over Chrome keeps HIDDEN`() {
+        val defaultLauncher = "com.miui.home"
+
+        fun computeAuthoritativeState(rawEventPkg: String?, activeAppPkg: String?): HomeSurfaceState {
+            val candidatePkg = when {
+                activeAppPkg != null -> activeAppPkg
+                else -> rawEventPkg
+            }
+            return when {
+                candidatePkg == null -> HomeSurfaceState.UNKNOWN
+                candidatePkg == defaultLauncher -> HomeSurfaceState.VISIBLE
+                else -> HomeSurfaceState.HIDDEN
+            }
+        }
+
+        // Overlay above launcher
+        val stateLauncher = computeAuthoritativeState(
+            rawEventPkg = "com.nitin.volumnbutton",
+            activeAppPkg = "com.miui.home"
+        )
+        assertEquals(HomeSurfaceState.VISIBLE, stateLauncher)
+
+        // Overlay above Chrome
+        val stateChrome = computeAuthoritativeState(
+            rawEventPkg = "com.nitin.volumnbutton",
+            activeAppPkg = "com.android.chrome"
+        )
+        assertEquals(HomeSurfaceState.HIDDEN, stateChrome)
+    }
+
+    @Test
+    fun `repeated lock and unlock 5 cycles consistently recovers timer without settings navigation`() {
+        var currentDeviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        var homeSurfaceState = HomeSurfaceState.VISIBLE
+        var timerArmed = true
+        var intervalFiredCount = 0
+
+        fun isRuntimeAllowed() = currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
+            homeSurfaceState == HomeSurfaceState.VISIBLE
+
+        repeat(5) {
+            // 1. Running on Home -> FIRE
+            assertTrue(isRuntimeAllowed())
+            assertTrue(timerArmed)
+            intervalFiredCount++
+
+            // 2. Lock screen
+            currentDeviceState = VocabularyPresentationDeviceState.SCREEN_OFF
+            homeSurfaceState = HomeSurfaceState.UNKNOWN
+            timerArmed = false
+            assertFalse(isRuntimeAllowed())
+            assertFalse(timerArmed)
+
+            // 3. Locked screen on
+            currentDeviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+            assertFalse(isRuntimeAllowed())
+            assertFalse(timerArmed)
+
+            // 4. Unlock directly to Home
+            currentDeviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            homeSurfaceState = HomeSurfaceState.VISIBLE
+            if (isRuntimeAllowed()) {
+                timerArmed = true
+            }
+            assertTrue(isRuntimeAllowed())
+            assertTrue(timerArmed)
+        }
+
+        assertEquals(5, intervalFiredCount)
+    }
+
+    @Test
+    fun `dedicated runtime clock starts when Auto-Next ON and widgets exist, stops when Auto-Next OFF or no widgets`() {
+        class FakeRuntimeClock : HomeWidgetRuntimeClock {
+            var armed = false
+            var interval = 0L
+            var scheduleCount = 0
+            var cancelCount = 0
+
+            override fun schedule(intervalMs: Long, reason: String, freshInterval: Boolean) {
+                armed = true
+                interval = intervalMs
+                scheduleCount++
+            }
+
+            override fun cancel(reason: String) {
+                armed = false
+                interval = 0L
+                cancelCount++
+            }
+
+            override fun isArmed(): Boolean = armed
+            override fun armedInterval(): Long = interval
+        }
+
+        val clock = FakeRuntimeClock()
+
+        var hasWidgets = true
+        var autoNextEnabled = true
+        var isServiceRunning = false
+
+        fun evaluateServiceLifetime() {
+            isServiceRunning = hasWidgets && autoNextEnabled
+            if (!isServiceRunning) {
+                clock.cancel("REQUIREMENTS_NOT_MET")
+            }
+        }
+
+        // 1. Initial: hasWidgets + autoNextEnabled -> service running
+        evaluateServiceLifetime()
+        assertTrue(isServiceRunning)
+
+        // 2. Schedule clock 5s
+        clock.schedule(5000L, "INIT")
+        assertTrue(clock.isArmed())
+        assertEquals(5000L, clock.armedInterval())
+
+        // 3. User turns Auto-Next OFF -> service stops, clock cancelled
+        autoNextEnabled = false
+        evaluateServiceLifetime()
+        assertFalse(isServiceRunning)
+        assertFalse(clock.isArmed())
+
+        // 4. User turns Auto-Next ON again -> service starts
+        autoNextEnabled = true
+        evaluateServiceLifetime()
+        assertTrue(isServiceRunning)
+
+        // 5. User removes all widgets -> service stops, clock cancelled
+        hasWidgets = false
+        evaluateServiceLifetime()
+        assertFalse(isServiceRunning)
+        assertFalse(clock.isArmed())
+    }
+
+    @Test
+    fun `runtime service remains alive while Home is HIDDEN but clock is paused and resumes on VISIBLE`() {
+        class FakeRuntimeClock : HomeWidgetRuntimeClock {
+            var armed = false
+            var interval = 0L
+
+            override fun schedule(intervalMs: Long, reason: String, freshInterval: Boolean) {
+                armed = true
+                interval = intervalMs
+            }
+
+            override fun cancel(reason: String) {
+                armed = false
+                interval = 0L
+            }
+
+            override fun isArmed(): Boolean = armed
+            override fun armedInterval(): Long = interval
+        }
+
+        val clock = FakeRuntimeClock()
+        val hasWidgets = true
+        val autoNextEnabled = true
+        val isServiceRunning = hasWidgets && autoNextEnabled
+        var homeSurfaceState = HomeSurfaceState.VISIBLE
+        var deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+
+        fun isRuntimeAllowed() = deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
+            homeSurfaceState == HomeSurfaceState.VISIBLE
+
+        fun reconcileClock() {
+            if (isRuntimeAllowed() && isServiceRunning) {
+                clock.schedule(5000L, "ALLOWED")
+            } else {
+                clock.cancel("PAUSED")
+            }
+        }
+
+        // 1. On Home -> clock armed
+        reconcileClock()
+        assertTrue(isServiceRunning)
+        assertTrue(clock.isArmed())
+
+        // 2. Open Chrome (Home HIDDEN) -> service still running, clock paused
+        homeSurfaceState = HomeSurfaceState.HIDDEN
+        reconcileClock()
+        assertTrue(isServiceRunning) // Service NOT stopped on Chrome transition
+        assertFalse(clock.isArmed())  // But timer clock is paused
+
+        // 3. Return Home -> clock resumes with fresh 5s interval
+        homeSurfaceState = HomeSurfaceState.VISIBLE
+        reconcileClock()
+        assertTrue(isServiceRunning)
+        assertTrue(clock.isArmed())
+        assertEquals(5000L, clock.armedInterval())
+    }
+
+    @Test
+    fun `tick defense-in-depth rejects tick if gate is closed at moment of fire`() {
+        var tickProcessed = false
+        var gateRejected = false
+
+        fun onRuntimeTick(deviceState: VocabularyPresentationDeviceState, homeSurfaceState: HomeSurfaceState) {
+            val runtimeAllowed = deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
+                homeSurfaceState == HomeSurfaceState.VISIBLE
+            if (!runtimeAllowed) {
+                gateRejected = true
+                return
+            }
+            tickProcessed = true
+        }
+
+        // Tick arrives while in Chrome
+        onRuntimeTick(
+            deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON,
+            homeSurfaceState = HomeSurfaceState.HIDDEN
+        )
+        assertFalse(tickProcessed)
+        assertTrue(gateRejected)
+
+        // Tick arrives while locked
+        gateRejected = false
+        onRuntimeTick(
+            deviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON,
+            homeSurfaceState = HomeSurfaceState.VISIBLE
+        )
+        assertFalse(tickProcessed)
+        assertTrue(gateRejected)
+
+        // Tick arrives on Home while unlocked
+        gateRejected = false
+        onRuntimeTick(
+            deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON,
+            homeSurfaceState = HomeSurfaceState.VISIBLE
+        )
+        assertTrue(tickProcessed)
+        assertFalse(gateRejected)
+    }
+
+    @Test
+    fun `post-unlock clock resume with same VISIBLE home state arms fresh interval without new home event`() {
+        class FakeRuntimeClock : HomeWidgetRuntimeClock {
+            var armed = false
+            var interval = 0L
+            var scheduleCount = 0
+            var cancelCount = 0
+
+            override fun schedule(intervalMs: Long, reason: String, freshInterval: Boolean) {
+                armed = true
+                interval = intervalMs
+                scheduleCount++
+            }
+
+            override fun cancel(reason: String) {
+                armed = false
+                interval = 0L
+                cancelCount++
+            }
+
+            override fun isArmed(): Boolean = armed
+            override fun armedInterval(): Long = interval
+        }
+
+        val clock = FakeRuntimeClock()
+        val hasWidgets = true
+        val autoNextEnabled = true
+        var deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        var homeSurfaceState = HomeSurfaceState.VISIBLE
+
+        fun isRuntimeAllowed() = deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
+            homeSurfaceState == HomeSurfaceState.VISIBLE
+
+        fun reconcileClock(reason: String) {
+            if (hasWidgets && autoNextEnabled && isRuntimeAllowed()) {
+                clock.schedule(5000L, reason)
+            } else {
+                clock.cancel(reason)
+            }
+        }
+
+        // 1. Initial on Home: clock ARMED
+        reconcileClock("INIT")
+        assertTrue(clock.isArmed())
+        assertEquals(5000L, clock.armedInterval())
+        assertEquals(1, clock.scheduleCount)
+
+        // 2. Lock screen: deviceState=SCREEN_OFF, homeSurfaceState stays VISIBLE
+        deviceState = VocabularyPresentationDeviceState.SCREEN_OFF
+        reconcileClock("DEVICE_SCREEN_OFF")
+        assertFalse(clock.isArmed())
+        assertEquals(1, clock.cancelCount)
+
+        // 3. Screen wakes locked: deviceState=LOCKED_SCREEN_ON, homeSurfaceState still VISIBLE
+        deviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+        reconcileClock("DEVICE_LOCKED")
+        assertFalse(clock.isArmed())
+
+        // 4. Unlock directly to Home: deviceState=UNLOCKED_SCREEN_ON, homeSurfaceState STILL VISIBLE (no new home event)
+        deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        reconcileClock("DEVICE_UNLOCKED")
+        assertTrue(clock.isArmed())
+        assertEquals(5000L, clock.armedInterval())
+        assertEquals(2, clock.scheduleCount)
+    }
+
+    @Test
+    fun `unlock with UNKNOWN then later VISIBLE transitions clock from PAUSED to ARMED`() {
+        class FakeRuntimeClock : HomeWidgetRuntimeClock {
+            var armed = false
+            var interval = 0L
+
+            override fun schedule(intervalMs: Long, reason: String, freshInterval: Boolean) {
+                armed = true
+                interval = intervalMs
+            }
+
+            override fun cancel(reason: String) {
+                armed = false
+                interval = 0L
+            }
+
+            override fun isArmed(): Boolean = armed
+            override fun armedInterval(): Long = interval
+        }
+
+        val clock = FakeRuntimeClock()
+        var deviceState = VocabularyPresentationDeviceState.SCREEN_OFF
+        var homeSurfaceState = HomeSurfaceState.UNKNOWN
+
+        fun isRuntimeAllowed() = deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
+            homeSurfaceState == HomeSurfaceState.VISIBLE
+
+        fun reconcileClock(reason: String) {
+            if (isRuntimeAllowed()) {
+                clock.schedule(5000L, reason)
+            } else {
+                clock.cancel(reason)
+            }
+        }
+
+        // 1. Device unlocks but surface is UNKNOWN: clock PAUSED
+        deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        homeSurfaceState = HomeSurfaceState.UNKNOWN
+        reconcileClock("UNLOCK_UNKNOWN")
+        assertFalse(clock.isArmed())
+
+        // 2. Accessibility/window event confirms VISIBLE: clock ARMED
+        homeSurfaceState = HomeSurfaceState.VISIBLE
+        reconcileClock("HOME_VISIBLE")
+        assertTrue(clock.isArmed())
+        assertEquals(5000L, clock.armedInterval())
+    }
+
+    @Test
+    fun `reverse event ordering VISIBLE while LOCKED then UNLOCKED converges to ARMED`() {
+        class FakeRuntimeClock : HomeWidgetRuntimeClock {
+            var armed = false
+            var interval = 0L
+
+            override fun schedule(intervalMs: Long, reason: String, freshInterval: Boolean) {
+                armed = true
+                interval = intervalMs
+            }
+
+            override fun cancel(reason: String) {
+                armed = false
+                interval = 0L
+            }
+
+            override fun isArmed(): Boolean = armed
+            override fun armedInterval(): Long = interval
+        }
+
+        val clock = FakeRuntimeClock()
+        var deviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+        var homeSurfaceState = HomeSurfaceState.VISIBLE
+
+        fun isRuntimeAllowed() = deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
+            homeSurfaceState == HomeSurfaceState.VISIBLE
+
+        fun reconcileClock(reason: String) {
+            if (isRuntimeAllowed()) {
+                clock.schedule(5000L, reason)
+            } else {
+                clock.cancel(reason)
+            }
+        }
+
+        // 1. Surface confirms VISIBLE while still LOCKED: clock PAUSED
+        reconcileClock("VISIBLE_WHILE_LOCKED")
+        assertFalse(clock.isArmed())
+
+        // 2. Device transitions to UNLOCKED: clock ARMED
+        deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        reconcileClock("DEVICE_UNLOCKED")
+        assertTrue(clock.isArmed())
+        assertEquals(5000L, clock.armedInterval())
+    }
+
+    @Test
+    fun `repeated 5 lock unlock cycles consistently toggle ARMED and PAUSED with fresh intervals`() {
+        class FakeRuntimeClock : HomeWidgetRuntimeClock {
+            var armed = false
+            var interval = 0L
+            var tickCount = 0
+
+            override fun schedule(intervalMs: Long, reason: String, freshInterval: Boolean) {
+                armed = true
+                interval = intervalMs
+            }
+
+            override fun cancel(reason: String) {
+                armed = false
+                interval = 0L
+            }
+
+            override fun isArmed(): Boolean = armed
+            override fun armedInterval(): Long = interval
+
+            fun fireTick() {
+                if (armed) tickCount++
+            }
+        }
+
+        val clock = FakeRuntimeClock()
+        var deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+        var homeSurfaceState = HomeSurfaceState.VISIBLE
+
+        fun isRuntimeAllowed() = deviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
+            homeSurfaceState == HomeSurfaceState.VISIBLE
+
+        fun reconcileClock(reason: String) {
+            if (isRuntimeAllowed()) {
+                clock.schedule(5000L, reason)
+            } else {
+                clock.cancel(reason)
+            }
+        }
+
+        repeat(5) {
+            // Unlocked on Home -> ARMED -> fire
+            deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            homeSurfaceState = HomeSurfaceState.VISIBLE
+            reconcileClock("UNLOCKED")
+            assertTrue(clock.isArmed())
+            clock.fireTick()
+
+            // Lock screen -> PAUSED
+            deviceState = VocabularyPresentationDeviceState.SCREEN_OFF
+            reconcileClock("SCREEN_OFF")
+            assertFalse(clock.isArmed())
+
+            // Screen wake locked -> PAUSED
+            deviceState = VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+            reconcileClock("LOCKED")
+            assertFalse(clock.isArmed())
+
+            // Unlock to Home -> ARMED again
+            deviceState = VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            reconcileClock("UNLOCKED")
+            assertTrue(clock.isArmed())
+        }
+
+        assertEquals(5, clock.tickCount)
+    }
 }

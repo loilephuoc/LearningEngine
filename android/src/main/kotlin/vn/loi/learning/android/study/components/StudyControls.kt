@@ -26,6 +26,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import vn.loi.learning.android.R
 import vn.loi.learning.android.ui.LearningSpacing
 import vn.loi.learning.android.ui.StudyRatingColors
 import vn.loi.learning.domain.study.memory.model.ReviewRating
@@ -39,17 +41,16 @@ internal fun StudyRatingBar(
     modifier: Modifier = Modifier
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-        RatingButton("Again", "Start over", ReviewRating.AGAIN, selectedRating == ReviewRating.AGAIN, underlinedRating == ReviewRating.AGAIN, enabled, onRating, Modifier.weight(1f))
-        RatingButton("Hard", "Hard to recall", ReviewRating.HARD, selectedRating == ReviewRating.HARD, underlinedRating == ReviewRating.HARD, enabled, onRating, Modifier.weight(1f))
-        RatingButton("Good", "Recalled well", ReviewRating.GOOD, selectedRating == ReviewRating.GOOD, underlinedRating == ReviewRating.GOOD, enabled, onRating, Modifier.weight(1f))
-        RatingButton("Easy", "Effortless recall", ReviewRating.EASY, selectedRating == ReviewRating.EASY, underlinedRating == ReviewRating.EASY, enabled, onRating, Modifier.weight(1f))
+        RatingButton(stringResource(R.string.rating_again), ReviewRating.AGAIN, selectedRating == ReviewRating.AGAIN, underlinedRating == ReviewRating.AGAIN, enabled, onRating, Modifier.weight(1f))
+        RatingButton(stringResource(R.string.rating_hard), ReviewRating.HARD, selectedRating == ReviewRating.HARD, underlinedRating == ReviewRating.HARD, enabled, onRating, Modifier.weight(1f))
+        RatingButton(stringResource(R.string.rating_good), ReviewRating.GOOD, selectedRating == ReviewRating.GOOD, underlinedRating == ReviewRating.GOOD, enabled, onRating, Modifier.weight(1f))
+        RatingButton(stringResource(R.string.rating_easy), ReviewRating.EASY, selectedRating == ReviewRating.EASY, underlinedRating == ReviewRating.EASY, enabled, onRating, Modifier.weight(1f))
     }
 }
 
 @Composable
 private fun RatingButton(
     label: String,
-    supporting: String,
     rating: ReviewRating,
     selected: Boolean,
     underlined: Boolean,
@@ -74,7 +75,7 @@ private fun RatingButton(
         border = BorderStroke(if (selected) 2.dp else 1.dp, palette.border),
         contentPadding = PaddingValues(horizontal = LearningSpacing.extraSmall),
         modifier = modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
-            contentDescription = "$label, $supporting"
+            contentDescription = label
             stateDescription = if (selected) "Selected" else "Not selected"
         }
     ) {

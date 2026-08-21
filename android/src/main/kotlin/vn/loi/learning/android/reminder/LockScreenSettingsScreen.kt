@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import java.io.File
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import vn.loi.learning.android.R
+import androidx.compose.ui.res.stringResource
 import vn.loi.learning.android.LearningEngineAndroidApplication
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -275,7 +277,7 @@ fun LockScreenSettingsScreen(
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("Choose background image")
+                                    Text(stringResource(R.string.lock_screen_choose_bg))
                                 }
                             } else {
                                 Row(
@@ -290,7 +292,7 @@ fun LockScreenSettingsScreen(
                                         },
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Text("Change image")
+                                        Text(stringResource(R.string.lock_screen_change_bg))
                                     }
                                     OutlinedButton(
                                         onClick = {
@@ -298,7 +300,7 @@ fun LockScreenSettingsScreen(
                                         },
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Text("Remove background")
+                                        Text(stringResource(R.string.lock_screen_remove_bg))
                                     }
                                 }
                             }

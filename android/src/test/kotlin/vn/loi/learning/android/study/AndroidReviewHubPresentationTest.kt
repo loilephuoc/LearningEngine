@@ -10,6 +10,9 @@ import org.junit.Test
 class AndroidReviewHubPresentationTest {
     private val source = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/ui/AndroidRootNavigation.kt")
+    ).substringAfter("fun ReviewHub(").substringBefore("@Composable\nprivate fun QuickReviewInsightsCard(")
+    private val fullSource = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/ui/AndroidRootNavigation.kt")
     ).substringAfter("fun ReviewHub(").substringBefore("fun SettingsScreen(")
 
     @Test
@@ -22,10 +25,10 @@ class AndroidReviewHubPresentationTest {
             "AndroidSessionEntry.DIFFICULT",
             "AndroidSessionEntry.LEARNED"
         ).forEach { assertTrue(source.contains(it)) }
-        assertTrue(source.contains("NHANH · KHÔNG GIỚI HẠN"))
-        assertTrue(source.contains("Vuốt lên để lướt"))
-        assertTrue(source.contains("Again / Hard / Good / Easy"))
-        assertTrue(source.contains("Phiên ôn hữu hạn có đánh giá"))
+        assertTrue(source.contains("R.string.review_quick_badge"))
+        assertTrue(source.contains("R.string.review_quick_desc"))
+        assertTrue(source.contains("R.string.review_difficult_desc"))
+        assertTrue(source.contains("R.string.review_learned_desc"))
     }
 
     @Test
@@ -45,19 +48,21 @@ class AndroidReviewHubPresentationTest {
         assertTrue(source.contains("defaultMinSize(minHeight = LearningSpacing.touchTarget)"))
         assertTrue(source.contains("stateDescription = if (action.available) \"Available\" else \"Unavailable\""))
         assertTrue(source.contains("contentDescription = null"))
-        assertTrue(source.contains("LearningEngineSecondaryButton("))
+        assertTrue(source.contains("clickable(enabled = action.available)"))
+        assertFalse(source.contains("LearningEngineSecondaryButton("))
+        assertFalse(source.contains("review_action_switch"))
+        assertFalse(source.contains("review_action_start"))
     }
 
     @Test
     fun `runtime-only Quick Review summary is compact accessible and delegates difficult entry`() {
-        assertTrue(source.contains("quickReviewSummary?.takeIf { it.totalExposures > 0 }"))
-        assertTrue(source.contains("Quick Review vừa rồi"))
-        assertTrue(source.contains("${'$'}{summary.totalExposures} lượt · Lướt ${'$'}{summary.skipped}"))
-        assertTrue(source.contains("Again ${'$'}{summary.again} · Hard ${'$'}{summary.hard}"))
-        assertTrue(source.contains("clearAndSetSemantics { contentDescription = semanticSummary }"))
-        assertTrue(source.contains("AndroidStudyEvent.Start(AndroidSessionEntry.DIFFICULT)"))
-        assertTrue(source.contains("difficultAvailable = home.availability.canStartDifficultPractice"))
-        assertFalse(source.contains("studyQueue"))
-        assertFalse(source.contains("MemoryState"))
+        assertTrue(fullSource.contains("quickReviewSummary?.takeIf { it.totalExposures > 0 }"))
+        assertTrue(fullSource.contains("R.string.review_recent_summary_title"))
+        assertTrue(fullSource.contains("${'$'}{summary.totalExposures} lượt · Lướt ${'$'}{summary.skipped}"))
+        assertTrue(fullSource.contains("${'$'}ratingAgain ${'$'}{summary.again} · ${'$'}ratingHard ${'$'}{summary.hard}"))
+        assertTrue(fullSource.contains("clearAndSetSemantics { contentDescription = semanticSummary }"))
+        assertTrue(fullSource.contains("AndroidStudyEvent.Start(AndroidSessionEntry.DIFFICULT)"))
+        assertTrue(fullSource.contains("difficultAvailable = home.availability.canStartDifficultPractice"))
+        assertFalse(fullSource.contains("studyQueue"))
     }
 }

@@ -245,20 +245,24 @@ class AndroidVocabularyReminderOverlayController(
         // 5. Auto-Fit IPA + POS (Pre-resolved before attachment)
         if (ipaText != null || posText != null) {
             metadataRow.visibility = View.VISIBLE
+            if (posText != null) {
+                posTextView.text = posText.uppercase()
+                posTextView.isSingleLine = true
+                posTextView.maxLines = 1
+                posTextView.visibility = View.VISIBLE
+            } else {
+                posTextView.visibility = View.GONE
+            }
+
             if (ipaText != null) {
                 ipaTextView.text = "/$ipaText/"
+                ipaTextView.isSingleLine = true
+                ipaTextView.maxLines = 1
                 ipaTextView.visibility = View.VISIBLE
                 val ipaSizeSp = if (ipaText.length > 22 || availableTextWidthPx < (200 * density).toInt()) 11.5f else 13f
                 ipaTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, ipaSizeSp)
             } else {
                 ipaTextView.visibility = View.GONE
-            }
-
-            if (posText != null) {
-                posTextView.text = posText.uppercase()
-                posTextView.visibility = View.VISIBLE
-            } else {
-                posTextView.visibility = View.GONE
             }
         } else {
             metadataRow.visibility = View.GONE
@@ -563,12 +567,14 @@ class AndroidVocabularyReminderOverlayController(
                         currentOnDismissed = null
                         state = OverlayState.HIDDEN
                         showing.set(false)
+                        vn.loi.learning.android.controller.ControllerSystemActionBridge.reconcileHomeSurface()
                     }
                 } catch (e: Throwable) {
                     Log.w(TAG, "Error removing overlay view after exit animation", e)
                 }
                 onComplete?.invoke()
                 dismissCallback?.invoke(reason)
+                vn.loi.learning.android.controller.ControllerSystemActionBridge.reconcileHomeSurface()
             }
             ?.start()
     }

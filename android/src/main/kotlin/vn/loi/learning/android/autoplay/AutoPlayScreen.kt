@@ -27,6 +27,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import vn.loi.learning.android.R
+import androidx.compose.ui.res.stringResource
 import vn.loi.learning.android.ui.*
 
 @Composable
@@ -211,7 +213,7 @@ private fun AutoPlayConfigScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Auto Play", style = MaterialTheme.typography.titleLarge)
+                        Text(stringResource(R.string.autoplay_title), style = MaterialTheme.typography.titleLarge)
                         packageTitle?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -219,7 +221,7 @@ private fun AutoPlayConfigScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -489,9 +491,9 @@ private fun AutoPlayConfigScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("Play Front Audio", style = LearningTextRole.cardTitle)
+                                Text(stringResource(R.string.autoplay_front_audio_title), style = LearningTextRole.cardTitle)
                                 Text(
-                                    if (config.direction == AutoPlayDirection.VIETNAMESE_TO_ENGLISH) "Play Vietnamese answer audio on the front." else "Play English word audio on the front.",
+                                    if (config.direction == AutoPlayDirection.VIETNAMESE_TO_ENGLISH) stringResource(R.string.autoplay_front_audio_desc_vi) else stringResource(R.string.autoplay_front_audio_desc_en),
                                     style = LearningTextRole.metadata,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -505,7 +507,7 @@ private fun AutoPlayConfigScreen(
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
 
                         AutoPlayDelayControl(
-                            label = "Front Display Duration",
+                            label = stringResource(R.string.autoplay_front_display_duration),
                             currentDelayMs = config.frontDelayMs,
                             presetSeconds = listOf(1.0, 2.0, 3.0, 5.0, 8.0),
                             minDelayMs = AutoPlayConfig.MIN_FRONT_DELAY_MS,
@@ -532,9 +534,9 @@ private fun AutoPlayConfigScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("Play Answer Audio", style = LearningTextRole.cardTitle)
+                                Text(stringResource(R.string.autoplay_answer_audio_title), style = LearningTextRole.cardTitle)
                                 Text(
-                                    if (config.direction == AutoPlayDirection.VIETNAMESE_TO_ENGLISH) "Play English word pronunciation after reveal." else "Play Vietnamese answer audio after reveal.",
+                                    if (config.direction == AutoPlayDirection.VIETNAMESE_TO_ENGLISH) stringResource(R.string.autoplay_answer_audio_desc_vi) else stringResource(R.string.autoplay_answer_audio_desc_en),
                                     style = LearningTextRole.metadata,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -549,7 +551,7 @@ private fun AutoPlayConfigScreen(
                             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
 
                             AutoPlayDelayControl(
-                                label = "Delay after Answer Audio",
+                                label = stringResource(R.string.autoplay_post_answer_delay),
                                 currentDelayMs = config.postAnswerDelayMs,
                                 presetSeconds = listOf(0.0, 1.0, 2.0, 3.0, 5.0),
                                 minDelayMs = 0L,
@@ -577,8 +579,8 @@ private fun AutoPlayConfigScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("Play English Example Audio", style = LearningTextRole.cardTitle)
-                                Text("Play English example sentence audio if available", style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.autoplay_example_en_title), style = LearningTextRole.cardTitle)
+                                Text(stringResource(R.string.autoplay_example_en_desc), style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Switch(
                                 checked = config.playExampleEnglishAudio,
@@ -590,7 +592,7 @@ private fun AutoPlayConfigScreen(
                             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
 
                             AutoPlayDelayControl(
-                                label = "Delay after English Example",
+                                label = stringResource(R.string.autoplay_post_example_en_delay),
                                 currentDelayMs = config.postExampleEnglishDelayMs,
                                 presetSeconds = listOf(0.0, 1.0, 2.0, 3.0, 5.0),
                                 minDelayMs = 0L,
@@ -618,8 +620,8 @@ private fun AutoPlayConfigScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("Play Vietnamese Example Audio", style = LearningTextRole.cardTitle)
-                                Text("Play Vietnamese example translation audio if available", style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.autoplay_example_vi_title), style = LearningTextRole.cardTitle)
+                                Text(stringResource(R.string.autoplay_example_vi_desc), style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Switch(
                                 checked = config.playExampleVietnameseAudio,
@@ -631,7 +633,7 @@ private fun AutoPlayConfigScreen(
                             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
 
                             AutoPlayDelayControl(
-                                label = "Delay after Vietnamese Example",
+                                label = stringResource(R.string.autoplay_post_example_vi_delay),
                                 currentDelayMs = config.postExampleVietnameseDelayMs,
                                 presetSeconds = listOf(0.0, 1.0, 2.0, 3.0, 5.0),
                                 minDelayMs = 0L,
@@ -659,8 +661,8 @@ private fun AutoPlayConfigScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("Keep Screen On", style = LearningTextRole.cardTitle)
-                                Text("Prevent screen from sleeping during active Auto Play", style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.autoplay_keep_screen_on_title), style = LearningTextRole.cardTitle)
+                                Text(stringResource(R.string.autoplay_keep_screen_on_desc), style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Switch(
                                 checked = config.keepScreenOn,
@@ -676,8 +678,8 @@ private fun AutoPlayConfigScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("Background Playback", style = LearningTextRole.cardTitle)
-                                Text("Continue Auto Play when the app is minimized or the screen is off", style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.autoplay_background_playback_title), style = LearningTextRole.cardTitle)
+                                Text(stringResource(R.string.autoplay_background_playback_desc), style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Switch(
                                 checked = config.backgroundPlayback,
@@ -698,7 +700,7 @@ private fun AutoPlayConfigScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(Modifier.padding(LearningSpacing.medium), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-                        Text("Automatically stop Auto Play after duration", style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.autoplay_sleep_timer_desc), style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                         AutoPlaySleepTimerControl(
                             selectedMinutes = config.sleepTimerMinutes,
@@ -835,7 +837,7 @@ private fun AutoPlayDelayControl(
                             isInputError = input.isNotBlank()
                         }
                     },
-                    label = { Text("Custom seconds") },
+                    label = { Text(stringResource(R.string.autoplay_custom_seconds)) },
                     placeholder = { Text("e.g. 1.5 or 2.75") },
                     isError = isInputError,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -903,7 +905,7 @@ private fun AutoPlaySleepTimerControl(
                         isInputError = customText.isNotBlank()
                     }
                 },
-                label = { Text("Custom") },
+                label = { Text(stringResource(R.string.autoplay_custom)) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -924,7 +926,7 @@ private fun AutoPlaySleepTimerControl(
                         isInputError = input.isNotBlank()
                     }
                 },
-                label = { Text("Custom minutes") },
+                label = { Text(stringResource(R.string.autoplay_custom_minutes)) },
                 placeholder = { Text("e.g. 0.5 or 37.5") },
                 isError = isInputError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -958,7 +960,7 @@ private fun AutoPlaySleepTimerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Sleep Timer", style = MaterialTheme.typography.titleLarge) },
+        title = { Text(stringResource(R.string.autoplay_sleep_timer_title), style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (remainingMillis != null && remainingMillis > 0L) {
@@ -984,7 +986,7 @@ private fun AutoPlaySleepTimerDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(R.string.action_close))
             }
         }
     )
@@ -1525,7 +1527,7 @@ private fun AutoPlayCompletedScreen(
                         onClick = onBack,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Back to Home")
+                        Text(stringResource(R.string.action_back_home))
                     }
                 }
             }
@@ -1546,10 +1548,10 @@ private fun AutoPlayEmptyScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Auto Play", style = MaterialTheme.typography.titleLarge) },
+                title = { Text(stringResource(R.string.autoplay_title), style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back_home))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

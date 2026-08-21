@@ -35,6 +35,15 @@
         </service>
 
         <service
+            android:name=".reminder.HomeVocabularyWidgetRuntimeService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Maintains reliable interval clock for user-enabled Home-Screen Vocabulary Widget automatic rotation." />
+        </service>
+
+        <service
             android:name=".autoplay.AutoPlayPlaybackService"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback">
@@ -70,6 +79,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

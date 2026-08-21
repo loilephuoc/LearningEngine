@@ -2,6 +2,7 @@ package vn.loi.learning.android.packageexperience
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.rememberScrollState
@@ -41,6 +42,8 @@ import androidx.compose.ui.layout.ContentScale
 import android.graphics.BitmapFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import vn.loi.learning.android.R
+import androidx.compose.ui.res.stringResource
 import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.study.normalizedIntroductionPronunciation
 import vn.loi.learning.android.study.partOfSpeechPresentation
@@ -352,7 +355,7 @@ private fun PackageCtaRow(
     when (cta) {
         is AndroidPackageCta.ContinueLearning -> {
             LearningEnginePrimaryButton(
-                label = "Continue Learning",
+                label = stringResource(R.string.library_continue_learning),
                 onClick = onContinueLearning,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -362,7 +365,7 @@ private fun PackageCtaRow(
         }
         AndroidPackageCta.ContinuePackage -> {
             LearningEnginePrimaryButton(
-                label = "Continue Package",
+                label = stringResource(R.string.library_continue_package),
                 onClick = onStudyPackage,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -372,7 +375,7 @@ private fun PackageCtaRow(
         }
         AndroidPackageCta.StudyPackage -> {
             LearningEnginePrimaryButton(
-                label = "Study Package",
+                label = stringResource(R.string.library_study_package),
                 onClick = onStudyPackage,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -402,7 +405,7 @@ private fun PackageSearchField(
     OutlinedTextField(
         value = input,
         onValueChange = { updated -> input = updated; onSearch(updated.text) },
-        label = { Text("Search content") },
+        label = { Text(stringResource(R.string.library_search_placeholder)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { keyboard?.hide() }),
@@ -412,7 +415,7 @@ private fun PackageSearchField(
                     onClick = { input = TextFieldValue("", TextRange.Zero); onClear() },
                     modifier = Modifier.defaultMinSize(minWidth = LearningSpacing.touchTarget, minHeight = LearningSpacing.touchTarget)
                 ) {
-                    Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.library_clear_search))
                 }
             } else {
                 Icon(Icons.Default.Search, contentDescription = null)
@@ -591,6 +594,7 @@ private fun PackageFiltersRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PackageContentRow(
     row: AndroidPackageContentRow,
@@ -600,99 +604,149 @@ private fun PackageContentRow(
     onToggleDifficult: () -> Unit,
     onClick: () -> Unit
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onQuickEdit
-            )
             .defaultMinSize(minHeight = LearningSpacing.touchTarget)
-            .semantics {
-                contentDescription = buildString {
-                    append(row.question)
-                    if (row.answer.isNotBlank()) { append(", "); append(row.answer) }
-                    if (row.hasImage) append(", has image")
-                    if (row.hasAudio) append(", has audio")
-                    append(", status ${row.fsrsStatus.label}")
-                    if (row.isDifficult) append(", marked difficult")
-                    append(". Chạm để mở xem đầy đủ. Nhấn giữ để sửa.")
-                }
-                customActions = buildList {
-                    row.audioRef?.let { reference ->
-                        add(CustomAccessibilityAction("Nghe từ") { onPlayAudio(reference); true })
-                    }
-                    add(CustomAccessibilityAction("Sửa từ") { onQuickEdit(); true })
-                }
-                role = Role.Button
-            }
-            .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 12.dp)
     ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                row.question,
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            normalizedIntroductionPronunciation(row.partOfSpeech, row.pronunciation)?.let { pronunciation ->
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .combinedClickable(
+                        onClick = { row.audioRef?.let { onPlayAudio(it) } },
+                        onLongClick = onQuickEdit
+                    )
+                    .semantics {
+                        contentDescription = buildString {
+                            append(row.question)
+                            if (row.answer.isNotEmpty()) { append(", "); append(row.answer) }
+                            if (row.hasImage) append(", has image")
+                            if (row.hasAudio) append(", has audio")
+                            append(", status ${row.fsrsStatus.label}")
+                            if (row.isDifficult) append(", marked difficult")
+                            append(". Chạm để nghe từ. Nhấn giữ để sửa.")
+                        }
+                        customActions = buildList {
+                            row.audioRef?.let { reference ->
+                                add(CustomAccessibilityAction("Nghe từ") { onPlayAudio(reference); true })
+                            }
+                            add(CustomAccessibilityAction("Mở chi tiết") { onClick(); true })
+                            add(CustomAccessibilityAction("Sửa từ") { onQuickEdit(); true })
+                        }
+                        role = Role.Button
+                    },
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
-                    pronunciation,
+                    row.question,
                     modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                     maxLines = 2,
                     softWrap = true,
                     overflow = TextOverflow.Ellipsis
                 )
+                normalizedIntroductionPronunciation(row.partOfSpeech, row.pronunciation)?.let { pronunciation ->
+                    Text(
+                        pronunciation,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        softWrap = true,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (row.answer.isNotBlank()) {
+                    Text(
+                        row.answer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
-            if (row.answer.isNotBlank()) {
-                Text(
-                    row.answer,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth()
+            if (row.imageRef != null) {
+                Box(
+                    modifier = Modifier
+                        .size(96.dp)
+                        .combinedClickable(
+                            onClick = onClick,
+                            onLongClick = onQuickEdit
+                        )
+                        .semantics {
+                            contentDescription = "Mở chi tiết cho ${row.question}"
+                            role = Role.Button
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    PackageThumbnail(row.imageRef, resolveMedia)
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(width = 48.dp, height = 96.dp)
+                        .combinedClickable(
+                            onClick = onClick,
+                            onLongClick = onQuickEdit
+                        )
+                        .semantics {
+                            contentDescription = "Mở chi tiết cho ${row.question}"
+                            role = Role.Button
+                        }
                 )
             }
         }
-        Column(
-            modifier = Modifier.width(68.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+
+        // Overlays outside Row width allocation
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .size(if (row.imageRef != null) 96.dp else 48.dp)
         ) {
             partOfSpeechPresentation(row.partOfSpeech)?.let { presentation ->
-                PartOfSpeechBadge(presentation, compact = true)
-                Spacer(Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(4.dp)
+                ) {
+                    PartOfSpeechBadge(presentation, compact = true)
+                }
             }
             IconButton(
                 onClick = onToggleDifficult,
                 modifier = Modifier
+                    .align(Alignment.BottomStart)
                     .size(48.dp)
                     .semantics {
                         contentDescription = if (row.isDifficult) "Unmark as difficult" else "Mark as difficult"
                     }
             ) {
-                Icon(
-                    imageVector = if (row.isDifficult) Icons.Filled.Star else Icons.Filled.StarBorder,
-                    contentDescription = null,
-                    tint = if (row.isDifficult) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.76f),
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (row.isDifficult) Icons.Filled.Star else Icons.Filled.StarBorder,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = if (row.isDifficult) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-        }
-        Box(
-            modifier = Modifier.width(96.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            row.imageRef?.let { PackageThumbnail(it, resolveMedia) }
         }
     }
     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)

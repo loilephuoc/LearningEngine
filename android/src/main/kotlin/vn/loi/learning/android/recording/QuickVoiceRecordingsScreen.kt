@@ -43,6 +43,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import vn.loi.learning.android.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -153,8 +155,8 @@ fun QuickVoiceRecordingsScreen(
         val target = itemToDelete!!
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
-            title = { Text("Delete Recording?") },
-            text = { Text("Are you sure you want to permanently delete '${target.filename}'?") },
+            title = { Text(stringResource(R.string.voice_delete_title)) },
+            text = { Text(stringResource(R.string.voice_delete_confirm, target.filename)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -164,12 +166,12 @@ fun QuickVoiceRecordingsScreen(
                         }
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { itemToDelete = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )

@@ -116,7 +116,7 @@ class AndroidDesignSystemTest {
     fun `Study settings expose durable validated accessible daily limits`() {
         val settings = source("vn/loi/learning/android/ui/AndroidRootNavigation.kt")
         val preferences = source("vn/loi/learning/android/study/AndroidStudyPreferences.kt")
-        listOf("New items per day", "Review items per day", "KeyboardType.Number", "1..999",
+        listOf("settings_new_items_per_day", "settings_review_items_per_day", "KeyboardType.Number", "1..999",
             "contentDescription", "stateDescription").forEach { assertTrue(settings.contains(it), it) }
         assertTrue(preferences.contains("getSharedPreferences"))
         assertTrue(preferences.contains("DailyStudyBudgetLimits"))

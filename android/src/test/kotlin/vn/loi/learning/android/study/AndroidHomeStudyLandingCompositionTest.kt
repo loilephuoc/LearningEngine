@@ -74,8 +74,8 @@ class AndroidHomeStudyLandingCompositionTest {
         assertTrue(landingSource.contains("when (primaryAction)"))
         assertTrue(landingSource.contains("AndroidHomePrimaryAction.OpenLibrary -> onLibrary()"))
         assertFalse(landingSource.contains("presentation.hasContent -> onEvent(AndroidStudyEvent.Start"))
-        listOf("Learn new", "Adaptive study", "Typing practice").forEach { label ->
-            assertTrue(landingSource.contains("\"$label\""))
+        listOf("R.string.study_mode_learn_new", "R.string.study_mode_adaptive", "R.string.study_mode_typing").forEach { resKey ->
+            assertTrue(landingSource.contains(resKey))
         }
         assertFalse(landingSource.contains("AndroidHomePrimaryAction.StartLearning -> Unit"))
         assertTrue(landingSource.contains("enabled = home.availability.canStartTyping"))

@@ -54,7 +54,7 @@ class AndroidPackageConsolidatedUxTest {
         assertFalse(screen.contains("if (result.isFailure) editing = null"))
     }
 
-    @Test fun `vocabulary metadata keeps full width IPA and compact center POS`() {
+    @Test fun `vocabulary metadata keeps full width IPA and overlay POS`() {
         val row = screen.substringAfter("private fun PackageContentRow(").substringBefore("private fun PackageContentBody(")
         assertFalse(row.contains("ListItem("))
         assertTrue(row.contains("PartOfSpeechBadge(presentation, compact = true)"))
@@ -64,37 +64,42 @@ class AndroidPackageConsolidatedUxTest {
         assertTrue(ipa.contains("softWrap = true"))
         assertTrue(row.contains("onClick = onClick"))
         assertFalse(row.contains("row.audioRef?.let(onPlayAudio) ?: onClick()"))
-        val meaning = row.substringAfter("if (row.answer.isNotBlank())").substringBefore("modifier = Modifier.width(68.dp)")
+        val meaning = row.substringAfter("if (row.answer.isNotBlank())").substringBefore("if (row.imageRef != null)")
         assertFalse(meaning.contains("clickable"))
         assertFalse(meaning.contains("combinedClickable"))
         assertFalse(row.contains("IconButton(onClick = { onPlayAudio(reference) })"))
     }
 
-    @Test fun `flat compact row uses text center controls and far right image zones`() {
+    @Test fun `flat compact row uses full width text and overlay image zones`() {
         val row = screen.substringAfter("private fun PackageContentRow(").substringBefore("private fun PackageContentBody(")
-        val textStack = row.substringAfter("modifier = Modifier.weight(1f)")
-            .substringBefore("modifier = Modifier.width(68.dp)")
+        assertTrue(row.contains("Box("))
+        val rowContent = row.substringAfter("Row(").substringBefore("// Overlays outside Row width allocation")
+        val textStack = rowContent.substringAfter("modifier = Modifier.weight(1f)")
+            .substringBefore("if (row.imageRef != null)")
         assertTrue(textStack.indexOf("row.question") < textStack.indexOf("normalizedIntroductionPronunciation"))
         assertTrue(textStack.indexOf("normalizedIntroductionPronunciation") < textStack.indexOf("row.answer.isNotBlank()"))
-        val center = row.substringAfter("modifier = Modifier.width(68.dp)").substringBefore("modifier = Modifier.width(96.dp)")
-        assertTrue(center.indexOf("PartOfSpeechBadge") < center.indexOf("IconButton"))
-        assertTrue(center.contains("Icons.Filled.StarBorder"))
-        val media = row.substringAfter("modifier = Modifier.width(96.dp)")
-        assertTrue(media.contains("PackageThumbnail"))
-        assertFalse(media.contains("IconButton"))
         assertFalse(textStack.contains("PackageThumbnail"))
-        assertFalse(row.contains("Surface("))
+        assertFalse(rowContent.contains("PartOfSpeechBadge"))
+        assertFalse(rowContent.contains("IconButton"))
+        assertFalse(rowContent.contains("68.dp"))
+
+        val overlays = row.substringAfter("// Overlays outside Row width allocation")
+        assertTrue(overlays.contains("PartOfSpeechBadge"))
+        assertTrue(overlays.contains("IconButton"))
+        assertTrue(overlays.contains("Icons.Filled.StarBorder"))
     }
 
     @Test fun `English IPA and one line meaning remain in flexible left zone`() {
         val row = screen.substringAfter("private fun PackageContentRow(").substringBefore("private fun PackageContentBody(")
-        val left = row.substringAfter("modifier = Modifier.weight(1f)").substringBefore("modifier = Modifier.width(68.dp)")
+        val rowContent = row.substringAfter("Row(").substringBefore("// Overlays outside Row width allocation")
+        val left = rowContent.substringAfter("modifier = Modifier.weight(1f)").substringBefore("if (row.imageRef != null)")
         assertTrue(left.contains("row.question"))
         assertTrue(left.contains("normalizedIntroductionPronunciation"))
         val meaning = left.substringAfter("if (row.answer.isNotBlank())")
         assertTrue(meaning.contains("maxLines = 1"))
         assertTrue(meaning.contains("modifier = Modifier.fillMaxWidth()"))
         assertFalse(left.contains("PartOfSpeechBadge"))
+        assertFalse(left.contains("IconButton"))
     }
 
     @Test fun `package detail surfaces use canonical theme aware neutral and mint roles`() {

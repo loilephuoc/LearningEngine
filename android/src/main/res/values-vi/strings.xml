@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Learning Engine</string>
+    <string name="controller_accessibility_service_label">Chẩn đoán Tay cầm LearningEngine</string>
+    <string name="controller_accessibility_service_description">Dịch vụ chẩn đoán theo dõi sự kiện phím tay cầm 8BitDo Micro khi chạy nền/tắt màn hình.</string>
+
+    <!-- Navigation / Top Bar -->
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_library">Thư viện</string>
+    <string name="nav_study">Học</string>
+    <string name="nav_review">Ôn tập</string>
+    <string name="nav_settings">Cài đặt</string>
+    <string name="nav_history">Lịch sử</string>
+
+    <!-- Home Screen -->
+    <string name="home_header_brand">LEARNING ENGINE</string>
+    <string name="home_header_title">Tiếp tục tiến trình học tập</string>
+    <string name="home_active_learning">ĐANG HỌC</string>
+    <string name="home_ready_to_study">SẴN SÀNG HỌC TẬP</string>
+    <string name="home_choose_content">Chọn gói học tập</string>
+    <string name="home_continue_session">Tiếp tục phiên học</string>
+    <string name="home_adaptive_study">Học thích ứng</string>
+    <string name="home_learn_new">Học từ mới</string>
+    <string name="home_open_library">Mở Thư viện</string>
+    <string name="home_autoplay_title">Tự động phát</string>
+    <string name="home_autoplay_desc">Nghe thụ động và ôn tập không cần chấm điểm.</string>
+    <string name="home_open_autoplay">Mở Tự động phát</string>
+    <string name="home_progress_title">Tiến độ học tập</string>
+    <string name="home_insights_title">Thống kê &amp; Dự báo</string>
+    <string name="home_forecast_title">Dự báo ôn tập</string>
+    <string name="home_retention_title">Mức độ ghi nhớ</string>
+    <string name="home_today_ratings_title">Đánh giá hôm nay</string>
+    <string name="home_empty_title">Thư viện đã sẵn sàng</string>
+    <string name="home_empty_detail">Nhập gói học tập để bắt đầu.</string>
+    <string name="home_empty_action">Nhập gói học</string>
+    <string name="home_due_label">Đến hạn</string>
+    <string name="home_reviewed_today">Đã ôn hôm nay</string>
+    <string name="home_active_memories">Từ đang học</string>
+    <string name="home_accuracy_label">Độ chính xác</string>
+    <string name="home_active_memory_count">%1$d trong %2$d từ đang học</string>
+    <string name="home_due_review_desc">%1$d từ sẵn sàng ôn tập trong nội dung đang kích hoạt.</string>
+    <string name="home_due_review_action">Ôn từ đến hạn</string>
+    <string name="home_daily_new_progress">MỚI %1$d/%2$d · ÔN %3$d/%4$d</string>
+
+    <!-- Study Hub -->
+    <string name="study_hub_title">Học</string>
+    <string name="study_hub_subtitle">Tiếp tục học từ nội dung đang kích hoạt</string>
+    <string name="study_mode_learn_new">Học từ mới</string>
+    <string name="study_mode_adaptive">Học thích ứng</string>
+    <string name="study_mode_typing">Luyện gõ</string>
+    <string name="study_switch_learn_new">Chuyển sang Học từ mới</string>
+    <string name="study_switch_adaptive">Chuyển sang Học thích ứng</string>
+    <string name="study_switch_typing">Chuyển sang Luyện gõ</string>
+    <string name="study_resume_detail">Tiếp tục chính xác nơi bạn đã dừng lại.</string>
+    <string name="study_review_due_detail">Củng cố các từ đến hạn trong gói học hiện tại.</string>
+    <string name="study_start_learning_detail">Bắt đầu phiên học từ gói học hiện tại.</string>
+    <string name="study_open_library_detail">Mở Thư viện để chọn gói học hiện tại.</string>
+    <string name="study_daily_complete_detail">Chỉ tiêu MỚI và ÔN hôm nay đã hoàn thành.</string>
+    <string name="study_learn_new_desc">Bắt đầu học các từ mới từ gói học đang chọn.</string>
+    <string name="study_learn_new_desc_switch">Chuyển từ phiên hiện tại sang học các từ mới trong gói.</string>
+    <string name="study_adaptive_desc">Học thích ứng theo lịch trình ghi nhớ thông minh.</string>
+    <string name="study_adaptive_desc_switch">Tiếp tục ôn luyện thông minh với các từ đã học.</string>
+    <string name="study_adaptive_desc_recall">Chuyển từ phiên hiện tại sang gợi nhớ từ đến hạn theo kế hoạch thích ứng.</string>
+    <string name="study_typing_desc">Luyện gõ chính xác các từ vựng đã học.</string>
+    <string name="study_typing_desc_switch">Chuyển từ phiên hiện tại sang chế độ luyện gõ.</string>
+    <string name="study_learn_new_unavailable">Hiện không có từ mới nào để học</string>
+    <string name="study_adaptive_unavailable">Hiện không có từ nào đến hạn ôn</string>
+    <string name="study_typing_unavailable">Chưa có từ vựng nào để luyện gõ</string>
+    <string name="study_reveal_answer">Xem đáp án</string>
+    <string name="study_session_complete">Hoàn thành phiên học</string>
+    <string name="study_session_unavailable">Không thể mở phiên học</string>
+    <string name="study_rating_again">Học lại</string>
+    <string name="study_rating_hard">Khó</string>
+    <string name="study_rating_good">Tốt</string>
+    <string name="study_rating_easy">Dễ</string>
+
+    <!-- Insights & Forecast -->
+    <string name="insights_title">Thống kê &amp; Dự báo</string>
+    <string name="insights_all_packages">Tất cả gói học</string>
+    <string name="insights_scope_active">· Đang chọn</string>
+    <string name="insights_forecast_title">Dự báo ôn tập</string>
+    <string name="insights_forecast_subtitle">%1$d thẻ đến hạn trong 7 ngày tới</string>
+    <string name="insights_forecast_no_reviews">Không có thẻ nào đến hạn trong 7 ngày tới</string>
+    <string name="insights_forecast_tomorrow">Ngày mai</string>
+    <string name="insights_retention_title">Mức độ ghi nhớ</string>
+    <string name="insights_retention_subtitle">%1$d từ trong phạm vi thống kê</string>
+    <string name="insights_retention_new">Mới</string>
+    <string name="insights_retention_learning">Đang học</string>
+    <string name="insights_retention_young">Mới hình thành (≤21 ngày)</string>
+    <string name="insights_retention_retained">Đã ghi nhớ (>21 ngày)</string>
+    <string name="insights_today_ratings_title">Đánh giá hôm nay</string>
+    <string name="insights_today_ratings_subtitle">%1$d lượt ôn đã hoàn thành hôm nay</string>
+    <string name="insights_today_ratings_none">Chưa có lượt ôn nào hôm nay</string>
+    <string name="rating_again">Học lại</string>
+    <string name="rating_hard">Khó</string>
+    <string name="rating_good">Tốt</string>
+    <string name="rating_easy">Dễ</string>
+
+    <!-- Review Hub -->
+    <string name="review_hub_title">Ôn tập</string>
+    <string name="review_hub_subtitle">Củng cố trí nhớ cho toàn bộ từ vựng</string>
+    <string name="review_quick_title">Ôn nhanh</string>
+    <string name="review_quick_desc">Ôn nhanh không giới hạn. Vuốt lên để lướt, hoặc chấm Học lại / Khó / Tốt / Dễ sau khi xem đáp án.</string>
+    <string name="review_quick_badge">NHANH · KHÔNG GIỚI HẠN</string>
+    <string name="review_recent_title">Ôn từ vừa học</string>
+    <string name="review_recent_desc">Xem lại các từ Mới trong phiên học hoàn tất gần nhất.</string>
+    <string name="review_difficult_title">Ôn Học lại / Khó</string>
+    <string name="review_difficult_desc">Tập trung vào các từ hiện được đánh giá Học lại hoặc Khó.</string>
+    <string name="review_learned_title">Ôn tất cả đã học</string>
+    <string name="review_learned_desc">Phiên ôn hữu hạn có đánh giá cho toàn bộ từ đã học.</string>
+    <string name="review_action_start">Bắt đầu</string>
+    <string name="review_action_switch">Chuyển</string>
+    <string name="review_recent_summary_title">Quick Review vừa rồi</string>
+
+    <!-- Settings - Appearance -->
+    <string name="settings_appearance_title">Giao diện</string>
+    <string name="settings_appearance_desc">Giao diện và dữ liệu cục bộ</string>
+    <string name="settings_theme_system">Hệ thống</string>
+    <string name="settings_theme_light">Sáng</string>
+    <string name="settings_theme_dark">Tối</string>
+    <string name="settings_app_language">Ngôn ngữ ứng dụng</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_vi">Tiếng Việt</string>
+    <string name="settings_import_package">Nhập gói học</string>
+    <string name="settings_import_package_desc">Thêm nội dung học từ gói</string>
+
+    <!-- Settings - Reminders & Surfaces -->
+    <string name="settings_reminders_title">Nhắc nhở &amp; Bề mặt</string>
+    <string name="settings_reminders_hub_label">Nhắc nhở Từ vựng &amp; Bề mặt</string>
+    <string name="settings_reminders_hub_desc">Màn hình khóa, cửa sổ nhắc nhở nổi và tiện ích màn hình chính</string>
+
+    <!-- Settings - Study -->
+    <string name="settings_study_title">Học tập</string>
+    <string name="settings_new_items_per_day">Từ mới mỗi ngày</string>
+    <string name="settings_review_items_per_day">Từ ôn tập mỗi ngày</string>
+    <string name="settings_continuous_skim">Lướt liên tục</string>
+    <string name="settings_continuous_skim_desc">Tiếp tục luyện tập ngẫu nhiên sau khi hoàn thành chỉ tiêu ngày</string>
+    <string name="settings_daily_progress_desc">Tiến độ hằng ngày theo lịch địa phương của người học.</string>
+
+    <!-- Settings - External Controller -->
+    <string name="settings_controller_title">Tay cầm Ngoài &amp; Giọng nói</string>
+    <string name="settings_controller_settings">Cài đặt 8BitDo / Tay cầm</string>
+    <string name="settings_controller_settings_desc">Cấu hình gán phím, hồ sơ hoạt động và phím bổ trợ</string>
+    <string name="settings_voice_recordings">Ghi âm Giọng nói Nhanh</string>
+    <string name="settings_voice_recordings_desc">Xem lại, phát hoặc xuất các bản ghi âm tạm thời</string>
+    <string name="settings_controller_diagnostics">Chẩn đoán Trực tiếp Tay cầm</string>
+    <string name="settings_controller_diagnostics_desc">Giám sát sự kiện phím, trạng thái kết nối và pin</string>
+    <string name="controller_active_profile">Hồ sơ hoạt động</string>
+    <string name="controller_button_bindings">Gán phím</string>
+    <string name="controller_modifier_button">Phím bổ trợ</string>
+    <string name="controller_clear_log">Xóa nhật ký</string>
+    <string name="controller_copy_summary">Sao chép tóm tắt</string>
+    <string name="controller_copy_trace">Sao chép dấu vết</string>
+
+    <!-- Settings - Data & Backup -->
+    <string name="settings_data_title">Dữ liệu &amp; Sao lưu</string>
+    <string name="settings_backup_restore">Sao lưu &amp; Phục hồi</string>
+    <string name="settings_backup_restore_desc">Tạo bản sao lưu, kiểm tra hoặc khôi phục dữ liệu học tập</string>
+    <string name="backup_create_title">Tạo bản sao lưu</string>
+    <string name="backup_create_desc">Lưu bản sao đầy đủ tiến trình học tập</string>
+    <string name="backup_restore_title">Khôi phục từ bản sao lưu</string>
+    <string name="backup_restore_desc">Khôi phục tiến trình học tập từ tệp sao lưu</string>
+    <string name="backup_inspect_title">Kiểm tra tệp sao lưu</string>
+
+    <!-- Library -->
+    <string name="library_title">Thư viện</string>
+    <string name="library_subtitle">Gói học và bộ sưu tập</string>
+    <string name="library_tab_all">Tất cả</string>
+    <string name="library_tab_collections">Bộ sưu tập</string>
+    <string name="library_tab_packages">Gói học</string>
+    <string name="library_available">Có sẵn</string>
+    <string name="library_current_package">Gói học hiện tại</string>
+    <string name="library_use_for_study">Dùng để học</string>
+    <string name="library_import_package">Nhập gói học</string>
+    <string name="library_lessons">Bài học</string>
+    <string name="library_all_lessons">Tất cả bài học</string>
+    <string name="library_content_count">%1$d nội dung</string>
+    <string name="library_package_item_count">%1$d mục</string>
+    <string name="library_no_packages">Không tìm thấy gói học nào</string>
+    <string name="library_no_matching_words">Không có từ khớp</string>
+    <string name="library_clear_filters">Xóa bộ lọc</string>
+    <string name="library_package_details">Chi tiết gói học</string>
+    <string name="library_search_placeholder">Tìm kiếm nội dung</string>
+    <string name="library_search_packages_collections">Tìm gói học và bộ sưu tập</string>
+    <string name="library_section_collections">Bộ sưu tập</string>
+    <string name="library_section_packages">Gói học</string>
+    <string name="library_section_collection_packages">Gói học trong bộ sưu tập</string>
+    <string name="library_empty_title">Thư viện của bạn đang trống</string>
+    <string name="library_empty_desc">Nhập gói học để bắt đầu.</string>
+    <string name="library_empty_no_results">Không có kết quả</string>
+    <string name="library_empty_no_results_desc">Thử tìm kiếm với tên gói học hoặc bộ sưu tập khác.</string>
+    <string name="library_active_badge">Đang học</string>
+    <string name="library_active_semantics">Đang học</string>
+    <string name="library_clear_search">Xóa tìm kiếm</string>
+    <string name="library_study_package">Học gói này</string>
+    <string name="library_continue_package">Tiếp tục gói này</string>
+    <string name="library_continue_learning">Tiếp tục học</string>
+    <string name="library_listen_to_word">Nghe từ</string>
+    <string name="library_open_details">Mở chi tiết</string>
+    <string name="library_mark_difficult">Đánh dấu khó</string>
+    <string name="library_unmark_difficult">Bỏ đánh dấu khó</string>
+    <string name="library_edit_word">Sửa từ</string>
+
+    <!-- AutoPlay -->
+    <string name="autoplay_title">Tự động phát</string>
+    <string name="autoplay_subtitle">Nghe thụ động và ôn tập rảnh tay</string>
+    <string name="autoplay_playing">Đang phát</string>
+    <string name="autoplay_paused">Tạm dừng</string>
+    <string name="autoplay_speed">Tốc độ phát</string>
+    <string name="autoplay_interval">Khoảng cách</string>
+
+    <!-- Home Widget & Reminder Settings -->
+    <string name="widget_settings_title">Tiện ích Từ vựng Màn hình chính</string>
+    <string name="widget_auto_next_label">Tự động chuyển từ</string>
+    <string name="widget_auto_next_desc">Tự động chuyển sang từ tiếp theo khi ở màn hình chính</string>
+    <string name="widget_interval_label">Đổi từ sau mỗi</string>
+    <string name="widget_auto_audio_label">Tự động phát âm thanh</string>
+    <string name="widget_auto_audio_desc">Phát phát âm khi từ mới xuất hiện</string>
+    <string name="widget_screen_on_only">Chỉ cập nhật khi bật màn hình</string>
+    <string name="widget_screen_on_only_desc">Tạm dừng xoay từ khi tắt màn hình</string>
+    <string name="lock_screen_settings_title">Từ vựng Màn hình khóa</string>
+    <string name="lock_screen_enable_label">Bật từ vựng màn hình khóa</string>
+    <string name="lock_screen_choose_bg">Chọn ảnh nền</string>
+    <string name="lock_screen_change_bg">Đổi ảnh</string>
+    <string name="lock_screen_remove_bg">Xóa ảnh nền</string>
+    <string name="popup_settings_title">Cửa sổ Từ vựng Nổi</string>
+    <string name="reminder_review_title">Xem lại nhắc nhở</string>
+    <string name="reminder_review_history">Lịch sử ôn tập</string>
+    <string name="reminder_no_reviews">Chưa có lượt ôn nào</string>
+    <string name="reminder_fsrs_details">Chi tiết FSRS</string>
+    <string name="reminder_no_items">Không có mục nhắc nhở nào</string>
+
+    <!-- Voice Recordings -->
+    <string name="voice_delete_title">Xóa bản ghi âm?</string>
+    <string name="voice_delete_confirm">Bạn có chắc chắn muốn xóa vĩnh viễn \'%1$s\'?</string>
+
+    <!-- Foreground Service -->
+    <string name="fgs_notification_title">Learning Engine</string>
+    <string name="fgs_notification_text">Tiện ích từ vựng màn hình chính đang tự động xoay vòng</string>
+    <string name="fgs_channel_name">Tự động đổi từ tiện ích</string>
+    <string name="fgs_channel_desc">Duy trì đồng hồ tự động xoay từ vựng trên màn hình chính.</string>
+
+    <!-- Common Actions & Units -->
+    <string name="action_back">Quay lại</string>
+    <string name="action_close">Đóng</string>
+    <string name="action_save">Lưu</string>
+    <string name="action_cancel">Hủy</string>
+    <string name="action_delete">Xóa</string>
+    <string name="action_retry">Thử lại</string>
+    <string name="action_dismiss">Bỏ qua</string>
+    <string name="action_continue">Tiếp tục</string>
+    <string name="action_undo">Hoàn tác</string>
+    <string name="action_check">Kiểm tra</string>
+    <string name="action_previous">Trước</string>
+    <string name="action_next">Tiếp theo</string>
+    <string name="permission_grant">Cấp quyền</string>
+    <string name="unit_sec">Giây</string>
+    <string name="unit_min">Phút</string>
+    <string name="hud_total">Tổng cộng</string>
+    <string name="hud_new">Mới</string>
+    <string name="hud_review">Ôn tập</string>
+    <string name="hud_due">Đến hạn</string>
+
+    <!-- Library operations & dialogs -->
+    <string name="library_export">Xuất gói</string>
+    <string name="library_verify_package">Kiểm tra tệp gói</string>
+    <string name="library_uninstall_action">Gỡ cài đặt</string>
+    <string name="library_study">Học</string>
+    <string name="library_uninstall_confirm_title">Gỡ cài đặt gói học?</string>
+    <string name="library_uninstall_confirm_message">Thao tác này sẽ xóa %1$s cùng toàn bộ dữ liệu học tập cục bộ.</string>
+    <string name="library_results_count">%1$d kết quả</string>
+    <string name="library_lessons_title">Bài học — %1$s</string>
+    <string name="library_study_this_item">Học từ này</string>
+    <string name="library_edit">Sửa</string>
+    <string name="library_unavailable">Thư viện hiện không khả dụng</string>
+
+    <!-- AutoPlay settings & controls -->
+    <string name="autoplay_front_audio_title">Phát âm thanh mặt trước</string>
+    <string name="autoplay_front_audio_desc_vi">Phát âm thanh nghĩa tiếng Việt ở mặt trước.</string>
+    <string name="autoplay_front_audio_desc_en">Phát âm thanh từ tiếng Anh ở mặt trước.</string>
+    <string name="autoplay_front_display_duration">Thời gian hiển thị mặt trước</string>
+    <string name="autoplay_answer_audio_title">Phát âm thanh đáp án</string>
+    <string name="autoplay_answer_audio_desc_vi">Phát phát âm từ tiếng Anh sau khi mở đáp án.</string>
+    <string name="autoplay_answer_audio_desc_en">Phát âm thanh nghĩa tiếng Việt sau khi mở đáp án.</string>
+    <string name="autoplay_post_answer_delay">Độ trễ sau âm thanh đáp án</string>
+    <string name="autoplay_example_en_title">Phát âm thanh ví dụ tiếng Anh</string>
+    <string name="autoplay_example_en_desc">Phát âm thanh câu ví dụ tiếng Anh nếu có</string>
+    <string name="autoplay_post_example_en_delay">Độ trễ sau ví dụ tiếng Anh</string>
+    <string name="autoplay_example_vi_title">Phát âm thanh ví dụ tiếng Việt</string>
+    <string name="autoplay_example_vi_desc">Phát âm thanh bản dịch ví dụ tiếng Việt nếu có</string>
+    <string name="autoplay_post_example_vi_delay">Độ trễ sau ví dụ tiếng Việt</string>
+    <string name="autoplay_keep_screen_on_title">Giữ màn hình luôn sáng</string>
+    <string name="autoplay_keep_screen_on_desc">Ngăn màn hình tắt trong khi đang Tự động phát</string>
+    <string name="autoplay_background_playback_title">Phát dưới nền</string>
+    <string name="autoplay_background_playback_desc">Tiếp tục Tự động phát khi ẩn ứng dụng hoặc tắt màn hình</string>
+    <string name="autoplay_sleep_timer_title">Hẹn giờ dừng</string>
+    <string name="autoplay_sleep_timer_desc">Tự động dừng Tự động phát sau khoảng thời gian đã chọn</string>
+    <string name="autoplay_custom_seconds">Tùy chỉnh số giây</string>
+    <string name="autoplay_custom_minutes">Tùy chỉnh số phút</string>
+    <string name="autoplay_custom">Tùy chỉnh</string>
+    <string name="action_back_home">Về Trang chủ</string>
+
+    <!-- Reminder Settings Screen -->
+    <string name="reminder_resume_now">Tiếp tục ngay</string>
+    <string name="reminder_learning_package_title">Gói học tập</string>
+    <string name="reminder_no_packages_installed">Chưa cài đặt gói học nào</string>
+    <string name="reminder_package_items_count">%1$d từ</string>
+    <string name="reminder_presets_label">Cài đặt sẵn</string>
+    <string name="reminder_active_time_window_title">Khung giờ &amp; Thời lượng hoạt động</string>
+    <string name="reminder_active_from">Hoạt động từ</string>
+    <string name="reminder_active_until">Hoạt động đến</string>
+    <string name="reminder_notification_duration">Thời lượng thông báo (giây)</string>
+    <string name="reminder_pause_30m">Tạm dừng 30p</string>
+    <string name="reminder_pause_1h">Tạm dừng 1h</string>
+    <string name="reminder_pause_today">Tạm dừng hôm nay</string>
+    <string name="reminder_floating_banners_title">Biểu ngữ / Thông báo nổi</string>
+    <string name="reminder_floating_banners_desc">Trên Xiaomi / HyperOS, bật \'Thông báo nổi\' (Floating notifications) trong cài đặt kênh để hiện tức thì.</string>
+    <string name="reminder_configure_button">Cài đặt</string>
+    <string name="reminder_preview_button">Xem trước thông báo</string>
+    <string name="reminder_other_surfaces_title">Các bề mặt từ vựng khác</string>
+    <string name="reminder_unlocked_popup_title">Thông báo nổi khi mở khóa</string>
+    <string name="reminder_enable_unlocked">Bật nhắc nhở khi mở khóa</string>
+    <string name="reminder_actively_scheduled">Nhắc nhở đang được lên lịch</string>
+    <string name="reminder_paused_or_off">Nhắc nhở đang tạm dừng/tắt</string>
+    <string name="reminder_permission_required">Yêu cầu quyền thông báo</string>
+    <string name="reminder_permission_desc">Cấp quyền để nhận thông báo nhắc nhở từ vựng định kỳ.</string>
+    <string name="reminder_play_pronunciation">Phát âm khi hiện nhắc nhở</string>
+    <string name="reminder_large_popup_title">Popup nhắc nhở lớn</string>
+    <string name="reminder_large_popup_desc">Hiển thị thẻ từ vựng lớn trên các ứng dụng khác khi màn hình đã mở khóa.</string>
+    <string name="reminder_large_popup_permission_title">Yêu cầu quyền hiển thị trên ứng dụng khác</string>
+    <string name="reminder_large_popup_permission_desc">Cấp quyền \'Hiển thị trên các ứng dụng khác\' để cho phép hiển thị thẻ từ vựng nổi.</string>
+    <string name="reminder_quick_pause_actions_title">Nút tạm dừng nhanh</string>
+    <string name="reminder_quick_pause_actions_desc">Hiển thị các nút tạm dừng 5 phút, 30 phút và 1 giờ trên popup nhắc nhở.</string>
+    <string name="reminder_quick_pause_title">Tạm dừng nhắc nhở nhanh</string>
+    <string name="reminder_mode_title">Chế độ nhắc nhở</string>
+    <string name="reminder_mode_again_hard">Học lại / Khó</string>
+    <string name="reminder_mode_due">Từ đến hạn</string>
+    <string name="reminder_mode_random_learned">Ngẫu nhiên từ đã học</string>
+    <string name="reminder_mode_random_all">Ngẫu nhiên tất cả</string>
+    <string name="reminder_mode_marked_difficult">Đã đánh dấu khó</string>
+    <string name="reminder_mode_new_unseen">Từ mới / Chưa học</string>
+    <string name="reminder_interval_title">Khoảng thời gian nhắc</string>
+    <string name="reminder_interval_value">Giá trị</string>
+    <string name="reminder_preview_sent">Đã gửi thông báo xem trước.</string>
+    <string name="reminder_paused_remaining">Đang tạm dừng (còn %1$d phút)</string>
+    <string name="reminder_paused_until_time">Tạm dừng đến %1$s</string>
+    <string name="reminder_hub_header_desc">Tùy chọn phương thức và vị trí bạn muốn ôn tập từ vựng thụ động trong ngày.</string>
+    <string name="reminder_hub_lock_desc">Hiển thị từ vựng trên hình nền màn hình khóa khi thiết bị đang khóa</string>
+    <string name="reminder_hub_popup_desc">Hiển thị thẻ flashcard định kỳ trong khi sử dụng điện thoại</string>
+    <string name="reminder_hub_widget_desc">Cấu hình thẻ từ vựng và tự động chuyển từ trên màn hình chính</string>
+    <string name="reminder_status_on">BẬT</string>
+    <string name="reminder_status_off">TẮT</string>
+    <string name="reminder_status_paused_until">Tạm dừng đến %1$s</string>
+    <string name="reminder_status_every_minutes">BẬT · Mỗi %1$dp</string>
+    <string name="reminder_status_widget_none">Chưa thêm tiện ích</string>
+    <string name="reminder_status_widget_auto_off">Hoạt động · Tự chuyển TẮT</string>
+    <string name="reminder_status_widget_muted">Hoạt động · Mỗi %1$s · Tắt âm</string>
+    <string name="reminder_status_widget_audio">Hoạt động · Mỗi %1$s · Bật âm</string>
+    <string name="reminder_lock_screen_surface_title">Từ vựng Màn hình Khóa</string>
+    <string name="reminder_lock_screen_surface_desc">Cấu hình thẻ hình nền màn hình khóa</string>
+    <string name="reminder_home_widget_surface_title">Tiện ích Từ vựng Màn hình Chính</string>
+    <string name="reminder_home_widget_surface_desc">Cấu hình thẻ tiện ích &amp; tự động xoay từ trên màn hình chính</string>
+</resources>
+

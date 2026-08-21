@@ -12,11 +12,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+import vn.loi.learning.android.R
+import androidx.compose.ui.res.stringResource
 import vn.loi.learning.android.LearningEngineAndroidApplication
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -30,6 +35,23 @@ fun HomeWidgetSettingsScreen(
     val homeWidgetSettings by controller.homeWidgetSettings.collectAsState()
     var homeWidgetDraft by remember(homeWidgetSettings) {
         mutableStateOf(AndroidHomeVocabularyWidgetDraft.from(homeWidgetSettings))
+    }
+    var intervalTextFieldValue by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = homeWidgetDraft.intervalValueText,
+                selection = TextRange(homeWidgetDraft.intervalValueText.length)
+            )
+        )
+    }
+
+    LaunchedEffect(homeWidgetDraft.intervalValueText) {
+        if (intervalTextFieldValue.text != homeWidgetDraft.intervalValueText) {
+            intervalTextFieldValue = TextFieldValue(
+                text = homeWidgetDraft.intervalValueText,
+                selection = TextRange(homeWidgetDraft.intervalValueText.length)
+            )
+        }
     }
     val availablePackages by remember { mutableStateOf(selector.getAvailablePackages()) }
 
@@ -215,15 +237,30 @@ fun HomeWidgetSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             OutlinedTextField(
-                                value = homeWidgetDraft.intervalValueText,
-                                onValueChange = { nextVal ->
-                                    applyHomeWidgetDraft(homeWidgetDraft.copy(intervalValueText = nextVal))
+                                value = intervalTextFieldValue,
+                                onValueChange = { nextTfv ->
+                                    val filteredText = nextTfv.text.filter { it.isDigit() }
+                                    val newSelection = if (filteredText == nextTfv.text) {
+                                        nextTfv.selection
+                                    } else {
+                                        TextRange(filteredText.length)
+                                    }
+                                    intervalTextFieldValue = nextTfv.copy(text = filteredText, selection = newSelection)
+                                    applyHomeWidgetDraft(homeWidgetDraft.copy(intervalValueText = filteredText))
                                 },
                                 label = { Text("Value") },
                                 isError = homeWidgetDraft.intervalValidationMessage != null,
                                 supportingText = homeWidgetDraft.intervalValidationMessage?.let { msg -> { Text(msg) } },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            intervalTextFieldValue = intervalTextFieldValue.copy(
+                                                selection = TextRange(0, intervalTextFieldValue.text.length)
+                                            )
+                                        }
+                                    }
                             )
 
                             Row(
@@ -234,14 +271,14 @@ fun HomeWidgetSettingsScreen(
                                     onClick = {
                                         applyHomeWidgetDraft(homeWidgetDraft.copy(intervalUnit = AndroidVocabularyReminderIntervalUnit.SECONDS))
                                     },
-                                    label = { Text("Sec") }
+                                    label = { Text(stringResource(R.string.unit_sec)) }
                                 )
                                 FilterChip(
                                     selected = homeWidgetDraft.intervalUnit == AndroidVocabularyReminderIntervalUnit.MINUTES,
                                     onClick = {
                                         applyHomeWidgetDraft(homeWidgetDraft.copy(intervalUnit = AndroidVocabularyReminderIntervalUnit.MINUTES))
                                     },
-                                    label = { Text("Min") }
+                                    label = { Text(stringResource(R.string.unit_min)) }
                                 )
                             }
                         }

@@ -121,8 +121,9 @@ internal fun focusedPracticeHeadwordGlowActive(
 internal fun introductionRatingInputEnabled(
     revealed: Boolean,
     historyPreview: Boolean,
-    interactionPending: Boolean
-): Boolean = revealed && !historyPreview && !interactionPending
+    interactionPending: Boolean,
+    canCorrectRating: Boolean = false
+): Boolean = revealed && (!historyPreview || canCorrectRating) && !interactionPending
 
 internal fun resolveIntroductionStageGesture(
     deltaX: Float,

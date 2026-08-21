@@ -131,11 +131,12 @@ fun LearningEnginePrimaryCard(
 @Composable
 fun LearningEngineCompactCard(
     modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
     content: @Composable RowScope.() -> Unit
 ) = Surface(
     modifier = modifier,
     shape = LearningEngineShapes.medium,
-    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
+    color = containerColor,
     tonalElevation = LearningElevation.card
 ) { Row(Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.medium), content = content) }

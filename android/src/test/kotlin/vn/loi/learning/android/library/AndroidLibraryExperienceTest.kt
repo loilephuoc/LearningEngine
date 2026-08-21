@@ -67,7 +67,7 @@ class AndroidLibraryExperienceTest {
     @Test fun `root UI uses lazy stable accessible Material foundation`() {
         val source = source("vn/loi/learning/android/library/LibraryScreen.kt")
         listOf("LazyColumn", "key={\"package-\${it.packageId}\"}", "LibrarySurfaceCard",
-            "LearningEngineEmptyState", "LearningEngineStatusBadge", "Clear search", "Role.Button"
+            "LearningEngineEmptyState", "library_clear_search", "Role.Button"
         ).forEach { assertTrue(source.contains(it), it) }
         assertFalse(source.contains("Color("))
         assertFalse(source.contains("Repository"))
@@ -88,12 +88,16 @@ class AndroidLibraryExperienceTest {
         assertFalse(source.contains("Color("))
     }
 
-    @Test fun `usable package cards distinguish availability from current learning selection`() {
+    @Test fun `usable package cards use high density layout and render active badge without low-value metadata`() {
         val source = source("vn/loi/learning/android/library/LibraryScreen.kt")
-        assertTrue(source.contains("Current learning package"))
-        assertTrue(source.contains("Use for Study"))
-        assertTrue(source.contains("\"Available\""))
-        assertFalse(source.contains("LearningEngineStatusBadge(\"Active\""))
+        val pkgCard = source.substringAfter("private fun LibraryPackageCard(").substringBefore("private fun ImportState(")
+        assertTrue(pkgCard.contains("R.string.library_active_badge"))
+        assertTrue(pkgCard.contains("R.string.library_active_semantics"))
+        assertTrue(pkgCard.contains("pkg.isActivePackage"))
+        assertFalse(pkgCard.contains("pkg.version"))
+        assertFalse(pkgCard.contains("R.string.library_available"))
+        assertFalse(pkgCard.contains("R.string.library_use_for_study"))
+        assertFalse(pkgCard.contains("R.string.library_current_package"))
     }
 
     @Test fun `import success refreshes once through existing operation state`() {

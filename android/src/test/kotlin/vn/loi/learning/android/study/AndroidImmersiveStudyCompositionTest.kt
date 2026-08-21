@@ -53,8 +53,8 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(screen.contains("targetState = state.revealed"))
         assertTrue(screen.contains("label = \"Introduction coordinated reveal\""))
         assertTrue(screen.contains("StudyRatingBar"))
-        listOf("Again", "Hard", "Good", "Easy").forEach { rating ->
-            assertTrue(controls.contains("RatingButton(\"$rating\""))
+        listOf("rating_again", "rating_hard", "rating_good", "rating_easy").forEach { rating ->
+            assertTrue(controls.contains("RatingButton(stringResource(R.string.$rating)"))
         }
         assertFalse(screen.contains("\"Expected Answer\""))
         assertFalse(screen.contains("\"Meaning\""))
@@ -164,7 +164,9 @@ class AndroidImmersiveStudyCompositionTest {
         }
         assertFalse(hud.contains("remember"))
         assertFalse(hud.contains("mutableState"))
-        listOf("Again", "Hard", "Good", "Easy").forEach { assertTrue(hud.contains("HudRating(\"$it\""), it) }
+        listOf("rating_again", "rating_hard", "rating_good", "rating_easy").forEach {
+            assertTrue(hud.contains("HudRating(stringResource(R.string.$it)"), it)
+        }
         listOf("HudRating(\"A\"", "HudRating(\"H\"", "HudRating(\"G\"", "HudRating(\"E\"").forEach {
             assertFalse(hud.contains(it), it)
         }
@@ -172,8 +174,8 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(hud.contains("semanticColors.warning"))
         assertTrue(hud.contains("semanticColors.success"))
         assertTrue(hud.contains("MaterialTheme.colorScheme.tertiary"))
-        assertTrue(hud.contains("HudInlineMetric(\"NEW\"") && hud.contains("MaterialTheme.colorScheme.primary"))
-        assertTrue(hud.contains("HudInlineMetric(\"REVIEW\"") && hud.contains("MaterialTheme.colorScheme.secondary"))
+        assertTrue(hud.contains("HudInlineMetric(stringResource(R.string.hud_new)") && hud.contains("MaterialTheme.colorScheme.primary"))
+        assertTrue(hud.contains("HudInlineMetric(stringResource(R.string.hud_review)") && hud.contains("MaterialTheme.colorScheme.secondary"))
     }
 
     @Test
@@ -186,7 +188,9 @@ class AndroidImmersiveStudyCompositionTest {
         }
         assertTrue(hud.contains("displayedIntroductionRatingCount"))
         assertTrue(presentationPolicy.contains("fun displayedIntroductionRatingCount"))
-        listOf("Again", "Hard", "Good", "Easy").forEach { assertTrue(hud.contains(it), it) }
+        listOf("rating_again", "rating_hard", "rating_good", "rating_easy").forEach {
+            assertTrue(hud.contains("R.string.$it"), it)
+        }
         assertFalse(hud.contains("CompactLearnMetric(\"A\""))
         assertFalse(hud.contains("CompactLearnMetric(\"H\""))
         assertFalse(hud.contains("CompactLearnMetric(\"G\""))
@@ -202,7 +206,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(answerSection.contains("languageLabel = \"EN\""))
         assertTrue(answerSection.contains("\"English example\""))
         assertFalse(answerSection.contains("languageLabel = \"VI\""))
-        assertFalse(answerSection.contains("\"Vietnamese example\""))
+        assertTrue(answerSection.contains("\"Vietnamese example\""))
         assertTrue(answerSection.contains("StudyExampleColors.english"))
         assertTrue(answerSection.contains("StudyExampleColors.vietnamese"))
     }
@@ -243,7 +247,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("resumeLoopAfterTemporary"))
         assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)"))
         assertTrue(answerSection.contains("onEnglishExampleAudio"))
-        assertFalse(answerSection.contains("onVietnameseExampleAudio"))
+        assertTrue(answerSection.contains("onVietnameseExampleAudio"))
         assertTrue(screen.contains("childConsumed = childConsumed || change.isConsumed"))
     }
 
@@ -257,7 +261,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(introduction.contains("onGenericStageTap()"))
         assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)"))
         assertFalse(introduction.contains("playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)"))
-        assertFalse(introduction.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)"))
+        assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)"))
         assertTrue(answerSection.contains("interaction = StudyTextInteraction.PASSIVE"))
         assertTrue(answerSection.contains("boundedAudioTarget = !isLooping"))
     }

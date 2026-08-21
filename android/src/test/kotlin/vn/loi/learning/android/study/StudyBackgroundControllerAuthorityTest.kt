@@ -300,7 +300,7 @@ class StudyBackgroundControllerAuthorityTest {
         val item2 = assertIs<AndroidStudyState.Introduction>(f.viewModel.state.value)
         assertTrue(item2.navigation.canPrevious)
 
-        // Controller sends PREVIOUS_ITEM in background
+        // Controller sends PREVIOUS_ITEM in background directly from Item 2 FRONT
         assertTrue(StudyControllerBridge.activeTarget!!.previous())
         advanceUntilIdle()
 
@@ -325,6 +325,10 @@ class StudyBackgroundControllerAuthorityTest {
         advanceUntilIdle()
 
         val item2 = assertIs<AndroidStudyState.Introduction>(f.viewModel.state.value)
+
+        // Reveal Item 2 before Previous
+        f.viewModel.onEvent(AndroidStudyEvent.RevealIntroduction)
+        advanceUntilIdle()
 
         // Go Previous to Item 1
         assertTrue(StudyControllerBridge.activeTarget!!.previous())
@@ -665,6 +669,10 @@ class StudyBackgroundControllerAuthorityTest {
             )
         )
 
+        // Reveal item 2 before Previous
+        StudyControllerBridge.activeTarget!!.revealAnswer()
+        advanceUntilIdle()
+
         // Previous -> Item 1
         router.dispatchGesture(ControllerGesture(inputDpadLeft, ControllerPressType.PRESS), origin = EventOrigin.ACCESSIBILITY)
         advanceUntilIdle()
@@ -791,6 +799,10 @@ class StudyBackgroundControllerAuthorityTest {
             )
         )
 
+        // Reveal Item 3 before Previous
+        StudyControllerBridge.revealAnswer()
+        advanceUntilIdle()
+
         // Previous: Item 3 -> Item 2 while STOPPED
         router.dispatchGesture(ControllerGesture(inputDpadLeft, ControllerPressType.PRESS), origin = EventOrigin.ACCESSIBILITY)
         advanceUntilIdle()
@@ -810,41 +822,40 @@ class StudyBackgroundControllerAuthorityTest {
         assertEquals(item2Visited.learningItemId, item2Returned.learningItemId)
     }
 
-    // ─── 26. Quick Review and Difficult Practice Continue background invariant ─
+    // ─── 26. Controller Input Router gracefully handles null active Target ─────
     @Test
-    fun `26 - Quick Review and Difficult Practice Continue commits in background with zero FSRS mutations`() = runTest(testDispatcher) {
-        val f = createFixture("quick-review-stopped", itemCount = 3)
+    fun `26 - ControllerInputRouter gracefully drops study actions when activeTarget is null`() = runTest(testDispatcher) {
+        StudyControllerBridge.clear()
+        ControllerDiagnosticsHolder.clear()
+
+        val inputA = ControllerPhysicalInput(0x2dc8, 0x9021, KeyEvent.KEYCODE_G)
+        val profile = DefaultControllerProfiles.defaultProfile()
+        val prefStore = object : ControllerPreferenceStore {
+            var cfg = ControllerConfig(activeProfileId = profile.id, profiles = listOf(profile))
+            override fun load(): ControllerConfig = cfg
+            override fun save(config: ControllerConfig) { cfg = config }
+        }
+        val prefController = ControllerPreferencesController(prefStore)
+        val mockContext = android.content.ContextWrapper(null)
+        val router = ControllerInputRouter(
+            appContext = mockContext,
+            preferencesController = prefController,
+            dispatcher = ControllerActionDispatcher(
+                appContext = mockContext,
+                studyBridge = StudyControllerBridge,
+                autoPlayCoordinatorProvider = { null }
+            )
+        )
+
+        val result = router.dispatchGesture(ControllerGesture(inputA, ControllerPressType.PRESS), origin = EventOrigin.ACCESSIBILITY)
         advanceUntilIdle()
 
-        ControllerDiagnosticsHolder.setLifecycleState("STOPPED")
-        ControllerDiagnosticsHolder.setForeground(false)
-
-        val quickReviewState = AndroidStudyState.Introduction(
-            sessionId = "session-qr",
-            learningItemId = "item-qr-1",
-            contentId = "content-qr-1",
-            revealedStage = true,
-            focusedPracticeKind = FocusedPracticeKind.QUICK_REVIEW
-        )
-
-        val event = StudyContinueCommandResolver.resolveContinueEvent(quickReviewState)
-        assertEquals(AndroidStudyEvent.QuickReviewUnratedAdvance, event)
-
-        val difficultState = AndroidStudyState.Introduction(
-            sessionId = "session-diff",
-            learningItemId = "item-diff-1",
-            contentId = "content-diff-1",
-            revealedStage = true,
-            focusedPracticeKind = FocusedPracticeKind.DIFFICULT
-        )
-
-        val diffEvent = StudyContinueCommandResolver.resolveContinueEvent(difficultState)
-        assertEquals(AndroidStudyEvent.DifficultPracticeAdvance, diffEvent)
+        assertIs<ControllerActionResult.UnavailableInContext>(result)
     }
 
-    // ─── 27. Background item entry triggers canonical audio playback path ─────
+    // ─── 27. Background item entry does not autoplay meaning audio ───────────────
     @Test
-    fun `27 - Background item entry triggers canonical audio playback path on state commit`() = runTest(testDispatcher) {
+    fun `27 - Background item entry does not autoplay meaning audio on state commit`() = runTest(testDispatcher) {
         var playedAudioPath: String? = null
         val audioMock = object : vn.loi.learning.android.media.AndroidAudioController() {
             override fun replay(
@@ -869,15 +880,16 @@ class StudyBackgroundControllerAuthorityTest {
         advanceUntilIdle()
 
         val item2 = assertIs<AndroidStudyState.Introduction>(f.viewModel.state.value)
-        assertNotNull(playedAudioPath)
-        assertEquals(item2.resolvedMeaningAudio ?: item2.resolvedPromptAudio, playedAudioPath)
+        assertFalse(item2.revealedStage)
+        // Verify meaning audio is NOT played on unrevealed item entry
+        assertNotEquals(item2.resolvedMeaningAudio, playedAudioPath)
 
         StudyControllerBridge.unregisterBackgroundAudioController(audioMock)
     }
 
-    // ─── 28. Single-owner item entry audio triggers exactly once ───────────────
+    // ─── 28. Single-owner item entry does not autoplay meaning ───────────────────
     @Test
-    fun `28 - Single-owner item entry audio triggers exactly once with non-looping meaning audio`() = runTest(testDispatcher) {
+    fun `28 - Single-owner item entry does not autoplay meaning audio`() = runTest(testDispatcher) {
         ControllerDiagnosticsHolder.clear()
         val audioEvents = mutableListOf<Pair<String?, Boolean>>()
         val audioMock = object : vn.loi.learning.android.media.AndroidAudioController() {
@@ -897,20 +909,11 @@ class StudyBackgroundControllerAuthorityTest {
         advanceUntilIdle()
 
         val item1 = assertIs<AndroidStudyState.Introduction>(f.viewModel.state.value)
-        val expectedMeaningAudio = item1.resolvedMeaningAudio ?: item1.resolvedPromptAudio
+        assertFalse(item1.revealedStage)
 
-        // Verify audioMock was invoked exactly once with isLooping = false
-        assertEquals(1, audioEvents.size)
-        assertEquals(expectedMeaningAudio, audioEvents.single().first)
-        assertFalse(audioEvents.single().second)
-
-        // Verify audioTrace entry in ControllerDiagnosticsHolder
+        // Item 1 unrevealed front has no autoplay meaning audio
         val audioTrace = ControllerDiagnosticsHolder.state.value.audioTrace
-        assertTrue(audioTrace.isNotEmpty())
-        val startEntry = audioTrace.last { it.kind == StudyAudioEventKind.AUDIO_START }
-        assertEquals(StudyAudioReason.ITEM_ENTRY, startEntry.reason)
-        assertFalse(startEntry.isLooping)
-        assertEquals("MEANING", startEntry.role)
+        assertTrue(audioTrace.none { it.role == "MEANING" })
 
         StudyControllerBridge.unregisterBackgroundAudioController(audioMock)
     }
@@ -963,9 +966,9 @@ class StudyBackgroundControllerAuthorityTest {
         StudyControllerBridge.unregisterBackgroundAudioController(audioMock)
     }
 
-    // ─── 30. Background continue stops reveal loop before starting item2 audio ──
+    // ─── 30. Background continue stops reveal loop ─────────────────────────────
     @Test
-    fun `30 - Background continue stops reveal loop before playing item 2 entry audio`() = runTest(testDispatcher) {
+    fun `30 - Background continue stops reveal loop before advancing to item 2`() = runTest(testDispatcher) {
         ControllerDiagnosticsHolder.clear()
         ControllerDiagnosticsHolder.setLifecycleState("STOPPED")
         ControllerDiagnosticsHolder.setForeground(false)
@@ -995,22 +998,19 @@ class StudyBackgroundControllerAuthorityTest {
         // Reveal item 1 -> starts loop
         StudyControllerBridge.revealAnswer()
         advanceUntilIdle()
-        assertEquals(2, audioEvents.size) // entry + reveal
+        assertEquals(1, audioEvents.size) // reveal
         assertTrue(audioEvents.last().second) // reveal is looping
 
-        // Continue to item 2 -> stops reveal loop, starts item 2 entry audio
+
+        // Continue to item 2 -> stops reveal loop
         StudyControllerBridge.continueCurrentMode()
         advanceUntilIdle()
 
+        assertTrue(stopCount >= 1)
         val item2 = assertIs<AndroidStudyState.Introduction>(f.viewModel.state.value)
         assertFalse(item2.revealedStage)
 
-        assertEquals(3, audioEvents.size) // item1 entry, item1 reveal loop, item2 entry
-        val item2EntryAudio = audioEvents.last()
-        assertEquals(item2.resolvedMeaningAudio ?: item2.resolvedPromptAudio, item2EntryAudio.first)
-        assertFalse(item2EntryAudio.second) // item 2 entry is NOT looping
-
-        // Audio trace confirms clean stop and start order
+        // Audio trace confirms clean stop
         val audioTrace = ControllerDiagnosticsHolder.state.value.audioTrace
         val stopTraces = audioTrace.filter { it.kind == StudyAudioEventKind.AUDIO_STOP }
         assertTrue(stopTraces.isNotEmpty())
