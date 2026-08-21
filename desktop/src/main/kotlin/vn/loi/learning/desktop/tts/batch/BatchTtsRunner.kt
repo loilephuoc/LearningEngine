@@ -12,10 +12,12 @@ import vn.loi.learning.desktop.tts.DesktopTtsAudioService
 import vn.loi.learning.desktop.tts.TtsError
 import vn.loi.learning.desktop.tts.TtsException
 import vn.loi.learning.desktop.tts.TtsField
+import vn.loi.learning.desktop.tts.TtsVoice
+import vn.loi.learning.desktop.tts.strategy.VoiceAttempt
 
 /**
- * Sequential runner for batch TTS jobs with real-time progress, error isolation,
- * cancellation support, friendly error classification, and Generate != Apply boundary.
+ * Sequential runner for batch TTS jobs with real-time progress, multi-attempt fallback chains,
+ * error isolation, cancellation support, and Generate != Apply boundary.
  */
 class BatchTtsRunner(
     private val ttsService: DesktopTtsAudioService,
@@ -36,7 +38,7 @@ class BatchTtsRunner(
         get() = cancelFlag.get()
 
     /**
-     * Executes a list of batch jobs sequentially.
+     * Executes a list of batch jobs sequentially with fallback support.
      *
      * @param jobs The batch jobs to execute.
      * @param packageName Target package name.
@@ -107,46 +109,102 @@ class BatchTtsRunner(
                     )
                 )
 
-                try {
-                    val asset = ttsService.generatePermanentAudio(
-                        contentId = currentJob.contentId,
-                        packageName = packageName,
-                        field = currentJob.field,
-                        text = currentJob.text,
-                        voice = currentJob.voice,
-                        rate = currentJob.rate
-                    )
+                val attempts = mutableListOf<VoiceAttempt>()
+                var jobSuccess = false
+                var successVoice: TtsVoice? = null
+                var successAssetPath: String? = null
+                var lastCategory: TtsErrorCategory? = null
+                var lastErrorMessage: String? = null
 
-                    // Apply audio reference if immediate apply is requested
-                    onApply?.invoke(currentJob.contentId, currentJob.field, asset.relativePath)
+                val candidateChain = if (currentJob.candidateVoices.isNotEmpty()) {
+                    currentJob.candidateVoices
+                } else {
+                    listOf(currentJob.voice)
+                }
 
+                for (voiceCandidate in candidateChain) {
+                    if (cancelFlag.get()) break
+
+                    try {
+                        val asset = ttsService.generatePermanentAudio(
+                            contentId = currentJob.contentId,
+                            packageName = packageName,
+                            field = currentJob.field,
+                            text = currentJob.text,
+                            voice = voiceCandidate,
+                            rate = currentJob.rate
+                        )
+
+                        // Synthesis succeeded with this voice
+                        attempts.add(VoiceAttempt(voice = voiceCandidate, isSuccess = true))
+                        jobSuccess = true
+                        successVoice = voiceCandidate
+                        successAssetPath = asset.relativePath
+
+                        onApply?.invoke(currentJob.contentId, currentJob.field, asset.relativePath)
+                        break
+                    } catch (ce: CancellationException) {
+                        attempts.add(
+                            VoiceAttempt(
+                                voice = voiceCandidate,
+                                isSuccess = false,
+                                errorCategory = TtsErrorCategory.CANCELLED,
+                                errorMessage = "Operation cancelled"
+                            )
+                        )
+                        cancelFlag.set(true)
+                        break
+                    } catch (ex: Exception) {
+                        val (category, message) = classifyError(ex)
+                        lastCategory = category
+                        lastErrorMessage = message
+                        attempts.add(
+                            VoiceAttempt(
+                                voice = voiceCandidate,
+                                isSuccess = false,
+                                errorCategory = category,
+                                errorMessage = message
+                            )
+                        )
+                        // Continue to next fallback voice in chain if available
+                    }
+                }
+
+                if (jobSuccess && successVoice != null && successAssetPath != null) {
+                    val recoveredViaFallback = successVoice.id != currentJob.requestedVoice.id
                     results.add(
                         BatchTtsJobResult(
                             job = currentJob,
                             status = BatchTtsJobStatus.SUCCESS,
-                            assetRelativePath = asset.relativePath
+                            assetRelativePath = successAssetPath,
+                            actualVoiceUsed = successVoice,
+                            attempts = attempts.toList(),
+                            recoveredViaFallback = recoveredViaFallback
                         )
                     )
                     successCount++
-                } catch (ce: CancellationException) {
+                } else if (cancelFlag.get()) {
                     results.add(
                         BatchTtsJobResult(
                             job = currentJob,
                             status = BatchTtsJobStatus.CANCELLED,
+                            actualVoiceUsed = null,
+                            attempts = attempts.toList(),
                             errorCategory = TtsErrorCategory.CANCELLED,
                             errorMessage = "Job cancelled"
                         )
                     )
                     cancelledCount++
-                    cancelFlag.set(true)
-                } catch (ex: Exception) {
-                    val (category, message) = classifyError(ex)
+                } else {
                     results.add(
                         BatchTtsJobResult(
                             job = currentJob,
                             status = BatchTtsJobStatus.FAILED,
-                            errorCategory = category,
-                            errorMessage = message
+                            actualVoiceUsed = null,
+                            attempts = attempts.toList(),
+                            recoveredViaFallback = false,
+                            errorCategory = lastCategory ?: TtsErrorCategory.UNKNOWN,
+                            errorMessage = lastErrorMessage ?: "Generation failed after ${attempts.size} attempts"
                         )
                     )
                     failedCount++

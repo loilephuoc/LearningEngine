@@ -55,26 +55,48 @@
 - [x] Refreshed Content Studio view and verified persistence
 - [x] Pass `./gradlew.bat clean test` (4,957 tests)
 
-## Phase 8 — Batch Workflow Polish (Selected Items → Fields → Profiles → Preview → Generate → Apply → Undo)
-- [x] User can select multiple items in Content Studio.
-- [x] User can select Question/Answer/Example/Translation independently with live missing counts.
-- [x] English fields map to English automatically (Question/Answer/Example).
-- [x] Translation maps to Vietnamese automatically.
-- [x] English voice + speech rate can be selected independently.
-- [x] Vietnamese voice + speech rate can be selected independently.
-- [x] Pre-generation voice preview works using representative text from selected items.
-- [x] Voice dropdown layout bug fixed (wide popup, readable names, smooth scrolling, no narrow column wrapping).
-- [x] Missing audio scanned at TARGET level (1 Item != 1 Target).
-- [x] Existing audio is NEVER overwritten (safe skip).
-- [x] Empty text is skipped.
-- [x] Batch generation works sequentially with error isolation.
-- [x] Target-based progress bar and live counters.
-- [x] "Retry Failed" works for failed targets.
-- [x] Generate != Apply safety boundary preserved.
-- [x] Atomic Batch Apply updates only target references and persists all items.
-- [x] Batch Apply is safely reversible via `Undo TTS`.
-- [x] Undo restores exact previous audio references (missing becomes missing, existing stays original).
-- [x] Generated files cleaned during Undo only when safely unreferenced; existing assets never deleted.
-- [x] Single-item TTS and Generate All Missing Audio preserved without regression.
-- [x] Android remains 100% HARD FROZEN (0 diff).
-- [x] Pass `./gradlew.bat clean test` (4,962 tests, 0 failures, 0 errors, 0 skipped).
+## Batch Workflow Polish
+- [x] User can select multiple items in Content Studio
+- [x] User can select Question/Answer/Example/Translation independently with live missing counts
+- [x] English fields map to English automatically (Question/Answer/Example)
+- [x] Translation maps to Vietnamese automatically
+- [x] English voice + speech rate can be selected independently
+- [x] Vietnamese voice + speech rate can be selected independently
+- [x] Pre-generation voice preview works using representative text from selected items
+- [x] Voice dropdown layout bug fixed (wide popup, readable names, smooth scrolling, no narrow column wrapping)
+- [x] Missing audio scanned at TARGET level (1 Item != 1 Target)
+- [x] Existing audio is NEVER overwritten (safe skip)
+- [x] Empty text is skipped
+- [x] Atomic Batch Apply updates only target references and persists all items
+- [x] Batch Apply is safely reversible via `Undo TTS`
+- [x] Undo restores exact previous audio references
+- [x] Generated files cleaned during Undo only when safely unreferenced; existing assets never deleted
+- [x] Pass `./gradlew.bat clean test` (4,962 tests)
+
+## Phase 8 — Advanced Voice Strategy
+- [x] Single Voice mode
+- [x] Fallback Chain mode (Primary -> Fallback 1 -> Fallback 2 -> ...)
+- [x] Voice Rotation / Workflow mode with sequence continuation across items
+- [x] Attempt history recording per target
+- [x] Requested voice vs actual voice used distinction and tracking
+- [x] Bounded retry attempts per target
+- [x] Immediate cancellation handling
+- [x] Pass `./gradlew.bat clean test` (4,969 tests)
+
+## Phase 9 — Advanced Batch Workflow
+- [x] Multi-target combinations without treating item as single unit
+- [x] Representative sample preview before large batches
+- [x] Pre-apply batch review with fallback recovery counts and failure details
+- [x] Pass `./gradlew.bat clean test` (4,969 tests)
+
+## Phase 10 — Safety & Recovery
+- [x] Strict Generate != Apply boundary
+- [x] Partial batch success: apply only succeeds targets while keeping failed for retry
+- [x] Safe unreferenced cleanup on Undo; never deletes existing media
+- [x] Pass `./gradlew.bat clean test` (4,969 tests)
+
+## Phase 11 — Final Integration & Acceptance
+- [x] Full regression test pass with 0 failures, 0 errors, 0 skipped (4,969 tests)
+- [x] Android remains 100% HARD FROZEN (0 diff)
+- [x] Working tree clean and properly committed to `feat/desktop-tts`
+- [x] All documentation updated for full AI autonomy and handoff

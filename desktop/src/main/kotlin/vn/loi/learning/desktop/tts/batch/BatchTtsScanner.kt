@@ -4,6 +4,8 @@ import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowse
 import vn.loi.learning.desktop.tts.TtsField
 import vn.loi.learning.desktop.tts.TtsLanguage
 import vn.loi.learning.desktop.tts.TtsVoice
+import vn.loi.learning.desktop.tts.strategy.VoiceStrategyConfig
+import vn.loi.learning.desktop.tts.strategy.VoiceStrategyMode
 
 /**
  * Scans content items to identify missing audio targets and build executable batch jobs.
@@ -152,21 +154,49 @@ object BatchTtsScanner {
         englishRate: Int = 0,
         vietnameseRate: Int = 0
     ): List<BatchTtsJob> {
+        val enStrategy = VoiceStrategyConfig(VoiceStrategyMode.SINGLE_VOICE, englishVoice)
+        val viStrategy = VoiceStrategyConfig(VoiceStrategyMode.SINGLE_VOICE, vietnameseVoice)
+        return buildJobsWithStrategy(targets, enStrategy, viStrategy, englishRate, vietnameseRate)
+    }
+
+    /**
+     * Builds batch jobs incorporating advanced voice strategies (Single, Fallback Chain, Voice Rotation).
+     */
+    fun buildJobsWithStrategy(
+        targets: List<BatchTtsTarget>,
+        englishStrategy: VoiceStrategyConfig,
+        vietnameseStrategy: VoiceStrategyConfig,
+        englishRate: Int = 0,
+        vietnameseRate: Int = 0
+    ): List<BatchTtsJob> {
+        var englishIndex = 0
+        var vietnameseIndex = 0
+
         return targets
             .filter { it.canGenerate }
             .map { target ->
-                val (voice, rate) = when (target.language) {
-                    TtsLanguage.ENGLISH -> englishVoice to englishRate
-                    TtsLanguage.VIETNAMESE -> vietnameseVoice to vietnameseRate
+                val (candidateChain, rate) = when (target.language) {
+                    TtsLanguage.ENGLISH -> {
+                        val chain = englishStrategy.candidateChainForTarget(englishIndex)
+                        englishIndex++
+                        chain to englishRate
+                    }
+                    TtsLanguage.VIETNAMESE -> {
+                        val chain = vietnameseStrategy.candidateChainForTarget(vietnameseIndex)
+                        vietnameseIndex++
+                        chain to vietnameseRate
+                    }
                 }
+                val primaryVoice = candidateChain.first()
                 BatchTtsJob(
                     contentId = target.contentId,
                     field = target.field,
                     text = target.text,
                     language = target.language,
-                    voice = voice,
+                    voice = primaryVoice,
                     rate = rate,
-                    previousAudioRef = target.previousAudioRef
+                    previousAudioRef = target.previousAudioRef,
+                    candidateVoices = candidateChain
                 )
             }
     }

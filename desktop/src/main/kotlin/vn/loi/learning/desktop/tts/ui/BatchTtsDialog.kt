@@ -52,7 +52,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import java.nio.file.Path
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem
@@ -69,6 +68,8 @@ import vn.loi.learning.desktop.tts.batch.BatchTtsScanner
 import vn.loi.learning.desktop.tts.batch.BatchTtsScopeScan
 import vn.loi.learning.desktop.tts.batch.BatchTtsSummary
 import vn.loi.learning.desktop.tts.profile.TtsVoiceProfiles
+import vn.loi.learning.desktop.tts.strategy.VoiceStrategyConfig
+import vn.loi.learning.desktop.tts.strategy.VoiceStrategyMode
 import vn.loi.learning.desktop.ui.designsystem.LEColors
 import vn.loi.learning.desktop.ui.designsystem.LEElevation
 import vn.loi.learning.desktop.ui.designsystem.LEIcons
@@ -130,6 +131,10 @@ fun BatchTtsDialog(
     var selectedVietnameseVoice by remember { mutableStateOf<TtsVoice?>(null) }
     var englishRate by remember { mutableStateOf(initialProfiles.english.rate) }
     var vietnameseRate by remember { mutableStateOf(initialProfiles.vietnamese.rate) }
+
+    // Advanced Voice Strategy
+    var englishStrategyMode by remember { mutableStateOf(VoiceStrategyMode.FALLBACK_CHAIN) }
+    var vietnameseStrategyMode by remember { mutableStateOf(VoiceStrategyMode.FALLBACK_CHAIN) }
 
     // Voice Preview States
     var isPreviewingEn by remember { mutableStateOf(false) }
@@ -227,10 +232,32 @@ fun BatchTtsDialog(
     fun handleStartInitialBatch() {
         val enVoice = selectedEnglishVoice ?: return
         val viVoice = selectedVietnameseVoice ?: return
-        val jobs = BatchTtsScanner.buildJobs(
+
+        val enFallbacks = availableVoices.filter { it.language == "en" && it.id != enVoice.id }.take(3)
+        val viFallbacks = availableVoices.filter { it.language == "vi" && it.id != viVoice.id }.take(2)
+
+        val enRotation = listOf(enVoice) + enFallbacks
+        val viRotation = listOf(viVoice) + viFallbacks
+
+        val enStrategy = VoiceStrategyConfig(
+            mode = englishStrategyMode,
+            primaryVoice = enVoice,
+            fallbackVoices = enFallbacks,
+            rotationVoices = enRotation,
+            continueSequenceAcrossItems = true
+        )
+        val viStrategy = VoiceStrategyConfig(
+            mode = vietnameseStrategyMode,
+            primaryVoice = viVoice,
+            fallbackVoices = viFallbacks,
+            rotationVoices = viRotation,
+            continueSequenceAcrossItems = true
+        )
+
+        val jobs = BatchTtsScanner.buildJobsWithStrategy(
             targets = scopeScan.validTargets,
-            englishVoice = enVoice,
-            vietnameseVoice = viVoice,
+            englishStrategy = enStrategy,
+            vietnameseStrategy = viStrategy,
             englishRate = englishRate,
             vietnameseRate = vietnameseRate
         )
@@ -281,8 +308,8 @@ fun BatchTtsDialog(
         ) {
             Surface(
                 modifier = Modifier
-                    .width(660.dp)
-                    .heightIn(min = 400.dp, max = 720.dp)
+                    .width(680.dp)
+                    .heightIn(min = 420.dp, max = 740.dp)
                     .clip(LERadius.md)
                     .animateContentSize(),
                 color = LEColors.surface,
@@ -307,7 +334,7 @@ fun BatchTtsDialog(
                                 color = LEColors.textPrimary
                             )
                             Text(
-                                text = "Package: $packageName · Scope: ${itemsToScan.size} selected items",
+                                text = "Package: $packageName · Scope: ${itemsToScan.size} items",
                                 style = LETypography.secondaryMetadata,
                                 color = LEColors.textMuted
                             )
@@ -346,10 +373,14 @@ fun BatchTtsDialog(
                                     selectedVietnameseVoice = selectedVietnameseVoice,
                                     englishRate = englishRate,
                                     vietnameseRate = vietnameseRate,
+                                    englishStrategyMode = englishStrategyMode,
+                                    vietnameseStrategyMode = vietnameseStrategyMode,
                                     onEnglishVoiceChange = { selectedEnglishVoice = it },
                                     onVietnameseVoiceChange = { selectedVietnameseVoice = it },
                                     onEnglishRateChange = { englishRate = it },
                                     onVietnameseRateChange = { vietnameseRate = it },
+                                    onEnglishStrategyChange = { englishStrategyMode = it },
+                                    onVietnameseStrategyChange = { vietnameseStrategyMode = it },
                                     isPreviewingEn = isPreviewingEn,
                                     isPreviewingVi = isPreviewingVi,
                                     onPreviewEn = { handlePreview(TtsLanguage.ENGLISH) },
@@ -450,10 +481,14 @@ private fun ConfigStepContent(
     selectedVietnameseVoice: TtsVoice?,
     englishRate: Int,
     vietnameseRate: Int,
+    englishStrategyMode: VoiceStrategyMode,
+    vietnameseStrategyMode: VoiceStrategyMode,
     onEnglishVoiceChange: (TtsVoice) -> Unit,
     onVietnameseVoiceChange: (TtsVoice) -> Unit,
     onEnglishRateChange: (Int) -> Unit,
     onVietnameseRateChange: (Int) -> Unit,
+    onEnglishStrategyChange: (VoiceStrategyMode) -> Unit,
+    onVietnameseStrategyChange: (VoiceStrategyMode) -> Unit,
     isPreviewingEn: Boolean,
     isPreviewingVi: Boolean,
     onPreviewEn: () -> Unit,
@@ -554,8 +589,8 @@ private fun ConfigStepContent(
             )
         }
 
-        // Section 3: Voice & Rate Configurations with Preview
-        Text("Voice Profiles & Preview", style = LETypography.sectionTitle)
+        // Section 3: Voice & Rate Configurations with Strategy & Preview
+        Text("Voice Strategy & Preview", style = LETypography.sectionTitle)
 
         if (isLoadingVoices) {
             Row(
@@ -567,22 +602,24 @@ private fun ConfigStepContent(
                 Text("Loading available Edge TTS voices...", style = LETypography.caption, color = LEColors.textMuted)
             }
         } else {
-            // English Voice & Rate Row with Preview
-            VoiceConfigCard(
+            // English Voice & Strategy Card
+            VoiceStrategyCard(
                 title = "English Voice Configuration",
-                languageLabel = "English (US preferred)",
+                languageLabel = "English (en-US)",
                 currentVoice = selectedEnglishVoice,
                 candidateVoices = availableVoices.filter { it.language == "en" },
                 onVoiceSelect = onEnglishVoiceChange,
                 currentRate = englishRate,
                 onRateChange = onEnglishRateChange,
+                strategyMode = englishStrategyMode,
+                onStrategyChange = onEnglishStrategyChange,
                 isPreviewing = isPreviewingEn,
                 onPreview = onPreviewEn,
                 onStop = onStopPreview
             )
 
-            // Vietnamese Voice & Rate Row with Preview
-            VoiceConfigCard(
+            // Vietnamese Voice & Strategy Card
+            VoiceStrategyCard(
                 title = "Vietnamese Voice Configuration",
                 languageLabel = "Vietnamese (vi-VN)",
                 currentVoice = selectedVietnameseVoice,
@@ -590,6 +627,8 @@ private fun ConfigStepContent(
                 onVoiceSelect = onVietnameseVoiceChange,
                 currentRate = vietnameseRate,
                 onRateChange = onVietnameseRateChange,
+                strategyMode = vietnameseStrategyMode,
+                onStrategyChange = onVietnameseStrategyChange,
                 isPreviewing = isPreviewingVi,
                 onPreview = onPreviewVi,
                 onStop = onStopPreview
@@ -669,7 +708,7 @@ private fun MetricCard(
 }
 
 @Composable
-private fun VoiceConfigCard(
+private fun VoiceStrategyCard(
     title: String,
     languageLabel: String,
     currentVoice: TtsVoice?,
@@ -677,6 +716,8 @@ private fun VoiceConfigCard(
     onVoiceSelect: (TtsVoice) -> Unit,
     currentRate: Int,
     onRateChange: (Int) -> Unit,
+    strategyMode: VoiceStrategyMode,
+    onStrategyChange: (VoiceStrategyMode) -> Unit,
     isPreviewing: Boolean,
     onPreview: () -> Unit,
     onStop: () -> Unit
@@ -702,19 +743,26 @@ private fun VoiceConfigCard(
                 horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Fixed Wide Voice Dropdown
+                // Wide Voice Dropdown
                 WideVoiceDropdown(
                     currentVoice = currentVoice,
                     candidateVoices = candidateVoices,
                     onSelect = onVoiceSelect,
-                    modifier = Modifier.weight(0.6f)
+                    modifier = Modifier.weight(0.48f)
+                )
+
+                // Strategy Mode Dropdown
+                StrategyModeDropdown(
+                    currentMode = strategyMode,
+                    onSelectMode = onStrategyChange,
+                    modifier = Modifier.weight(0.24f)
                 )
 
                 // Speech Rate Selector
                 RateDropdown(
                     currentRate = currentRate,
                     onSelectRate = onRateChange,
-                    modifier = Modifier.weight(0.22f)
+                    modifier = Modifier.weight(0.14f)
                 )
 
                 // Preview Button
@@ -723,7 +771,7 @@ private fun VoiceConfigCard(
                         text = "■ Stop",
                         onClick = onStop,
                         icon = LEIcons.Stop,
-                        modifier = Modifier.weight(0.18f)
+                        modifier = Modifier.weight(0.14f)
                     )
                 } else {
                     LESecondaryButton(
@@ -731,9 +779,60 @@ private fun VoiceConfigCard(
                         onClick = onPreview,
                         icon = LEIcons.Audio,
                         enabled = currentVoice != null,
-                        modifier = Modifier.weight(0.18f)
+                        modifier = Modifier.weight(0.14f)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StrategyModeDropdown(
+    currentMode: VoiceStrategyMode,
+    onSelectMode: (VoiceStrategyMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(36.dp)
+                .clip(LERadius.xs)
+                .clickable { expanded = true }
+                .border(1.dp, LEColors.borderSubtle, LERadius.xs),
+            color = LEColors.surface
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = LESpacing.sm),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = currentMode.displayName,
+                    style = LETypography.caption,
+                    color = LEColors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text("▾", style = LETypography.caption, color = LEColors.textMuted)
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            VoiceStrategyMode.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = { Text(mode.displayName, style = LETypography.caption) },
+                    onClick = {
+                        expanded = false
+                        onSelectMode(mode)
+                    }
+                )
             }
         }
     }
@@ -775,7 +874,6 @@ private fun WideVoiceDropdown(
             }
         }
 
-        // Bug Fix: Explicit min-width and max-height prevents narrow vertical column wrapping
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
@@ -909,6 +1007,9 @@ private fun RunningStepContent(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Text("Success: ${summary.successCount}", style = LETypography.caption, color = LEColors.success, fontWeight = FontWeight.Bold)
+            if (summary.fallbackRecoveredCount > 0) {
+                Text("Fallback: ${summary.fallbackRecoveredCount}", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
+            }
             Text("Skipped: ${summary.skippedCount}", style = LETypography.caption, color = LEColors.textMuted)
             Text("Failed: ${summary.failedCount}", style = LETypography.caption, color = if (summary.failedCount > 0) LEColors.danger else LEColors.textMuted, fontWeight = FontWeight.Bold)
             if (summary.cancelledCount > 0) {
@@ -947,8 +1048,6 @@ private fun CompletedStepContent(
     localAudioPlayer: AudioPlayer,
     onRetryFailed: () -> Unit
 ) {
-    var playingRelativePath by remember { mutableStateOf<String?>(null) }
-
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(LESpacing.md)
@@ -975,6 +1074,9 @@ private fun CompletedStepContent(
         ) {
             StatPill(label = "Total Targets", value = "${summary.totalJobs}", color = LEColors.textPrimary)
             StatPill(label = "Success", value = "${summary.successCount}", color = LEColors.success)
+            if (summary.fallbackRecoveredCount > 0) {
+                StatPill(label = "Fallback Recovered", value = "${summary.fallbackRecoveredCount}", color = LEColors.primary)
+            }
             StatPill(label = "Failed", value = "${summary.failedCount}", color = if (summary.failedCount > 0) LEColors.danger else LEColors.textMuted)
             if (summary.cancelledCount > 0) {
                 StatPill(label = "Cancelled", value = "${summary.cancelledCount}", color = LEColors.warning)
@@ -1010,6 +1112,14 @@ private fun CompletedStepContent(
                         fontWeight = FontWeight.Bold,
                         color = LEColors.success
                     )
+                    if (summary.fallbackRecoveredCount > 0) {
+                        Text(
+                            text = "${summary.fallbackRecoveredCount} targets were successfully recovered via secondary fallback voices.",
+                            style = LETypography.caption,
+                            color = LEColors.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                     Text(
                         text = "Click 'Apply' to link these audio references to your content items atomically. You can immediately Undo this operation if needed.",
                         style = LETypography.caption,
@@ -1080,6 +1190,14 @@ private fun FailedJobRow(result: BatchTtsJobResult) {
                 color = LEColors.textMuted,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        if (result.attempts.isNotEmpty()) {
+            Text(
+                text = "Attempts (${result.attempts.size}): " + result.attempts.joinToString { "${it.voice.displayName} (${it.errorCategory?.displayLabel ?: "Failed"})" },
+                style = LETypography.caption,
+                color = LEColors.textMuted
             )
         }
     }

@@ -3,6 +3,7 @@ package vn.loi.learning.desktop.tts.batch
 import vn.loi.learning.desktop.tts.TtsField
 import vn.loi.learning.desktop.tts.TtsLanguage
 import vn.loi.learning.desktop.tts.TtsVoice
+import vn.loi.learning.desktop.tts.strategy.VoiceAttempt
 
 /**
  * Lifecycle states of an individual TTS batch job.
@@ -65,7 +66,7 @@ data class BatchTtsScopeScan(
 }
 
 /**
- * Executable batch job representation.
+ * Executable batch job representation with candidate voice chain for fallback / rotation.
  */
 data class BatchTtsJob(
     val contentId: String,
@@ -75,19 +76,27 @@ data class BatchTtsJob(
     val voice: TtsVoice,
     val rate: Int = 0,
     val previousAudioRef: String? = null,
+    val candidateVoices: List<TtsVoice> = listOf(voice),
     val id: String = "${contentId}_${field.name.lowercase()}"
-)
+) {
+    val requestedVoice: TtsVoice get() = voice
+}
 
 /**
- * Execution result for an individual batch job.
+ * Execution result for an individual batch job including attempt history and fallback recovery details.
  */
 data class BatchTtsJobResult(
     val job: BatchTtsJob,
     val status: BatchTtsJobStatus,
     val assetRelativePath: String? = null,
+    val actualVoiceUsed: TtsVoice? = null,
+    val attempts: List<VoiceAttempt> = emptyList(),
+    val recoveredViaFallback: Boolean = false,
     val errorCategory: TtsErrorCategory? = null,
     val errorMessage: String? = null
-)
+) {
+    val requestedVoice: TtsVoice get() = job.requestedVoice
+}
 
 /**
  * Aggregated summary of batch execution progress and final results.
@@ -112,6 +121,9 @@ data class BatchTtsSummary(
 
     val failedResults: List<BatchTtsJobResult>
         get() = jobResults.filter { it.status == BatchTtsJobStatus.FAILED }
+
+    val fallbackRecoveredCount: Int
+        get() = jobResults.count { it.status == BatchTtsJobStatus.SUCCESS && it.recoveredViaFallback }
 
     companion object {
         fun initial(total: Int, skippedCount: Int = 0): BatchTtsSummary =

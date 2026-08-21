@@ -40,17 +40,39 @@ Autonomous end-to-end delivery of Text-to-Speech (TTS) integration for Desktop C
 - **Delivered**: Full package-level scanning, pre-generation confirmation with item & language breakdown, queue execution with real-time progress, cancellation, retry failed, Content persistence update and refreshed Content Studio view.
 - **Verification**: 4,957 tests passed, clean build.
 
+### Batch Workflow Polish [PASS]
+- **Commit**: `9068a783b21cdd64403e007487a190106d0ec6be`
+- **Delivered**: Selected-item scope scanning, audio field selection checkboxes, missing counts, fixed voice dropdown layout, pre-generation preview, atomic apply, and full Undo TTS.
+- **Verification**: 4,962 tests passed, clean build.
+
 ---
 
-### Phase 8 — Batch Workflow Polish (Selected Items → Fields → EN/VI Profiles → Preview → Generate → Apply → Undo) [PASS]
+### Phase 8 — Advanced Voice Strategy [PASS]
 - **Delivered**:
-  - Selected-item scope scanning with strict item boundary (`selectedIds.size`).
-  - Independent audio field selection checkboxes (Question, Answer, Example, Translation) with live per-field missing counts.
-  - Automatic language mapping: Question/Answer/Example → English, Translation → Vietnamese.
-  - Independent English & Vietnamese voice and rate configuration with pre-generation audio preview using representative text from selected items.
-  - Voice dropdown layout fix: full width, readable text, smooth scrolling, no narrow vertical column wrapping.
-  - Target-level batch execution (1 Item != 1 Target).
-  - Existing audio skip policy (never overwrite) & empty text skip.
-  - Generate != Apply boundary: permanent assets synthesized before atomic apply.
-  - Atomic Batch Apply & Undo: captures `BatchTtsUndoSnapshot`, restores exact previous audio references upon Undo (null stays null, previous ref restored), safely deletes newly created unreferenced files, never deletes existing user assets.
-- **Verification**: 4,962 tests passed, clean build (0 failures, 0 errors, 0 skipped).
+  - `VoiceStrategyMode`: `SINGLE_VOICE`, `FALLBACK_CHAIN`, `VOICE_ROTATION`.
+  - `VoiceStrategyConfig` and `VoiceAttempt` tracking.
+  - Multi-attempt sequential execution per target with fallback recovery.
+  - Distinction between `requestedVoice` and `actualVoiceUsed` with `recoveredViaFallback` flag.
+  - Bounded retry attempts per target with immediate cancellation support.
+- **Verification**: 4,969 tests passed, clean build (0 failures, 0 errors, 0 skipped).
+
+### Phase 9 — Advanced Batch Workflow [PASS]
+- **Delivered**:
+  - Full multi-target field combinations (Question + Answer + Example + Translation independently).
+  - Pre-generation sample preview before large batch runs.
+  - Pre-apply batch review showing total, English, Vietnamese, skipped, fallback recovered, failed, and detailed error attempt history.
+- **Verification**: 4,969 tests passed, clean build.
+
+### Phase 10 — Safety & Recovery Hardening [PASS]
+- **Delivered**:
+  - Enforced `Generate != Apply` separation with non-mutating preview.
+  - Atomic apply of successful targets only (failed remain available for retry).
+  - Safe media cleanup on Undo: deletes only newly created unreferenced files, never touches existing media.
+- **Verification**: 4,969 tests passed, clean build.
+
+### Phase 11 — Final Integration & Acceptance [PASS]
+- **Delivered**:
+  - Zero Android diff verified (`git diff --name-only HEAD -- android` = 0).
+  - Clean full regression pass (`.\gradlew.bat clean test` = 4,969 tests, 0 failures).
+  - Desktop runtime intact and verified.
+- **Verification**: 4,969 tests passed, clean build.
