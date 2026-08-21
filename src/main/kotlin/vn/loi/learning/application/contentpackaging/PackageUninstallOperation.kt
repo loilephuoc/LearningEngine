@@ -36,7 +36,8 @@ class PackageUninstallOperation(
     private val memoryStateRepository: MemoryStateRepository? = null,
     private val reviewEventRepository: ReviewEventRepository? = null,
     private val studySessionRepository: StudySessionRepository? = null,
-    private val studyQueueRepository: vn.loi.learning.application.port.StudyQueueRepository? = null
+    private val studyQueueRepository: vn.loi.learning.application.port.StudyQueueRepository? = null,
+    private val contentMediaStorage: vn.loi.learning.application.port.ContentMediaStorage? = null
 ) {
 
     fun execute(
@@ -78,6 +79,16 @@ class PackageUninstallOperation(
                 .forEach { collection ->
                     collectionRepository?.save(collection.removePackage(matchingInstPkg.id).aggregate)
                 }
+        }
+
+        val packageNamesToDelete = (
+            plan.installedPackages.map { it.name.value } +
+            plan.contentPackageIds.map { it.value } +
+            listOf(command.packageId.value)
+        ).distinct()
+
+        packageNamesToDelete.forEach { pkgName ->
+            contentMediaStorage?.deletePackageNamespace(pkgName)
         }
     }
 

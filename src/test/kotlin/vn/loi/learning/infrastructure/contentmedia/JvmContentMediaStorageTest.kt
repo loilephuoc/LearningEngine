@@ -27,4 +27,26 @@ class JvmContentMediaStorageTest {
             assertNull(storage.resolve("missing.png"))
         } finally { Files.walk(root).use{paths->paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)} }
     }
+
+    @Test fun `storeStream streams content without loading into byte array and deletePackageNamespace cleans namespace`() {
+        val root = createTempDirectory("media-stream-delete")
+        try {
+            val storage = JvmContentMediaStorage(root)
+            val tempSource = root.resolve("source.bin")
+            Files.write(tempSource, byteArrayOf(10, 20, 30, 40))
+
+            val asset = storage.storeStream("TestPackage", "stream.bin", tempSource)
+            assertEquals("TestPackage/stream.bin", asset.relativePath)
+            val resolved = storage.resolve(asset.relativePath)
+            assertNotNull(resolved)
+            assertContentEquals(byteArrayOf(10, 20, 30, 40), Files.readAllBytes(resolved))
+
+            val deleted = storage.deletePackageNamespace("TestPackage")
+            assertTrue(deleted)
+            assertNull(storage.resolve("TestPackage/stream.bin"))
+            assertFalse(Files.exists(root.resolve("TestPackage")))
+        } finally {
+            Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
+        }
+    }
 }

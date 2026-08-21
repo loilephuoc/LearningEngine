@@ -373,7 +373,8 @@ object PersistedLearningPlatformFactory {
         transactionRunner: TransactionRunner,
         memoryStateRepository: MemoryStateRepository? = null,
         reviewEventRepository: ReviewEventRepository? = null,
-        studySessionRepository: StudySessionRepository? = null
+        studySessionRepository: StudySessionRepository? = null,
+        contentMediaStorage: vn.loi.learning.application.port.ContentMediaStorage? = null
     ): UninstallContentPackageUseCase =
         UninstallContentPackageUseCase(
             uninstallOperation =
@@ -393,7 +394,9 @@ object PersistedLearningPlatformFactory {
                     reviewEventRepository =
                         reviewEventRepository,
                     studySessionRepository =
-                        studySessionRepository
+                        studySessionRepository,
+                    contentMediaStorage =
+                        contentMediaStorage
                 ),
             transactionRunner =
                 transactionRunner

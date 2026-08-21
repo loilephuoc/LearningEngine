@@ -16,7 +16,8 @@ import vn.loi.learning.application.contentpackaging.PackageScanCandidate
 class PackageBundleImporter(
     private val bundleReader: BundlePackageReader,
     private val bundleContentImporter: BundlePackageContentImporter = BundlePackageContentImporter(),
-    private val mediaExtractor: Opd3BundleMediaExtractor? = null
+    private val mediaExtractor: Opd3BundleMediaExtractor? = null,
+    private val installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null
 ) : PackageContentImporter {
 
     override fun importContent(
@@ -30,6 +31,27 @@ class PackageBundleImporter(
         val manifest = runCatching { bundleContentImporter.parseManifest(bundle.manifestJson()) }.getOrNull()
         val defaultName = path.fileName?.toString()?.removeSuffix(".opd3")?.removeSuffix(".zip") ?: candidate.source
         val packageName = manifest?.name?.ifBlank { defaultName } ?: defaultName
+        val safePackageName = packageName.trim()
+            .replace(Regex("[^A-Za-z0-9._-]"), "_")
+            .ifBlank { "package" }
+
+        val isInstalled = installedPackageRepository?.findAll().orEmpty().any { instPkg ->
+            val instName = instPkg.name.value
+            val instSafeName = instName.trim().replace(Regex("[^A-Za-z0-9._-]"), "_")
+            instName.equals(packageName, ignoreCase = true) ||
+                instSafeName.equals(safePackageName, ignoreCase = true) ||
+                instPkg.packageId.value.equals(packageName, ignoreCase = true) ||
+                instPkg.packageId.value.equals(safePackageName, ignoreCase = true) ||
+                instPkg.id.value.equals(packageName, ignoreCase = true) ||
+                instPkg.topicId.value.equals(packageName, ignoreCase = true)
+        }
+
+        val existingDir = mediaExtractor?.resolveExistingPackageDirectory(packageName)
+        val ownership = when {
+            existingDir == null -> PackageNamespaceOwnership.EMPTY_NAMESPACE
+            isInstalled -> PackageNamespaceOwnership.ACTIVE_NAMESPACE
+            else -> PackageNamespaceOwnership.ORPHAN_NAMESPACE
+        }
 
         val preparedMedia = mediaExtractor?.prepare(
             packagePath = path,
@@ -45,7 +67,8 @@ class PackageBundleImporter(
                     )
                 )
             },
-            cancellationSignal = cancellationSignal
+            cancellationSignal = cancellationSignal,
+            ownership = ownership
         )
 
         val imported = bundleContentImporter.importContent(bundle)

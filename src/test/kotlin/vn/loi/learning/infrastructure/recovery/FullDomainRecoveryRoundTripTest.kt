@@ -122,6 +122,59 @@ class FullDomainRecoveryRoundTripTest {
         }
     }
 
+    @Test
+    fun `backup containing orphan package media restores faithfully and subsequent reimport recovers safely`() {
+        fixture().use { fixture ->
+            fixture.populate()
+            // Add orphan package media before backup (Package B media exists on disk but is not installed)
+            val orphanMediaFile = fixture.dataPath.resolve("media/OrphanPackage/sample.jpg")
+            Files.createDirectories(orphanMediaFile.parent)
+            Files.writeString(orphanMediaFile, "OLD_ORPHAN_MEDIA_BYTES")
+
+            val archive = fixture.root.resolve("with-orphan.lebak")
+            fixture.manager().createBackup(archive)
+
+            // Wipe and restore
+            fixture.replaceRuntimeWithDivergentState()
+            fixture.manager().restore(archive, false)
+
+            // Restore faithfully preserves exact physical media including orphan
+            assertTrue(Files.exists(orphanMediaFile))
+            assertEquals("OLD_ORPHAN_MEDIA_BYTES", Files.readString(orphanMediaFile))
+
+            // Now import the package with new media bytes through the engine without needing manual ADB delete
+            val opd3File = fixture.root.resolve("orphan-pkg.opd3")
+            java.util.zip.ZipOutputStream(Files.newOutputStream(opd3File)).use { zip ->
+                zip.putNextEntry(java.util.zip.ZipEntry("manifest.json"))
+                zip.write("""{"name": "OrphanPackage", "version": "1.0.0", "format": "OPD3", "contentCount": 0, "learningItemCount": 0}""".toByteArray())
+                zip.closeEntry()
+                zip.putNextEntry(java.util.zip.ZipEntry("contents.json"))
+                zip.write("""{"contents":[]}""".toByteArray())
+                zip.closeEntry()
+                zip.putNextEntry(java.util.zip.ZipEntry("learning-items.json"))
+                zip.write("""{"learningItems":[]}""".toByteArray())
+                zip.closeEntry()
+                zip.putNextEntry(java.util.zip.ZipEntry("metadata.json"))
+                zip.write("""{"name": "OrphanPackage"}""".toByteArray())
+                zip.closeEntry()
+                zip.putNextEntry(java.util.zip.ZipEntry("media/OrphanPackage/sample.jpg"))
+                zip.write("NEW_VALID_MEDIA_BYTES".toByteArray())
+                zip.closeEntry()
+            }
+
+            val app = LearningApplicationFactory.createPersisted(fixture.dataPath, false)
+            val importer = vn.loi.learning.infrastructure.contentpackaging.ContentPackageImportFactory.createContentImporter(
+                mediaDirectory = fixture.dataPath.resolve("media"),
+                installedPackageRepository = app.installedPackageRepository
+            )
+            val imported = importer.importContent(vn.loi.learning.application.contentpackaging.PackageScanCandidate(opd3File.toString()))
+            imported.onCommit?.invoke()
+
+            // Verification: new media replaced old orphan media without collision exception
+            assertEquals("NEW_VALID_MEDIA_BYTES", Files.readString(orphanMediaFile))
+        }
+    }
+
     private fun fixture() = Fixture(Files.createTempDirectory("full-domain-recovery-"))
 
     private class Fixture(val root: Path) : AutoCloseable {

@@ -2,7 +2,9 @@ package vn.loi.learning.infrastructure.contentmedia
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.util.Comparator
 import vn.loi.learning.application.contentmedia.ContentMediaAsset
 import vn.loi.learning.application.port.ContentMediaStorage
 
@@ -35,7 +37,7 @@ class JvmContentMediaStorage(
         }
 
         val packageDirectory =
-            resolvePackageDirectory(
+            ensurePackageDirectory(
                 packageName
             )
 
@@ -74,6 +76,65 @@ class JvmContentMediaStorage(
                     targetPath
                 )
         )
+    }
+
+    override fun storeStream(
+        packageName: String,
+        fileName: String,
+        source: Path
+    ): ContentMediaAsset {
+        require(packageName.isNotBlank()) { "Package name must not be blank." }
+        require(fileName.isNotBlank()) { "Media file name must not be blank." }
+        val packageDirectory = ensurePackageDirectory(packageName)
+        val targetPath = packageDirectory.resolve(fileName).normalize()
+        require(targetPath.startsWith(packageDirectory)) {
+            "Media file must remain inside its package directory: $fileName"
+        }
+        Files.createDirectories(requireNotNull(targetPath.parent))
+        Files.copy(source, targetPath, StandardCopyOption.REPLACE_EXISTING)
+        return ContentMediaAsset(
+            packageName = packageName,
+            fileName = fileName,
+            relativePath = toPortableRelativePath(targetPath)
+        )
+    }
+
+    override fun deletePackageNamespace(
+        packageName: String
+    ): Boolean {
+        if (packageName.isBlank()) return false
+        val safeName = packageName.trim()
+            .replace(Regex("[^A-Za-z0-9._-]"), "_")
+            .ifBlank { "package" }
+        val candidateNames = listOf(packageName.trim(), safeName).distinct()
+        var deletedAny = false
+        candidateNames.forEach { name ->
+            val packageDirectory = rootDirectory.resolve(name).normalize()
+            if (packageDirectory.parent == rootDirectory && Files.isDirectory(packageDirectory)) {
+                Files.walk(packageDirectory).use { paths ->
+                    paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
+                }
+                deletedAny = true
+            }
+        }
+        return deletedAny
+    }
+
+    override fun resolvePackageDirectory(
+        packageName: String
+    ): Path? {
+        if (packageName.isBlank()) return null
+        val safeName = packageName.trim()
+            .replace(Regex("[^A-Za-z0-9._-]"), "_")
+            .ifBlank { "package" }
+        val candidateNames = listOf(packageName.trim(), safeName).distinct()
+        for (name in candidateNames) {
+            val dir = rootDirectory.resolve(name).normalize()
+            if (dir.parent == rootDirectory && Files.isDirectory(dir)) {
+                return dir
+            }
+        }
+        return null
     }
 
     override fun resolve(
@@ -167,7 +228,7 @@ class JvmContentMediaStorage(
     ): Boolean =
         resolve(relativePath) != null
 
-    private fun resolvePackageDirectory(
+    private fun ensurePackageDirectory(
         packageName: String
     ): Path {
         val packageDirectory =

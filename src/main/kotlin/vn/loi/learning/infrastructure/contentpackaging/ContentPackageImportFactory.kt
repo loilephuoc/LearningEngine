@@ -78,7 +78,8 @@ object ContentPackageImportFactory {
     }
 
     fun createContentImporter(
-        mediaDirectory: Path
+        mediaDirectory: Path,
+        installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null
     ): PackageContentImporter {
         val archiveReader =
             JvmOpd3ArchiveReader()
@@ -113,7 +114,8 @@ object ContentPackageImportFactory {
             entryReader = entryReader,
             legacyImporter = legacyImporter,
             binaryPairImporter = createLegacyImporter(mediaDirectory),
-            mediaStorage = mediaStorage
+            mediaStorage = mediaStorage,
+            installedPackageRepository = installedPackageRepository
         )
     }
 
@@ -181,7 +183,8 @@ object ContentPackageImportFactory {
         entryReader: Opd3EntryReader,
         legacyImporter: JvmPackageContentImporter,
         binaryPairImporter: vn.loi.learning.application.contentpackaging.LegacyPackageContentImporter?,
-        mediaStorage: vn.loi.learning.application.port.ContentMediaStorage? = null
+        mediaStorage: vn.loi.learning.application.port.ContentMediaStorage? = null,
+        installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null
     ): PackageContentImporter {
         val bundleImporter =
             PackageBundleImporter(
@@ -197,7 +200,8 @@ object ContentPackageImportFactory {
                         archiveReader = archiveReader,
                         mediaStorage = it
                     )
-                }
+                },
+                installedPackageRepository = installedPackageRepository
             )
 
         return PackageContentImporterCompat(

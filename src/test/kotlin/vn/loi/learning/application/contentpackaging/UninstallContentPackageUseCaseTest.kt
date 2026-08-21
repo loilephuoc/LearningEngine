@@ -630,6 +630,78 @@ class UninstallContentPackageUseCaseTest {
         assertEquals(installedPackage, installedPackages.findById(installedPackage.id))
     }
 
+    @Test
+    fun `deletes physical media namespace when uninstalling package`() {
+        val tempDir = java.nio.file.Files.createTempDirectory("uninstall-media-test-")
+        try {
+            val mediaStorage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(tempDir)
+            mediaStorage.store("TestPackage", "sample.mp3", "audio".toByteArray())
+            assertEquals(true, mediaStorage.exists("TestPackage/sample.mp3"))
+
+            val packageId = PackageId("TestPackage")
+            val catalogId = PackageCatalogId("installed-packages")
+            val contentLibraryRepository = InMemoryContentLibraryRepository()
+            val contentRepository = InMemoryContentRepository()
+            val learningItemRepository = InMemoryLearningItemRepository()
+            val contentPackageRepository = InMemoryContentPackageRepository()
+            val packageCatalogRepository = InMemoryPackageCatalogRepository()
+            val installedPackages = InMemoryInstalledPackageRepository()
+
+            val installedPackage = InstalledPackage(
+                id = InstalledPackageId("installed-pkg-1"),
+                packageId = packageId,
+                name = PackageName("TestPackage"),
+                version = PackageVersion("1.0.0"),
+                state = PackageState.ACTIVE,
+                installedAt = Instant.now(),
+                libraryId = LibraryId("lib-1"),
+                topicId = TopicId("topic-1"),
+                contentCount = 1,
+                learningItemCount = 1
+            )
+            installedPackages.save(installedPackage)
+
+            contentLibraryRepository.save(
+                ContentLibrary(
+                    id = ContentLibraryId("lib-1"),
+                    descriptor = LibraryDescriptor("lib-1"),
+                    contentIds = emptySet()
+                )
+            )
+
+            packageCatalogRepository.save(
+                PackageCatalog(
+                    id = catalogId,
+                    packageIds = setOf(packageId)
+                )
+            )
+            contentPackageRepository.save(
+                ContentPackage(
+                    id = packageId,
+                    descriptor = PackageDescriptor(name = "TestPackage", version = "1.0.0", format = "OPD3"),
+                    libraryIds = setOf(ContentLibraryId("lib-1"))
+                )
+            )
+
+            val operation = PackageUninstallOperation(
+                contentLibraryRepository = contentLibraryRepository,
+                contentRepository = contentRepository,
+                learningItemRepository = learningItemRepository,
+                contentPackageRepository = contentPackageRepository,
+                packageCatalogRepository = packageCatalogRepository,
+                installedPackageRepository = installedPackages,
+                contentMediaStorage = mediaStorage
+            )
+
+            operation.execute(UninstallContentPackageCommand(catalogId, packageId))
+
+            assertEquals(false, mediaStorage.exists("TestPackage/sample.mp3"))
+            assertEquals(false, java.nio.file.Files.exists(tempDir.resolve("TestPackage")))
+        } finally {
+            java.nio.file.Files.walk(tempDir).sorted(java.util.Comparator.reverseOrder()).forEach(java.nio.file.Files::deleteIfExists)
+        }
+    }
+
     private fun createUseCase(
         contentLibraryRepository:
         InMemoryContentLibraryRepository,

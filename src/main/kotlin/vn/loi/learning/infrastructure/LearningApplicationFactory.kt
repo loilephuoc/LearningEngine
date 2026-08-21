@@ -772,7 +772,8 @@ object LearningApplicationFactory {
                 memoryStateRepository = memoryStateRepository,
                 reviewEventRepository = reviewEventRepository,
                 studySessionRepository = studySessionRepository,
-                studyQueueRepository = studyQueueRepository
+                studyQueueRepository = studyQueueRepository,
+                contentMediaStorage = mediaDirectory?.let { vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(it) }
             )
 
 
@@ -1019,7 +1020,7 @@ object LearningApplicationFactory {
                         if (mediaDirectory == null) {
                             ContentPackageImportFactory.createContentImporter()
                         } else {
-                            ContentPackageImportFactory.createContentImporter(mediaDirectory)
+                            ContentPackageImportFactory.createContentImporter(mediaDirectory, installedPackageRepository)
                         },
                     contentLibraryRepository =
                         contentLibraryRepository,
