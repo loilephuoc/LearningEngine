@@ -80,6 +80,13 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("com.googlecode.soundlibs:mp3spi:1.9.5.4")
+    implementation("io.github.whitemagic2014:tts-edge-java:1.3.3")
+
+    constraints {
+        implementation("org.apache.commons:commons-lang3:3.18.0") {
+            because("CVE-2025-48924 affects commons-lang3 versions prior to 3.18.0")
+        }
+    }
 
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.compose.ui:ui-test-junit4-desktop:1.11.1")
