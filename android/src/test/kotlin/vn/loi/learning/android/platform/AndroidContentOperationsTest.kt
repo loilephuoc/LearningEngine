@@ -75,23 +75,25 @@ class AndroidContentOperationsTest {
         }
     }
 
-    @Test fun `v2 backup is not silently interpreted by production v1 restore`() = runTest {
+    @Test fun `v2 backup restores successfully through AndroidContentOperations`() = runTest {
         fixture().use { fixture ->
-            val durable = fixture.directories.dataDirectory.resolve("content.json")
-            Files.writeString(durable, "before")
+            val durable = fixture.directories.dataDirectory.resolve("contents.json")
+            Files.write(durable, "[]".toByteArray())
             val backup = ByteArrayOutputStream()
             val operations = fixture.operations(StandardTestDispatcher(testScheduler))
             assertIs<AndroidContentOperationState.Succeeded>(operations.backup(operations.newOperation(AndroidOperationKind.BACKUP)) { backup })
-            Files.writeString(durable, "after")
+            Files.write(durable, "[{\"id\":\"modified\"}]".toByteArray())
             val restore = fixture.operations(StandardTestDispatcher(testScheduler))
-            assertIs<AndroidContentOperationState.Failed>(restore.restore(restore.newOperation(AndroidOperationKind.RESTORE)) { ByteArrayInputStream(backup.toByteArray()) })
-            assertEquals("after", Files.readString(durable))
+            assertIs<AndroidContentOperationState.Succeeded>(restore.restore(restore.newOperation(AndroidOperationKind.RESTORE)) { ByteArrayInputStream(backup.toByteArray()) })
+            assertEquals("[]", String(Files.readAllBytes(durable), java.nio.charset.StandardCharsets.UTF_8))
         }
     }
 
-    @Test fun `Android v2 backup inventories overlapping media once and restore remains v1 only`() = runTest {
+    @Test fun `Android v2 backup restores media successfully and invalid archive preserves live data`() = runTest {
         fixture().use { fixture ->
             val media = fixture.directories.mediaDirectory.resolve("package/large.bin")
+            val canonicalData = fixture.directories.dataDirectory.resolve("contents.json")
+            Files.write(canonicalData, "[]".toByteArray())
             Files.createDirectories(media.parent)
             val expected = ByteArray(64 * 1024 * 2 + 11) { index -> (index % 239).toByte() }
             Files.write(media, expected)
@@ -103,10 +105,10 @@ class AndroidContentOperationsTest {
             Files.write(media, byteArrayOf(9))
 
             val restore = fixture.operations(StandardTestDispatcher(testScheduler))
-            assertIs<AndroidContentOperationState.Failed>(
+            assertIs<AndroidContentOperationState.Succeeded>(
                 restore.restore(restore.newOperation(AndroidOperationKind.RESTORE)) { ByteArrayInputStream(backup.toByteArray()) }
             )
-            assertContentEquals(byteArrayOf(9), Files.readAllBytes(media))
+            assertContentEquals(expected, Files.readAllBytes(media))
         }
     }
 

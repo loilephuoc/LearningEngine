@@ -388,6 +388,7 @@ fun SettingsScreen(
     onVocabularyReminders: () -> Unit = {},
     onReminderSettings: () -> Unit = {},
     onHomeWidgetSettings: () -> Unit = {},
+    onBackupRestore: () -> Unit = {},
     onAction: (AndroidOperationKind) -> Unit
 ) {
     LearningEngineScreenShell("Settings", "Appearance and local data",
@@ -459,12 +460,10 @@ fun SettingsScreen(
         }
         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
             Text("Data management", style = LearningTextRole.sectionTitle)
+            LearningEngineSettingsRow(Icons.Default.Backup, "Backup & Restore", "Full backup and restore for learning data",
+                onBackupRestore)
             LearningEngineSettingsRow(Icons.Default.Download, "Import package", "Add learning content from a package",
                 { onAction(AndroidOperationKind.IMPORT) })
-            LearningEngineSettingsRow(Icons.Default.Backup, "Create backup", "Save a portable copy of local learning data",
-                { onAction(AndroidOperationKind.BACKUP) })
-            LearningEngineSettingsRow(Icons.Default.Restore, "Restore backup", "Restore from an existing backup file",
-                { onAction(AndroidOperationKind.RESTORE) })
         }
     }
 }

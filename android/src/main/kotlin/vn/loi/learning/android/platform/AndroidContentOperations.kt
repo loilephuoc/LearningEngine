@@ -96,8 +96,16 @@ class AndroidContentOperations(
             try {
                 open()?.use { input -> Files.copy(input, staging, StandardCopyOption.REPLACE_EXISTING) }
                     ?: return@executeOnce AndroidContentFailure.Unavailable()
-                graph.recovery.restore(staging, operationActive = false)
-                "Backup restored. Reopen Study to reload durable state."
+                when (val result = graph.restorePortableBackup(staging, operationActive = false)) {
+                    is vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult.Success ->
+                        "Backup restored. Reopen Study to reload durable state."
+                    is vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult.InsufficientSpace ->
+                        return@executeOnce AndroidContentFailure.Storage()
+                    is vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult.Busy ->
+                        return@executeOnce AndroidContentFailure.Unavailable()
+                    else ->
+                        return@executeOnce AndroidContentFailure.Restore()
+                }
             } finally { Files.deleteIfExists(staging) }
         }
 

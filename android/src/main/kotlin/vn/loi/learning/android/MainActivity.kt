@@ -57,6 +57,8 @@ import vn.loi.learning.android.recording.QuickVoicePermissionBridge
 import vn.loi.learning.android.recording.QuickVoiceRecordingsScreen
 import vn.loi.learning.android.reminder.AndroidVocabularyReminderNotificationHelper
 import vn.loi.learning.android.reminder.AndroidVocabularyReminderSelectionMode
+import vn.loi.learning.android.recovery.BackupRestoreScreen
+import vn.loi.learning.android.recovery.BackupRestoreViewModel
 import vn.loi.learning.android.reminder.HomeWidgetSettingsScreen
 import vn.loi.learning.android.reminder.LockScreenSettingsScreen
 import vn.loi.learning.android.reminder.ReminderReviewScreen
@@ -643,8 +645,34 @@ class MainActivity : ComponentActivity() {
                             onVoiceRecordings = { navController.navigate("voice_recordings") { launchSingleTop = true } },
                             onVocabularyReminders = { navController.navigate("vocabulary_reminders") { launchSingleTop = true } },
                             onReminderSettings = { navController.navigate("vocabulary_reminders") { launchSingleTop = true } },
-                            onHomeWidgetSettings = { navController.navigate("home_widget_settings") { launchSingleTop = true } }
+                            onHomeWidgetSettings = { navController.navigate("home_widget_settings") { launchSingleTop = true } },
+                            onBackupRestore = { navController.navigate("backup_restore") { launchSingleTop = true } }
                         ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
+                    }
+                    composable("backup_restore", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        val backupRestoreViewModel = viewModel<BackupRestoreViewModel> {
+                            BackupRestoreViewModel(
+                                graphProvider = { app.graph },
+                                savedState = createSavedStateHandle()
+                            )
+                        }
+                        val coroutineScope = rememberCoroutineScope()
+                        BackupRestoreScreen(
+                            viewModel = backupRestoreViewModel,
+                            onBack = { navController.popBackStack() },
+                            onReload = {
+                                coroutineScope.launch {
+                                    app.reloadApplicationGraph()
+                                    vn.loi.learning.android.recording.QuickVoiceRecordingRepository.getInstance(this@MainActivity).reconcile()
+                                    app.homeVocabularyWidgetCoordinator.start()
+                                    vn.loi.learning.android.reminder.AndroidLockScreenVocabularyService.reconcile(this@MainActivity, "POST_RESTORE")
+                                    graphRetry += 1
+                                    navController.navigate("home") {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
+                            }
+                        )
                     }
                     composable("vocabulary_reminders", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         VocabularyRemindersHubScreen(

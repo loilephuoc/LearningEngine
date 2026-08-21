@@ -118,7 +118,13 @@ object LearningApplicationFactory {
 
         val contentIds = contents.mapTo(hashSetOf()) { it.id }
         val libraryIds = libraries.mapTo(hashSetOf()) { it.id }
+        val itemIds = items.mapTo(hashSetOf()) { it.id }
         require(items.all { it.contentId in contentIds }) { "LearningItem references missing Content." }
+        require(memoryStates.all { it.learningItemId in itemIds }) { "MemoryState references missing LearningItem." }
+        require(reviewEvents.all { it.learningItemId in itemIds }) { "ReviewEvent references missing LearningItem." }
+        require(queues.all { queue -> queue.learningItemIds.all { it in itemIds } }) {
+            "StudyQueue references missing LearningItem."
+        }
         require(libraries.all { library -> library.contentIds.all { it in contentIds } }) {
             "ContentLibrary references missing Content."
         }

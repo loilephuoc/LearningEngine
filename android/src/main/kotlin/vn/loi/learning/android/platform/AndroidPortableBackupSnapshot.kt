@@ -11,13 +11,16 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import vn.loi.learning.android.recording.QuickVoiceRecordingRepository
+import vn.loi.learning.application.port.RecoveryOperation
+import vn.loi.learning.application.port.RecoveryOperationBusyException
 import vn.loi.learning.infrastructure.recovery.PortableBackupSupplementV2
+import vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreConsumer
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2SnapshotContributor
 
 internal class AndroidPortableBackupSnapshot(
     private val context: Context,
     private val recordings: QuickVoiceRecordingRepository = QuickVoiceRecordingRepository.getInstance(context)
-) : PortableBackupV2SnapshotContributor {
+) : PortableBackupV2SnapshotContributor, PortableBackupV2RestoreConsumer {
     override fun snapshot(stagingDirectory: Path): List<PortableBackupSupplementV2> {
         val output = mutableListOf<PortableBackupSupplementV2>()
         val preferencesPath = stagingDirectory.resolve(PREFERENCES_PATH)
@@ -46,6 +49,120 @@ internal class AndroidPortableBackupSnapshot(
         }
         return output
     }
+
+    override fun preflight(stagingDirectory: Path) {
+        if (recordings.isRecordingActive) {
+            throw RecoveryOperationBusyException(RecoveryOperation.RESTORE)
+        }
+        val preferencesPath = stagingDirectory.resolve(PREFERENCES_PATH)
+        if (Files.isRegularFile(preferencesPath)) {
+            val text = Files.newBufferedReader(preferencesPath, StandardCharsets.UTF_8).use { it.readText() }
+            val json = jsonParser.parseToJsonElement(text) as? kotlinx.serialization.json.JsonObject
+                ?: error("Invalid preferences.json payload.")
+            val version = (json["schemaVersion"] as? JsonPrimitive)?.content?.toIntOrNull()
+            if (version != 1) error("Unsupported preferences.json schemaVersion: $version")
+            if (json["stores"] !is kotlinx.serialization.json.JsonObject) error("Missing stores in preferences.json.")
+        }
+        val recordingIndexPath = stagingDirectory.resolve(RECORDING_INDEX_PATH)
+        if (Files.isRegularFile(recordingIndexPath)) {
+            val text = Files.newBufferedReader(recordingIndexPath, StandardCharsets.UTF_8).use { it.readText() }
+            val json = jsonParser.parseToJsonElement(text) as? kotlinx.serialization.json.JsonObject
+                ?: error("Invalid recordings index.json payload.")
+            val version = (json["schemaVersion"] as? JsonPrimitive)?.content?.toIntOrNull()
+            if (version != 1) error("Unsupported recordings index schemaVersion: $version")
+        }
+    }
+
+    override fun captureCurrentState(): Any {
+        val prefs = DURABLE_KEYS.keys.associateWith {
+            context.getSharedPreferences(it, Context.MODE_PRIVATE).all
+        }
+        val rollbackDir = try {
+            Files.createTempDirectory(context.cacheDir.toPath(), ".platform-rollback-")
+        } catch (_: Exception) { null }
+        val recordingItems = recordings.captureRecordingsStateToDirectory(rollbackDir)
+        val bgPath = context.filesDir.toPath().resolve("lockscreen_custom_bg.png")
+        val hasBg = Files.isRegularFile(bgPath)
+        if (hasBg && rollbackDir != null) {
+            Files.copy(bgPath, rollbackDir.resolve("lockscreen_custom_bg.png"), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+        return AndroidPlatformRestoreState(prefs, recordingItems, rollbackDir, hasBg)
+    }
+
+    override fun applyRestored(stagingDirectory: Path) {
+        AndroidPreferenceSnapshotGate.mutation {
+            val preferencesPath = stagingDirectory.resolve(PREFERENCES_PATH)
+            if (Files.isRegularFile(preferencesPath)) {
+                val text = Files.newBufferedReader(preferencesPath, StandardCharsets.UTF_8).use { it.readText() }
+                val json = jsonParser.parseToJsonElement(text) as? kotlinx.serialization.json.JsonObject
+                val storesObj = json?.get("stores") as? kotlinx.serialization.json.JsonObject
+                if (storesObj != null) {
+                    DURABLE_KEYS.forEach { (storeName, allowlist) ->
+                        val sp = context.getSharedPreferences(storeName, Context.MODE_PRIVATE)
+                        val editor = sp.edit()
+                        allowlist.forEach { editor.remove(it) }
+                        TRANSIENT_KEYS[storeName]?.forEach { editor.remove(it) }
+                        val storeJson = storesObj[storeName] as? kotlinx.serialization.json.JsonObject
+                        storeJson?.forEach { (k, v) ->
+                            if (k in allowlist) {
+                                putRestoredPreferenceValue(editor, k, v)
+                            }
+                        }
+                        editor.commit()
+                    }
+                }
+            }
+            val stagedBg = stagingDirectory.resolve(BACKGROUND_PATH)
+            val liveBg = context.filesDir.toPath().resolve("lockscreen_custom_bg.png")
+            if (Files.isRegularFile(stagedBg)) {
+                Files.copy(stagedBg, liveBg, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } else {
+                Files.deleteIfExists(liveBg)
+            }
+        }
+        val recordingIndex = stagingDirectory.resolve(RECORDING_INDEX_PATH)
+        if (Files.isRegularFile(recordingIndex)) {
+            recordings.restoreRecordingsFromBackup(stagingDirectory.resolve("android/recordings"))
+        }
+    }
+
+    override fun rollback(capturedState: Any?) {
+        val state = capturedState as? AndroidPlatformRestoreState ?: return
+        try {
+            AndroidPreferenceSnapshotGate.mutation {
+                DURABLE_KEYS.keys.forEach { storeName ->
+                    val sp = context.getSharedPreferences(storeName, Context.MODE_PRIVATE)
+                    val editor = sp.edit()
+                    DURABLE_KEYS[storeName]?.forEach { editor.remove(it) }
+                    TRANSIENT_KEYS[storeName]?.forEach { editor.remove(it) }
+                    val capturedMap = state.preferences[storeName].orEmpty()
+                    capturedMap.forEach { (k, v) ->
+                        if (k in DURABLE_KEYS[storeName].orEmpty()) {
+                            putCapturedPreferenceValue(editor, k, v)
+                        }
+                    }
+                    editor.commit()
+                }
+                val liveBg = context.filesDir.toPath().resolve("lockscreen_custom_bg.png")
+                val stagedBg = state.rollbackDir?.resolve("lockscreen_custom_bg.png")
+                if (state.hasLockscreenBackground && stagedBg != null && Files.isRegularFile(stagedBg)) {
+                    Files.copy(stagedBg, liveBg, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                } else {
+                    Files.deleteIfExists(liveBg)
+                }
+            }
+            recordings.rollbackRecordingsFromDirectory(state.recordings, state.rollbackDir)
+        } finally {
+            state.rollbackDir?.let { deleteTree(it) }
+        }
+    }
+
+    override fun validateLive() {
+        DURABLE_KEYS.keys.forEach {
+            context.getSharedPreferences(it, Context.MODE_PRIVATE).all
+        }
+    }
+
 
     private fun preferenceSnapshot(): JsonElement = AndroidPreferenceSnapshotGate.snapshot {
         encodePreferences(
@@ -120,5 +237,87 @@ internal class AndroidPortableBackupSnapshot(
                 "home_widget.card_background_opacity", "home_widget.update_only_screen_on", "home_widget.autoaudio_enabled"
             )
         )
+
+        private val TRANSIENT_KEYS = mapOf(
+            "learning_engine_reminder_prefs" to setOf(
+                "reminder.paused_until_epoch_millis",
+                "reminder.unlocked_paused_until_epoch_millis",
+                "home_widget.current_candidate_id",
+                "lockscreen.shuffle_state",
+                "lockscreen.candidate_index"
+            ),
+            "learning-engine-autoplay" to setOf(
+                "autoplay.sleep_timer_remaining_ms",
+                "autoplay.active_playback_id"
+            )
+        )
+
+        private val jsonParser = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
+        private fun putRestoredPreferenceValue(editor: android.content.SharedPreferences.Editor, key: String, element: JsonElement) {
+            when {
+                element is kotlinx.serialization.json.JsonArray -> {
+                    val set = element.map { (it as? JsonPrimitive)?.content ?: it.toString() }.toSet()
+                    editor.putStringSet(key, set)
+                }
+                element is JsonPrimitive -> {
+                    if (element.isString) {
+                        editor.putString(key, element.content)
+                    } else {
+                        val booleanVal = element.content.toBooleanStrictOrNull()
+                        if (booleanVal != null) {
+                            editor.putBoolean(key, booleanVal)
+                        } else {
+                            when (key) {
+                                "daily.new", "daily.review", "reminder.interval_minutes" -> {
+                                    editor.putInt(key, element.content.toIntOrNull() ?: 0)
+                                }
+                                "lockscreen.word_size", "lockscreen.vietnamese_size", "lockscreen.image_size",
+                                "lockscreen.card_background_opacity", "home_widget.word_size",
+                                "home_widget.vietnamese_size", "home_widget.image_size", "home_widget.card_background_opacity" -> {
+                                    editor.putFloat(key, element.content.toFloatOrNull() ?: 1.0f)
+                                }
+                                else -> {
+                                    val longVal = element.content.toLongOrNull()
+                                    if (longVal != null) {
+                                        editor.putLong(key, longVal)
+                                    } else {
+                                        val floatVal = element.content.toFloatOrNull()
+                                        if (floatVal != null) {
+                                            editor.putFloat(key, floatVal)
+                                        } else {
+                                            editor.putString(key, element.content)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else -> Unit
+            }
+        }
+
+        private fun putCapturedPreferenceValue(editor: android.content.SharedPreferences.Editor, key: String, value: Any?) {
+            when (value) {
+                is Boolean -> editor.putBoolean(key, value)
+                is Int -> editor.putInt(key, value)
+                is Long -> editor.putLong(key, value)
+                is Float -> editor.putFloat(key, value)
+                is String -> editor.putString(key, value)
+                is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+            }
+        }
     }
+}
+
+private data class AndroidPlatformRestoreState(
+    val preferences: Map<String, Map<String, *>>,
+    val recordings: List<vn.loi.learning.android.recording.VoiceRecordingItem>,
+    val rollbackDir: Path?,
+    val hasLockscreenBackground: Boolean
+)
+
+private fun deleteTree(root: Path) {
+    root.toFile().deleteRecursively()
 }

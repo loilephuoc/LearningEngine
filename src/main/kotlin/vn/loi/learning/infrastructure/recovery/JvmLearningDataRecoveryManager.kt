@@ -47,6 +47,10 @@ internal fun filesEqual(first: Path, second: Path): Boolean {
 }
 
 private const val FILE_COMPARISON_BUFFER_SIZE = 64 * 1024
+private const val DEFAULT_STREAMING_BUFFER_SIZE = 64 * 1024
+
+private class UnsupportedSchemaException(message: String, val version: Int) : RuntimeException(message)
+private class InsufficientSpaceException(message: String, val requiredBytes: Long, val availableBytes: Long) : RuntimeException(message)
 
 open class LearningDataRecoveryException(message: String, cause: Throwable? = null) : IllegalStateException(message, cause)
 class CatastrophicLearningDataRecoveryException(
@@ -115,6 +119,46 @@ class JvmLearningDataRecoveryManager(
     } catch (failure: Exception) {
         throw LearningDataRecoveryException("Could not validate portable backup v2.", failure)
     }
+
+    fun previewPortableBackupV2(
+        source: Path,
+        limits: PortableBackupV2Limits = PortableBackupV2Limits()
+    ): PortableBackupV2Preview {
+        val manifest = validatePortableBackupV2(source, limits)
+        return PortableBackupV2Preview(
+            backupSchemaVersion = manifest.backupSchemaVersion,
+            appVersion = manifest.appVersion,
+            versionCode = manifest.versionCode,
+            createdAtUtc = manifest.createdAtUtc,
+            sourcePlatform = manifest.sourcePlatform,
+            learnerIds = manifest.learnerIds,
+            includedSections = manifest.includedSections,
+            counts = manifest.counts,
+            bytes = manifest.bytes,
+            totalEntries = manifest.entries.size
+        )
+    }
+
+    fun restorePortableBackupV2(
+        source: Path,
+        operationActive: Boolean = false,
+        contributorForSafetyBackup: PortableBackupV2SnapshotContributor? = null,
+        consumer: PortableBackupV2RestoreConsumer? = null,
+        limits: PortableBackupV2Limits = PortableBackupV2Limits()
+    ): PortableBackupV2RestoreResult {
+        if (operationActive) return PortableBackupV2RestoreResult.Busy()
+        return try {
+            gate.restore {
+                failureHook("restore-v2-gate-acquired", null)
+                restorePortableBackupV2Locked(source, contributorForSafetyBackup, consumer, limits)
+            }
+        } catch (busy: RecoveryOperationBusyException) {
+            PortableBackupV2RestoreResult.Busy(busy.message ?: "Recovery gate is busy.")
+        } catch (e: Exception) {
+            PortableBackupV2RestoreResult.ValidationFailed("Restore failed: ${e.message}", e.message)
+        }
+    }
+
 
     private fun createPortableBackupV2Locked(
         target: Path,
@@ -214,7 +258,7 @@ class JvmLearningDataRecoveryManager(
                     appendLine("files=${files.size}")
                     files.forEachIndexed { index, (name, path) ->
                         failureHook("$scope-hash", "$index:${files.size}:$name")
-                        appendLine("file.$index=$name\t${Files.size(path)}\t${sha256(Files.readAllBytes(path))}")
+                        appendLine("file.$index=$name\t${Files.size(path)}\t${sha256(path)}")
                     }
                 }
                 failureHook("$scope-archive-entry-write", MANIFEST_ENTRY)
@@ -254,9 +298,21 @@ class JvmLearningDataRecoveryManager(
                 error("Backup inventory does not match.")
             }
             records.forEach { record ->
-                val bytes = zip.getInputStream(zip.getEntry(record[0])).readAllBytes()
-                if (bytes.size.toLong() != record[1].toLong() || sha256(bytes) != record[2]) error("Backup checksum failed.")
-                if ("/media/" in record[0] && bytes.isEmpty()) error("Backup contains empty managed media.")
+                val entry = zip.getEntry(record[0]) ?: error("Missing entry")
+                val (size, sha) = zip.getInputStream(entry).use { stream ->
+                    val digest = MessageDigest.getInstance("SHA-256")
+                    val buffer = ByteArray(FILE_COMPARISON_BUFFER_SIZE)
+                    var totalSize = 0L
+                    while (true) {
+                        val count = stream.read(buffer)
+                        if (count < 0) break
+                        totalSize += count
+                        digest.update(buffer, 0, count)
+                    }
+                    totalSize to digest.digest().joinToString("") { "%02x".format(it) }
+                }
+                if (size != record[1].toLong() || sha != record[2]) error("Backup checksum failed.")
+                if ("/media/" in record[0] && size == 0L) error("Backup contains empty managed media.")
             }
             records.map { it[0] }
         }
@@ -349,6 +405,30 @@ class JvmLearningDataRecoveryManager(
         if (actualNames != expected.keys.sorted()) error("Canonical inventory verification failed.")
         expected.forEach { (name, bytes) ->
             if (!Files.readAllBytes(resolve(name)).contentEquals(bytes)) error("Canonical checksum verification failed: $name")
+        }
+    }
+
+    private fun assertExactRestoreV2(staging: Path, manifest: PortableBackupManifestV2) {
+        val livePortable = portableInventory()
+        val expectedPortableEntries = manifest.entries.filter { it.logicalPath.startsWith("portable/") }
+        val livePaths = livePortable.map { it.first }.sorted()
+        val expectedPaths = expectedPortableEntries.map { it.logicalPath }.sorted()
+        if (livePaths != expectedPaths) {
+            val missing = expectedPaths - livePaths.toSet()
+            val extra = livePaths - expectedPaths.toSet()
+            error("Restored canonical inventory mismatch: missing=$missing, extra=$extra")
+        }
+        livePortable.forEach { (logicalPath, livePath) ->
+            val stagedPath = staging.resolve(logicalPath)
+            if (!Files.isRegularFile(stagedPath)) {
+                error("Restored entry missing in staging: $logicalPath")
+            }
+            val liveSha = sha256(livePath)
+            val expectedRecord = expectedPortableEntries.firstOrNull { it.logicalPath == logicalPath }
+                ?: error("Entry not found in manifest: $logicalPath")
+            if (liveSha != expectedRecord.sha256) {
+                error("Restored canonical sha256 mismatch for $logicalPath: expected=${expectedRecord.sha256}, actual=$liveSha")
+            }
         }
     }
 
@@ -448,6 +528,245 @@ class JvmLearningDataRecoveryManager(
         }
     }
 
+    private fun validateRecordingReferencesStaged(staging: Path, records: List<PortableBackupEntryV2>) {
+        val index = records.singleOrNull { it.logicalPath == "android/recordings/index.json" } ?: return
+        val indexFile = staging.resolve(index.logicalPath)
+        if (!Files.isRegularFile(indexFile)) error("Recording index file missing from staging.")
+        val text = Files.newBufferedReader(indexFile, StandardCharsets.UTF_8).use { it.readText() }
+        val paths = Regex("\\\"recordingFile\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"").findAll(text).map { it.groupValues[1] }.toList()
+        val names = records.map { it.logicalPath }.toSet()
+        if (paths.any { unsafeRelativeRecordingPath(it) || "android/recordings/$it" !in names }) {
+            error("Recording metadata does not resolve to an archive recording.")
+        }
+        paths.forEach { rel ->
+            val stagedTarget = staging.resolve("android/recordings").resolve(rel).normalize()
+            if (!stagedTarget.startsWith(staging.resolve("android/recordings")) || !Files.isRegularFile(stagedTarget)) {
+                error("Recording target file missing from staging: $rel")
+            }
+        }
+    }
+
+    private fun extractAndValidateToStaging(
+        normalized: Path,
+        staging: Path,
+        limits: PortableBackupV2Limits
+    ): PortableBackupManifestV2 {
+        val usable = try {
+            normalized.toFile().usableSpace
+        } catch (_: Exception) { 0L }
+
+        return ZipFile(normalized.toFile()).use { zip ->
+            val zipEntries = zip.entries().asSequence().toList()
+            if (zipEntries.size > limits.maxArchiveEntryCount) {
+                error("Backup has too many entries: ${zipEntries.size}")
+            }
+            val names = zipEntries.map { it.name }
+            if (names.size != names.toSet().size || names.map(String::lowercase).size != names.map(String::lowercase).toSet().size) {
+                error("Backup contains duplicate or case-colliding paths.")
+            }
+            if (names.any { it != V2_MANIFEST_ENTRY && unsafeV2Name(it) }) {
+                error("Backup contains unsafe entry names.")
+            }
+            val manifestEntry = zip.getEntry(V2_MANIFEST_ENTRY)
+                ?: error("Backup v2 manifest is missing.")
+            val manifest = zip.getInputStream(manifestEntry).bufferedReader(StandardCharsets.UTF_8).use {
+                V2_JSON.decodeFromString<PortableBackupManifestV2>(it.readText())
+            }
+            if (manifest.backupSchemaVersion != 2) {
+                throw UnsupportedSchemaException("Unsupported backup schema version: ${manifest.backupSchemaVersion}", manifest.backupSchemaVersion)
+            }
+            val requiredBytes = try {
+                Math.addExact(Math.multiplyExact(manifest.bytes.totalExpandedBytes, 2L), limits.requireFreeDiskSpaceMarginBytes)
+            } catch (_: Exception) { Long.MAX_VALUE }
+            if (usable in 1 until requiredBytes) {
+                throw InsufficientSpaceException("Insufficient free disk space for safe restore.", requiredBytes, usable)
+            }
+            val declared = manifest.entries
+            if (declared.map { it.logicalPath }.sorted() != names.filter { it != V2_MANIFEST_ENTRY }.sorted()) {
+                error("Backup inventory does not match manifest.")
+            }
+            if (declared.map { it.logicalPath }.distinct().size != declared.size) {
+                error("Duplicate manifest entries.")
+            }
+            if (declared.none { it.logicalPath.startsWith("portable/data/") }) {
+                error("Canonical data section is missing.")
+            }
+            var total = 0L
+            declared.forEach { record ->
+                if (unsafeV2Name(record.logicalPath)) {
+                    error("Unsafe manifest path: ${record.logicalPath}")
+                }
+                val entry = zip.getEntry(record.logicalPath)
+                    ?: error("Declared entry missing: ${record.logicalPath}")
+                if (entry.size != record.uncompressedSize || entry.size > limits.maxUncompressedBytesPerEntry) {
+                    error("Backup size mismatch for: ${record.logicalPath}")
+                }
+                total = Math.addExact(total, entry.size)
+                if (total > limits.maxTotalExpandedBytes) {
+                    error("Backup expanded size is oversized.")
+                }
+                val compressed = entry.compressedSize
+                if ((entry.size > 0 && compressed == 0L) || (compressed > 0 && entry.size.toDouble() / compressed > limits.maxCompressionRatio)) {
+                    error("Backup compression ratio is unsafe.")
+                }
+                val target = staging.resolve(record.logicalPath).normalize()
+                if (!target.startsWith(staging)) {
+                    error("Staged entry escaped staging directory.")
+                }
+                Files.createDirectories(requireNotNull(target.parent))
+                zip.getInputStream(entry).use { input ->
+                    Files.newOutputStream(target).use { output ->
+                        val buffer = ByteArray(limits.ioBufferBytes)
+                        val digest = MessageDigest.getInstance("SHA-256")
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            output.write(buffer, 0, count)
+                            digest.update(buffer, 0, count)
+                        }
+                        val computedSha = digest.digest().joinToString("") { "%02x".format(it) }
+                        if (computedSha != record.sha256) {
+                            error("Checksum mismatch for: ${record.logicalPath}")
+                        }
+                    }
+                }
+            }
+            manifest
+        }
+    }
+
+    private fun restorePortableBackupV2Locked(
+        source: Path,
+        contributorForSafetyBackup: PortableBackupV2SnapshotContributor?,
+        consumer: PortableBackupV2RestoreConsumer?,
+        limits: PortableBackupV2Limits
+    ): PortableBackupV2RestoreResult {
+        val normalized = source.toAbsolutePath().normalize()
+        if (!Files.isRegularFile(normalized)) {
+            return PortableBackupV2RestoreResult.ValidationFailed("Backup archive does not exist.")
+        }
+        val usable = try {
+            normalized.toFile().usableSpace
+        } catch (_: Exception) { 0L }
+
+        Files.createDirectories(safetyDirectory)
+        val staging = Files.createTempDirectory(safetyDirectory, ".learning-engine-restore-v2-")
+        try {
+            val manifest = try {
+                extractAndValidateToStaging(normalized, staging, limits)
+            } catch (e: UnsupportedSchemaException) {
+                return PortableBackupV2RestoreResult.UnsupportedSchema(e.message ?: "Unsupported schema", e.version)
+            } catch (e: InsufficientSpaceException) {
+                return PortableBackupV2RestoreResult.InsufficientSpace(e.message ?: "Insufficient space", e.requiredBytes, e.availableBytes)
+            } catch (e: Exception) {
+                return PortableBackupV2RestoreResult.ValidationFailed("Archive preflight validation failed: ${e.message}", e.message)
+            }
+
+            try {
+                validateRecordingReferencesStaged(staging, manifest.entries)
+                stagedDomainValidator(roots.keys.associateWith { staging.resolve("portable/$it") })
+                consumer?.preflight(staging)
+                failureHook("restore-v2-preflight-verified", null)
+            } catch (e: Exception) {
+                return PortableBackupV2RestoreResult.ValidationFailed("Staged domain preflight validation failed: ${e.message}", e.message)
+            }
+
+            val safety = safetyDirectory.resolve("safety-v2-${clock.instant().toEpochMilli()}.lebak")
+            try {
+                failureHook("restore-v2-safety-backup-start", null)
+                createPortableBackupV2Locked(
+                    safety,
+                    PortableBackupV2Descriptor("safety-pre-restore", null, "safety", emptyList()),
+                    contributorForSafetyBackup,
+                    limits
+                )
+                validatePortableBackupV2Internal(safety, limits)
+                failureHook("restore-v2-safety-backup-verified", null)
+            } catch (e: Exception) {
+                return PortableBackupV2RestoreResult.SafetyBackupFailed("Safety backup before restore failed.", e.message)
+            }
+
+            val capturedPlatformState = consumer?.captureCurrentState()
+            try {
+                failureHook("restore-v2-live-replace-start", null)
+                clear()
+                roots.forEach { (rootName, root) ->
+                    val stagedRoot = staging.resolve("portable/$rootName")
+                    if (Files.exists(stagedRoot)) {
+                        Files.walk(stagedRoot).use { paths ->
+                            paths.filter { Files.isRegularFile(it) }.forEach { sourceFile ->
+                                val relative = stagedRoot.relativize(sourceFile)
+                                val target = root.resolve(relative)
+                                Files.createDirectories(requireNotNull(target.parent))
+                                Files.copy(sourceFile, target, StandardCopyOption.REPLACE_EXISTING)
+                            }
+                        }
+                    }
+                }
+                cleanEmptyDirectories()
+                failureHook("restore-v2-canonical-copied", null)
+                consumer?.applyRestored(staging)
+                failureHook("restore-v2-consumer-applied", null)
+
+                assertExactRestoreV2(staging, manifest)
+                stagedDomainValidator(roots)
+                consumer?.validateLive()
+                failureHook("restore-v2-post-validation-complete", null)
+
+                return PortableBackupV2RestoreResult.Success(
+                    safetyBackupPath = safety.toString(),
+                    restoredEntriesCount = manifest.entries.size,
+                    appVersion = manifest.appVersion
+                )
+            } catch (restoreFailure: Exception) {
+                try {
+                    failureHook("restore-v2-rollback-start", restoreFailure.message)
+                    val rollbackStaging = Files.createTempDirectory(safetyDirectory, ".learning-engine-rollback-v2-")
+                    try {
+                        val safetyManifest = extractAndValidateToStaging(safety, rollbackStaging, limits)
+                        clear()
+                        roots.forEach { (rootName, root) ->
+                            val stagedRoot = rollbackStaging.resolve("portable/$rootName")
+                            if (Files.exists(stagedRoot)) {
+                                Files.walk(stagedRoot).use { paths ->
+                                    paths.filter { Files.isRegularFile(it) }.forEach { sourceFile ->
+                                        val relative = stagedRoot.relativize(sourceFile)
+                                        val target = root.resolve(relative)
+                                        Files.createDirectories(requireNotNull(target.parent))
+                                        Files.copy(sourceFile, target, StandardCopyOption.REPLACE_EXISTING)
+                                    }
+                                }
+                            }
+                        }
+                        cleanEmptyDirectories()
+                        assertExactRestoreV2(rollbackStaging, safetyManifest)
+                    } finally {
+                        deleteTree(rollbackStaging)
+                    }
+                    consumer?.rollback(capturedPlatformState)
+                    consumer?.validateLive()
+                    failureHook("restore-v2-rollback-success", null)
+                    return PortableBackupV2RestoreResult.RestoreFailedRolledBack(
+                        "Restore failed and previous state was rolled back.",
+                        safetyBackupPath = safety.toString(),
+                        failureReason = restoreFailure.message ?: "Restore error"
+                    )
+                } catch (rollbackFailure: Exception) {
+                    failureHook("restore-v2-rollback-failed", rollbackFailure.message)
+                    return PortableBackupV2RestoreResult.RollbackFailed(
+                        "Restore failed and rollback also failed. Safety backup retained at $safety",
+                        safetyBackupPath = safety.toString(),
+                        restoreFailure = restoreFailure.message ?: "Restore error",
+                        rollbackFailure = rollbackFailure.message ?: "Rollback error"
+                    )
+                }
+            }
+        } finally {
+            deleteTree(staging)
+        }
+    }
+
+
     private fun inferCounts(
         records: List<PortableBackupEntryV2>,
         payloads: List<PortableBackupSupplementV2>
@@ -538,8 +857,29 @@ class JvmLearningDataRecoveryManager(
             .map { "$name/${root.relativize(it).toString().replace('\\', '/')}" to it }.toList() }
     }.sortedBy { it.first }
 
-    private fun clear() = roots.values.forEach { root -> if (Files.exists(root)) Files.walk(root).use { paths -> paths
-        .sorted(Comparator.reverseOrder()).filter { it != root && !it.startsWith(safetyDirectory) }.forEach(Files::deleteIfExists) } }
+    private fun clear() = roots.values.sortedByDescending { it.nameCount }.forEach { root ->
+        if (Files.exists(root)) {
+            Files.walk(root).use { paths ->
+                paths.sorted(Comparator.reverseOrder())
+                    .filter { it != root && !it.startsWith(safetyDirectory) }
+                    .forEach(Files::deleteIfExists)
+            }
+        }
+    }
+
+    private fun cleanEmptyDirectories() = roots.values.sortedByDescending { it.nameCount }.forEach { root ->
+        if (Files.exists(root)) {
+            Files.walk(root).use { paths ->
+                paths.sorted(Comparator.reverseOrder())
+                    .filter { it != root && Files.isDirectory(it) && !it.startsWith(safetyDirectory) }
+                    .forEach { dir ->
+                        try {
+                            Files.delete(dir)
+                        } catch (_: Exception) {}
+                    }
+            }
+        }
+    }
 
     private fun resolve(name: String): Path {
         val rootName = name.substringBefore('/'); val root = roots[rootName] ?: error("Unknown durable root.")

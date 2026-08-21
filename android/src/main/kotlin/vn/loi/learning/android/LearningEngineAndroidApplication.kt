@@ -103,12 +103,16 @@ class LearningEngineAndroidApplication : Application() {
         vn.loi.learning.android.reminder.AndroidReminderReviewFsrsInspectorQuery(context = graph.engine)
     }
 
-    private val graphOwner by lazy {
-        SingleInstanceOwner { AndroidApplicationGraph.create(this) }
-    }
+    @Volatile
+    private var graphOwner = SingleInstanceOwner { AndroidApplicationGraph.create(this) }
 
     val graph: AndroidApplicationGraph
         get() = graphOwner.value
+
+    fun reloadApplicationGraph(): AndroidApplicationGraph {
+        graphOwner = SingleInstanceOwner { AndroidApplicationGraph.create(this) }
+        return graphOwner.value
+    }
 }
 
 internal class SingleInstanceOwner<T>(

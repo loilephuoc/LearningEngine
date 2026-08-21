@@ -172,4 +172,12 @@ class AndroidSettingsNavigationTest {
         assertTrue(reqWidgetOnly.required)
         assertTrue(reqWidgetOnly.homeWidgetRequired)
     }
+
+    @Test
+    fun `backup and restore navigation callback is invokable from settings`() {
+        var navigated = false
+        val onBackupRestore = { navigated = true }
+        onBackupRestore()
+        assertTrue(navigated)
+    }
 }

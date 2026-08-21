@@ -34,6 +34,15 @@ class AndroidApplicationGraph internal constructor(
         contributor = portableBackupSnapshot
     )
 
+    fun previewPortableBackup(source: Path) = recovery.previewPortableBackupV2(source)
+
+    fun restorePortableBackup(source: Path, operationActive: Boolean = false) = recovery.restorePortableBackupV2(
+        source = source,
+        operationActive = operationActive,
+        contributorForSafetyBackup = portableBackupSnapshot,
+        consumer = portableBackupSnapshot
+    )
+
     companion object {
         fun create(context: Context): AndroidApplicationGraph {
             return AndroidStartupTrace.measured("application_graph_create") {

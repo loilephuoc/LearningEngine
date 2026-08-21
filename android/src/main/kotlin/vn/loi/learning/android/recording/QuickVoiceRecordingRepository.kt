@@ -81,6 +81,9 @@ class QuickVoiceRecordingRepository(
         }
     }
 
+    @Volatile
+    var isRecordingActive: Boolean = false
+
     /**
      * Copies only indexed, completed recordings while holding the repository mutation lock.
      * An active MediaRecorder output is not indexed until stop/save and is therefore excluded.
@@ -98,6 +101,116 @@ class QuickVoiceRecordingRepository(
             }
         }
     }
+
+    fun captureRecordingsState(): Pair<List<VoiceRecordingItem>, Map<String, ByteArray>> = runBlocking {
+        mutex.withLock {
+            val items = _recordings.value
+            val files = if (recordingsDir.exists()) {
+                recordingsDir.listFiles { file -> file.isFile && file.name != "recordings_index.json" }?.associate {
+                    it.name to it.readBytes()
+                }.orEmpty()
+            } else emptyMap()
+            items to files
+        }
+    }
+
+    fun captureRecordingsStateToDirectory(rollbackDir: Path?): List<VoiceRecordingItem> = runBlocking {
+        mutex.withLock {
+            val items = _recordings.value
+            if (rollbackDir != null && recordingsDir.exists()) {
+                val dir = rollbackDir.resolve("recordings_rollback")
+                Files.createDirectories(dir)
+                recordingsDir.listFiles { file -> file.isFile && file.name != "recordings_index.json" }?.forEach { src ->
+                    Files.copy(src.toPath(), dir.resolve(src.name), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
+            items
+        }
+    }
+
+    fun restoreRecordingsFromBackup(recordingsStagingDirectory: Path) = runBlocking {
+        mutex.withLock {
+            if (isRecordingActive) throw IllegalStateException("Cannot restore recordings while recording is active.")
+            val stagingFiles = recordingsStagingDirectory.resolve("files")
+            val stagingIndex = recordingsStagingDirectory.resolve("index.json")
+            if (Files.exists(recordingsDir.toPath())) {
+                recordingsDir.listFiles()?.forEach { it.delete() }
+            }
+            recordingsDir.mkdirs()
+            val restoredItems = mutableListOf<VoiceRecordingItem>()
+            if (Files.isRegularFile(stagingIndex)) {
+                val text = Files.newBufferedReader(stagingIndex, java.nio.charset.StandardCharsets.UTF_8).use { it.readText() }
+                val parsed = jsonParser.parseToJsonElement(text) as? kotlinx.serialization.json.JsonObject
+                val recordingsArray = parsed?.get("recordings") as? kotlinx.serialization.json.JsonArray
+                if (recordingsArray != null) {
+                    for (elem in recordingsArray) {
+                        val obj = elem as? kotlinx.serialization.json.JsonObject ?: continue
+                        val id = obj["id"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content } ?: continue
+                        val filename = obj["filename"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content } ?: continue
+                        requireSafePortableFilename(filename)
+                        val createdAt = obj["createdAt"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() } ?: 0L
+                        val durationMs = obj["durationMs"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() } ?: 0L
+                        val sizeBytes = obj["sizeBytes"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() } ?: 0L
+                        val sourceFile = stagingFiles.resolve(filename)
+                        val targetFile = File(recordingsDir, filename)
+                        if (Files.isRegularFile(sourceFile)) {
+                            Files.copy(sourceFile, targetFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                            restoredItems.add(
+                                VoiceRecordingItem(
+                                    id = id,
+                                    filename = filename,
+                                    filePath = targetFile.absolutePath,
+                                    createdAt = createdAt,
+                                    durationMs = durationMs,
+                                    sizeBytes = sizeBytes
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+            restoredItems.sortByDescending { it.createdAt }
+            _recordings.value = restoredItems
+            _latestRecording.value = restoredItems.firstOrNull()
+            writeIndexFile(restoredItems)
+        }
+    }
+
+    fun rollbackRecordings(items: List<VoiceRecordingItem>, files: Map<String, ByteArray>) = runBlocking {
+        mutex.withLock {
+            if (Files.exists(recordingsDir.toPath())) {
+                recordingsDir.listFiles()?.forEach { it.delete() }
+            }
+            recordingsDir.mkdirs()
+            files.forEach { (name, bytes) ->
+                File(recordingsDir, name).writeBytes(bytes)
+            }
+            _recordings.value = items
+            _latestRecording.value = items.firstOrNull()
+            writeIndexFile(items)
+        }
+    }
+
+    fun rollbackRecordingsFromDirectory(items: List<VoiceRecordingItem>, rollbackDir: Path?) = runBlocking {
+        mutex.withLock {
+            if (Files.exists(recordingsDir.toPath())) {
+                recordingsDir.listFiles()?.forEach { it.delete() }
+            }
+            recordingsDir.mkdirs()
+            if (rollbackDir != null) {
+                val dir = rollbackDir.resolve("recordings_rollback")
+                if (Files.exists(dir)) {
+                    dir.toFile().listFiles { f -> f.isFile }?.forEach { src ->
+                        Files.copy(src.toPath(), File(recordingsDir, src.name).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                    }
+                }
+            }
+            _recordings.value = items
+            _latestRecording.value = items.firstOrNull()
+            writeIndexFile(items)
+        }
+    }
+
 
     private fun reconcileInternal() {
         val loaded = readIndexFile().filter { it.exists }.toMutableList()
