@@ -7,6 +7,17 @@ import vn.loi.learning.domain.sync.protocol.SyncAccountId
 import vn.loi.learning.domain.sync.protocol.SyncCursor
 import vn.loi.learning.domain.sync.protocol.SyncEventId
 
+data class SyncQuarantineRecord(
+    val accountId: SyncAccountId,
+    val eventId: SyncEventId,
+    val reviewEventId: String,
+    val learningItemId: String,
+    val remoteRevision: Long,
+    val payloadVersion: Int,
+    val code: String,
+    val reason: String
+)
+
 interface LocalSyncStateRepository {
     fun enqueue(change: OutboundSyncChange)
     fun pendingOutbox(accountId: SyncAccountId): List<OutboundSyncChange>
@@ -14,6 +25,8 @@ interface LocalSyncStateRepository {
     fun hasApplied(accountId: SyncAccountId, eventId: SyncEventId): Boolean
     fun recordApplied(accountId: SyncAccountId, eventId: SyncEventId, cursor: SyncCursor)
     fun cursor(accountId: SyncAccountId): SyncCursor
+    fun recordQuarantine(record: SyncQuarantineRecord)
+    fun quarantines(accountId: SyncAccountId): List<SyncQuarantineRecord>
 }
 
 class LocalSyncCoordinator(
@@ -23,6 +36,13 @@ class LocalSyncCoordinator(
     fun <T> mutateAndEnqueue(change: OutboundSyncChange, mutation: () -> T): T =
         transactions.runInTransaction {
             val result = mutation()
+            state.enqueue(change)
+            result
+        }
+
+    fun <T> mutateAndEnqueue(mutation: () -> Pair<T, OutboundSyncChange>): T =
+        transactions.runInTransaction {
+            val (result, change) = mutation()
             state.enqueue(change)
             result
         }

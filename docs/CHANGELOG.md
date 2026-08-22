@@ -1,3 +1,12 @@
+# Incremental learning/review delta
+
+- Added atomic local canonical review plus outbox production and remote sequential replay through the
+  existing validating FSRS review use case, preserving ReviewEvent identity and deriving MemoryState.
+- Added durable, restart-safe quarantine for unsafe timeline branches/gaps, replay mismatches,
+  missing/disabled items, and unsupported payloads; duplicate ReviewEvent IDs remain no-op.
+- Preserved Content, media, custom fields, LearningTrajectory, StudySession, StudyQueue, and study limits.
+- Full clean verification passes 818 suites / 5,070 tests with zero failures, errors, or skips.
+
 # Android -1 Screen Quick Review widget
 
 - Added a dedicated large, resizable launcher widget with Vietnamese Quick Review presentation, reveal, next and four explicit rating actions.

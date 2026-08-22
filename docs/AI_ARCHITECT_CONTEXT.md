@@ -24,6 +24,13 @@
   `customFields["definition"]` remains an independent read projection and is untouched. Different
   field paths converge; same-field overlap preserves the pending local value with a typed diagnostic.
   The next architecture-backed capability is Learning/Review delta; Media remains separately scoped.
+- Capability 4 transports immutable ReviewEvent facts with predecessor and MemoryState validation
+  proofs. Sequential events replay through the canonical validating FSRS use case; proofs never
+  overwrite local state. Duplicate ReviewEvent IDs are no-op, while branch/gap/replay/item/version
+  failures persist in restart-safe quarantine and advance inbox/cursor atomically. Direct review owns
+  MemoryState plus ReviewEvent only, so trajectory/session/queue remain unchanged. Full clean gate:
+  818 suites / 5,070 tests (root 426 / 2,281; Android 100 / 983; Desktop 292 / 1,806), zero
+  failures/errors/skips. The next capability is Media delta.
 
 ## Current autonomous UAT continuation
 

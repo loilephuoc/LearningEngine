@@ -522,6 +522,11 @@ object LearningApplicationFactory {
         var packageContentQueryRef: vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService? = null
         var topicsRef: TopicQueryService? = null
 
+        val canonicalScheduler =
+            ValidatingScheduler(
+                delegate = FsrsScheduler()
+            )
+
         val engine =
             LearningEngine(
                 contentRepository =
@@ -540,11 +545,7 @@ object LearningApplicationFactory {
                     studyQueue,
                 transactionRunner =
                     transactionRunner,
-                scheduler =
-                    ValidatingScheduler(
-                        delegate =
-                            FsrsScheduler()
-                    ),
+                scheduler = canonicalScheduler,
                 packageContentQuerySupplier = { packageContentQueryRef },
                 topicQueryServiceSupplier = { topicsRef },
                 installedPackageRepository = installedPackageRepository,
@@ -1015,6 +1016,19 @@ object LearningApplicationFactory {
             contentFieldSyncService = localSyncStateRepository?.let { state ->
                 vn.loi.learning.application.sync.ContentFieldSyncService(
                     contentRepository,
+                    state,
+                    vn.loi.learning.application.sync.LocalSyncCoordinator(state, transactionRunner)
+                )
+            },
+            reviewDeltaSyncService = localSyncStateRepository?.let { state ->
+                vn.loi.learning.application.sync.ReviewDeltaSyncService(
+                    learningItemRepository,
+                    contentRepository,
+                    memoryStateRepository,
+                    reviewEventRepository,
+                    vn.loi.learning.application.review.ReviewLearningItemUseCase(
+                        memoryStateRepository, reviewEventRepository, canonicalScheduler
+                    ),
                     state,
                     vn.loi.learning.application.sync.LocalSyncCoordinator(state, transactionRunner)
                 )

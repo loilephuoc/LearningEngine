@@ -23,7 +23,10 @@ class ReviewLearningItemUseCase(
     private val scheduler: Scheduler
 ) {
 
-    fun execute(command: ReviewCommand): ReviewResult {
+    fun execute(
+        command: ReviewCommand,
+        validateBeforePersistence: (ReviewEvent) -> Unit = {}
+    ): ReviewResult {
         val persistedState = memoryStateRepository.find(
                 learnerId = command.learnerId,
                 learningItemId = command.learningItemId
@@ -49,6 +52,8 @@ class ReviewLearningItemUseCase(
             stateAfter = decision.nextState,
             source = command.source
         )
+
+        validateBeforePersistence(event)
 
         memoryStateRepository.save(decision.nextState)
         reviewEventRepository.append(event)

@@ -1888,3 +1888,13 @@ target property, preserving Content identity, all other text/media/metadata, kno
 fields, LearningItem, MemoryState, and ReviewEvent state. Empty nullable editor values canonicalize
 to absence; Question remains required. A remote field with no same-path local outbox change applies;
 a same-path pending local change is preserved with `SYNC_CONTENT_FIELD_LOCAL_PENDING` diagnostic.
+
+Learning sync treats immutable `ReviewEvent` as the transported fact and `ReviewEventId` as its
+idempotency identity. The payload carries rating/time/source, an explicit predecessor, and before/after
+MemoryState proofs. Proofs are validation inputs only: accepted sequential events run through the same
+`ReviewLearningItemUseCase` and validating FSRS scheduler as `LearningEngine.review`; remote state is
+never written as authority. Local review plus outbox and remote review plus inbox/cursor share the JSON
+transaction boundary. A branch, gap, replay mismatch, missing/disabled item, or unsupported payload is
+recorded in durable quarantine before the cursor advances. Direct review does not own LearningTrajectory,
+StudySession, or StudyQueue, so incremental review apply deliberately leaves those session aggregates
+unchanged.

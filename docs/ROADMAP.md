@@ -1067,8 +1067,9 @@ Engine core.
    `text.translatedText`, `text.exampleText`, `text.exampleTranslation`) apply independently;
    unchanged text, Content identity, custom fields, and learning state are preserved. Same-field
    overlap with a pending local change deterministically preserves local and emits a typed diagnostic.
-4. **Learning/Review Delta:** deduplicate stable ReviewEvent identity and derive MemoryState only
-   through proven canonical scheduling semantics.
+4. **Learning/Review Delta — complete:** stable ReviewEvent identity deduplicates retries; sequential
+   facts replay through the canonical scheduler while state proofs validate rather than overwrite
+   MemoryState. Unsafe branches, gaps, invalid items, and unsupported payloads persist in quarantine.
 5. **Media Delta:** content-addressed validated transfer and reference-safe replacement/removal.
 6. **Supabase Transport:** versioned PostgreSQL/Storage/RLS adapter after core/local gates pass.
 7. **Desktop Integration.**

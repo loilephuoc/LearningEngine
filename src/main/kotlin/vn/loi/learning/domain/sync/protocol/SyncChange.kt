@@ -75,7 +75,16 @@ data class ReviewEventDelta(
     val reviewEventId: String,
     val learningItemId: String,
     val learnerId: String,
-    val payload: String
+    /** Capability 1 opaque payload retained only so persisted pre-Capability 4 outbox records remain readable. */
+    val payload: String? = null,
+    val contentId: String? = null,
+    val rating: String? = null,
+    val reviewedAtEpochMillis: Long? = null,
+    val responseTimeMillis: Long? = null,
+    val ratingSource: String? = null,
+    val predecessorReviewEventId: String? = null,
+    val stateBefore: ReviewMemoryStateProof? = null,
+    val expectedStateAfter: ReviewMemoryStateProof? = null
 ) : SyncDelta {
     override val namespace: SyncNamespace = SyncNamespace.LEARNING
 
@@ -83,9 +92,23 @@ data class ReviewEventDelta(
         require(reviewEventId.isNotBlank()) { "Review event ID must not be blank." }
         require(learningItemId.isNotBlank()) { "Learning item ID must not be blank." }
         require(learnerId.isNotBlank()) { "Learner ID must not be blank." }
-        require(payload.isNotBlank()) { "Review event payload must not be blank." }
+        require(payload == null || payload.isNotBlank()) { "Legacy review event payload must not be blank." }
     }
+
+    val hasReplayContract: Boolean
+        get() = contentId != null && rating != null && reviewedAtEpochMillis != null &&
+            ratingSource != null && stateBefore != null && expectedStateAfter != null
 }
+
+data class ReviewMemoryStateProof(
+    val stage: String,
+    val difficulty: Double,
+    val stabilityDays: Double,
+    val dueAtEpochMillis: Long,
+    val lastReviewedAtEpochMillis: Long?,
+    val reviewCount: Int,
+    val lapseCount: Int
+)
 
 data class OutboundSyncChange(
     val accountId: SyncAccountId,

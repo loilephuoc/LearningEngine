@@ -6,6 +6,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import vn.loi.learning.application.sync.LocalSyncStateRepository
+import vn.loi.learning.application.sync.SyncQuarantineRecord
 import vn.loi.learning.domain.sync.protocol.*
 
 class JsonLocalSyncStateRepository(
@@ -43,6 +44,20 @@ class JsonLocalSyncStateRepository(
     override fun cursor(accountId: SyncAccountId): SyncCursor =
         SyncCursor(load().cursors[accountId.value] ?: 0L)
 
+    override fun recordQuarantine(record: SyncQuarantineRecord) = update { current ->
+        val persisted = record.toRecord()
+        val existing = current.quarantines.firstOrNull {
+            it.accountId == persisted.accountId && it.eventId == persisted.eventId
+        }
+        require(existing == null || existing == persisted) {
+            "Quarantined sync event ID cannot identify different failures."
+        }
+        if (existing == null) current.copy(quarantines = current.quarantines + persisted) else current
+    }
+
+    override fun quarantines(accountId: SyncAccountId): List<SyncQuarantineRecord> =
+        load().quarantines.filter { it.accountId == accountId.value }.map(QuarantineRecord::toDomain)
+
     fun validate() { load() }
 
     private fun load(): LocalSyncStateRecord = JsonFileReader.read(
@@ -59,7 +74,8 @@ private data class LocalSyncStateRecord(
     val schemaVersion: Int = 1,
     val outbox: List<SyncChangeRecord> = emptyList(),
     val inbox: List<InboxRecord> = emptyList(),
-    val cursors: Map<String, Long> = emptyMap()
+    val cursors: Map<String, Long> = emptyMap(),
+    val quarantines: List<QuarantineRecord> = emptyList()
 ) {
     fun validated(): LocalSyncStateRecord {
         require(schemaVersion == 1) { "Unsupported local sync state schema version: $schemaVersion" }
@@ -68,6 +84,9 @@ private data class LocalSyncStateRecord(
             "Duplicate local sync outbox event identity."
         }
         require(inbox.distinct().size == inbox.size) { "Duplicate local sync inbox event identity." }
+        require(quarantines.map { it.accountId to it.eventId }.distinct().size == quarantines.size) {
+            "Duplicate quarantined sync event identity."
+        }
         outbox.forEach { it.toDomain() }
         return this
     }
@@ -75,6 +94,28 @@ private data class LocalSyncStateRecord(
 
 @Serializable
 private data class InboxRecord(val accountId: String, val eventId: String)
+
+@Serializable
+private data class QuarantineRecord(
+    val accountId: String,
+    val eventId: String,
+    val reviewEventId: String,
+    val learningItemId: String,
+    val remoteRevision: Long,
+    val payloadVersion: Int,
+    val code: String,
+    val reason: String
+) {
+    fun toDomain() = SyncQuarantineRecord(
+        SyncAccountId(accountId), SyncEventId(eventId), reviewEventId, learningItemId,
+        remoteRevision, payloadVersion, code, reason
+    )
+}
+
+private fun SyncQuarantineRecord.toRecord() = QuarantineRecord(
+    accountId.value, eventId.value, reviewEventId, learningItemId,
+    remoteRevision, payloadVersion, code, reason
+)
 
 @Serializable
 private data class SyncChangeRecord(
@@ -85,7 +126,12 @@ private data class SyncChangeRecord(
     val mediaReference: String? = null, val sha256: String? = null, val sizeBytes: Long? = null,
     val mimeType: String? = null, val baseRevision: Long? = null,
     val reviewEventId: String? = null, val learningItemId: String? = null,
-    val learnerId: String? = null, val payload: String? = null
+    val learnerId: String? = null, val payload: String? = null,
+    val contentId: String? = null, val rating: String? = null,
+    val reviewedAtEpochMillis: Long? = null, val responseTimeMillis: Long? = null,
+    val ratingSource: String? = null, val predecessorReviewEventId: String? = null,
+    val stateBefore: ReviewMemoryStateProofRecord? = null,
+    val expectedStateAfter: ReviewMemoryStateProofRecord? = null
 ) {
     fun toDomain(): OutboundSyncChange = OutboundSyncChange(
         SyncAccountId(accountId), SyncEventId(eventId), IdempotencyKey(idempotencyKey),
@@ -101,7 +147,9 @@ private data class SyncChangeRecord(
             )
             "REVIEW_EVENT" -> ReviewEventDelta(
                 requireNotNull(reviewEventId), requireNotNull(learningItemId),
-                requireNotNull(learnerId), requireNotNull(payload)
+                requireNotNull(learnerId), payload, contentId, rating, reviewedAtEpochMillis,
+                responseTimeMillis, ratingSource, predecessorReviewEventId,
+                stateBefore?.toDomain(), expectedStateAfter?.toDomain()
             )
             else -> error("Unsupported sync delta kind: $kind")
         }
@@ -123,6 +171,33 @@ private fun OutboundSyncChange.toRecord(): SyncChangeRecord = when (val payload 
     is ReviewEventDelta -> SyncChangeRecord(
         accountId.value, eventId.value, idempotencyKey.value, sourceDeviceId.value, entityId.value,
         payloadVersion, payload.namespace.name, "REVIEW_EVENT", reviewEventId = payload.reviewEventId,
-        learningItemId = payload.learningItemId, learnerId = payload.learnerId, payload = payload.payload
+        learningItemId = payload.learningItemId, learnerId = payload.learnerId, payload = payload.payload,
+        contentId = payload.contentId, rating = payload.rating,
+        reviewedAtEpochMillis = payload.reviewedAtEpochMillis,
+        responseTimeMillis = payload.responseTimeMillis, ratingSource = payload.ratingSource,
+        predecessorReviewEventId = payload.predecessorReviewEventId,
+        stateBefore = payload.stateBefore?.toRecord(),
+        expectedStateAfter = payload.expectedStateAfter?.toRecord()
     )
 }
+
+@Serializable
+private data class ReviewMemoryStateProofRecord(
+    val stage: String,
+    val difficulty: Double,
+    val stabilityDays: Double,
+    val dueAtEpochMillis: Long,
+    val lastReviewedAtEpochMillis: Long?,
+    val reviewCount: Int,
+    val lapseCount: Int
+) {
+    fun toDomain() = ReviewMemoryStateProof(
+        stage, difficulty, stabilityDays, dueAtEpochMillis,
+        lastReviewedAtEpochMillis, reviewCount, lapseCount
+    )
+}
+
+private fun ReviewMemoryStateProof.toRecord() = ReviewMemoryStateProofRecord(
+    stage, difficulty, stabilityDays, dueAtEpochMillis,
+    lastReviewedAtEpochMillis, reviewCount, lapseCount
+)
