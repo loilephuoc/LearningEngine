@@ -21,6 +21,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +68,10 @@ fun SettingsScreen(
     onExportDiagnostics: () -> String?,
     onCreateBackup: () -> String?,
     onRestoreBackup: () -> String?,
+    onOpenBackupDialog: () -> Unit = {},
+    onOpenRestoreDialog: () -> Unit = {},
+    onOpenSyncExportDialog: () -> Unit = {},
+    onOpenSyncImportDialog: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var aboutVisible by remember { mutableStateOf(false) }
@@ -275,22 +280,48 @@ fun SettingsScreen(
             }
         )
 
-        SettingsCategoryHeading("Dữ liệu")
+        SettingsCategoryHeading("Sao lưu & Đồng bộ (Backup & Sync)")
 
-        SettingsChoiceSection(
-            title = strings.recovery,
-            options = listOf(strings.createBackup, strings.restoreBackup),
-            selected = "",
-            label = { it },
-            onSelected = { action ->
-                if (action == strings.createBackup) {
-                    recoveryStatus = runCatching(onCreateBackup).fold(
-                        { it?.let(strings::backupCreatedAt) },
-                        { strings.recoveryFailed(it.message ?: "unknown error") }
-                    )
-                } else restoreConfirmationVisible = true
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onOpenSyncExportDialog,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Xuất đồng bộ vi sai (.lesync)")
+                }
+                OutlinedButton(
+                    onClick = onOpenSyncImportDialog,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Nạp đồng bộ vi sai (.lesync)")
+                }
             }
-        )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onOpenBackupDialog,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Sao lưu toàn diện (.lebak)")
+                }
+                OutlinedButton(
+                    onClick = onOpenRestoreDialog,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Khôi phục toàn diện (.lebak)")
+                }
+            }
+        }
         recoveryStatus?.let { Text(it) }
 
         SettingsCategoryHeading("Giới thiệu & hệ thống")

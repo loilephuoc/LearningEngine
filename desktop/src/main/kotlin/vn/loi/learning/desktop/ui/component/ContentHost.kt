@@ -52,6 +52,10 @@ fun ContentHost(
     onExportDiagnostics: () -> String?,
     onCreateBackup: () -> String?,
     onRestoreBackup: () -> String?,
+    onOpenBackupDialog: () -> Unit = {},
+    onOpenRestoreDialog: () -> Unit = {},
+    onOpenSyncExportDialog: () -> Unit = {},
+    onOpenSyncImportDialog: () -> Unit = {},
     onRefreshDashboard: () -> Unit,
     onOpenStudy: () -> Unit,
     onOpenStudyDirect: () -> Unit,
@@ -267,6 +271,10 @@ fun ContentHost(
                 onExportDiagnostics = onExportDiagnostics,
                 onCreateBackup = onCreateBackup,
                 onRestoreBackup = onRestoreBackup,
+                onOpenBackupDialog = onOpenBackupDialog,
+                onOpenRestoreDialog = onOpenRestoreDialog,
+                onOpenSyncExportDialog = onOpenSyncExportDialog,
+                onOpenSyncImportDialog = onOpenSyncImportDialog,
                 modifier = modifier.fillMaxSize()
             )
     }

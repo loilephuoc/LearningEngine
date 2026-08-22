@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop.ui
+package vn.loi.learning.desktop.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,7 +35,8 @@ fun LearningApp(
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
     onCreateBackup: () -> String?,
-    onRestoreBackup: (Boolean) -> String?
+    onRestoreBackup: (Boolean) -> String?,
+    recoveryManager: vn.loi.learning.desktop.runtime.DesktopRecoveryManager? = null
 ) {
     var startupState by remember { mutableStateOf(DesktopStartupState.STARTING) }
     var showOnboarding by remember { mutableStateOf(onboardingRequired) }
@@ -76,7 +77,8 @@ fun LearningApp(
                     onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                     onExportDiagnostics = onExportDiagnostics,
                     onCreateBackup = onCreateBackup,
-                    onRestoreBackup = onRestoreBackup
+                    onRestoreBackup = onRestoreBackup,
+                    recoveryManager = recoveryManager
                 )
             }
         }

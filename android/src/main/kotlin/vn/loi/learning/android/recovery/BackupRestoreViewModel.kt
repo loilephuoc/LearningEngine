@@ -21,6 +21,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import vn.loi.learning.android.platform.AndroidApplicationGraph
+import vn.loi.learning.domain.sync.model.ConflictResolutionStrategy
+import vn.loi.learning.domain.sync.model.SyncPreviewReport
+import vn.loi.learning.domain.sync.model.SyncResultSummary
 import vn.loi.learning.infrastructure.recovery.PortableBackupCountsV2
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2Preview
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult
@@ -30,6 +33,14 @@ data class BackupSuccessSummary(
     val fileSizeFormatted: String,
     val counts: PortableBackupCountsV2,
     val createdAtUtc: String
+)
+
+data class SyncExportSuccessSummary(
+    val fileName: String,
+    val fileSizeFormatted: String,
+    val contentDeltasCount: Int,
+    val reviewEventsCount: Int,
+    val mediaCount: Int
 )
 
 sealed interface BackupRestoreUiState {
@@ -49,6 +60,23 @@ sealed interface BackupRestoreUiState {
         val appVersion: String
     ) : BackupRestoreUiState
     data class RestoreFailure(val result: PortableBackupV2RestoreResult) : BackupRestoreUiState
+
+    // Differential Sync States
+    data class SyncExporting(val message: String = "Exporting differential sync changeset...") : BackupRestoreUiState
+    data class SyncExportSuccess(val summary: SyncExportSuccessSummary) : BackupRestoreUiState
+    data class SyncExportFailure(val message: String) : BackupRestoreUiState
+
+    data class SyncPreviewing(val message: String = "Analyzing sync changeset...") : BackupRestoreUiState
+    data class SyncPreviewReady(
+        val report: SyncPreviewReport,
+        val stagedFile: File,
+        val conflictStrategy: ConflictResolutionStrategy = ConflictResolutionStrategy.MERGE_FIELD_LEVEL
+    ) : BackupRestoreUiState
+    data class SyncPreviewFailure(val message: String) : BackupRestoreUiState
+
+    data class SyncImporting(val message: String = "Applying sync changeset...") : BackupRestoreUiState
+    data class SyncImportSuccess(val summary: SyncResultSummary) : BackupRestoreUiState
+    data class SyncImportFailure(val message: String) : BackupRestoreUiState
 }
 
 class BackupRestoreViewModel(
@@ -68,9 +96,15 @@ class BackupRestoreViewModel(
         return "LearningEngine_Backup_$formatted.lebak"
     }
 
+    fun generateDefaultSyncFilename(): String {
+        val now = LocalDateTime.now()
+        val formatted = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm", Locale.US))
+        return "LearningEngine_Sync_$formatted.lesync"
+    }
+
     fun createBackup(cacheDir: File, openOutputStream: () -> OutputStream?) {
         val currentState = mutableState.value
-        if (currentState is BackupRestoreUiState.BackingUp || currentState is BackupRestoreUiState.Restoring) {
+        if (currentState is BackupRestoreUiState.BackingUp || currentState is BackupRestoreUiState.Restoring || currentState is BackupRestoreUiState.SyncExporting || currentState is BackupRestoreUiState.SyncImporting) {
             return
         }
         if (activeJob?.isActive == true) return
@@ -111,7 +145,7 @@ class BackupRestoreViewModel(
 
     fun stageAndPreviewRestore(cacheDir: File, openInputStream: () -> InputStream?) {
         val currentState = mutableState.value
-        if (currentState is BackupRestoreUiState.Restoring || currentState is BackupRestoreUiState.Previewing) {
+        if (currentState is BackupRestoreUiState.Restoring || currentState is BackupRestoreUiState.Previewing || currentState is BackupRestoreUiState.SyncImporting) {
             return
         }
         if (activeJob?.isActive == true) return
@@ -180,9 +214,129 @@ class BackupRestoreViewModel(
         }
     }
 
+    // --- Differential Sync Actions ---
+
+    fun exportSync(
+        cacheDir: File,
+        specificPackageIds: Set<String>? = null,
+        knownRemoteMediaHashes: Set<String> = emptySet(),
+        openOutputStream: () -> OutputStream?
+    ) {
+        val currentState = mutableState.value
+        if (currentState is BackupRestoreUiState.SyncExporting || currentState is BackupRestoreUiState.Restoring || currentState is BackupRestoreUiState.SyncImporting) {
+            return
+        }
+        if (activeJob?.isActive == true) return
+
+        mutableState.value = BackupRestoreUiState.SyncExporting("Packaging differential changes (.lesync)...")
+        activeJob = viewModelScope.launch {
+            try {
+                val summary = withContext(ioDispatcher) {
+                    val tempFile = File.createTempFile("sync_export_", ".lesync", cacheDir)
+                    tempFile.delete()
+                    try {
+                        val graph = graphProvider()
+                        graph.exportSync(
+                            target = tempFile.toPath(),
+                            specificPackageIds = specificPackageIds,
+                            knownRemoteMediaHashes = knownRemoteMediaHashes,
+                            includeReviewEvents = true
+                        )
+                        val preview = graph.previewSync(tempFile.toPath())
+                        val out = openOutputStream() ?: throw IllegalStateException("Cannot open destination file.")
+                        out.use { output ->
+                            Files.newInputStream(tempFile.toPath()).use { input ->
+                                input.copyTo(output)
+                            }
+                        }
+                        SyncExportSuccessSummary(
+                            fileName = generateDefaultSyncFilename(),
+                            fileSizeFormatted = formatBytes(tempFile.length()),
+                            contentDeltasCount = preview.manifest.contentDeltasCount,
+                            reviewEventsCount = preview.manifest.reviewEventsCount,
+                            mediaCount = preview.manifest.mediaAssetsCount
+                        )
+                    } finally {
+                        tempFile.delete()
+                    }
+                }
+                mutableState.value = BackupRestoreUiState.SyncExportSuccess(summary)
+            } catch (e: Exception) {
+                mutableState.value = BackupRestoreUiState.SyncExportFailure(e.message ?: "Failed to export sync package.")
+            }
+        }
+    }
+
+    fun stageAndPreviewSync(cacheDir: File, openInputStream: () -> InputStream?) {
+        val currentState = mutableState.value
+        if (currentState is BackupRestoreUiState.SyncPreviewing || currentState is BackupRestoreUiState.SyncImporting || currentState is BackupRestoreUiState.Restoring) {
+            return
+        }
+        if (activeJob?.isActive == true) return
+
+        mutableState.value = BackupRestoreUiState.SyncPreviewing("Analyzing sync package (.lesync)...")
+        activeJob = viewModelScope.launch {
+            var stagedFile: File? = null
+            try {
+                val report = withContext(ioDispatcher) {
+                    val input = openInputStream() ?: throw IllegalStateException("Cannot read selected sync file.")
+                    stagedFile = File.createTempFile("sync_staged_", ".lesync", cacheDir)
+                    val target = stagedFile!!.toPath()
+                    input.use { inputStream ->
+                        Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING)
+                    }
+                    val graph = graphProvider()
+                    val engine = requireNotNull(graph.engine.syncEngine) { "SyncEngine is not initialized." }
+                    engine.generatePreviewReport(target)
+                }
+                mutableState.value = BackupRestoreUiState.SyncPreviewReady(
+                    report = report,
+                    stagedFile = stagedFile!!,
+                    conflictStrategy = ConflictResolutionStrategy.MERGE_FIELD_LEVEL
+                )
+            } catch (e: Exception) {
+                stagedFile?.delete()
+                mutableState.value = BackupRestoreUiState.SyncPreviewFailure(e.message ?: "Invalid or corrupted sync file.")
+            }
+        }
+    }
+
+    fun setSyncConflictStrategy(strategy: ConflictResolutionStrategy) {
+        val current = mutableState.value
+        if (current is BackupRestoreUiState.SyncPreviewReady) {
+            mutableState.value = current.copy(conflictStrategy = strategy)
+        }
+    }
+
+    fun confirmSyncImport(stagedFile: File, strategy: ConflictResolutionStrategy) {
+        val currentState = mutableState.value
+        if (currentState is BackupRestoreUiState.SyncImporting || currentState is BackupRestoreUiState.Restoring) {
+            return
+        }
+        if (activeJob?.isActive == true) return
+
+        mutableState.value = BackupRestoreUiState.SyncImporting("Applying differential sync changes...")
+        activeJob = viewModelScope.launch {
+            try {
+                val summary = withContext(ioDispatcher) {
+                    try {
+                        val graph = graphProvider()
+                        graph.importSync(stagedFile.toPath(), strategy)
+                    } finally {
+                        stagedFile.delete()
+                    }
+                }
+                mutableState.value = BackupRestoreUiState.SyncImportSuccess(summary)
+            } catch (e: Exception) {
+                mutableState.value = BackupRestoreUiState.SyncImportFailure(e.message ?: "Failed to apply sync changes.")
+            }
+        }
+    }
+
     fun cancelPreview(stagedFile: File?) {
         stagedFile?.delete()
-        if (mutableState.value is BackupRestoreUiState.PreviewReady || mutableState.value is BackupRestoreUiState.PreviewFailure) {
+        if (mutableState.value is BackupRestoreUiState.PreviewReady || mutableState.value is BackupRestoreUiState.PreviewFailure ||
+            mutableState.value is BackupRestoreUiState.SyncPreviewReady || mutableState.value is BackupRestoreUiState.SyncPreviewFailure) {
             mutableState.value = BackupRestoreUiState.Idle
         }
     }

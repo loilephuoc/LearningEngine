@@ -38,6 +38,13 @@ import vn.loi.learning.desktop.ui.component.ContentHost
 import vn.loi.learning.desktop.ui.component.Sidebar
 import vn.loi.learning.desktop.ui.component.StatusBar
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryFacade
+import vn.loi.learning.desktop.ui.sync.DesktopSyncViewModel
+import vn.loi.learning.desktop.ui.sync.DesktopBackupDialog
+import vn.loi.learning.desktop.ui.sync.DesktopRestoreDialog
+import vn.loi.learning.desktop.ui.sync.DesktopSyncExportDialog
+import vn.loi.learning.desktop.ui.sync.DesktopSyncImportDialog
+import vn.loi.learning.desktop.runtime.DesktopRecoveryManager
+import androidx.compose.runtime.collectAsState
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserFacade
 import vn.loi.learning.desktop.ui.dashboard.DashboardFacade
@@ -75,7 +82,8 @@ fun LearningShell(
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
     onCreateBackup: () -> String?,
-    onRestoreBackup: (Boolean) -> String?
+    onRestoreBackup: (Boolean) -> String?,
+    recoveryManager: DesktopRecoveryManager? = null
 ) {
     val strings = DesktopLocalization.strings(runtimeConfiguration.locale)
     val taskScope = rememberCoroutineScope()
@@ -239,6 +247,21 @@ fun LearningShell(
         contentLibraryViewModel.invalidate()
     }
 
+    val effectiveRecoveryManager = remember(recoveryManager) {
+        recoveryManager ?: DesktopRecoveryManager(java.nio.file.Path.of("data"), java.nio.file.Path.of("config"))
+    }
+    val syncViewModel = remember(applicationContext, effectiveRecoveryManager) {
+        DesktopSyncViewModel(applicationContext, effectiveRecoveryManager)
+    }
+    val backupState by syncViewModel.backupState.collectAsState()
+    val restoreState by syncViewModel.restoreState.collectAsState()
+    val syncExportState by syncViewModel.syncExportState.collectAsState()
+    val syncImportState by syncViewModel.syncImportState.collectAsState()
+
+    var showBackupDialog by remember { mutableStateOf(false) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
+    var showSyncExportDialog by remember { mutableStateOf(false) }
+    var showSyncImportDialog by remember { mutableStateOf(false) }
 
     fun refreshDestination(
         destination: NavigationDestination
@@ -501,6 +524,22 @@ fun LearningShell(
                     onExportDiagnostics = onExportDiagnostics,
                     onCreateBackup = onCreateBackup,
                     onRestoreBackup = { onRestoreBackup(studyViewModel.uiState.hasActiveSession) },
+                    onOpenBackupDialog = {
+                        syncViewModel.openBackupDialog()
+                        showBackupDialog = true
+                    },
+                    onOpenRestoreDialog = {
+                        syncViewModel.openRestoreDialog()
+                        showRestoreDialog = true
+                    },
+                    onOpenSyncExportDialog = {
+                        syncViewModel.openSyncExportDialog()
+                        showSyncExportDialog = true
+                    },
+                    onOpenSyncImportDialog = {
+                        syncViewModel.openSyncImportDialog()
+                        showSyncImportDialog = true
+                    },
                     onRefreshDashboard =
                         dashboardViewModel::refresh,
                     onOpenStudy = {
@@ -646,6 +685,90 @@ fun LearningShell(
                     dashboardName = dashboardName
                 )
             }
+        }
+
+        if (showBackupDialog) {
+            DesktopBackupDialog(
+                state = backupState,
+                onToggleSelectAll = syncViewModel::toggleBackupSelectAll,
+                onTogglePackage = syncViewModel::toggleBackupPackage,
+                onToggleIncludeProgress = syncViewModel::toggleBackupIncludeProgress,
+                onExecuteBackup = {
+                    val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Chọn nơi lưu bản sao lưu .lebak", java.awt.FileDialog.SAVE)
+                    dialog.file = "LearningEngine_Backup_${System.currentTimeMillis()}.lebak"
+                    dialog.isVisible = true
+                    val dir = dialog.directory
+                    val file = dialog.file
+                    if (dir != null && file != null) {
+                        syncViewModel.executeBackup(java.nio.file.Path.of(dir, file))
+                    }
+                },
+                onDismiss = { showBackupDialog = false }
+            )
+        }
+
+        if (showRestoreDialog) {
+            DesktopRestoreDialog(
+                state = restoreState,
+                onSelectFile = {
+                    val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Chọn tệp sao lưu .lebak", java.awt.FileDialog.LOAD)
+                    dialog.isVisible = true
+                    val dir = dialog.directory
+                    val file = dialog.file
+                    if (dir != null && file != null) {
+                        syncViewModel.stageAndPreviewRestore(java.nio.file.Path.of(dir, file))
+                    }
+                },
+                onConfirmRestore = {
+                    val staged = restoreState.stagedFilePath
+                    if (staged != null) {
+                        syncViewModel.executeRestore(java.nio.file.Path.of(staged))
+                    }
+                },
+                onDismiss = { showRestoreDialog = false }
+            )
+        }
+
+        if (showSyncExportDialog) {
+            DesktopSyncExportDialog(
+                state = syncExportState,
+                onTogglePackage = syncViewModel::toggleSyncExportPackage,
+                onToggleIncludeReviews = syncViewModel::toggleSyncExportIncludeReviews,
+                onExecuteExport = {
+                    val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Chọn nơi lưu gói đồng bộ vi sai .lesync", java.awt.FileDialog.SAVE)
+                    dialog.file = "LearningEngine_Sync_${System.currentTimeMillis()}.lesync"
+                    dialog.isVisible = true
+                    val dir = dialog.directory
+                    val file = dialog.file
+                    if (dir != null && file != null) {
+                        syncViewModel.executeSyncExport(java.nio.file.Path.of(dir, file))
+                    }
+                },
+                onDismiss = { showSyncExportDialog = false }
+            )
+        }
+
+        if (showSyncImportDialog) {
+            DesktopSyncImportDialog(
+                state = syncImportState,
+                onSelectFile = {
+                    val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Chọn tệp đồng bộ vi sai .lesync", java.awt.FileDialog.LOAD)
+                    dialog.isVisible = true
+                    val dir = dialog.directory
+                    val file = dialog.file
+                    if (dir != null && file != null) {
+                        syncViewModel.stageAndPreviewSyncImport(java.nio.file.Path.of(dir, file))
+                    }
+                },
+                onStrategySelected = syncViewModel::setConflictStrategy,
+                onConfirmImport = {
+                    val staged = syncImportState.stagedFilePath
+                    if (staged != null) {
+                        syncViewModel.executeSyncImport(java.nio.file.Path.of(staged))
+                    }
+                },
+                onDismiss = { showSyncImportDialog = false }
+            )
         }
     }
 }

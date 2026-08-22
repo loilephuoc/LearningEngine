@@ -39,6 +39,7 @@ import vn.loi.learning.domain.sync.model.MediaSyncItem
 import vn.loi.learning.domain.sync.model.MediaSyncManifest
 import vn.loi.learning.domain.sync.model.SyncConflict
 import vn.loi.learning.domain.sync.model.SyncConflictType
+import vn.loi.learning.domain.sync.model.SyncPreviewReport
 import vn.loi.learning.domain.sync.model.SyncResultSummary
 import vn.loi.learning.infrastructure.persistence.record.MemoryStateRecord
 import vn.loi.learning.infrastructure.persistence.record.ReviewEventRecord
@@ -54,6 +55,37 @@ class SyncEngine(
     private val mediaStorage: ContentMediaStorage? = null,
     private val transactionRunner: TransactionRunner
 ) {
+    fun isPackageBaselined(packageId: String): Boolean {
+        val all = installedPackageRepository.findAll()
+        return all.any { it.packageId.value == packageId || it.id.value == packageId }
+    }
+
+    fun getMediaHashesForPackages(packageIds: Set<String>? = null): Set<String> {
+        if (mediaStorage == null) return emptySet()
+        val allContents = if (packageIds != null) {
+            val targetContentIds = resolveContentIdsForPackages(packageIds)
+            if (targetContentIds.isNotEmpty()) contentRepository.findAll().filter { it.id in targetContentIds }
+            else contentRepository.findAll()
+        } else contentRepository.findAll()
+
+        val hashes = mutableSetOf<String>()
+        allContents.forEach { content ->
+            listOfNotNull(
+                content.media.primaryAudio,
+                content.media.translatedAudio,
+                content.media.image,
+                content.media.exampleAudio,
+                content.media.exampleTranslatedAudio
+            ).forEach { ref ->
+                val resolved = mediaStorage.resolve(ref)
+                if (resolved != null && Files.isRegularFile(resolved)) {
+                    hashes += PortableSyncPackageService.sha256(resolved)
+                }
+            }
+        }
+        return hashes
+    }
+
     fun exportSyncPackage(
         target: Path,
         sourcePlatform: String,
@@ -65,11 +97,22 @@ class SyncEngine(
         val installedPackages = installedPackageRepository.findAll()
             .filter { specificPackageIds == null || it.packageId.value in specificPackageIds || it.id.value in specificPackageIds }
 
-        val targetPackageIds = installedPackages.map { it.packageId.value }.distinct()
+        val targetPackageIds = if (specificPackageIds != null) {
+            installedPackages.map { it.packageId.value }.ifEmpty { specificPackageIds.toList() }.distinct()
+        } else {
+            installedPackages.map { it.packageId.value }.distinct()
+        }
 
         val allContents = contentRepository.findAll()
+        val scopedContents = if (specificPackageIds != null) {
+            val targetContentIds = resolveContentIdsForPackages(specificPackageIds)
+            if (targetContentIds.isNotEmpty()) allContents.filter { it.id in targetContentIds } else allContents
+        } else allContents
+
+        val scopedContentIdSet = scopedContents.map { it.id }.toSet()
+
         // Collect content deltas
-        val contentDeltas = allContents.map { content ->
+        val contentDeltas = scopedContents.map { content ->
             ContentDeltaRecord(
                 contentId = content.id.value,
                 operation = ContentDeltaOperation.UPSERT,
@@ -96,7 +139,7 @@ class SyncEngine(
         val mediaSyncItems = mutableListOf<MediaSyncItem>()
 
         if (mediaStorage != null) {
-            allContents.forEach { content ->
+            scopedContents.forEach { content ->
                 listOfNotNull(
                     content.media.primaryAudio,
                     content.media.translatedAudio,
@@ -123,10 +166,18 @@ class SyncEngine(
             }
         }
 
-        // Collect review events
+        // Collect review events for scoped items
         val reviewEventRecords = if (includeReviewEvents) {
             val allReviewEvents = reviewEventRepository.findAll()
-            allReviewEvents.map { event ->
+            val filteredEvents = if (specificPackageIds != null) {
+                val scopedItemIds = learningItemRepository.findAll()
+                    .filter { it.contentId in scopedContentIdSet }
+                    .map { it.id }
+                    .toSet()
+                allReviewEvents.filter { it.learningItemId in scopedItemIds }
+            } else allReviewEvents
+
+            filteredEvents.map { event ->
                 ReviewEventRecord(
                     schemaVersion = ReviewEventRecord.CURRENT_SCHEMA_VERSION,
                     id = event.id.value,
@@ -156,6 +207,73 @@ class SyncEngine(
         val tempDir = Files.createTempDirectory(".sync-preview-")
         try {
             return PortableSyncPackageService.readAndValidateSyncPackage(source, tempDir)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    fun generatePreviewReport(source: Path): SyncPreviewReport {
+        val tempDir = Files.createTempDirectory(".sync-preview-report-")
+        try {
+            val payload = PortableSyncPackageService.readAndValidateSyncPackage(source, tempDir)
+            val targetPackageIds = payload.manifest.packageIds
+            val installedLocalPackages = installedPackageRepository.findAll()
+            val installedPackageIds = (installedLocalPackages.map { it.packageId.value } +
+                installedLocalPackages.map { it.id.value }).toSet()
+
+            val missingBaseline = targetPackageIds.filter { it !in installedPackageIds }
+            val requiresFullBackup = missingBaseline.isNotEmpty()
+
+            val conflicts = mutableListOf<SyncConflict>()
+            payload.contentDeltas.forEach { delta ->
+                val existing = contentRepository.findById(ContentId(delta.contentId))
+                if (existing != null) {
+                    val isTextDifferent = existing.text.primaryText != delta.primaryText ||
+                        existing.text.translatedText != delta.translatedText ||
+                        existing.text.exampleText != delta.exampleText ||
+                        existing.text.exampleTranslation != delta.exampleTranslation
+                    if (isTextDifferent && existing.text.primaryText != delta.primaryText) {
+                        conflicts += SyncConflict(
+                            conflictType = SyncConflictType.CONTENT_FIELD_COLLISION,
+                            entityId = delta.contentId,
+                            fieldName = "primaryText",
+                            localValueSummary = existing.text.primaryText,
+                            incomingValueSummary = delta.primaryText,
+                            resolutionApplied = ConflictResolutionStrategy.MERGE_FIELD_LEVEL,
+                            detail = "Local text differs from incoming change."
+                        )
+                    }
+                }
+            }
+
+            val existingEvents = reviewEventRepository.findAll().map { it.id.value }.toSet()
+            val deduplicatedReviewCount = payload.reviewEvents.count { it.id in existingEvents }
+            val newReviewCount = payload.reviewEvents.size - deduplicatedReviewCount
+
+            val mediaReusedCount = payload.mediaManifest.items.count { !it.isContainedInSyncPackage }
+            val newMediaBytes = payload.mediaFiles.values.sumOf { Files.size(it) }
+
+            val warnings = mutableListOf<String>()
+            if (requiresFullBackup) {
+                warnings += "Gói (${missingBaseline.joinToString()}) chưa tồn tại trên thiết bị này. Khuyến nghị thực hiện Sao lưu toàn diện (.lebak) để thiết lập baseline."
+            }
+
+            return SyncPreviewReport(
+                syncPackageId = payload.manifest.syncPackageId,
+                sourcePlatform = payload.manifest.sourcePlatform,
+                createdAtUtc = payload.manifest.createdAtUtc,
+                packagesAffected = targetPackageIds,
+                contentChangesCount = payload.contentDeltas.size,
+                newMediaCount = payload.mediaFiles.size,
+                newMediaBytes = newMediaBytes,
+                existingMediaReusedCount = mediaReusedCount,
+                reviewEventsCount = newReviewCount,
+                reviewEventsDeduplicatedCount = deduplicatedReviewCount,
+                conflicts = conflicts,
+                missingBaselinePackageIds = missingBaseline,
+                requiresFullBackup = requiresFullBackup,
+                warnings = warnings
+            )
         } finally {
             tempDir.toFile().deleteRecursively()
         }
@@ -389,6 +507,31 @@ class SyncEngine(
             success = true,
             message = "Sync applied: $contentAppliedCount content updates, $mediaAddedCount media assets, $reviewMergedCount review events merged ($reviewDeduplicatedCount deduplicated)."
         )
+    }
+
+    private fun resolveContentIdsForPackages(packageIds: Set<String>): Set<ContentId> {
+        val targetContentIds = mutableSetOf<ContentId>()
+        val installed = installedPackageRepository.findAll()
+            .filter { it.packageId.value in packageIds || it.id.value in packageIds }
+        val packageIdValues = (installed.map { it.packageId.value } + packageIds).toSet()
+
+        contentPackageRepository?.findAll()
+            ?.filter { it.id.value in packageIdValues }
+            ?.forEach { cp ->
+                cp.libraryIds.forEach { libId ->
+                    contentLibraryRepository?.findById(libId)?.contentIds?.let { targetContentIds.addAll(it) }
+                }
+            }
+
+        if (targetContentIds.isEmpty()) {
+            contentRepository.findAll().forEach { content ->
+                val mediaRef = content.media.primaryAudio ?: content.media.image
+                if (mediaRef != null && packageIdValues.any { mediaRef.startsWith(it) }) {
+                    targetContentIds.add(content.id)
+                }
+            }
+        }
+        return targetContentIds
     }
 
     private fun toMemoryStateRecord(state: MemoryState): MemoryStateRecord = MemoryStateRecord(

@@ -103,3 +103,21 @@ data class SyncResultSummary(
     val success: Boolean = true,
     val message: String = "Sync completed successfully."
 )
+
+@Serializable
+data class SyncPreviewReport(
+    val syncPackageId: String,
+    val sourcePlatform: String,
+    val createdAtUtc: String,
+    val packagesAffected: List<String> = emptyList(),
+    val contentChangesCount: Int = 0,
+    val newMediaCount: Int = 0,
+    val newMediaBytes: Long = 0L,
+    val existingMediaReusedCount: Int = 0,
+    val reviewEventsCount: Int = 0,
+    val reviewEventsDeduplicatedCount: Int = 0,
+    val conflicts: List<SyncConflict> = emptyList(),
+    val missingBaselinePackageIds: List<String> = emptyList(),
+    val requiresFullBackup: Boolean = false,
+    val warnings: List<String> = emptyList()
+)

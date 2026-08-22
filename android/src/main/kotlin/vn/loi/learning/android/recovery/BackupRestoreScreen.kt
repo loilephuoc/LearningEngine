@@ -4,40 +4,21 @@ import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -52,6 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import vn.loi.learning.android.ui.LearningSpacing
+import vn.loi.learning.domain.sync.model.ConflictResolutionStrategy
+import vn.loi.learning.domain.sync.model.SyncPreviewReport
+import vn.loi.learning.domain.sync.model.SyncResultSummary
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2Preview
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult
 
@@ -81,23 +65,50 @@ fun BackupRestoreScreen(
         }
     }
 
+    val createSyncLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportSync(context.cacheDir) { context.contentResolver.openOutputStream(uri) }
+        }
+    }
+
+    val openSyncLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.stageAndPreviewSync(context.cacheDir) { context.contentResolver.openInputStream(uri) }
+        }
+    }
+
     val isBusy = uiState is BackupRestoreUiState.BackingUp ||
             uiState is BackupRestoreUiState.Previewing ||
-            uiState is BackupRestoreUiState.Restoring
+            uiState is BackupRestoreUiState.Restoring ||
+            uiState is BackupRestoreUiState.SyncExporting ||
+            uiState is BackupRestoreUiState.SyncPreviewing ||
+            uiState is BackupRestoreUiState.SyncImporting
 
     BackHandler(enabled = true) {
-        if (uiState is BackupRestoreUiState.Restoring) {
-            // Prevent leaving during destructive mutation
+        if (uiState is BackupRestoreUiState.Restoring || uiState is BackupRestoreUiState.SyncImporting) {
             return@BackHandler
         }
         if (uiState is BackupRestoreUiState.PreviewReady) {
             viewModel.cancelPreview((uiState as BackupRestoreUiState.PreviewReady).stagedFile)
             return@BackHandler
         }
+        if (uiState is BackupRestoreUiState.SyncPreviewReady) {
+            viewModel.cancelPreview((uiState as BackupRestoreUiState.SyncPreviewReady).stagedFile)
+            return@BackHandler
+        }
         if (uiState is BackupRestoreUiState.PreviewFailure ||
             uiState is BackupRestoreUiState.BackupSuccess ||
             uiState is BackupRestoreUiState.BackupFailure ||
-            uiState is BackupRestoreUiState.RestoreFailure) {
+            uiState is BackupRestoreUiState.RestoreFailure ||
+            uiState is BackupRestoreUiState.SyncExportSuccess ||
+            uiState is BackupRestoreUiState.SyncExportFailure ||
+            uiState is BackupRestoreUiState.SyncPreviewFailure ||
+            uiState is BackupRestoreUiState.SyncImportSuccess ||
+            uiState is BackupRestoreUiState.SyncImportFailure) {
             viewModel.dismissResult()
             return@BackHandler
         }
@@ -133,6 +144,18 @@ fun BackupRestoreScreen(
                 .padding(LearningSpacing.medium),
             verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
         ) {
+            // Differential Sync Card
+            DifferentialSyncCard(
+                enabled = !isBusy,
+                onExportSync = {
+                    val defaultName = viewModel.generateDefaultSyncFilename()
+                    createSyncLauncher.launch(defaultName)
+                },
+                onImportSync = {
+                    openSyncLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*"))
+                }
+            )
+
             // Full Backup Card
             FullBackupCard(
                 enabled = !isBusy,
@@ -244,6 +267,109 @@ fun BackupRestoreScreen(
             RestoreFailureDialog(
                 result = state.result,
                 onDismiss = { viewModel.dismissResult() }
+            )
+        }
+        is BackupRestoreUiState.SyncExporting -> {
+            ProgressDialog(title = "Xuất gói vi sai", message = state.message)
+        }
+        is BackupRestoreUiState.SyncExportSuccess -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissResult() },
+                title = { Text("Xuất gói đồng bộ vi sai thành công") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Tệp: ${state.summary.fileName}", fontWeight = FontWeight.Bold)
+                        Text("Dung lượng: ${state.summary.fileSizeFormatted}")
+                        Text("• Thẻ từ vựng cập nhật: ${state.summary.contentDeltasCount}")
+                        Text("• Lượt ôn tập: ${state.summary.reviewEventsCount}")
+                        Text("• Tệp âm thanh/ảnh mới: ${state.summary.mediaCount}")
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = { viewModel.dismissResult() }) {
+                        Text("Xong")
+                    }
+                }
+            )
+        }
+        is BackupRestoreUiState.SyncExportFailure -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissResult() },
+                title = { Text("Xuất gói thất bại", color = MaterialTheme.colorScheme.error) },
+                text = { Text(state.message) },
+                confirmButton = {
+                    Button(onClick = { viewModel.dismissResult() }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        is BackupRestoreUiState.SyncPreviewing -> {
+            ProgressDialog(title = "Đang phân tích gói đồng bộ", message = state.message)
+        }
+        is BackupRestoreUiState.SyncPreviewReady -> {
+            SyncPreviewDialog(
+                report = state.report,
+                strategy = state.conflictStrategy,
+                onStrategyChanged = { viewModel.setSyncConflictStrategy(it) },
+                onConfirm = { viewModel.confirmSyncImport(state.stagedFile, state.conflictStrategy) },
+                onCancel = { viewModel.cancelPreview(state.stagedFile) }
+            )
+        }
+        is BackupRestoreUiState.SyncPreviewFailure -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissResult() },
+                title = { Text("Không thể đọc gói đồng bộ", color = MaterialTheme.colorScheme.error) },
+                text = { Text(state.message) },
+                confirmButton = {
+                    Button(onClick = { viewModel.dismissResult() }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        is BackupRestoreUiState.SyncImporting -> {
+            ProgressDialog(
+                title = "Đang áp dụng đồng bộ",
+                message = state.message,
+                dismissible = false
+            )
+        }
+        is BackupRestoreUiState.SyncImportSuccess -> {
+            AlertDialog(
+                onDismissRequest = {
+                    viewModel.dismissResult()
+                    onReload()
+                },
+                title = { Text("Đồng bộ hoàn tất") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(state.summary.message)
+                        Text("• Cập nhật thẻ: ${state.summary.contentDeltasApplied}")
+                        Text("• Media mới: ${state.summary.mediaAssetsAdded}")
+                        Text("• Lượt ôn tập: ${state.summary.reviewEventsMerged} mới (${state.summary.reviewEventsDeduplicated} bỏ qua)")
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        viewModel.dismissResult()
+                        onReload()
+                    }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        is BackupRestoreUiState.SyncImportFailure -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissResult() },
+                title = { Text("Đồng bộ thất bại", color = MaterialTheme.colorScheme.error) },
+                text = { Text(state.message) },
+                confirmButton = {
+                    Button(onClick = { viewModel.dismissResult() }) {
+                        Text("OK")
+                    }
+                }
             )
         }
         is BackupRestoreUiState.Idle -> {}
@@ -579,6 +705,151 @@ private fun RestoreFailureDialog(
         confirmButton = {
             Button(onClick = onDismiss) {
                 Text("OK")
+            }
+        }
+    )
+}
+
+@Composable
+private fun DifferentialSyncCard(
+    enabled: Boolean,
+    onExportSync: () -> Unit,
+    onImportSync: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(LearningSpacing.medium),
+            verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+            ) {
+                Icon(
+                    Icons.Default.Sync,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Text(
+                    "Đồng bộ vi sai (.lesync)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Text(
+                "Trao đổi siêu nhẹ: Chỉ chuyển các nội dung chỉnh sửa, audio TTS mới và lượt ôn tập FSRS. Tệp media có sẵn sẽ tự động được tái sử dụng mà không truyền lại.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+            ) {
+                Button(
+                    onClick = onExportSync,
+                    enabled = enabled,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Xuất thay đổi")
+                }
+                OutlinedButton(
+                    onClick = onImportSync,
+                    enabled = enabled,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Nạp thay đổi")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SyncPreviewDialog(
+    report: SyncPreviewReport,
+    strategy: ConflictResolutionStrategy,
+    onStrategyChanged: (ConflictResolutionStrategy) -> Unit,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = {
+            Text(
+                "Xem trước gói đồng bộ vi sai",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text("Nguồn gửi: ${report.sourcePlatform.uppercase()}", fontWeight = FontWeight.SemiBold)
+                Text("Gói ảnh hưởng: ${report.packagesAffected.joinToString().ifEmpty { "Tất cả" }}")
+                Text("• Thẻ từ vựng cập nhật: ${report.contentChangesCount}")
+                Text("• Media mới: ${report.newMediaCount} (${formatBytesHelper(report.newMediaBytes)})")
+                Text("• Media có sẵn (tái sử dụng): ${report.existingMediaReusedCount} file", color = MaterialTheme.colorScheme.primary)
+                Text("• Lượt ôn tập: ${report.reviewEventsCount} mới (${report.reviewEventsDeduplicatedCount} bỏ qua)")
+
+                if (report.requiresFullBackup) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    Text(
+                        report.warnings.firstOrNull() ?: "Thiết bị thiếu baseline cho gói này. Khuyến nghị Sao lưu toàn diện trước.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                if (report.conflicts.isNotEmpty()) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    Text(
+                        "Xung đột phát hiện (${report.conflicts.size}):",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                    report.conflicts.forEach { conflict ->
+                        Text("• Thẻ ${conflict.entityId}: \"${conflict.localValueSummary}\" ↔ \"${conflict.incomingValueSummary}\"", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Phương thức hòa giải:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = strategy == ConflictResolutionStrategy.MERGE_FIELD_LEVEL,
+                            onClick = { onStrategyChanged(ConflictResolutionStrategy.MERGE_FIELD_LEVEL) }
+                        )
+                        Text("Hòa giải từng trường (Khuyến nghị)", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = strategy == ConflictResolutionStrategy.PRESERVE_LOCAL,
+                            onClick = { onStrategyChanged(ConflictResolutionStrategy.PRESERVE_LOCAL) }
+                        )
+                        Text("Giữ bản hiện tại", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = strategy == ConflictResolutionStrategy.APPLY_INCOMING,
+                            onClick = { onStrategyChanged(ConflictResolutionStrategy.APPLY_INCOMING) }
+                        )
+                        Text("Ghi đè bản nhận được", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Áp dụng đồng bộ")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onCancel) {
+                Text("Hủy")
             }
         }
     )

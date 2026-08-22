@@ -202,6 +202,60 @@ class BackupRestoreViewModelTest {
     }
 
     @Test
+    fun `exportSync creates lesync archive and transitions to SyncExportSuccess`() = runTest {
+        val fixture = createFixture()
+        try {
+            val viewModel = BackupRestoreViewModel(
+                graphProvider = { fixture.graph },
+                savedState = SavedStateHandle(),
+                ioDispatcher = dispatcher
+            )
+            val outputStream = ByteArrayOutputStream()
+            viewModel.exportSync(fixture.contextDir) { outputStream }
+            testScheduler.advanceUntilIdle()
+
+            val state = viewModel.state.value
+            assertIs<BackupRestoreUiState.SyncExportSuccess>(state)
+            assertTrue(outputStream.size() > 0)
+            assertTrue(state.summary.fileName.startsWith("LearningEngine_Sync_"))
+        } finally {
+            fixture.cleanup()
+        }
+    }
+
+    @Test
+    fun `stageAndPreviewSync reads report and confirmSyncImport applies changeset`() = runTest {
+        val fixture = createFixture()
+        try {
+            val syncFile = fixture.tempDir.resolve("test.lesync")
+            fixture.graph.exportSync(syncFile)
+            val syncBytes = Files.readAllBytes(syncFile)
+
+            val viewModel = BackupRestoreViewModel(
+                graphProvider = { fixture.graph },
+                savedState = SavedStateHandle(),
+                ioDispatcher = dispatcher
+            )
+            viewModel.stageAndPreviewSync(fixture.contextDir) { ByteArrayInputStream(syncBytes) }
+            testScheduler.advanceUntilIdle()
+
+            val previewState = viewModel.state.value
+            assertIs<BackupRestoreUiState.SyncPreviewReady>(previewState)
+            assertTrue(previewState.stagedFile.exists())
+
+            viewModel.confirmSyncImport(previewState.stagedFile, previewState.conflictStrategy)
+            testScheduler.advanceUntilIdle()
+
+            val importState = viewModel.state.value
+            assertIs<BackupRestoreUiState.SyncImportSuccess>(importState)
+            assertTrue(importState.summary.success)
+            assertFalse(previewState.stagedFile.exists())
+        } finally {
+            fixture.cleanup()
+        }
+    }
+
+    @Test
     fun `dismissResult resets state to Idle`() {
         val fixture = createFixture()
         try {

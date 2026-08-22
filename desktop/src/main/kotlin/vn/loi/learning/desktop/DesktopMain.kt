@@ -231,7 +231,8 @@ fun main() {
                             exitApplication()
                             source.toString()
                         }
-                    }
+                    },
+                    recoveryManager = runtime.recovery
                 )
             }
 
