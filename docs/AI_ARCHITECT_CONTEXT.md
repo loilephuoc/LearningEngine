@@ -15,6 +15,10 @@
   prove mutation+outbox atomicity and restart/dedup/cursor safety before content merge begins.
 - Supabase credentials, migrations, deployment, network access, client integration, and physical
   sync UAT have not been performed. Android widget physical UAT also remains pending.
+- Capability 2 composes durable `sync-state.json` into persisted application graphs and the canonical
+  JSON transaction path set. Local mutation/outbox and apply/inbox/cursor are atomic; outbound events
+  survive restart and remote-accept/local-ACK crashes until explicit acknowledgement. The next
+  capability is Content field-level delta production/application using these boundaries.
 
 ## Current autonomous UAT continuation
 

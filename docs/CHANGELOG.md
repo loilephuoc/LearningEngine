@@ -4767,3 +4767,12 @@ Searchable desktop collections now expose a polite live result status that disti
 - Added a deterministic per-account in-memory transport with ordered pagination, retry-safe event
   and idempotency deduplication, account isolation, monotonic ACK, and no-op pull coverage.
 - Added no Supabase dependency, network call, persistence-schema change, or Desktop/Android UI change.
+
+## Durable Local Sync Recovery State
+
+- Added canonical versioned `sync-state.json` persistence for outbox, applied-event inbox, and
+  per-account cursor, composed into the existing JSON transaction snapshot membership.
+- Added Application workflows that atomically pair local mutation with outbox enqueue and remote
+  apply with inbox deduplication/cursor advance.
+- Verified restart recovery, mutation/apply rollback, pull retry no-op, and retention of accepted
+  outbound changes until explicit ACK. Content/review producers and UI remain out of scope.

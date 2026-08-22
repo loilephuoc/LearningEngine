@@ -1060,8 +1060,9 @@ Engine core.
 1. **Sync Protocol/Core Contracts — complete:** typed sync identities; distinct content, media, and
    learning deltas; revision/cursor/ACK and conflict diagnostics; `SyncTransport`; deterministic
    in-memory adapter with ordering, pagination, duplicate, isolation, and no-op coverage.
-2. **Durable Local Outbox/Inbox/Cursor:** extend the existing JSON transaction membership so local
-   mutation and queued change can commit atomically; add retry/restart/dedup/apply recovery.
+2. **Durable Local Outbox/Inbox/Cursor — complete:** canonical `sync-state.json` participates in the
+   existing JSON transaction membership; mutation+outbox and apply+inbox+cursor commit atomically,
+   outbox remains retryable until ACK, and restart/dedup/failure rollback are verified.
 3. **Content Field-Level Delta:** preserve unchanged and unknown fields and stable Content identity.
 4. **Learning/Review Delta:** deduplicate stable ReviewEvent identity and derive MemoryState only
    through proven canonical scheduling semantics.

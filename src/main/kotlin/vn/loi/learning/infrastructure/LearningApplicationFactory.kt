@@ -115,6 +115,9 @@ object LearningApplicationFactory {
         context.packageCatalog?.findAll()
         checkpoint("installed-packages")
         val installedPackages = context.installedPackageRepository?.findAll().orEmpty()
+        checkpoint("local-sync-state")
+        (context.localSyncStateRepository as? vn.loi.learning.infrastructure.persistence.json.JsonLocalSyncStateRepository)
+            ?.validate()
 
         val contentIds = contents.mapTo(hashSetOf()) { it.id }
         val libraryIds = libraries.mapTo(hashSetOf()) { it.id }
@@ -273,6 +276,10 @@ object LearningApplicationFactory {
         val continuousReviewIntentsPath =
             persistenceDirectory.resolve(CONTINUOUS_REVIEW_INTENTS_FILE_NAME)
 
+        val localSyncStatePath = persistenceDirectory.resolve(LOCAL_SYNC_STATE_FILE_NAME)
+        val localSyncStateRepository =
+            vn.loi.learning.infrastructure.persistence.json.JsonLocalSyncStateRepository(localSyncStatePath)
+
         val contentPackagesPath =
             persistenceDirectory.resolve(
                 CONTENT_PACKAGES_FILE_NAME
@@ -403,6 +410,7 @@ object LearningApplicationFactory {
                     studySessionsPath,
                     studyQueuesPath,
                     continuousReviewIntentsPath,
+                    localSyncStatePath,
                     contentPackagesPath,
                     packageCatalogsPath
                 )
@@ -434,6 +442,7 @@ object LearningApplicationFactory {
             transactionRunner = transactionRunner,
             continuousReviewIntentRepository = continuousReviewIntentRepository,
             learningTrajectoryRepository = learningTrajectoryRepository,
+            localSyncStateRepository = localSyncStateRepository,
             mediaDirectory = persistenceDirectory.resolve(MEDIA_DIRECTORY_NAME),
             installedPackageRepository =
                 StoreBackedInstalledPackageRepository(
@@ -482,6 +491,7 @@ object LearningApplicationFactory {
         continuousReviewIntentRepository:
         ContinuousReviewIntentRepository,
         learningTrajectoryRepository: LearningTrajectoryRepository,
+        localSyncStateRepository: vn.loi.learning.application.sync.LocalSyncStateRepository? = null,
         mediaDirectory: Path?,
         installedPackageRepository:
         vn.loi.learning.domain.library.repository.InstalledPackageRepository =
@@ -997,7 +1007,11 @@ object LearningApplicationFactory {
             packageIntegrityChecker = packageIntegrityChecker,
             intermediatePublicTransportRepair = intermediatePublicTransportRepair,
             recoveryOperationGate = recoveryOperationGate,
-            syncEngine = syncEngine
+            syncEngine = syncEngine,
+            localSyncStateRepository = localSyncStateRepository,
+            localSyncCoordinator = localSyncStateRepository?.let {
+                vn.loi.learning.application.sync.LocalSyncCoordinator(it, transactionRunner)
+            }
         )
 
     }
@@ -1095,6 +1109,8 @@ object LearningApplicationFactory {
 
     private const val CONTINUOUS_REVIEW_INTENTS_FILE_NAME =
         "continuous-review-intents.json"
+
+    private const val LOCAL_SYNC_STATE_FILE_NAME = "sync-state.json"
 
     private const val CONTENT_PACKAGES_FILE_NAME =
         "content-packages.json"

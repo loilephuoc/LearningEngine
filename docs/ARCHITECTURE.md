@@ -1872,3 +1872,10 @@ monotonic and never advances apply state by itself. Server timestamps are not co
 The deterministic in-memory transport is the executable protocol adapter for core tests; the
 existing portable `.lesync` archive remains a separate file-transfer workflow and is not the
 incremental transport contract.
+
+Persisted clients compose one canonical `sync-state.json` repository into the same explicit
+`JsonFileTransactionRunner` membership as local domain stores. `LocalSyncCoordinator` owns two
+application workflows: local mutation then outbox enqueue, and remote apply then inbox/event dedup
+plus cursor advance. Failure rolls both sides back. Accepted outbound changes remain queued until
+explicit ACK, so a crash between remote acceptance and local acknowledgement retries the same
+event/idempotency identity. The cursor advances only after successful local apply.
