@@ -1,5 +1,13 @@
 # Cross-Platform Sync & Portable Backup — Handoff
 
+## Autonomous UAT continuation — 2026-08-22
+
+- Current clean checkpoint before this handoff: `595444fbc7519e8ef4ff62cad9b5d2ee25f5591e`.
+- Physical Android restore of the current 2-package baseline passed: Elementary + OPD_2nd,
+  3,376 Content, 16,880 LearningItems and 16,619 media files.
+- Safety Backup is now opt-in/user-managed and restore rollback is hidden/temporary/transactional.
+- Resume at Phase 3 Desktop backup progress UX; do not repeat completed restore phases.
+
 ## 1. System Overview
 Learning Engine uses a dual-layer synchronization and recovery architecture:
 1. **Full Portable Backup (`.lebak`)**: Unified disaster recovery format containing complete package contents, full media storage, learning state, and platform supplements.

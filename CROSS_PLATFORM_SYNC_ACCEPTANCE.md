@@ -6,7 +6,7 @@
 - [x] Portable backup archive is versioned (`backupSchemaVersion = 2`) and self-describing (`manifest.json`).
 - [x] Desktop can create full portable backup with all packages, JSON data, and media files.
 - [x] Desktop can inspect and preview portable backup before restore.
-- [x] Desktop can safely restore portable backup with automatic safety backup and atomic rollback on failure.
+- [x] Desktop can safely restore portable backup with temporary transactional rollback; persistent Safety Backup is never automatic.
 - [x] Android can create portable backup with Android supplements (preferences, recordings, lockscreen background).
 - [x] Android can preview and restore portable backup produced by Desktop.
 - [x] Desktop can preview and restore portable backup produced by Android.
@@ -28,7 +28,7 @@
 - [x] Same content changed concurrently on both devices: conflict detected and presented in conflict report UI.
 - [x] Conflict resolution strategies available: Merge field level, Keep local, Apply incoming.
 - [x] User changes are never silently discarded or overwritten.
-- [x] Restore operations are strictly transactional (validate -> stage -> safety backup -> apply -> verify -> commit/rollback).
+- [x] Restore operations are strictly transactional (validate -> stage -> temporary rollback snapshot -> apply -> verify -> commit/rollback).
 - [x] Existing user data, package data, review history, and settings are preserved.
 
 ### 4. UI & Workflow

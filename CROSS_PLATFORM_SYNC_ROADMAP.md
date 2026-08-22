@@ -1,5 +1,18 @@
 # Cross-Platform Sync & Portable Backup — Roadmap
 
+## Current autonomous UAT sequence
+
+1. Phase 0 recovery/audit — PASS.
+2. Safety semantics — PASS at `595444fb`.
+3. Restore robustness — automated PASS and 2-package physical restore PASS.
+4. Desktop truthful backup progress — IN PROGRESS.
+5. Desktop success dialog.
+6. Android localization.
+7. Android Library/active package and Study indicator.
+8. Reminder controls and image radius.
+9. Desktop Content Studio context Delete.
+10. Global localization audit, full regression and physical UAT.
+
 This roadmap defines the sequential capabilities and definition of done for the cross-platform sync & backup master implementation between Desktop and Android.
 
 ---
