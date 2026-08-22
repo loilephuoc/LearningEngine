@@ -2230,6 +2230,18 @@ or skipped tests.
   confirmation remain required.
 # Cross-platform sync Phase 4 handoff — 2026-08-22
 
+## Selective backup referential-integrity follow-up — 2026-08-22
+
+- Root cause verified from the failed OPD_2nd Android archive: selective staging wrote filtered
+  shadow `data` arrays while canonical persistence retained/read global `records`; StudySession and
+  StudyQueue were not scoped at all.
+- Current capability uses one canonical package graph for preview, staging, counts, validation, and
+  selective merge. ReviewEvent uses nested state item IDs, LearningTrajectory uses content ID, and
+  whole StudyQueue snapshots follow selected installed-package StudySessions without trimming.
+- Android production validation was not changed. `clean test` passes 5,000/5,000 tests: Engine 2,236,
+  Android 962, and Desktop 1,802, with zero failures, errors, or skips. The checkpoint commit and a
+  newly generated OPD_2nd Desktop archive for physical Android round-trip are the continuation point.
+
 - Branch: `feat/cross-platform-sync`.
 - Verified capability commits: `3f8f6b73` media completeness, `36e67c50` creation preview/naming,
   `62735f79` progress/cancellation, `d28ac963` selected-media staging/performance and physical UAT.

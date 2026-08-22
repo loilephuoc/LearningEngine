@@ -1,3 +1,16 @@
+# Cross-platform sync — selective portable backup referential integrity
+
+- Replaced media-name ownership heuristics with one canonical package dependency scope shared by
+  backup preview, archive staging, manifest counts, validation, and selective restore merge.
+- Selective JSON staging now replaces canonical `records` instead of adding a shadow `data` array,
+  so Desktop preview and Android persistence consume the same package-isolated records.
+- Added schema-correct filtering for nested ReviewEvent learning-item state, content-owned learning
+  trajectories, installed-package-owned study sessions, and their complete StudyQueue snapshots.
+- Portable backup creation now rejects unresolved package/library/content/item/progress/session/queue
+  or media references before publishing the archive; Android restore validation remains unchanged.
+- Selective restore now merges the complete canonical dependency graph and exact referenced media
+  paths while preserving unrelated package state and the existing safety-backup/rollback boundary.
+
 # Cross-platform sync — portable backup media completeness
 
 - Fixed selective `.lebak` scoping for production package identity: stable package IDs now resolve

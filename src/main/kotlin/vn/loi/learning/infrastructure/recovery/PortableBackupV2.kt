@@ -19,7 +19,9 @@ data class PortableBackupCountsV2(
     val learningItems: Long = 0,
     val memoryStates: Long = 0,
     val reviewEvents: Long = 0,
+    val learningTrajectories: Long = 0,
     val studySessions: Long = 0,
+    val studyQueues: Long = 0,
     val mediaFiles: Long = 0,
     val recordings: Long = 0
 )
@@ -51,6 +53,7 @@ data class PortableBackupManifestV2(
     val createdAtUtc: String,
     val sourcePlatform: String,
     val learnerIds: List<String> = emptyList(),
+    val selectivePackageIds: Set<String> = emptySet(),
     val includedSections: List<String>,
     val packages: List<PortableBackupPackageEntryV2> = emptyList(),
     val counts: PortableBackupCountsV2,
@@ -76,6 +79,9 @@ data class PortableBackupPackagePlanV2(
     val learningItemCount: Int,
     val memoryStateCount: Int,
     val reviewEventCount: Int,
+    val learningTrajectoryCount: Int,
+    val studySessionCount: Int,
+    val studyQueueCount: Int,
     val mediaFileCount: Int,
     val mediaBytes: Long,
     val estimatedDataBytes: Long

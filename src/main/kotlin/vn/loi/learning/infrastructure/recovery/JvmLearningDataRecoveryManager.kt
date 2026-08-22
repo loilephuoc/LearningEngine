@@ -54,9 +54,32 @@ internal fun filesEqual(first: Path, second: Path): Boolean {
 
 private const val FILE_COMPARISON_BUFFER_SIZE = 64 * 1024
 private const val DEFAULT_STREAMING_BUFFER_SIZE = 64 * 1024
+private val PROGRESS_DATA_FILES = setOf(
+    "memory-states.json",
+    "review-events.json",
+    "learning-trajectories.json",
+    "study-sessions.json",
+    "study-queues.json"
+)
+private val CANONICAL_PACKAGE_DATA_FILES = listOf(
+    "installed-packages.json", "content-packages.json", "content-libraries.json", "contents.json",
+    "learning-items.json", "memory-states.json", "review-events.json", "learning-trajectories.json",
+    "study-sessions.json", "study-queues.json"
+)
 
 private class UnsupportedSchemaException(message: String, val version: Int) : RuntimeException(message)
 private class InsufficientSpaceException(message: String, val requiredBytes: Long, val availableBytes: Long) : RuntimeException(message)
+
+private data class PackageBackupScope(
+    val packageIds: Set<String>,
+    val installedPackageIds: Set<String>,
+    val libraryIds: Set<String>,
+    val contentIds: Set<String>,
+    val learningItemIds: Set<String>,
+    val studySessionIds: Set<String>,
+    val mediaReferences: Set<String>,
+    val records: Map<String, List<JsonObject>>
+)
 
 open class LearningDataRecoveryException(message: String, cause: Throwable? = null) : IllegalStateException(message, cause)
 class CatastrophicLearningDataRecoveryException(
@@ -176,47 +199,16 @@ class JvmLearningDataRecoveryManager(
         val dataRoot = roots["data"] ?: error("Portable backup requires a data root.")
         val mediaRoot = roots["media"] ?: dataRoot.resolve("media")
         val installed = readJsonArrayObjects(dataRoot.resolve("installed-packages.json"))
-        val selected = installed.filter { pkg ->
-            val packageId = jsonString(pkg, "packageId") ?: jsonString(pkg, "id")
-            descriptor.specificPackageIds.isNullOrEmpty() || packageId in descriptor.specificPackageIds
-        }
-        if (!descriptor.specificPackageIds.isNullOrEmpty()) {
-            val found = selected.mapNotNull { jsonString(it, "packageId") ?: jsonString(it, "id") }.toSet()
-            val missing = descriptor.specificPackageIds - found
-            if (missing.isNotEmpty()) error("Unknown selected package ID(s): ${missing.sorted().joinToString()}")
-        }
-
-        val contentPackages = readJsonArrayObjects(dataRoot.resolve("content-packages.json"))
-        val contentLibraries = readJsonArrayObjects(dataRoot.resolve("content-libraries.json"))
-        val contents = readJsonArrayObjects(dataRoot.resolve("contents.json"))
-        val learningItems = readJsonArrayObjects(dataRoot.resolve("learning-items.json"))
-        val memoryStates = readJsonArrayObjects(dataRoot.resolve("memory-states.json"))
-        val reviewEvents = readJsonArrayObjects(dataRoot.resolve("review-events.json"))
-        val libraryContentIds = contentLibraries.associate { library ->
-            jsonString(library, "id").orEmpty() to jsonStringArray(library, "contentIds").toSet()
-        }
-        val packagePlans = selected.map { installedPackage ->
-            val packageId = jsonString(installedPackage, "packageId") ?: jsonString(installedPackage, "id")
-                ?: error("Installed package identity is missing.")
+        val selectedIds = descriptor.specificPackageIds?.takeIf(Set<String>::isNotEmpty)
+            ?: installed.mapNotNull { jsonString(it, "packageId") ?: jsonString(it, "id") }.toSet()
+        val scope = buildPackageBackupScope(dataRoot, selectedIds, descriptor.includeLearningProgress)
+        validatePackageBackupScope(scope, requireMedia = false)
+        val packagePlans = scope.records.getValue("installed-packages.json").map { installedPackage ->
+            val packageId = requireNotNull(jsonString(installedPackage, "packageId") ?: jsonString(installedPackage, "id"))
+            val packageScope = buildPackageBackupScope(dataRoot, setOf(packageId), descriptor.includeLearningProgress)
+            validatePackageBackupScope(packageScope, requireMedia = false)
             val packageName = jsonString(installedPackage, "name") ?: packageId
-            val packageRecord = contentPackages.firstOrNull {
-                (jsonString(it, "packageId") ?: jsonString(it, "id")) == packageId
-            }
-            val ownedContentIds = packageRecord?.let { record ->
-                jsonStringArray(record, "libraryIds").flatMap { libraryContentIds[it].orEmpty() }.toSet()
-            }.orEmpty()
-            val packageContents = contents.filter { content ->
-                val contentId = jsonString(content, "id")
-                contentId in ownedContentIds || mediaReferences(content).any { it == packageName || it.startsWith("$packageName/") }
-            }
-            val contentIds = packageContents.mapNotNull { jsonString(it, "id") }.toSet()
-            val packageItems = learningItems.filter { jsonString(it, "contentId") in contentIds }
-            val itemIds = packageItems.mapNotNull { jsonString(it, "id") }.toSet()
-            val packageMemory = if (descriptor.includeLearningProgress)
-                memoryStates.filter { learningItemReference(it) in itemIds } else emptyList()
-            val packageReviews = if (descriptor.includeLearningProgress)
-                reviewEvents.filter { learningItemReference(it) in itemIds } else emptyList()
-            val references = packageContents.flatMap(::mediaReferences).toSortedSet()
+            val references = packageScope.mediaReferences.toSortedSet()
             val mediaFiles = references.map { reference ->
                 val resolved = mediaRoot.resolve(reference).normalize()
                 if (!resolved.startsWith(mediaRoot.normalize()) || !Files.isRegularFile(resolved)) {
@@ -224,17 +216,18 @@ class JvmLearningDataRecoveryManager(
                 }
                 resolved
             }
-            val dataBytes = (listOf(installedPackage) + listOfNotNull(packageRecord) +
-                contentLibraries.filter { jsonString(it, "id") in jsonStringArray(packageRecord, "libraryIds") } +
-                packageContents + packageItems + packageMemory + packageReviews).sumOf(::estimatedJsonBytes)
+            val dataBytes = packageScope.records.values.flatten().sumOf(::estimatedJsonBytes)
             PortableBackupPackagePlanV2(
                 packageId = packageId,
                 packageName = packageName,
                 version = jsonString(installedPackage, "version") ?: "1.0.0",
-                contentCount = packageContents.size,
-                learningItemCount = packageItems.size,
-                memoryStateCount = packageMemory.size,
-                reviewEventCount = packageReviews.size,
+                contentCount = packageScope.records.getValue("contents.json").size,
+                learningItemCount = packageScope.records.getValue("learning-items.json").size,
+                memoryStateCount = packageScope.records.getValue("memory-states.json").size,
+                reviewEventCount = packageScope.records.getValue("review-events.json").size,
+                learningTrajectoryCount = packageScope.records.getValue("learning-trajectories.json").size,
+                studySessionCount = packageScope.records.getValue("study-sessions.json").size,
+                studyQueueCount = packageScope.records.getValue("study-queues.json").size,
                 mediaFileCount = mediaFiles.size,
                 mediaBytes = mediaFiles.sumOf(Files::size),
                 estimatedDataBytes = dataBytes
@@ -250,6 +243,9 @@ class JvmLearningDataRecoveryManager(
                 learningItems = packagePlans.sumOf { it.learningItemCount }.toLong(),
                 memoryStates = packagePlans.sumOf { it.memoryStateCount }.toLong(),
                 reviewEvents = packagePlans.sumOf { it.reviewEventCount }.toLong(),
+                learningTrajectories = packagePlans.sumOf { it.learningTrajectoryCount }.toLong(),
+                studySessions = packagePlans.sumOf { it.studySessionCount }.toLong(),
+                studyQueues = packagePlans.sumOf { it.studyQueueCount }.toLong(),
                 mediaFiles = packagePlans.sumOf { it.mediaFileCount }.toLong()
             ),
             estimatedDataBytes = totalDataBytes,
@@ -291,6 +287,11 @@ class JvmLearningDataRecoveryManager(
                 Files.copy(source, staged)
                 copiedBytes += Files.size(source)
             }
+            if (inventory.none { it.first.startsWith("portable/data/") }) {
+                val emptyInstalled = staging.resolve("portable/data/installed-packages.json")
+                Files.createDirectories(requireNotNull(emptyInstalled.parent))
+                writeUtf8String(emptyInstalled, "{\"schemaVersion\":1,\"records\":[]}")
+            }
 
             var packageEntries = if (selective || !descriptor.includeLearningProgress) {
                 val packageIds = descriptor.specificPackageIds?.takeIf { it.isNotEmpty() }
@@ -329,6 +330,16 @@ class JvmLearningDataRecoveryManager(
                 packageEntries = extractPackageEntries(staging)
             }
 
+            val stagedData = staging.resolve("portable/data")
+            val validationPackageIds = packageEntries.map { it.packageId }.toSet()
+            if (selective && validationPackageIds.isNotEmpty()) {
+                val stagedScope = buildPackageBackupScope(stagedData, validationPackageIds, descriptor.includeLearningProgress)
+                validatePackageBackupScope(stagedScope, requireMedia = true, mediaRoot = staging.resolve("portable/media"))
+            }
+            if (selective) {
+                stagedDomainValidator(roots.keys.associateWith { staging.resolve("portable/$it") })
+            }
+
             val stagedCanonical = mutableListOf<PortableBackupSupplementV2>()
             Files.walk(staging).use { paths ->
                 paths.filter { Files.isRegularFile(it) }.forEach { stagedFile ->
@@ -360,6 +371,7 @@ class JvmLearningDataRecoveryManager(
                 createdAtUtc = clock.instant().toString(),
                 sourcePlatform = descriptor.sourcePlatform,
                 learnerIds = descriptor.learnerIds.distinct().sorted(),
+                selectivePackageIds = descriptor.specificPackageIds.orEmpty().toSortedSet(),
                 includedSections = records.map { it.section }.distinct().sorted(),
                 packages = packageEntries,
                 counts = inferCounts(records, payloads),
@@ -690,9 +702,37 @@ class JvmLearningDataRecoveryManager(
             }
             if (total != manifest.bytes.totalExpandedBytes) error("Backup total expanded size failed.")
             if (declared.none { it.logicalPath.startsWith("portable/data/") }) error("Canonical data section is missing.")
+            validateCanonicalArchiveReferences(zip, manifest)
             validateRecordingReferences(zip, declared)
             manifest
         }
+
+    private fun validateCanonicalArchiveReferences(zip: ZipFile, manifest: PortableBackupManifestV2) {
+        if (manifest.selectivePackageIds.isEmpty()) return
+        val temporary = Files.createTempDirectory("learning-engine-portable-validation-")
+        try {
+            val dataDir = temporary.resolve("data")
+            CANONICAL_PACKAGE_DATA_FILES.forEach { fileName ->
+                val entry = zip.getEntry("portable/data/$fileName") ?: return@forEach
+                val target = dataDir.resolve(fileName)
+                Files.createDirectories(requireNotNull(target.parent))
+                zip.getInputStream(entry).use { Files.copy(it, target) }
+            }
+            val packageIds = manifest.selectivePackageIds
+            val scope = buildPackageBackupScope(dataDir, packageIds, includeLearningProgress = true)
+            validatePackageBackupScope(scope, requireMedia = false)
+            val declaredMedia = manifest.entries.asSequence()
+                .map { it.logicalPath }
+                .filter { it.startsWith("portable/media/") }
+                .map { it.removePrefix("portable/media/") }
+                .toSet()
+            require(scope.mediaReferences.all(declaredMedia::contains)) {
+                "Content references media missing from the portable archive."
+            }
+        } finally {
+            deleteTree(temporary)
+        }
+    }
 
     private fun validateRecordingReferences(zip: ZipFile, records: List<PortableBackupEntryV2>) {
         val index = records.singleOrNull { it.logicalPath == "android/recordings/index.json" } ?: return
@@ -976,7 +1016,7 @@ class JvmLearningDataRecoveryManager(
                     val element = V2_JSON.parseToJsonElement(text)
                     if (element is kotlinx.serialization.json.JsonArray) return element.size.toLong()
                     if (element is kotlinx.serialization.json.JsonObject) {
-                        val inner = element["data"] ?: element["items"] ?: element["records"]
+                        val inner = element["records"] ?: element["data"] ?: element["items"]
                         if (inner is kotlinx.serialization.json.JsonArray) return inner.size.toLong()
                     }
                 } catch (_: Exception) {}
@@ -990,7 +1030,9 @@ class JvmLearningDataRecoveryManager(
             learningItems = countItems("learning-items.json"),
             memoryStates = countItems("memory-states.json"),
             reviewEvents = countItems("review-events.json"),
+            learningTrajectories = countItems("learning-trajectories.json"),
             studySessions = countItems("study-sessions.json"),
+            studyQueues = countItems("study-queues.json"),
             mediaFiles = records.count { it.logicalType == "media" }.toLong(),
             recordings = records.count { it.logicalType == "recording" }.toLong()
         )
@@ -1095,7 +1137,7 @@ class JvmLearningDataRecoveryManager(
         val element = try { V2_JSON.parseToJsonElement(text) } catch (_: Exception) { return emptyList() }
         val array = when (element) {
             is JsonArray -> element
-            is JsonObject -> (element["data"] ?: element["items"] ?: element["records"]) as? JsonArray ?: JsonArray(emptyList())
+            is JsonObject -> (element["records"] ?: element["data"] ?: element["items"]) as? JsonArray ?: JsonArray(emptyList())
             else -> JsonArray(emptyList())
         }
         return array.mapNotNull { item ->
@@ -1138,179 +1180,141 @@ class JvmLearningDataRecoveryManager(
         }
     }
 
+    private fun buildPackageBackupScope(
+        dataDir: Path,
+        selectedPackageIds: Set<String>,
+        includeLearningProgress: Boolean
+    ): PackageBackupScope {
+        val all = CANONICAL_PACKAGE_DATA_FILES.associateWith { readJsonArrayObjects(dataDir.resolve(it)) }
+        val installed = all.getValue("installed-packages.json").filter {
+            (jsonString(it, "packageId") ?: jsonString(it, "id")) in selectedPackageIds
+        }
+        val foundPackageIds = installed.mapNotNull { jsonString(it, "packageId") ?: jsonString(it, "id") }.toSet()
+        val missing = selectedPackageIds - foundPackageIds
+        require(missing.isEmpty()) { "Unknown selected package ID(s): ${missing.sorted().joinToString()}" }
+        val installedIds = installed.mapNotNull { jsonString(it, "id") }.toSet()
+        val contentPackages = all.getValue("content-packages.json").filter {
+            (jsonString(it, "packageId") ?: jsonString(it, "id")) in foundPackageIds
+        }
+        val libraryIds = contentPackages.flatMap { jsonStringArray(it, "libraryIds") }.toSet()
+        val libraries = all.getValue("content-libraries.json").filter { jsonString(it, "id") in libraryIds }
+        val contentIds = libraries.flatMap { jsonStringArray(it, "contentIds") }.toSet()
+        val contents = all.getValue("contents.json").filter { jsonString(it, "id") in contentIds }
+        val items = all.getValue("learning-items.json").filter { jsonString(it, "contentId") in contentIds }
+        val itemIds = items.mapNotNull { jsonString(it, "id") }.toSet()
+
+        val memory = if (includeLearningProgress) all.getValue("memory-states.json").filter {
+            learningItemReference(it) in itemIds
+        } else emptyList()
+        val reviews = if (includeLearningProgress) all.getValue("review-events.json").filter {
+            val references = reviewEventLearningItemReferences(it)
+            references.any(itemIds::contains)
+        } else emptyList()
+        val trajectories = if (includeLearningProgress) all.getValue("learning-trajectories.json").filter {
+            jsonString(it, "contentId") in contentIds
+        } else emptyList()
+        val sessions = if (includeLearningProgress) all.getValue("study-sessions.json").filter {
+            jsonString(it, "installedPackageId") in installedIds
+        } else emptyList()
+        val sessionIds = sessions.mapNotNull { jsonString(it, "id") }.toSet()
+        val queues = if (includeLearningProgress) all.getValue("study-queues.json").filter {
+            jsonString(it, "sessionId") in sessionIds
+        } else emptyList()
+        val media = contents.flatMap(::mediaReferences).toSet()
+        return PackageBackupScope(
+            packageIds = foundPackageIds,
+            installedPackageIds = installedIds,
+            libraryIds = libraryIds,
+            contentIds = contentIds,
+            learningItemIds = itemIds,
+            studySessionIds = sessionIds,
+            mediaReferences = media,
+            records = mapOf(
+                "installed-packages.json" to installed,
+                "content-packages.json" to contentPackages,
+                "content-libraries.json" to libraries,
+                "contents.json" to contents,
+                "learning-items.json" to items,
+                "memory-states.json" to memory,
+                "review-events.json" to reviews,
+                "learning-trajectories.json" to trajectories,
+                "study-sessions.json" to sessions,
+                "study-queues.json" to queues
+            )
+        )
+    }
+
+    private fun validatePackageBackupScope(scope: PackageBackupScope, requireMedia: Boolean, mediaRoot: Path? = null) {
+        val records = scope.records
+        val packageIds = records.getValue("content-packages.json").mapNotNull { jsonString(it, "id") }.toSet()
+        val libraryIds = records.getValue("content-libraries.json").mapNotNull { jsonString(it, "id") }.toSet()
+        val contentIds = records.getValue("contents.json").mapNotNull { jsonString(it, "id") }.toSet()
+        val itemIds = records.getValue("learning-items.json").mapNotNull { jsonString(it, "id") }.toSet()
+        val reviewIds = records.getValue("review-events.json").mapNotNull { jsonString(it, "id") }.toSet()
+        val sessionIds = records.getValue("study-sessions.json").mapNotNull { jsonString(it, "id") }.toSet()
+
+        require(scope.packageIds == packageIds) { "Selected InstalledPackage is missing its ContentPackage." }
+        require(records.getValue("content-packages.json").all { jsonStringArray(it, "libraryIds").all(libraryIds::contains) }) {
+            "ContentPackage references missing ContentLibrary."
+        }
+        require(records.getValue("content-libraries.json").all { jsonStringArray(it, "contentIds").all(contentIds::contains) }) {
+            "ContentLibrary references missing Content."
+        }
+        require(records.getValue("learning-items.json").all { jsonString(it, "contentId") in contentIds }) {
+            "LearningItem references missing Content."
+        }
+        require(records.getValue("memory-states.json").all { learningItemReference(it) in itemIds }) {
+            "MemoryState references missing LearningItem."
+        }
+        require(records.getValue("review-events.json").all { review ->
+            val references = reviewEventLearningItemReferences(review)
+            references.size == 2 && references.all(itemIds::contains)
+        }) { "ReviewEvent references missing LearningItem." }
+        require(records.getValue("learning-trajectories.json").all { trajectory ->
+            jsonString(trajectory, "contentId") in contentIds &&
+                learningTrajectoryEntries(trajectory).all { entry ->
+                    jsonString(entry, "sessionId") in sessionIds &&
+                        (jsonString(entry, "reviewEventId")?.let(reviewIds::contains) != false)
+                }
+        }) {
+            "LearningTrajectory contains an unresolved Content, StudySession, or ReviewEvent reference."
+        }
+        require(records.getValue("study-sessions.json").all { session ->
+            jsonString(session, "installedPackageId") in scope.installedPackageIds &&
+                studySessionContentReferences(session).all(contentIds::contains) &&
+                studySessionLearningItemReferences(session).all(itemIds::contains) &&
+                studySessionReviewEventReferences(session).all(reviewIds::contains)
+        }) { "StudySession contains an unresolved package, Content, LearningItem, or ReviewEvent reference." }
+        require(records.getValue("study-queues.json").all { queue ->
+            jsonString(queue, "sessionId") in sessionIds &&
+                studyQueueLearningItemReferences(queue).all(itemIds::contains) &&
+                studyQueueContentReferences(queue).all(contentIds::contains)
+        }) { "StudyQueue contains an unresolved StudySession, LearningItem, or Content reference." }
+        if (requireMedia) {
+            val root = requireNotNull(mediaRoot).normalize()
+            require(scope.mediaReferences.all { reference ->
+                val file = root.resolve(reference).normalize()
+                file.startsWith(root) && Files.isRegularFile(file)
+            }) { "Selected package media is incomplete." }
+        }
+    }
+
     private fun scopeStagedDataForPackages(
         staging: Path,
         specificPackageIds: Set<String>,
         includeLearningProgress: Boolean,
         validateMedia: Boolean = true
     ): List<PortableBackupPackageEntryV2> {
-        val installedFile = staging.resolve("portable/data/installed-packages.json")
-        val targetPkgIds = mutableSetOf<String>()
-        val targetPackageNames = mutableSetOf<String>()
-        if (Files.isRegularFile(installedFile)) {
-            val text = readUtf8String(installedFile)
-            val element = V2_JSON.parseToJsonElement(text)
-            val (array, isEnvelope) = when (element) {
-                is JsonArray -> element to false
-                is JsonObject -> ((element["data"] ?: element["items"] ?: element["records"]) as? JsonArray ?: JsonArray(emptyList())) to true
-                else -> JsonArray(emptyList()) to false
-            }
-            val filtered = array.filterIsInstance<JsonObject>().filter { obj ->
-                val pId = obj["packageId"]?.jsonPrimitive?.content
-                    ?: (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    ?: obj["id"]?.jsonPrimitive?.content
-                val idVal = obj["id"]?.jsonPrimitive?.content
-                (pId != null && pId in specificPackageIds) || (idVal != null && idVal in specificPackageIds)
-            }
-            filtered.forEach { obj ->
-                obj["packageId"]?.jsonPrimitive?.content?.let { targetPkgIds.add(it) }
-                (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content?.let { targetPkgIds.add(it) }
-                obj["id"]?.jsonPrimitive?.content?.let { targetPkgIds.add(it) }
-                obj["name"]?.jsonPrimitive?.content?.let { targetPackageNames.add(it) }
-            }
-            targetPkgIds.addAll(specificPackageIds)
-            val newJson = if (isEnvelope && element is JsonObject) {
-                JsonObject(element + ("data" to JsonArray(filtered)))
-            } else {
-                JsonArray(filtered)
-            }
-            writeUtf8String(installedFile, V2_JSON.encodeToString(newJson))
-        } else {
-            targetPkgIds.addAll(specificPackageIds)
-        }
-
-        val contentPkgFile = staging.resolve("portable/data/content-packages.json")
-        val targetLibraryIds = mutableSetOf<String>()
-        if (Files.isRegularFile(contentPkgFile)) {
-            filterJsonArrayFile(contentPkgFile) { obj ->
-                val pId = obj["packageId"]?.jsonPrimitive?.content ?: obj["id"]?.jsonPrimitive?.content
-                val matches = pId != null && pId in targetPkgIds
-                if (matches) {
-                    (obj["libraryIds"] as? JsonArray).orEmpty().forEach { libraryId ->
-                        libraryId.jsonPrimitive.content.let(targetLibraryIds::add)
-                    }
-                    obj["name"]?.jsonPrimitive?.content?.let(targetPackageNames::add)
-                }
-                matches
-            }
-        }
-
-        val contentsFile = staging.resolve("portable/data/contents.json")
-        val targetContentIds = mutableSetOf<String>()
-        val targetMediaReferences = mutableSetOf<String>()
-        val contentLibrariesFile = staging.resolve("portable/data/content-libraries.json")
-        if (Files.isRegularFile(contentLibrariesFile) && targetLibraryIds.isNotEmpty()) {
-            filterJsonArrayFile(contentLibrariesFile) { obj ->
-                val libraryId = obj["id"]?.jsonPrimitive?.content
-                val matches = libraryId != null && libraryId in targetLibraryIds
-                if (matches) {
-                    (obj["contentIds"] as? JsonArray).orEmpty().forEach { contentId ->
-                        contentId.jsonPrimitive.content.let(targetContentIds::add)
-                    }
-                }
-                matches
-            }
-        }
-        if (Files.isRegularFile(contentsFile)) {
-            val text = readUtf8String(contentsFile)
-            val element = V2_JSON.parseToJsonElement(text)
-            val (array, isEnvelope) = when (element) {
-                is JsonArray -> element to false
-                is JsonObject -> ((element["data"] ?: element["items"] ?: element["records"]) as? JsonArray ?: JsonArray(emptyList())) to true
-                else -> JsonArray(emptyList()) to false
-            }
-            val filtered = array.filterIsInstance<JsonObject>().filter { obj ->
-                val id = obj["id"]?.jsonPrimitive?.content
-                    ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    ?: return@filter false
-                val primaryAudio = obj["primaryAudio"]?.jsonPrimitive?.content
-                    ?: (obj["media"] as? JsonObject)?.get("primaryAudio")?.jsonPrimitive?.content
-                val transAudio = obj["translatedAudio"]?.jsonPrimitive?.content
-                    ?: (obj["media"] as? JsonObject)?.get("translatedAudio")?.jsonPrimitive?.content
-                val img = obj["image"]?.jsonPrimitive?.content
-                    ?: (obj["media"] as? JsonObject)?.get("image")?.jsonPrimitive?.content
-                val customPkg = (obj["customFields"] as? JsonObject)?.get("packageId")?.jsonPrimitive?.content
-
-                val matchesByIdentity = targetPkgIds.any { pkg ->
-                    primaryAudio?.startsWith("$pkg/") == true ||
-                    transAudio?.startsWith("$pkg/") == true ||
-                    img?.startsWith("$pkg/") == true ||
-                    primaryAudio?.startsWith(pkg) == true ||
-                    customPkg == pkg
-                }
-                val matchesByName = targetPackageNames.any { packageName ->
-                    mediaReferences(obj).any { it == packageName || it.startsWith("$packageName/") }
-                }
-                val matches = id in targetContentIds || matchesByIdentity || matchesByName
-                if (matches) {
-                    targetContentIds.add(id)
-                    listOf(
-                        "primaryAudio",
-                        "translatedAudio",
-                        "image",
-                        "exampleAudio",
-                        "exampleTranslatedAudio"
-                    ).forEach { field ->
-                        val reference = obj[field]?.jsonPrimitive?.content
-                            ?: (obj["media"] as? JsonObject)?.get(field)?.jsonPrimitive?.content
-                        reference?.trim()?.replace('\\', '/')
-                            ?.takeIf { it.isNotEmpty() && it != "null" }
-                            ?.let(targetMediaReferences::add)
-                    }
-                }
-                matches
-            }
-            val newJson = if (isEnvelope && element is JsonObject) {
-                JsonObject(element + ("data" to JsonArray(filtered)))
-            } else {
-                JsonArray(filtered)
-            }
-            writeUtf8String(contentsFile, V2_JSON.encodeToString(newJson))
-        }
-
-        val itemsFile = staging.resolve("portable/data/learning-items.json")
-        val targetItemIds = mutableSetOf<String>()
-        if (Files.isRegularFile(itemsFile)) {
-            filterJsonArrayFile(itemsFile) { obj ->
-                val cId = obj["contentId"]?.jsonPrimitive?.content
-                    ?: (obj["contentId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                val matches = cId != null && cId in targetContentIds
-                if (matches) {
-                    val itemId = obj["id"]?.jsonPrimitive?.content
-                        ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    if (itemId != null) targetItemIds.add(itemId)
-                }
-                matches
-            }
-        }
-
-        val memoryFile = staging.resolve("portable/data/memory-states.json")
-        if (Files.isRegularFile(memoryFile)) {
-            if (!includeLearningProgress) Files.delete(memoryFile) else
-                filterJsonArrayFile(memoryFile) { obj ->
-                    val itemId = obj["learningItemId"]?.jsonPrimitive?.content
-                        ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                        ?: obj["itemId"]?.jsonPrimitive?.content
-                    itemId != null && itemId in targetItemIds
-                }
-        }
-
-        val reviewFile = staging.resolve("portable/data/review-events.json")
-        if (Files.isRegularFile(reviewFile)) {
-            if (!includeLearningProgress) Files.delete(reviewFile) else filterJsonArrayFile(reviewFile) { obj ->
-                val itemId = obj["learningItemId"]?.jsonPrimitive?.content
-                    ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    ?: obj["itemId"]?.jsonPrimitive?.content
-                itemId != null && itemId in targetItemIds
-            }
-        }
-
-        val trajFile = staging.resolve("portable/data/learning-trajectories.json")
-        if (Files.isRegularFile(trajFile)) {
-            if (!includeLearningProgress) Files.delete(trajFile) else filterJsonArrayFile(trajFile) { obj ->
-                val itemId = obj["learningItemId"]?.jsonPrimitive?.content
-                    ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                itemId != null && itemId in targetItemIds
+        val dataDir = staging.resolve("portable/data")
+        val scope = buildPackageBackupScope(dataDir, specificPackageIds, includeLearningProgress)
+        validatePackageBackupScope(scope, requireMedia = false)
+        scope.records.forEach { (fileName, records) ->
+            val file = dataDir.resolve(fileName)
+            if (!includeLearningProgress && fileName in PROGRESS_DATA_FILES) {
+                Files.deleteIfExists(file)
+            } else if (Files.isRegularFile(file)) {
+                writeCanonicalRecords(file, records)
+                require(readJsonArrayObjects(file) == records) { "Canonical filtered records did not round-trip: $fileName" }
             }
         }
 
@@ -1319,7 +1323,7 @@ class JvmLearningDataRecoveryManager(
             Files.walk(mediaDir).use { paths ->
                 paths.filter { Files.isRegularFile(it) }.forEach { file ->
                     val rel = mediaDir.relativize(file).toString().replace('\\', '/')
-                    val belongsToTarget = rel in targetMediaReferences
+                val belongsToTarget = rel in scope.mediaReferences
                     if (!belongsToTarget) {
                         Files.deleteIfExists(file)
                     }
@@ -1328,7 +1332,7 @@ class JvmLearningDataRecoveryManager(
             cleanEmptyTree(mediaDir)
         }
         if (validateMedia) {
-            val missingMedia = targetMediaReferences.filterNot { reference ->
+            val missingMedia = scope.mediaReferences.filterNot { reference ->
                 val resolved = mediaDir.resolve(reference).normalize()
                 resolved.startsWith(mediaDir.normalize()) && Files.isRegularFile(resolved)
             }
@@ -1338,24 +1342,6 @@ class JvmLearningDataRecoveryManager(
         }
 
         return extractPackageEntries(staging)
-    }
-
-    private fun filterJsonArrayFile(file: Path, predicate: (JsonObject) -> Boolean): List<JsonObject> {
-        val text = readUtf8String(file)
-        val element = try { V2_JSON.parseToJsonElement(text) } catch (_: Exception) { return emptyList() }
-        val (array, isEnvelope) = when (element) {
-            is JsonArray -> element to false
-            is JsonObject -> ((element["data"] ?: element["items"] ?: element["records"]) as? JsonArray ?: JsonArray(emptyList())) to true
-            else -> JsonArray(emptyList()) to false
-        }
-        val filtered = array.filterIsInstance<JsonObject>().filter(predicate)
-        val newJson = if (isEnvelope && element is JsonObject) {
-            JsonObject(element + ("data" to JsonArray(filtered)))
-        } else {
-            JsonArray(filtered)
-        }
-        writeUtf8String(file, V2_JSON.encodeToString(newJson))
-        return filtered
     }
 
     private fun inspectPackageCompatibility(
@@ -1423,170 +1409,55 @@ class JvmLearningDataRecoveryManager(
     private fun applySelectiveRestoreFromStaging(staging: Path, selectedPackageIds: Set<String>) {
         val liveData = requireNotNull(roots["data"]) { "Live data root missing." }
         val liveMedia = roots["media"]
+        val stagedData = staging.resolve("portable/data")
+        val scope = buildPackageBackupScope(stagedData, selectedPackageIds, includeLearningProgress = true)
+        validatePackageBackupScope(scope, requireMedia = true, mediaRoot = staging.resolve("portable/media"))
 
-        val stagedInstalled = staging.resolve("portable/data/installed-packages.json")
-        val liveInstalled = liveData.resolve("installed-packages.json")
-        val stagedPkgIds = mutableSetOf<String>()
-        if (Files.isRegularFile(stagedInstalled)) {
-            val stagedObjects = readJsonArrayObjects(stagedInstalled).filter { obj ->
-                val pId = obj["packageId"]?.jsonPrimitive?.content
-                    ?: (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    ?: obj["id"]?.jsonPrimitive?.content
-                pId != null && pId in selectedPackageIds
-            }
-            stagedObjects.forEach { obj ->
-                obj["packageId"]?.jsonPrimitive?.content?.let { stagedPkgIds.add(it) }
-                (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content?.let { stagedPkgIds.add(it) }
-                obj["id"]?.jsonPrimitive?.content?.let { stagedPkgIds.add(it) }
-            }
-            stagedPkgIds.addAll(selectedPackageIds)
-
-            val liveObjects = if (Files.isRegularFile(liveInstalled)) {
-                readJsonArrayObjects(liveInstalled).filter { obj ->
-                    val pId = obj["packageId"]?.jsonPrimitive?.content
-                        ?: (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                        ?: obj["id"]?.jsonPrimitive?.content
-                    pId == null || pId !in stagedPkgIds
-                }
-            } else {
-                emptyList()
-            }
-            writeJsonArrayObjects(liveInstalled, liveObjects + stagedObjects)
-        } else {
-            stagedPkgIds.addAll(selectedPackageIds)
+        fun merge(fileName: String, staged: List<JsonObject>, remove: (JsonObject) -> Boolean) {
+            val target = liveData.resolve(fileName)
+            val retained = readJsonArrayObjects(target).filterNot(remove)
+            writeRecords(target, retained + staged)
         }
 
-        val stagedContentsFile = staging.resolve("portable/data/contents.json")
-        val liveContentsFile = liveData.resolve("contents.json")
-        val targetContentIds = mutableSetOf<String>()
-        if (Files.isRegularFile(stagedContentsFile)) {
-            val stagedContents = readJsonArrayObjects(stagedContentsFile).filter { obj ->
-                val id = obj["id"]?.jsonPrimitive?.content
-                    ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    ?: return@filter false
-                val primaryAudio = obj["primaryAudio"]?.jsonPrimitive?.content
-                    ?: (obj["media"] as? JsonObject)?.get("primaryAudio")?.jsonPrimitive?.content
-                val transAudio = obj["translatedAudio"]?.jsonPrimitive?.content
-                    ?: (obj["media"] as? JsonObject)?.get("translatedAudio")?.jsonPrimitive?.content
-                val img = obj["image"]?.jsonPrimitive?.content
-                    ?: (obj["media"] as? JsonObject)?.get("image")?.jsonPrimitive?.content
-                val customPkg = (obj["customFields"] as? JsonObject)?.get("packageId")?.jsonPrimitive?.content
-
-                val matches = stagedPkgIds.any { pkg ->
-                    primaryAudio?.startsWith("$pkg/") == true ||
-                    transAudio?.startsWith("$pkg/") == true ||
-                    img?.startsWith("$pkg/") == true ||
-                    primaryAudio?.startsWith(pkg) == true ||
-                    customPkg == pkg
-                }
-                if (matches) targetContentIds.add(id)
-                matches
-            }
-
-            val liveContents = if (Files.isRegularFile(liveContentsFile)) {
-                readJsonArrayObjects(liveContentsFile).filter { obj ->
-                    val id = obj["id"]?.jsonPrimitive?.content
-                        ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    id == null || id !in targetContentIds
-                }
-            } else {
-                emptyList()
-            }
-            writeJsonArrayObjects(liveContentsFile, liveContents + stagedContents)
+        merge("installed-packages.json", scope.records.getValue("installed-packages.json")) {
+            (jsonString(it, "packageId") ?: jsonString(it, "id")) in scope.packageIds
         }
-
-        val stagedItemsFile = staging.resolve("portable/data/learning-items.json")
-        val liveItemsFile = liveData.resolve("learning-items.json")
-        val targetItemIds = mutableSetOf<String>()
-        if (Files.isRegularFile(stagedItemsFile)) {
-            val stagedItems = readJsonArrayObjects(stagedItemsFile).filter { obj ->
-                val cId = obj["contentId"]?.jsonPrimitive?.content
-                    ?: (obj["contentId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                val matches = cId != null && cId in targetContentIds
-                if (matches) {
-                    val id = obj["id"]?.jsonPrimitive?.content
-                        ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    if (id != null) targetItemIds.add(id)
-                }
-                matches
-            }
-
-            val liveItems = if (Files.isRegularFile(liveItemsFile)) {
-                readJsonArrayObjects(liveItemsFile).filter { obj ->
-                    val id = obj["id"]?.jsonPrimitive?.content
-                        ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    id == null || id !in targetItemIds
-                }
-            } else {
-                emptyList()
-            }
-            writeJsonArrayObjects(liveItemsFile, liveItems + stagedItems)
+        merge("content-packages.json", scope.records.getValue("content-packages.json")) {
+            (jsonString(it, "packageId") ?: jsonString(it, "id")) in scope.packageIds
         }
-
-        val stagedMemoryFile = staging.resolve("portable/data/memory-states.json")
-        val liveMemoryFile = liveData.resolve("memory-states.json")
-        if (Files.isRegularFile(stagedMemoryFile)) {
-            val stagedMemory = readJsonArrayObjects(stagedMemoryFile).filter { obj ->
-                val itemId = obj["learningItemId"]?.jsonPrimitive?.content
-                    ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    ?: obj["itemId"]?.jsonPrimitive?.content
-                itemId != null && itemId in targetItemIds
-            }
-            val liveMemory = if (Files.isRegularFile(liveMemoryFile)) {
-                readJsonArrayObjects(liveMemoryFile).filter { obj ->
-                    val itemId = obj["learningItemId"]?.jsonPrimitive?.content
-                        ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                        ?: obj["itemId"]?.jsonPrimitive?.content
-                    itemId == null || itemId !in targetItemIds
-                }
-            } else {
-                emptyList()
-            }
-            writeJsonArrayObjects(liveMemoryFile, liveMemory + stagedMemory)
+        merge("content-libraries.json", scope.records.getValue("content-libraries.json")) {
+            jsonString(it, "id") in scope.libraryIds
         }
-
-        val stagedReviewFile = staging.resolve("portable/data/review-events.json")
-        val liveReviewFile = liveData.resolve("review-events.json")
-        if (Files.isRegularFile(stagedReviewFile)) {
-            val stagedReviews = readJsonArrayObjects(stagedReviewFile).filter { obj ->
-                val itemId = obj["learningItemId"]?.jsonPrimitive?.content
-                    ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    ?: obj["itemId"]?.jsonPrimitive?.content
-                itemId != null && itemId in targetItemIds
-            }
-            val liveReviews = if (Files.isRegularFile(liveReviewFile)) {
-                readJsonArrayObjects(liveReviewFile)
-            } else {
-                emptyList()
-            }
-            val liveReviewIds = liveReviews.mapNotNull {
-                it["id"]?.jsonPrimitive?.content ?: (it["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-            }.toSet()
-            val newStagedReviews = stagedReviews.filter { obj ->
-                val id = obj["id"]?.jsonPrimitive?.content ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                id == null || id !in liveReviewIds
-            }
-            writeJsonArrayObjects(liveReviewFile, liveReviews + newStagedReviews)
+        merge("contents.json", scope.records.getValue("contents.json")) { jsonString(it, "id") in scope.contentIds }
+        merge("learning-items.json", scope.records.getValue("learning-items.json")) { jsonString(it, "id") in scope.learningItemIds }
+        merge("memory-states.json", scope.records.getValue("memory-states.json")) {
+            learningItemReference(it) in scope.learningItemIds
+        }
+        val stagedReviewIds = scope.records.getValue("review-events.json").mapNotNull { jsonString(it, "id") }.toSet()
+        merge("review-events.json", scope.records.getValue("review-events.json")) {
+            jsonString(it, "id") in stagedReviewIds || reviewEventLearningItemReferences(it).any(scope.learningItemIds::contains)
+        }
+        merge("learning-trajectories.json", scope.records.getValue("learning-trajectories.json")) {
+            jsonString(it, "contentId") in scope.contentIds
+        }
+        val liveSelectedSessionIds = readJsonArrayObjects(liveData.resolve("study-sessions.json"))
+            .filter { jsonString(it, "installedPackageId") in scope.installedPackageIds }
+            .mapNotNull { jsonString(it, "id") }.toSet()
+        merge("study-sessions.json", scope.records.getValue("study-sessions.json")) {
+            jsonString(it, "installedPackageId") in scope.installedPackageIds
+        }
+        merge("study-queues.json", scope.records.getValue("study-queues.json")) {
+            jsonString(it, "sessionId") in liveSelectedSessionIds || jsonString(it, "sessionId") in scope.studySessionIds
         }
 
         if (liveMedia != null) {
-            stagedPkgIds.forEach { pkgId ->
-                val stagedPkgMedia = staging.resolve("portable/media/$pkgId")
-                val livePkgMedia = liveMedia.resolve(pkgId)
-                if (Files.isDirectory(stagedPkgMedia)) {
-                    if (Files.exists(livePkgMedia)) {
-                        deleteTree(livePkgMedia)
-                    }
-                    Files.createDirectories(livePkgMedia)
-                    Files.walk(stagedPkgMedia).use { paths ->
-                        paths.filter { Files.isRegularFile(it) }.forEach { file ->
-                            val rel = stagedPkgMedia.relativize(file)
-                            val target = livePkgMedia.resolve(rel)
-                            Files.createDirectories(requireNotNull(target.parent))
-                            Files.copy(file, target, StandardCopyOption.REPLACE_EXISTING)
-                        }
-                    }
-                }
+            val stagedMedia = staging.resolve("portable/media").normalize()
+            scope.mediaReferences.forEach { reference ->
+                val source = stagedMedia.resolve(reference).normalize()
+                val target = liveMedia.resolve(reference).normalize()
+                require(source.startsWith(stagedMedia) && target.startsWith(liveMedia.normalize()))
+                Files.createDirectories(requireNotNull(target.parent))
+                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING)
             }
         }
     }
@@ -1597,7 +1468,7 @@ class JvmLearningDataRecoveryManager(
         val element = try { V2_JSON.parseToJsonElement(text) } catch (_: Exception) { return emptyList() }
         val array = when (element) {
             is JsonArray -> element
-            is JsonObject -> (element["data"] ?: element["items"] ?: element["records"]) as? JsonArray ?: JsonArray(emptyList())
+            is JsonObject -> (element["records"] ?: element["data"] ?: element["items"]) as? JsonArray ?: JsonArray(emptyList())
             else -> JsonArray(emptyList())
         }
         return array.filterIsInstance<JsonObject>()
@@ -1619,6 +1490,62 @@ class JvmLearningDataRecoveryManager(
     private fun learningItemReference(obj: JsonObject): String? =
         jsonString(obj, "learningItemId") ?: jsonString(obj, "itemId")
 
+    private fun reviewEventLearningItemReferences(obj: JsonObject): List<String> = listOfNotNull(
+        learningItemReference(obj["stateBefore"] as? JsonObject ?: JsonObject(emptyMap())),
+        learningItemReference(obj["stateAfter"] as? JsonObject ?: JsonObject(emptyMap()))
+    )
+
+    private fun studySessionLearningItemReferences(obj: JsonObject): Set<String> = buildSet {
+        addAll(jsonStringArray(obj, "reviewedItemIds"))
+        listOf("currentLearningItemId", "pendingReviewLearningItemId").mapNotNullTo(this) { jsonString(obj, it) }
+        (obj["undoableReview"] as? JsonObject)?.let { undo ->
+            jsonString(undo, "learningItemId")?.let(::add)
+            addAll(jsonStringArray(undo, "reviewedItemIdsBefore"))
+            learningItemReference(undo["memoryStateBefore"] as? JsonObject ?: JsonObject(emptyMap()))?.let(::add)
+        }
+    }
+
+    private fun learningTrajectoryEntries(obj: JsonObject): List<JsonObject> =
+        (obj["chains"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>().flatMap { chain ->
+            (chain["entries"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
+        }
+
+    private fun studySessionContentReferences(obj: JsonObject): Set<String> = buildSet {
+        listOf("includedContentIds", "reviewedContentIds", "introducedContentIds", "lapsedContentIds")
+            .forEach { addAll(jsonStringArray(obj, it)) }
+        (obj["undoableReview"] as? JsonObject)?.let { undo ->
+            jsonString(undo, "contentId")?.let(::add)
+            addAll(jsonStringArray(undo, "reviewedContentIdsBefore"))
+            addAll(jsonStringArray(undo, "lapsedContentIdsBefore"))
+        }
+    }
+
+    private fun studySessionReviewEventReferences(obj: JsonObject): Set<String> = buildSet {
+        jsonString(obj, "pendingReviewEventId")?.let(::add)
+        jsonString(obj["undoableReview"] as? JsonObject, "reviewEventId")?.let(::add)
+    }
+
+    private fun studyQueueLearningItemReferences(obj: JsonObject): Set<String> = buildSet {
+        addAll(jsonStringArray(obj, "learningItemIds"))
+        addAll(jsonStringArray(obj, "fixedPracticeMembership"))
+        listOf("itemOrigins", "itemContentIds", "practiceReinforcementStates", "coverageReinforcementStates")
+            .forEach { field -> addAll((obj[field] as? JsonObject)?.keys.orEmpty()) }
+        (obj["practiceMembershipUndo"] as? JsonObject)?.let { undo ->
+            jsonString(undo, "learningItemId")?.let(::add)
+            addAll(jsonStringArray(undo, "previousMembership"))
+            addAll(jsonStringArray(undo, "previousQueue"))
+        }
+        (obj["coverageReinforcementUndo"] as? JsonObject)?.let { undo ->
+            jsonString(undo, "learningItemId")?.let(::add)
+            addAll(jsonStringArray(undo, "discardedTail"))
+        }
+    }
+
+    private fun studyQueueContentReferences(obj: JsonObject): Set<String> =
+        (obj["itemContentIds"] as? JsonObject)?.values.orEmpty().mapNotNullTo(linkedSetOf()) { value ->
+            value.jsonPrimitive.content.takeUnless { it == "null" }
+        }
+
     private fun mediaReferences(obj: JsonObject): List<String> = listOf(
         "primaryAudio",
         "translatedAudio",
@@ -1633,17 +1560,29 @@ class JvmLearningDataRecoveryManager(
     private fun estimatedJsonBytes(obj: JsonObject): Long =
         obj.toString().toByteArray(StandardCharsets.UTF_8).size.toLong()
 
-    private fun writeJsonArrayObjects(file: Path, objects: List<JsonObject>) {
-        Files.createDirectories(requireNotNull(file.parent))
-        val existing = if (Files.isRegularFile(file)) {
-            try { V2_JSON.parseToJsonElement(readUtf8String(file)) } catch (_: Exception) { null }
-        } else null
-        val newJson = if (existing is JsonObject && "data" in existing) {
-            JsonObject(existing + ("data" to JsonArray(objects)))
+    private fun writeCanonicalRecords(file: Path, records: List<JsonObject>) {
+        val existing = V2_JSON.parseToJsonElement(readUtf8String(file))
+        val output = if (existing is JsonObject) {
+            JsonObject((existing - "data" - "items") + ("records" to JsonArray(records)))
         } else {
-            JsonArray(objects)
+            JsonArray(records)
         }
-        writeUtf8String(file, V2_JSON.encodeToString(newJson))
+        writeUtf8String(file, V2_JSON.encodeToString(output))
+    }
+
+    private fun writeRecords(file: Path, records: List<JsonObject>) {
+        if (Files.isRegularFile(file)) {
+            writeCanonicalRecords(file, records)
+        } else {
+            Files.createDirectories(requireNotNull(file.parent))
+            writeUtf8String(
+                file,
+                V2_JSON.encodeToString(JsonObject(mapOf(
+                    "schemaVersion" to kotlinx.serialization.json.JsonPrimitive(1),
+                    "records" to JsonArray(records)
+                )))
+            )
+        }
     }
 
     private fun readUtf8String(path: Path): String = String(Files.readAllBytes(path), StandardCharsets.UTF_8)

@@ -248,6 +248,7 @@ fun DesktopBackupDialog(
                             Text("Nội dung: ${preview.counts.contents} • Mục học: ${preview.counts.learningItems}")
                             if (state.includeLearningProgress) {
                                 Text("Trạng thái nhớ: ${preview.counts.memoryStates} • Lượt ôn: ${preview.counts.reviewEvents}")
+                                Text("Phiên học: ${preview.counts.studySessions} • Hàng đợi: ${preview.counts.studyQueues}")
                             }
                             Text("Media: ${preview.counts.mediaFiles} tệp / ${formatBackupBytes(preview.mediaBytes)}")
                             Text("Dữ liệu ước tính: ${formatBackupBytes(preview.estimatedDataBytes)}")

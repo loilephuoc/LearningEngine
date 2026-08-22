@@ -6,8 +6,13 @@ import java.time.Instant
 import java.util.zip.ZipFile
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.ContentMedia
@@ -25,6 +30,146 @@ import vn.loi.learning.domain.sync.model.PackageCompatibilityStatus
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class SelectivePackageBackupAndRestoreTest {
+
+    @Test
+    fun `selective package graph filters canonical records and restores a resolving queue`() {
+        val root = Files.createTempDirectory("selective-graph-test-")
+        try {
+            val source = root.resolve("source/data")
+            val media = root.resolve("source/media")
+            Files.createDirectories(media.resolve("Named_A"))
+            Files.createDirectories(media.resolve("Named_B"))
+            Files.writeString(media.resolve("Named_A/a.mp3"), "a")
+            Files.writeString(media.resolve("Named_B/b.mp3"), "b")
+            fun write(name: String, records: String) = Files.writeString(
+                source.resolve(name), """{"schemaVersion":1,"records":$records}"""
+            )
+            Files.createDirectories(source)
+            write("installed-packages.json", """[
+              {"id":"installed-a","libraryId":"default","packageId":"package-a","topicId":"topic-a","name":"Named_A","version":"1","state":"ACTIVE","installedAt":"2026-01-01T00:00:00Z"},
+              {"id":"installed-b","libraryId":"default","packageId":"package-b","topicId":"topic-b","name":"Named_B","version":"1","state":"ACTIVE","installedAt":"2026-01-01T00:00:00Z"}
+            ]""")
+            write("content-packages.json", """[
+              {"id":"package-a","name":"Named_A","version":"1","format":"OPD3","libraryIds":["library-a"]},
+              {"id":"package-b","name":"Named_B","version":"1","format":"OPD3","libraryIds":["library-b"]}
+            ]""")
+            write("content-libraries.json", """[
+              {"id":"library-a","name":"A","contentIds":["content-a"]},
+              {"id":"library-b","name":"B","contentIds":["content-b"]}
+            ]""")
+            write("contents.json", """[
+              {"id":"content-a","primaryAudio":"Named_A/a.mp3"},
+              {"id":"content-b","primaryAudio":"Named_B/b.mp3"}
+            ]""")
+            write("learning-items.json", """[
+              {"id":"item-a","contentId":"content-a"},{"id":"item-b","contentId":"content-b"}
+            ]""")
+            write("memory-states.json", """[
+              {"learnerId":"learner","learningItemId":"item-a"},{"learnerId":"learner","learningItemId":"item-b"}
+            ]""")
+            write("review-events.json", """[
+              {"id":"review-a","stateBefore":{"learningItemId":"item-a"},"stateAfter":{"learningItemId":"item-a"}},
+              {"id":"review-b","stateBefore":{"learningItemId":"item-b"},"stateAfter":{"learningItemId":"item-b"}}
+            ]""")
+            write("learning-trajectories.json", """[
+              {"learnerId":"learner","contentId":"content-a","chains":[]},
+              {"learnerId":"learner","contentId":"content-b","chains":[]}
+            ]""")
+            write("study-sessions.json", """[
+              {"id":"session-a","installedPackageId":"installed-a","reviewedItemIds":["item-a"],"reviewedContentIds":["content-a"]},
+              {"id":"session-b","installedPackageId":"installed-b","reviewedItemIds":["item-b"],"reviewedContentIds":["content-b"]}
+            ]""")
+            write("study-queues.json", """[
+              {"sessionId":"session-a","learningItemIds":["item-a"],"itemContentIds":{"item-a":"content-a"},"fixedPracticeMembership":["item-a"],"practiceReinforcementStates":{"item-a":{}},"coverageReinforcementStates":{"item-a":{}},"practiceMembershipUndo":{"learningItemId":"item-a","previousMembership":["item-a"],"previousQueue":["item-a"]},"coverageReinforcementUndo":{"learningItemId":"item-a","discardedTail":["item-a"]}},
+              {"sessionId":"session-b","learningItemIds":["item-b"],"itemContentIds":{"item-b":"content-b"}}
+            ]""")
+
+            val manager = JvmLearningDataRecoveryManager(
+                roots = mapOf("data" to source, "media" to media), safetyDirectory = root.resolve("safety")
+            )
+            val descriptor = PortableBackupV2Descriptor("2.0", sourcePlatform = "desktop", specificPackageIds = setOf("package-a"))
+            val preview = manager.previewPortableBackupCreation(descriptor)
+            val archive = root.resolve("a.lebak")
+            manager.createPortableBackupV2(archive, descriptor)
+            val manifest = manager.validatePortableBackupV2(archive)
+
+            ZipFile(archive.toFile()).use { zip ->
+                fun records(name: String): List<JsonObject> {
+                    val element = Json.parseToJsonElement(zip.getInputStream(zip.getEntry("portable/data/$name"))
+                        .bufferedReader().use { it.readText() }) as JsonObject
+                    assertFalse("data" in element)
+                    return (element.getValue("records") as JsonArray).filterIsInstance<JsonObject>()
+                }
+                assertEquals(listOf("package-a"), records("installed-packages.json").map { it["packageId"]!!.jsonPrimitive.content })
+                assertEquals(listOf("session-a"), records("study-sessions.json").map { it["id"]!!.jsonPrimitive.content })
+                val queue = records("study-queues.json").single()
+                assertEquals("session-a", queue["sessionId"]!!.jsonPrimitive.content)
+                assertEquals(listOf("item-a"), (queue["learningItemIds"] as JsonArray).map { it.jsonPrimitive.content })
+                assertEquals(listOf("review-a"), records("review-events.json").map { it["id"]!!.jsonPrimitive.content })
+                assertEquals(listOf("content-a"), records("learning-trajectories.json").map { it["contentId"]!!.jsonPrimitive.content })
+            }
+            assertEquals(preview.counts, manifest.counts)
+            assertEquals(1, manifest.counts.studySessions)
+            assertEquals(1, manifest.counts.studyQueues)
+            assertEquals(1, manifest.counts.learningTrajectories)
+
+            val noProgressArchive = root.resolve("a-no-progress.lebak")
+            manager.createPortableBackupV2(noProgressArchive, descriptor.copy(includeLearningProgress = false))
+            ZipFile(noProgressArchive.toFile()).use { zip ->
+                PROGRESS_FILE_NAMES.forEach { name -> assertTrue(zip.getEntry("portable/data/$name") == null) }
+            }
+
+            val targetData = root.resolve("target/data")
+            val targetMedia = root.resolve("target/media")
+            val target = JvmLearningDataRecoveryManager(
+                roots = mapOf("data" to targetData, "media" to targetMedia), safetyDirectory = root.resolve("target/safety")
+            )
+            val restoreResult = target.restorePortableBackupV2(archive, selectedPackageIds = setOf("package-a"))
+            assertTrue(restoreResult is PortableBackupV2RestoreResult.Success, restoreResult.toString())
+            assertEquals(listOf("item-a"), Json.parseToJsonElement(Files.readString(targetData.resolve("learning-items.json")))
+                .let { it as JsonObject }.getValue("records").let { it as JsonArray }
+                .map { (it as JsonObject)["id"]!!.jsonPrimitive.content })
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
+    private companion object {
+        val PROGRESS_FILE_NAMES = listOf(
+            "memory-states.json", "review-events.json", "learning-trajectories.json",
+            "study-sessions.json", "study-queues.json"
+        )
+    }
+
+    @Test
+    fun `selected queue with a dangling item fails before archive publication`() {
+        val root = Files.createTempDirectory("selective-dangling-queue-test-")
+        try {
+            val data = root.resolve("data")
+            Files.createDirectories(data)
+            val files = mapOf(
+                "installed-packages.json" to """[{"id":"installed-a","packageId":"package-a","name":"A"}]""",
+                "content-packages.json" to """[{"id":"package-a","libraryIds":["library-a"]}]""",
+                "content-libraries.json" to """[{"id":"library-a","contentIds":["content-a"]}]""",
+                "contents.json" to """[{"id":"content-a"}]""",
+                "learning-items.json" to """[{"id":"item-a","contentId":"content-a"}]""",
+                "study-sessions.json" to """[{"id":"session-a","installedPackageId":"installed-a","reviewedItemIds":[],"reviewedContentIds":[]}]""",
+                "study-queues.json" to """[{"sessionId":"session-a","learningItemIds":["missing-item"]}]"""
+            )
+            files.forEach { (name, records) -> Files.writeString(data.resolve(name), """{"schemaVersion":1,"records":$records}""") }
+            val archive = root.resolve("invalid.lebak")
+            val failure = runCatching {
+                JvmLearningDataRecoveryManager(mapOf("data" to data), root.resolve("safety")).createPortableBackupV2(
+                    archive, PortableBackupV2Descriptor("2.0", sourcePlatform = "desktop", specificPackageIds = setOf("package-a"))
+                )
+            }.exceptionOrNull()
+            assertNotNull(failure)
+            assertTrue(failure.cause?.message.orEmpty().contains("StudyQueue"))
+            assertTrue(Files.notExists(archive))
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
 
     @Test
     fun `selective backup resolves canonical package identity to library content and named media folder`() {
@@ -124,6 +269,10 @@ class SelectivePackageBackupAndRestoreTest {
             Files.createDirectories(data.resolve("media/Named_Package"))
             Files.writeString(data.resolve("installed-packages.json"),
                 """{"records":[{"id":"installed","packageId":"package-id","name":"Named_Package","contentCount":1,"learningItemCount":0}]}""")
+            Files.writeString(data.resolve("content-packages.json"),
+                """{"records":[{"id":"package-id","name":"Named_Package","version":"1","format":"OPD3","libraryIds":["library-id"]}]}""")
+            Files.writeString(data.resolve("content-libraries.json"),
+                """{"records":[{"id":"library-id","name":"Named_Package","contentIds":["content-id"]}]}""")
             Files.writeString(data.resolve("contents.json"),
                 """{"records":[{"id":"content-id","primaryAudio":"Named_Package/missing.mp3"}]}""")
 
@@ -229,6 +378,18 @@ class SelectivePackageBackupAndRestoreTest {
             )
             appA.contentRepository!!.save(contentA)
             appA.contentRepository!!.save(contentB)
+            Files.writeString(root.resolve("node-a/data/content-packages.json"), """
+                {"schemaVersion":1,"records":[
+                  {"id":"pkg-alpha","name":"Alpha Package","version":"1.0.0","format":"OPD3","libraryIds":["lib-alpha"]},
+                  {"id":"pkg-beta","name":"Beta Package","version":"1.0.0","format":"OPD3","libraryIds":["lib-beta"]}
+                ]}
+            """.trimIndent())
+            Files.writeString(root.resolve("node-a/data/content-libraries.json"), """
+                {"schemaVersion":1,"records":[
+                  {"id":"lib-alpha","name":"Alpha","contentIds":["content-alpha-1"]},
+                  {"id":"lib-beta","name":"Beta","contentIds":["content-beta-1"]}
+                ]}
+            """.trimIndent())
 
             // Create media files
             val mediaRoot = root.resolve("node-a/media")
@@ -418,6 +579,10 @@ class SelectivePackageBackupAndRestoreTest {
                     media = ContentMedia(primaryAudio = "pkg-beta/beta.mp3")
                 )
             )
+            Files.writeString(localData.resolve("content-packages.json"),
+                """{"schemaVersion":1,"records":[{"id":"pkg-beta","name":"Beta Local","version":"1.0.0","format":"OPD3","libraryIds":["lib-beta"]}]}""")
+            Files.writeString(localData.resolve("content-libraries.json"),
+                """{"schemaVersion":1,"records":[{"id":"lib-beta","name":"Beta","contentIds":["content-beta-1"]}]}""")
             Files.createDirectories(localMedia.resolve("pkg-beta"))
             Files.writeString(localMedia.resolve("pkg-beta/beta.mp3"), "local-beta-sound")
 
@@ -459,6 +624,18 @@ class SelectivePackageBackupAndRestoreTest {
                     media = ContentMedia(primaryAudio = "pkg-alpha/alpha.mp3")
                 )
             )
+            Files.writeString(remoteData.resolve("content-packages.json"), """
+                {"schemaVersion":1,"records":[
+                  {"id":"pkg-alpha","name":"Alpha Package","version":"1.0.0","format":"OPD3","libraryIds":["lib-alpha"]},
+                  {"id":"pkg-gamma","name":"Gamma Package","version":"1.0.0","format":"OPD3","libraryIds":["lib-gamma"]}
+                ]}
+            """.trimIndent())
+            Files.writeString(remoteData.resolve("content-libraries.json"), """
+                {"schemaVersion":1,"records":[
+                  {"id":"lib-alpha","name":"Alpha","contentIds":["content-alpha-1"]},
+                  {"id":"lib-gamma","name":"Gamma","contentIds":["content-gamma-1"]}
+                ]}
+            """.trimIndent())
             remoteApp.contentRepository!!.save(
                 Content(
                     id = ContentId("content-gamma-1"),

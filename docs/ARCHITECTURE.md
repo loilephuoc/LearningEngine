@@ -1815,3 +1815,12 @@ motion policies do not depend on Compose or learning authority. Small Compose pr
 responsive shell, stage surface and reusable content controls; `StudyScreen` continues to own runtime
 orchestration, while facade, scheduler, persistence and recall contracts remain unchanged. Generic
 mode adoption is deliberately shallow until their dedicated Phase 7–9 migrations.
+# Selective portable backup ownership
+
+Selective portable backup and restore use the canonical ownership chain
+`InstalledPackage.packageId → ContentPackage.id → ContentPackage.libraryIds → ContentLibrary.contentIds`.
+Learning items and learner progress are scoped transitively from those content IDs; StudySession is
+owned by `installedPackageId`, and StudyQueue is owned by its selected `sessionId`. Media ownership is
+the exact logical reference stored on Content, never a package-ID directory convention. Filtered
+persistence envelopes replace canonical `records`, and unresolved selected references fail before an
+archive is published.
