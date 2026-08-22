@@ -4776,3 +4776,13 @@ Searchable desktop collections now expose a polite live result status that disti
   apply with inbox deduplication/cursor advance.
 - Verified restart recovery, mutation/apply rollback, pull retry no-op, and retention of accepted
   outbound changes until explicit ACK. Content/review producers and UI remain out of scope.
+
+## Field-Level Content Delta Apply
+
+- Bound Question, Answer, Example, and Translation deltas to the existing Desktop Editor storage
+  properties without adding a schema, migration, package replacement, network, or UI behavior.
+- Added atomic local edit/outbox and deduplicated remote apply paths that change only the selected
+  ContentText property and preserve Content ID, custom fields (including reminder `definition`),
+  media, metadata, LearningItem, MemoryState, and ReviewEvent data.
+- Added deterministic same-field conflict preservation/diagnostics and verified independent-field
+  convergence, retry/no-op, nullable removal semantics, and persisted restart round trips.

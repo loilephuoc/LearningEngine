@@ -19,6 +19,11 @@
   JSON transaction path set. Local mutation/outbox and apply/inbox/cursor are atomic; outbound events
   survive restart and remote-accept/local-ACK crashes until explicit acknowledgement. The next
   capability is Content field-level delta production/application using these boundaries.
+- Capability 3 uses the verified Desktop Editor authority: Question=`primaryText`,
+  Answer=`translatedText`, Example=`exampleText`, Translation=`exampleTranslation`. Reminder
+  `customFields["definition"]` remains an independent read projection and is untouched. Different
+  field paths converge; same-field overlap preserves the pending local value with a typed diagnostic.
+  The next architecture-backed capability is Learning/Review delta; Media remains separately scoped.
 
 ## Current autonomous UAT continuation
 

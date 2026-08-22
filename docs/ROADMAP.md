@@ -1063,7 +1063,10 @@ Engine core.
 2. **Durable Local Outbox/Inbox/Cursor — complete:** canonical `sync-state.json` participates in the
    existing JSON transaction membership; mutation+outbox and apply+inbox+cursor commit atomically,
    outbox remains retryable until ACK, and restart/dedup/failure rollback are verified.
-3. **Content Field-Level Delta:** preserve unchanged and unknown fields and stable Content identity.
+3. **Content Field-Level Delta — complete:** canonical Desktop Editor paths (`text.primaryText`,
+   `text.translatedText`, `text.exampleText`, `text.exampleTranslation`) apply independently;
+   unchanged text, Content identity, custom fields, and learning state are preserved. Same-field
+   overlap with a pending local change deterministically preserves local and emits a typed diagnostic.
 4. **Learning/Review Delta:** deduplicate stable ReviewEvent identity and derive MemoryState only
    through proven canonical scheduling semantics.
 5. **Media Delta:** content-addressed validated transfer and reference-safe replacement/removal.

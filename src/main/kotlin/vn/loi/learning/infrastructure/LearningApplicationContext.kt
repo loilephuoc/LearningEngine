@@ -99,5 +99,6 @@ data class LearningApplicationContext(
     val intermediatePublicTransportRepair: vn.loi.learning.application.integrity.ReconcileIntermediatePublicTransportOrphan? = null,
     val syncEngine: vn.loi.learning.infrastructure.sync.SyncEngine? = null,
     val localSyncStateRepository: vn.loi.learning.application.sync.LocalSyncStateRepository? = null,
-    val localSyncCoordinator: vn.loi.learning.application.sync.LocalSyncCoordinator? = null
+    val localSyncCoordinator: vn.loi.learning.application.sync.LocalSyncCoordinator? = null,
+    val contentFieldSyncService: vn.loi.learning.application.sync.ContentFieldSyncService? = null
 )

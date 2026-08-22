@@ -2,9 +2,17 @@ package vn.loi.learning.domain.sync.protocol
 
 enum class SyncNamespace { CONTENT, MEDIA, LEARNING }
 
-enum class ContentField {
-    QUESTION, ANSWER, TRANSLATION, PRONUNCIATION, EXAMPLE, EXAMPLE_TRANSLATION,
-    TITLE, TAGS, CUSTOM_FIELD
+enum class ContentField(val canonicalPath: String) {
+    QUESTION("text.primaryText"),
+    ANSWER("text.translatedText"),
+    EXAMPLE("text.exampleText"),
+    TRANSLATION("text.exampleTranslation"),
+    @Deprecated("Use TRANSLATION; retained for persisted Capability 1 contract compatibility.")
+    EXAMPLE_TRANSLATION("text.exampleTranslation"),
+    PRONUNCIATION("text.pronunciation"),
+    TITLE("metadata.title"),
+    TAGS("metadata.tags"),
+    CUSTOM_FIELD("customFields")
 }
 
 enum class MediaSlot {

@@ -1011,6 +1011,13 @@ object LearningApplicationFactory {
             localSyncStateRepository = localSyncStateRepository,
             localSyncCoordinator = localSyncStateRepository?.let {
                 vn.loi.learning.application.sync.LocalSyncCoordinator(it, transactionRunner)
+            },
+            contentFieldSyncService = localSyncStateRepository?.let { state ->
+                vn.loi.learning.application.sync.ContentFieldSyncService(
+                    contentRepository,
+                    state,
+                    vn.loi.learning.application.sync.LocalSyncCoordinator(state, transactionRunner)
+                )
             }
         )
 

@@ -1879,3 +1879,12 @@ application workflows: local mutation then outbox enqueue, and remote apply then
 plus cursor advance. Failure rolls both sides back. Accepted outbound changes remain queued until
 explicit ACK, so a crash between remote acceptance and local acknowledgement retries the same
 event/idempotency identity. The cursor advances only after successful local apply.
+
+Content field sync follows the canonical Desktop Content Editor storage contract: Question is
+`ContentText.primaryText`, Answer is `translatedText`, Example is `exampleText`, and the UI's
+Translation (Vietnamese) is `exampleTranslation`. The reminder-only `customFields["definition"]`
+projection is not an alias and is never rewritten by content field sync. Each delta copies only its
+target property, preserving Content identity, all other text/media/metadata, known and unknown custom
+fields, LearningItem, MemoryState, and ReviewEvent state. Empty nullable editor values canonicalize
+to absence; Question remains required. A remote field with no same-path local outbox change applies;
+a same-path pending local change is preserved with `SYNC_CONTENT_FIELD_LOCAL_PENDING` diagnostic.
