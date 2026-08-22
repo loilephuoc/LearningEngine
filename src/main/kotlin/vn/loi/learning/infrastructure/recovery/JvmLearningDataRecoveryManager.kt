@@ -15,8 +15,14 @@ import java.nio.file.StandardOpenOption
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import vn.loi.learning.application.port.RecoveryOperationGate
 import vn.loi.learning.application.port.RecoveryOperationBusyException
+import vn.loi.learning.domain.sync.model.PackageCompatibilityStatus
+import vn.loi.learning.domain.sync.model.PackageRestorePreviewItem
 
 internal fun groupLogicalEntriesByPhysicalTarget(
     roots: Map<String, Path>,
@@ -125,14 +131,18 @@ class JvmLearningDataRecoveryManager(
         limits: PortableBackupV2Limits = PortableBackupV2Limits()
     ): PortableBackupV2Preview {
         val manifest = validatePortableBackupV2(source, limits)
+        val packagePreviews = inspectPackageCompatibility(manifest.packages)
         return PortableBackupV2Preview(
             backupSchemaVersion = manifest.backupSchemaVersion,
+            backupId = manifest.backupId,
             appVersion = manifest.appVersion,
             versionCode = manifest.versionCode,
             createdAtUtc = manifest.createdAtUtc,
             sourcePlatform = manifest.sourcePlatform,
             learnerIds = manifest.learnerIds,
             includedSections = manifest.includedSections,
+            packages = manifest.packages,
+            packagePreviews = packagePreviews,
             counts = manifest.counts,
             bytes = manifest.bytes,
             totalEntries = manifest.entries.size
@@ -144,13 +154,14 @@ class JvmLearningDataRecoveryManager(
         operationActive: Boolean = false,
         contributorForSafetyBackup: PortableBackupV2SnapshotContributor? = null,
         consumer: PortableBackupV2RestoreConsumer? = null,
-        limits: PortableBackupV2Limits = PortableBackupV2Limits()
+        limits: PortableBackupV2Limits = PortableBackupV2Limits(),
+        selectedPackageIds: Set<String>? = null
     ): PortableBackupV2RestoreResult {
         if (operationActive) return PortableBackupV2RestoreResult.Busy()
         return try {
             gate.restore {
                 failureHook("restore-v2-gate-acquired", null)
-                restorePortableBackupV2Locked(source, contributorForSafetyBackup, consumer, limits)
+                restorePortableBackupV2Locked(source, contributorForSafetyBackup, consumer, limits, selectedPackageIds)
             }
         } catch (busy: RecoveryOperationBusyException) {
             PortableBackupV2RestoreResult.Busy(busy.message ?: "Recovery gate is busy.")
@@ -158,7 +169,6 @@ class JvmLearningDataRecoveryManager(
             PortableBackupV2RestoreResult.ValidationFailed("Restore failed: ${e.message}", e.message)
         }
     }
-
 
     private fun createPortableBackupV2Locked(
         target: Path,
@@ -174,14 +184,30 @@ class JvmLearningDataRecoveryManager(
         try {
             temporary = Files.createTempFile(normalized.parent, ".learning-engine-backup-v2-", ".tmp")
             staging = Files.createTempDirectory(normalized.parent, ".learning-engine-snapshot-v2-")
-            val canonical = portableInventory().map { (logical, source) ->
+            portableInventory().forEach { (logical, source) ->
                 val staged = staging.resolve(logical).normalize().also { require(it.startsWith(staging)) }
                 Files.createDirectories(requireNotNull(staged.parent))
                 Files.copy(source, staged)
-                PortableBackupSupplementV2(logical, logical.substringBefore('/'), logicalType(logical), staged)
             }
+
+            val packageEntries = if (descriptor.specificPackageIds != null && descriptor.specificPackageIds.isNotEmpty()) {
+                scopeStagedDataForPackages(staging, descriptor.specificPackageIds)
+            } else {
+                extractPackageEntries(staging)
+            }
+
+            val stagedCanonical = mutableListOf<PortableBackupSupplementV2>()
+            Files.walk(staging).use { paths ->
+                paths.filter { Files.isRegularFile(it) }.forEach { stagedFile ->
+                    val logical = staging.relativize(stagedFile).toString().replace('\\', '/')
+                    if (logical != V2_MANIFEST_ENTRY && !logical.startsWith("android/")) {
+                        stagedCanonical += PortableBackupSupplementV2(logical, logical.substringBefore('/'), logicalType(logical), stagedFile)
+                    }
+                }
+            }
+
             val supplements = contributor?.snapshot(staging) ?: emptyList()
-            val payloads = (canonical + supplements).sortedBy { it.logicalPath }
+            val payloads = (stagedCanonical + supplements).sortedBy { it.logicalPath }
             validatePayloadPlan(payloads, staging, limits)
             val records = payloads.map { payload ->
                 PortableBackupEntryV2(
@@ -193,12 +219,15 @@ class JvmLearningDataRecoveryManager(
                 )
             }
             val manifest = PortableBackupManifestV2(
+                backupSchemaVersion = 2,
+                backupId = descriptor.backupId ?: java.util.UUID.randomUUID().toString(),
                 appVersion = descriptor.appVersion,
                 versionCode = descriptor.versionCode,
                 createdAtUtc = clock.instant().toString(),
                 sourcePlatform = descriptor.sourcePlatform,
                 learnerIds = descriptor.learnerIds.distinct().sorted(),
                 includedSections = records.map { it.section }.distinct().sorted(),
+                packages = packageEntries,
                 counts = inferCounts(records, payloads),
                 bytes = PortableBackupBytesV2(
                     mediaBytes = records.filter { it.section == "portable" && it.logicalType == "media" }.sumOf { it.uncompressedSize },
@@ -639,7 +668,8 @@ class JvmLearningDataRecoveryManager(
         source: Path,
         contributorForSafetyBackup: PortableBackupV2SnapshotContributor?,
         consumer: PortableBackupV2RestoreConsumer?,
-        limits: PortableBackupV2Limits
+        limits: PortableBackupV2Limits,
+        selectedPackageIds: Set<String>? = null
     ): PortableBackupV2RestoreResult {
         val normalized = source.toAbsolutePath().normalize()
         if (!Files.isRegularFile(normalized)) {
@@ -689,35 +719,53 @@ class JvmLearningDataRecoveryManager(
             val capturedPlatformState = consumer?.captureCurrentState()
             try {
                 failureHook("restore-v2-live-replace-start", null)
-                clear()
-                roots.forEach { (rootName, root) ->
-                    val stagedRoot = staging.resolve("portable/$rootName")
-                    if (Files.exists(stagedRoot)) {
-                        Files.walk(stagedRoot).use { paths ->
-                            paths.filter { Files.isRegularFile(it) }.forEach { sourceFile ->
-                                val relative = stagedRoot.relativize(sourceFile)
-                                val target = root.resolve(relative)
-                                Files.createDirectories(requireNotNull(target.parent))
-                                Files.copy(sourceFile, target, StandardCopyOption.REPLACE_EXISTING)
+                if (selectedPackageIds == null || selectedPackageIds.isEmpty()) {
+                    clear()
+                    roots.forEach { (rootName, root) ->
+                        val stagedRoot = staging.resolve("portable/$rootName")
+                        if (Files.exists(stagedRoot)) {
+                            Files.walk(stagedRoot).use { paths ->
+                                paths.filter { Files.isRegularFile(it) }.forEach { sourceFile ->
+                                    val relative = stagedRoot.relativize(sourceFile)
+                                    val target = root.resolve(relative)
+                                    Files.createDirectories(requireNotNull(target.parent))
+                                    Files.copy(sourceFile, target, StandardCopyOption.REPLACE_EXISTING)
+                                }
                             }
                         }
                     }
+                    cleanEmptyDirectories()
+                    failureHook("restore-v2-canonical-copied", null)
+                    consumer?.applyRestored(staging)
+                    failureHook("restore-v2-consumer-applied", null)
+
+                    assertExactRestoreV2(staging, manifest)
+                    stagedDomainValidator(roots)
+                    consumer?.validateLive()
+                    failureHook("restore-v2-post-validation-complete", null)
+
+                    return PortableBackupV2RestoreResult.Success(
+                        safetyBackupPath = safety.toString(),
+                        restoredEntriesCount = manifest.entries.size,
+                        appVersion = manifest.appVersion
+                    )
+                } else {
+                    applySelectiveRestoreFromStaging(staging, selectedPackageIds)
+                    cleanEmptyDirectories()
+                    failureHook("restore-v2-canonical-copied", null)
+                    consumer?.applyRestored(staging)
+                    failureHook("restore-v2-consumer-applied", null)
+
+                    stagedDomainValidator(roots)
+                    consumer?.validateLive()
+                    failureHook("restore-v2-post-validation-complete", null)
+
+                    return PortableBackupV2RestoreResult.Success(
+                        safetyBackupPath = safety.toString(),
+                        restoredEntriesCount = selectedPackageIds.size,
+                        appVersion = manifest.appVersion
+                    )
                 }
-                cleanEmptyDirectories()
-                failureHook("restore-v2-canonical-copied", null)
-                consumer?.applyRestored(staging)
-                failureHook("restore-v2-consumer-applied", null)
-
-                assertExactRestoreV2(staging, manifest)
-                stagedDomainValidator(roots)
-                consumer?.validateLive()
-                failureHook("restore-v2-post-validation-complete", null)
-
-                return PortableBackupV2RestoreResult.Success(
-                    safetyBackupPath = safety.toString(),
-                    restoredEntriesCount = manifest.entries.size,
-                    appVersion = manifest.appVersion
-                )
             } catch (restoreFailure: Exception) {
                 try {
                     failureHook("restore-v2-rollback-start", restoreFailure.message)
@@ -881,6 +929,497 @@ class JvmLearningDataRecoveryManager(
         }
     }
 
+    private fun extractPackageEntries(dir: Path): List<PortableBackupPackageEntryV2> {
+        val installedFile = when {
+            Files.isRegularFile(dir.resolve("portable/data/installed-packages.json")) -> dir.resolve("portable/data/installed-packages.json")
+            Files.isRegularFile(dir.resolve("data/installed-packages.json")) -> dir.resolve("data/installed-packages.json")
+            Files.isRegularFile(dir.resolve("installed-packages.json")) -> dir.resolve("installed-packages.json")
+            else -> return emptyList()
+        }
+        val mediaDir = when {
+            Files.isDirectory(dir.resolve("portable/media")) -> dir.resolve("portable/media")
+            Files.isDirectory(dir.resolve("media")) -> dir.resolve("media")
+            Files.isDirectory(dir.parent?.resolve("media") ?: dir.resolve("media")) -> dir.parent?.resolve("media") ?: dir.resolve("media")
+            else -> dir.resolve("media")
+        }
+        val text = readUtf8String(installedFile)
+        val element = try { V2_JSON.parseToJsonElement(text) } catch (_: Exception) { return emptyList() }
+        val array = when (element) {
+            is JsonArray -> element
+            is JsonObject -> (element["data"] ?: element["items"] ?: element["records"]) as? JsonArray ?: JsonArray(emptyList())
+            else -> JsonArray(emptyList())
+        }
+        return array.mapNotNull { item ->
+            if (item !is JsonObject) return@mapNotNull null
+            val pkgId = item["packageId"]?.jsonPrimitive?.content
+                ?: (item["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                ?: item["id"]?.jsonPrimitive?.content
+                ?: return@mapNotNull null
+            val name = item["name"]?.jsonPrimitive?.content
+                ?: (item["name"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                ?: pkgId
+            val version = item["version"]?.jsonPrimitive?.content
+                ?: (item["version"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                ?: "1.0.0"
+            val contentCount = item["contentCount"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+            val learningItemCount = item["learningItemCount"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+
+            val pkgMediaFolder = mediaDir.resolve(pkgId)
+            val mediaCount = if (Files.isDirectory(pkgMediaFolder)) {
+                Files.walk(pkgMediaFolder).use { paths -> paths.filter { Files.isRegularFile(it) }.count().toInt() }
+            } else {
+                0
+            }
+            val fingerprint = "$pkgId:$version:$contentCount"
+            PortableBackupPackageEntryV2(
+                packageId = pkgId,
+                packageName = name,
+                version = version,
+                contentCount = contentCount,
+                learningItemCount = learningItemCount,
+                mediaCount = mediaCount,
+                fingerprint = fingerprint
+            )
+        }
+    }
+
+    private fun scopeStagedDataForPackages(staging: Path, specificPackageIds: Set<String>): List<PortableBackupPackageEntryV2> {
+        val installedFile = staging.resolve("portable/data/installed-packages.json")
+        val targetPkgIds = mutableSetOf<String>()
+        if (Files.isRegularFile(installedFile)) {
+            val text = readUtf8String(installedFile)
+            val element = V2_JSON.parseToJsonElement(text)
+            val (array, isEnvelope) = when (element) {
+                is JsonArray -> element to false
+                is JsonObject -> ((element["data"] ?: element["items"] ?: element["records"]) as? JsonArray ?: JsonArray(emptyList())) to true
+                else -> JsonArray(emptyList()) to false
+            }
+            val filtered = array.filterIsInstance<JsonObject>().filter { obj ->
+                val pId = obj["packageId"]?.jsonPrimitive?.content
+                    ?: (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    ?: obj["id"]?.jsonPrimitive?.content
+                val idVal = obj["id"]?.jsonPrimitive?.content
+                (pId != null && pId in specificPackageIds) || (idVal != null && idVal in specificPackageIds)
+            }
+            filtered.forEach { obj ->
+                obj["packageId"]?.jsonPrimitive?.content?.let { targetPkgIds.add(it) }
+                (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content?.let { targetPkgIds.add(it) }
+                obj["id"]?.jsonPrimitive?.content?.let { targetPkgIds.add(it) }
+            }
+            targetPkgIds.addAll(specificPackageIds)
+            val newJson = if (isEnvelope && element is JsonObject) {
+                JsonObject(element + ("data" to JsonArray(filtered)))
+            } else {
+                JsonArray(filtered)
+            }
+            writeUtf8String(installedFile, V2_JSON.encodeToString(newJson))
+        } else {
+            targetPkgIds.addAll(specificPackageIds)
+        }
+
+        val contentPkgFile = staging.resolve("portable/data/content-packages.json")
+        if (Files.isRegularFile(contentPkgFile)) {
+            filterJsonArrayFile(contentPkgFile) { obj ->
+                val pId = obj["packageId"]?.jsonPrimitive?.content ?: obj["id"]?.jsonPrimitive?.content
+                pId != null && pId in targetPkgIds
+            }
+        }
+
+        val contentsFile = staging.resolve("portable/data/contents.json")
+        val targetContentIds = mutableSetOf<String>()
+        if (Files.isRegularFile(contentsFile)) {
+            val text = readUtf8String(contentsFile)
+            val element = V2_JSON.parseToJsonElement(text)
+            val (array, isEnvelope) = when (element) {
+                is JsonArray -> element to false
+                is JsonObject -> ((element["data"] ?: element["items"] ?: element["records"]) as? JsonArray ?: JsonArray(emptyList())) to true
+                else -> JsonArray(emptyList()) to false
+            }
+            val filtered = array.filterIsInstance<JsonObject>().filter { obj ->
+                val id = obj["id"]?.jsonPrimitive?.content
+                    ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    ?: return@filter false
+                val primaryAudio = obj["primaryAudio"]?.jsonPrimitive?.content
+                    ?: (obj["media"] as? JsonObject)?.get("primaryAudio")?.jsonPrimitive?.content
+                val transAudio = obj["translatedAudio"]?.jsonPrimitive?.content
+                    ?: (obj["media"] as? JsonObject)?.get("translatedAudio")?.jsonPrimitive?.content
+                val img = obj["image"]?.jsonPrimitive?.content
+                    ?: (obj["media"] as? JsonObject)?.get("image")?.jsonPrimitive?.content
+                val customPkg = (obj["customFields"] as? JsonObject)?.get("packageId")?.jsonPrimitive?.content
+
+                val matches = targetPkgIds.any { pkg ->
+                    primaryAudio?.startsWith("$pkg/") == true ||
+                    transAudio?.startsWith("$pkg/") == true ||
+                    img?.startsWith("$pkg/") == true ||
+                    primaryAudio?.startsWith(pkg) == true ||
+                    customPkg == pkg
+                }
+                if (matches) targetContentIds.add(id)
+                matches
+            }
+            val newJson = if (isEnvelope && element is JsonObject) {
+                JsonObject(element + ("data" to JsonArray(filtered)))
+            } else {
+                JsonArray(filtered)
+            }
+            writeUtf8String(contentsFile, V2_JSON.encodeToString(newJson))
+        }
+
+        val itemsFile = staging.resolve("portable/data/learning-items.json")
+        val targetItemIds = mutableSetOf<String>()
+        if (Files.isRegularFile(itemsFile)) {
+            filterJsonArrayFile(itemsFile) { obj ->
+                val cId = obj["contentId"]?.jsonPrimitive?.content
+                    ?: (obj["contentId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                val matches = cId != null && cId in targetContentIds
+                if (matches) {
+                    val itemId = obj["id"]?.jsonPrimitive?.content
+                        ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    if (itemId != null) targetItemIds.add(itemId)
+                }
+                matches
+            }
+        }
+
+        val memoryFile = staging.resolve("portable/data/memory-states.json")
+        if (Files.isRegularFile(memoryFile)) {
+            filterJsonArrayFile(memoryFile) { obj ->
+                val itemId = obj["learningItemId"]?.jsonPrimitive?.content
+                    ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    ?: obj["itemId"]?.jsonPrimitive?.content
+                itemId != null && itemId in targetItemIds
+            }
+        }
+
+        val reviewFile = staging.resolve("portable/data/review-events.json")
+        if (Files.isRegularFile(reviewFile)) {
+            filterJsonArrayFile(reviewFile) { obj ->
+                val itemId = obj["learningItemId"]?.jsonPrimitive?.content
+                    ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    ?: obj["itemId"]?.jsonPrimitive?.content
+                itemId != null && itemId in targetItemIds
+            }
+        }
+
+        val trajFile = staging.resolve("portable/data/learning-trajectories.json")
+        if (Files.isRegularFile(trajFile)) {
+            filterJsonArrayFile(trajFile) { obj ->
+                val itemId = obj["learningItemId"]?.jsonPrimitive?.content
+                    ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                itemId != null && itemId in targetItemIds
+            }
+        }
+
+        val mediaDir = staging.resolve("portable/media")
+        if (Files.isDirectory(mediaDir)) {
+            Files.walk(mediaDir).use { paths ->
+                paths.filter { Files.isRegularFile(it) }.forEach { file ->
+                    val rel = mediaDir.relativize(file).toString().replace('\\', '/')
+                    val belongsToTarget = targetPkgIds.any { rel.startsWith("$it/") || rel.startsWith(it) }
+                    if (!belongsToTarget) {
+                        Files.deleteIfExists(file)
+                    }
+                }
+            }
+            cleanEmptyTree(mediaDir)
+        }
+
+        return extractPackageEntries(staging)
+    }
+
+    private fun filterJsonArrayFile(file: Path, predicate: (JsonObject) -> Boolean): List<JsonObject> {
+        val text = readUtf8String(file)
+        val element = try { V2_JSON.parseToJsonElement(text) } catch (_: Exception) { return emptyList() }
+        val (array, isEnvelope) = when (element) {
+            is JsonArray -> element to false
+            is JsonObject -> ((element["data"] ?: element["items"] ?: element["records"]) as? JsonArray ?: JsonArray(emptyList())) to true
+            else -> JsonArray(emptyList()) to false
+        }
+        val filtered = array.filterIsInstance<JsonObject>().filter(predicate)
+        val newJson = if (isEnvelope && element is JsonObject) {
+            JsonObject(element + ("data" to JsonArray(filtered)))
+        } else {
+            JsonArray(filtered)
+        }
+        writeUtf8String(file, V2_JSON.encodeToString(newJson))
+        return filtered
+    }
+
+    private fun inspectPackageCompatibility(
+        packages: List<PortableBackupPackageEntryV2>
+    ): List<PackageRestorePreviewItem> {
+        val liveData = roots["data"] ?: return packages.map {
+            PackageRestorePreviewItem(
+                packageId = it.packageId,
+                packageName = it.packageName,
+                version = it.version,
+                contentCount = it.contentCount,
+                learningItemCount = it.learningItemCount,
+                mediaCount = it.mediaCount,
+                status = PackageCompatibilityStatus.NEW,
+                statusDetail = "Chưa cài đặt trên thiết bị này"
+            )
+        }
+        val liveInstalledFile = liveData.resolve("installed-packages.json")
+        val livePackages = if (Files.isRegularFile(liveInstalledFile)) {
+            extractPackageEntries(liveData)
+        } else {
+            emptyList()
+        }
+        val livePkgMap = livePackages.associateBy { it.packageId }
+
+        return packages.map { pkg ->
+            val local = livePkgMap[pkg.packageId] ?: livePackages.firstOrNull { it.packageName == pkg.packageName }
+            if (local == null) {
+                PackageRestorePreviewItem(
+                    packageId = pkg.packageId,
+                    packageName = pkg.packageName,
+                    version = pkg.version,
+                    contentCount = pkg.contentCount,
+                    learningItemCount = pkg.learningItemCount,
+                    mediaCount = pkg.mediaCount,
+                    status = PackageCompatibilityStatus.NEW,
+                    statusDetail = "Chưa cài đặt trên thiết bị này"
+                )
+            } else if (local.contentCount == pkg.contentCount && local.version == pkg.version) {
+                PackageRestorePreviewItem(
+                    packageId = pkg.packageId,
+                    packageName = pkg.packageName,
+                    version = pkg.version,
+                    contentCount = pkg.contentCount,
+                    learningItemCount = pkg.learningItemCount,
+                    mediaCount = pkg.mediaCount,
+                    status = PackageCompatibilityStatus.PRESENT,
+                    statusDetail = "Đã có và tương thích"
+                )
+            } else {
+                PackageRestorePreviewItem(
+                    packageId = pkg.packageId,
+                    packageName = pkg.packageName,
+                    version = pkg.version,
+                    contentCount = pkg.contentCount,
+                    learningItemCount = pkg.learningItemCount,
+                    mediaCount = pkg.mediaCount,
+                    status = PackageCompatibilityStatus.CONFLICT,
+                    statusDetail = "Nội dung cục bộ đã phân kỳ (Sao lưu: ${pkg.contentCount} thẻ, Cục bộ: ${local.contentCount} thẻ)"
+                )
+            }
+        }
+    }
+
+    private fun applySelectiveRestoreFromStaging(staging: Path, selectedPackageIds: Set<String>) {
+        val liveData = requireNotNull(roots["data"]) { "Live data root missing." }
+        val liveMedia = roots["media"]
+
+        val stagedInstalled = staging.resolve("portable/data/installed-packages.json")
+        val liveInstalled = liveData.resolve("installed-packages.json")
+        val stagedPkgIds = mutableSetOf<String>()
+        if (Files.isRegularFile(stagedInstalled)) {
+            val stagedObjects = readJsonArrayObjects(stagedInstalled).filter { obj ->
+                val pId = obj["packageId"]?.jsonPrimitive?.content
+                    ?: (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    ?: obj["id"]?.jsonPrimitive?.content
+                pId != null && pId in selectedPackageIds
+            }
+            stagedObjects.forEach { obj ->
+                obj["packageId"]?.jsonPrimitive?.content?.let { stagedPkgIds.add(it) }
+                (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content?.let { stagedPkgIds.add(it) }
+                obj["id"]?.jsonPrimitive?.content?.let { stagedPkgIds.add(it) }
+            }
+            stagedPkgIds.addAll(selectedPackageIds)
+
+            val liveObjects = if (Files.isRegularFile(liveInstalled)) {
+                readJsonArrayObjects(liveInstalled).filter { obj ->
+                    val pId = obj["packageId"]?.jsonPrimitive?.content
+                        ?: (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                        ?: obj["id"]?.jsonPrimitive?.content
+                    pId == null || pId !in stagedPkgIds
+                }
+            } else {
+                emptyList()
+            }
+            writeJsonArrayObjects(liveInstalled, liveObjects + stagedObjects)
+        } else {
+            stagedPkgIds.addAll(selectedPackageIds)
+        }
+
+        val stagedContentsFile = staging.resolve("portable/data/contents.json")
+        val liveContentsFile = liveData.resolve("contents.json")
+        val targetContentIds = mutableSetOf<String>()
+        if (Files.isRegularFile(stagedContentsFile)) {
+            val stagedContents = readJsonArrayObjects(stagedContentsFile).filter { obj ->
+                val id = obj["id"]?.jsonPrimitive?.content
+                    ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    ?: return@filter false
+                val primaryAudio = obj["primaryAudio"]?.jsonPrimitive?.content
+                    ?: (obj["media"] as? JsonObject)?.get("primaryAudio")?.jsonPrimitive?.content
+                val transAudio = obj["translatedAudio"]?.jsonPrimitive?.content
+                    ?: (obj["media"] as? JsonObject)?.get("translatedAudio")?.jsonPrimitive?.content
+                val img = obj["image"]?.jsonPrimitive?.content
+                    ?: (obj["media"] as? JsonObject)?.get("image")?.jsonPrimitive?.content
+                val customPkg = (obj["customFields"] as? JsonObject)?.get("packageId")?.jsonPrimitive?.content
+
+                val matches = stagedPkgIds.any { pkg ->
+                    primaryAudio?.startsWith("$pkg/") == true ||
+                    transAudio?.startsWith("$pkg/") == true ||
+                    img?.startsWith("$pkg/") == true ||
+                    primaryAudio?.startsWith(pkg) == true ||
+                    customPkg == pkg
+                }
+                if (matches) targetContentIds.add(id)
+                matches
+            }
+
+            val liveContents = if (Files.isRegularFile(liveContentsFile)) {
+                readJsonArrayObjects(liveContentsFile).filter { obj ->
+                    val id = obj["id"]?.jsonPrimitive?.content
+                        ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    id == null || id !in targetContentIds
+                }
+            } else {
+                emptyList()
+            }
+            writeJsonArrayObjects(liveContentsFile, liveContents + stagedContents)
+        }
+
+        val stagedItemsFile = staging.resolve("portable/data/learning-items.json")
+        val liveItemsFile = liveData.resolve("learning-items.json")
+        val targetItemIds = mutableSetOf<String>()
+        if (Files.isRegularFile(stagedItemsFile)) {
+            val stagedItems = readJsonArrayObjects(stagedItemsFile).filter { obj ->
+                val cId = obj["contentId"]?.jsonPrimitive?.content
+                    ?: (obj["contentId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                val matches = cId != null && cId in targetContentIds
+                if (matches) {
+                    val id = obj["id"]?.jsonPrimitive?.content
+                        ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    if (id != null) targetItemIds.add(id)
+                }
+                matches
+            }
+
+            val liveItems = if (Files.isRegularFile(liveItemsFile)) {
+                readJsonArrayObjects(liveItemsFile).filter { obj ->
+                    val id = obj["id"]?.jsonPrimitive?.content
+                        ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    id == null || id !in targetItemIds
+                }
+            } else {
+                emptyList()
+            }
+            writeJsonArrayObjects(liveItemsFile, liveItems + stagedItems)
+        }
+
+        val stagedMemoryFile = staging.resolve("portable/data/memory-states.json")
+        val liveMemoryFile = liveData.resolve("memory-states.json")
+        if (Files.isRegularFile(stagedMemoryFile)) {
+            val stagedMemory = readJsonArrayObjects(stagedMemoryFile).filter { obj ->
+                val itemId = obj["learningItemId"]?.jsonPrimitive?.content
+                    ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    ?: obj["itemId"]?.jsonPrimitive?.content
+                itemId != null && itemId in targetItemIds
+            }
+            val liveMemory = if (Files.isRegularFile(liveMemoryFile)) {
+                readJsonArrayObjects(liveMemoryFile).filter { obj ->
+                    val itemId = obj["learningItemId"]?.jsonPrimitive?.content
+                        ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                        ?: obj["itemId"]?.jsonPrimitive?.content
+                    itemId == null || itemId !in targetItemIds
+                }
+            } else {
+                emptyList()
+            }
+            writeJsonArrayObjects(liveMemoryFile, liveMemory + stagedMemory)
+        }
+
+        val stagedReviewFile = staging.resolve("portable/data/review-events.json")
+        val liveReviewFile = liveData.resolve("review-events.json")
+        if (Files.isRegularFile(stagedReviewFile)) {
+            val stagedReviews = readJsonArrayObjects(stagedReviewFile).filter { obj ->
+                val itemId = obj["learningItemId"]?.jsonPrimitive?.content
+                    ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                    ?: obj["itemId"]?.jsonPrimitive?.content
+                itemId != null && itemId in targetItemIds
+            }
+            val liveReviews = if (Files.isRegularFile(liveReviewFile)) {
+                readJsonArrayObjects(liveReviewFile)
+            } else {
+                emptyList()
+            }
+            val liveReviewIds = liveReviews.mapNotNull {
+                it["id"]?.jsonPrimitive?.content ?: (it["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+            }.toSet()
+            val newStagedReviews = stagedReviews.filter { obj ->
+                val id = obj["id"]?.jsonPrimitive?.content ?: (obj["id"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                id == null || id !in liveReviewIds
+            }
+            writeJsonArrayObjects(liveReviewFile, liveReviews + newStagedReviews)
+        }
+
+        if (liveMedia != null) {
+            stagedPkgIds.forEach { pkgId ->
+                val stagedPkgMedia = staging.resolve("portable/media/$pkgId")
+                val livePkgMedia = liveMedia.resolve(pkgId)
+                if (Files.isDirectory(stagedPkgMedia)) {
+                    if (Files.exists(livePkgMedia)) {
+                        deleteTree(livePkgMedia)
+                    }
+                    Files.createDirectories(livePkgMedia)
+                    Files.walk(stagedPkgMedia).use { paths ->
+                        paths.filter { Files.isRegularFile(it) }.forEach { file ->
+                            val rel = stagedPkgMedia.relativize(file)
+                            val target = livePkgMedia.resolve(rel)
+                            Files.createDirectories(requireNotNull(target.parent))
+                            Files.copy(file, target, StandardCopyOption.REPLACE_EXISTING)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun readJsonArrayObjects(file: Path): List<JsonObject> {
+        val text = readUtf8String(file)
+        val element = try { V2_JSON.parseToJsonElement(text) } catch (_: Exception) { return emptyList() }
+        val array = when (element) {
+            is JsonArray -> element
+            is JsonObject -> (element["data"] ?: element["items"] ?: element["records"]) as? JsonArray ?: JsonArray(emptyList())
+            else -> JsonArray(emptyList())
+        }
+        return array.filterIsInstance<JsonObject>()
+    }
+
+    private fun writeJsonArrayObjects(file: Path, objects: List<JsonObject>) {
+        Files.createDirectories(requireNotNull(file.parent))
+        val existing = if (Files.isRegularFile(file)) {
+            try { V2_JSON.parseToJsonElement(readUtf8String(file)) } catch (_: Exception) { null }
+        } else null
+        val newJson = if (existing is JsonObject && "data" in existing) {
+            JsonObject(existing + ("data" to JsonArray(objects)))
+        } else {
+            JsonArray(objects)
+        }
+        writeUtf8String(file, V2_JSON.encodeToString(newJson))
+    }
+
+    private fun readUtf8String(path: Path): String = String(Files.readAllBytes(path), StandardCharsets.UTF_8)
+    private fun writeUtf8String(path: Path, text: String) {
+        Files.write(path, text.toByteArray(StandardCharsets.UTF_8))
+    }
+
+    private fun cleanEmptyTree(dir: Path) {
+        if (!Files.isDirectory(dir)) return
+        Files.walk(dir).use { paths ->
+            paths.sorted(Comparator.reverseOrder()).forEach {
+                if (Files.isDirectory(it) && it != dir) {
+                    try {
+                        Files.delete(it)
+                    } catch (_: Exception) {}
+                }
+            }
+        }
+    }
+
     private fun resolve(name: String): Path {
         val rootName = name.substringBefore('/'); val root = roots[rootName] ?: error("Unknown durable root.")
         return root.resolve(name.substringAfter('/')).normalize().also { require(it.startsWith(root)) }
@@ -893,7 +1432,7 @@ class JvmLearningDataRecoveryManager(
         const val V2_MANIFEST_ENTRY = "manifest.json"
         private val V2_ROOTS = setOf("portable", "android")
         private val DRIVE_PATH = Regex("^[A-Za-z]:.*")
-        private val V2_JSON = Json { encodeDefaults = true; ignoreUnknownKeys = false; prettyPrint = true }
+        private val V2_JSON = Json { encodeDefaults = true; ignoreUnknownKeys = true; prettyPrint = true }
         private fun safeSegment(value: String) = value.isNotBlank() && '/' !in value && '\\' !in value && value !in setOf(".", "..")
         private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
         private fun sha256(path: Path, bufferSize: Int = DEFAULT_BUFFER_SIZE): String =

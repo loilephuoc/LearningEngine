@@ -50,7 +50,11 @@ sealed interface BackupRestoreUiState {
     data class BackupFailure(val message: String) : BackupRestoreUiState
 
     data class Previewing(val message: String = "Analyzing backup file...") : BackupRestoreUiState
-    data class PreviewReady(val preview: PortableBackupV2Preview, val stagedFile: File) : BackupRestoreUiState
+    data class PreviewReady(
+        val preview: PortableBackupV2Preview,
+        val stagedFile: File,
+        val selectedPackageIds: Set<String> = preview.packagePreviews.map { it.packageId }.toSet()
+    ) : BackupRestoreUiState
     data class PreviewFailure(val message: String) : BackupRestoreUiState
 
     data class Restoring(val message: String = "Restoring backup... Please do not close the app.") : BackupRestoreUiState
@@ -102,7 +106,7 @@ class BackupRestoreViewModel(
         return "LearningEngine_Sync_$formatted.lesync"
     }
 
-    fun createBackup(cacheDir: File, openOutputStream: () -> OutputStream?) {
+    fun createBackup(cacheDir: File, specificPackageIds: Set<String>? = null, openOutputStream: () -> OutputStream?) {
         val currentState = mutableState.value
         if (currentState is BackupRestoreUiState.BackingUp || currentState is BackupRestoreUiState.Restoring || currentState is BackupRestoreUiState.SyncExporting || currentState is BackupRestoreUiState.SyncImporting) {
             return
@@ -164,7 +168,11 @@ class BackupRestoreViewModel(
                     val graph = graphProvider()
                     graph.previewPortableBackup(target)
                 }
-                mutableState.value = BackupRestoreUiState.PreviewReady(preview, stagedFile!!)
+                mutableState.value = BackupRestoreUiState.PreviewReady(
+                    preview = preview,
+                    stagedFile = stagedFile!!,
+                    selectedPackageIds = preview.packagePreviews.map { it.packageId }.toSet()
+                )
             } catch (e: Exception) {
                 stagedFile?.delete()
                 mutableState.value = BackupRestoreUiState.PreviewFailure(e.message ?: "Invalid or corrupted backup file.")
@@ -172,7 +180,15 @@ class BackupRestoreViewModel(
         }
     }
 
-    fun confirmRestore(stagedFile: File) {
+    fun toggleRestorePackage(pkgId: String, selected: Boolean) {
+        val current = mutableState.value
+        if (current is BackupRestoreUiState.PreviewReady) {
+            val updated = if (selected) current.selectedPackageIds + pkgId else current.selectedPackageIds - pkgId
+            mutableState.value = current.copy(selectedPackageIds = updated)
+        }
+    }
+
+    fun confirmRestore(stagedFile: File, selectedPackageIds: Set<String>? = null) {
         val currentState = mutableState.value
         if (currentState is BackupRestoreUiState.Restoring) {
             return
@@ -185,7 +201,11 @@ class BackupRestoreViewModel(
                 val result = withContext(ioDispatcher) {
                     try {
                         val graph = graphProvider()
-                        graph.restorePortableBackup(stagedFile.toPath(), operationActive = false)
+                        graph.restorePortableBackup(
+                            source = stagedFile.toPath(),
+                            operationActive = false,
+                            selectedPackageIds = selectedPackageIds
+                        )
                     } finally {
                         stagedFile.delete()
                     }

@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -212,9 +213,15 @@ fun BackupRestoreScreen(
             )
         }
         is BackupRestoreUiState.PreviewReady -> {
+            val isAll = state.selectedPackageIds.size == state.preview.packagePreviews.size
             RestorePreviewDialog(
                 preview = state.preview,
-                onConfirm = { viewModel.confirmRestore(state.stagedFile) },
+                selectedPackageIds = state.selectedPackageIds,
+                onTogglePackage = { pkgId, checked -> viewModel.toggleRestorePackage(pkgId, checked) },
+                onConfirm = {
+                    val sel = if (isAll) null else state.selectedPackageIds
+                    viewModel.confirmRestore(state.stagedFile, sel)
+                },
                 onCancel = { viewModel.cancelPreview(state.stagedFile) }
             )
         }
@@ -609,6 +616,8 @@ private fun BackupSuccessDialog(
 @Composable
 private fun RestorePreviewDialog(
     preview: PortableBackupV2Preview,
+    selectedPackageIds: Set<String>,
+    onTogglePackage: (String, Boolean) -> Unit,
     onConfirm: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -616,8 +625,7 @@ private fun RestorePreviewDialog(
         onDismissRequest = onCancel,
         title = {
             Text(
-                "Replace current learning data?",
-                color = MaterialTheme.colorScheme.error,
+                "Khôi phục bản sao lưu (.lebak)",
                 fontWeight = FontWeight.Bold
             )
         },
@@ -626,41 +634,78 @@ private fun RestorePreviewDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(
-                    "Caution: This operation will REPLACE all current local learning data with the contents of this backup file. This is NOT a merge.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    "A safety backup of your current data will be created automatically before any changes are made.",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Text("Thông tin bản sao lưu:", fontWeight = FontWeight.Bold)
+                Text("• Nền tảng tạo: ${preview.sourcePlatform.uppercase()} (${preview.appVersion})")
+                Text("• Thời gian: ${preview.createdAtUtc}")
+                Text("• Tổng số thẻ từ vựng: ${preview.counts.contents}")
+                Text("• Tệp media & âm thanh: ${preview.counts.mediaFiles} (${formatBytesHelper(preview.bytes.mediaBytes)})")
+                Text("• Lịch sử ôn tập (FSRS): ${preview.counts.reviewEvents} lượt ôn")
+
+                if (preview.packagePreviews.isNotEmpty()) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    Text("Chọn gói cần khôi phục (${preview.packagePreviews.size} gói):", fontWeight = FontWeight.Bold)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        preview.packagePreviews.forEach { pkg ->
+                            val isChecked = pkg.packageId in selectedPackageIds
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = { onTogglePackage(pkg.packageId, it) }
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Column {
+                                        Text(pkg.packageName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                        Text("${pkg.contentCount} thẻ • ${pkg.mediaCount} media", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                                val (statusText, statusColor) = when (pkg.status) {
+                                    vn.loi.learning.domain.sync.model.PackageCompatibilityStatus.NEW -> "MỚI" to MaterialTheme.colorScheme.primary
+                                    vn.loi.learning.domain.sync.model.PackageCompatibilityStatus.PRESENT -> "ĐÃ CÓ" to MaterialTheme.colorScheme.secondary
+                                    vn.loi.learning.domain.sync.model.PackageCompatibilityStatus.CONFLICT -> "XUNG ĐỘT" to MaterialTheme.colorScheme.error
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = statusColor.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = statusText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = statusColor,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Text("Backup Information:", fontWeight = FontWeight.Bold)
-                Text("• Created: ${preview.createdAtUtc}")
-                Text("• App Version: ${preview.appVersion} (${preview.sourcePlatform})")
-                Text("• Packages: ${preview.counts.packages}")
-                Text("• Vocabulary Items: ${preview.counts.contents}")
-                Text("• Learning Items: ${preview.counts.learningItems}")
-                Text("• FSRS Cards: ${preview.counts.memoryStates}")
-                Text("• Review History: ${preview.counts.reviewEvents}")
-                Text("• Voice Recordings: ${preview.counts.recordings}")
-                Text("• Total Expanded Size: ${formatBytesHelper(preview.bytes.totalExpandedBytes)}")
+                Text(
+                    "Lưu ý: Quá trình khôi phục sẽ ghi đè các gói đã chọn. Một bản sao an toàn (safety backup) sẽ được tự động tạo trước khi áp dụng.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.semantics { contentDescription = "Confirm destructive restore" }
+                enabled = selectedPackageIds.isNotEmpty(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.semantics { contentDescription = "Confirm restore" }
             ) {
-                Text("Replace & Restore")
+                Text("Khôi phục (${selectedPackageIds.size} gói)")
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onCancel) {
-                Text("Cancel")
+                Text("Hủy")
             }
         }
     )

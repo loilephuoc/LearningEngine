@@ -26,6 +26,7 @@ import vn.loi.learning.desktop.ui.designsystem.components.LESecondaryButton
 fun DesktopRestoreDialog(
     state: DesktopRestoreDialogState,
     onSelectFile: () -> Unit,
+    onTogglePackage: (String, Boolean) -> Unit = { _, _ -> },
     onConfirmRestore: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -35,7 +36,7 @@ fun DesktopRestoreDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.6f)
+                .fillMaxWidth(0.65f)
                 .wrapContentHeight()
                 .padding(LESpacing.md),
             shape = LERadius.lg,
@@ -65,7 +66,7 @@ fun DesktopRestoreDialog(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Nạp bản sao lưu .lebak từ thiết bị khác. Hệ thống tự động tạo bản sao an toàn trước khi khôi phục.",
+                                text = "Nạp bản sao lưu .lebak từ thiết bị khác. Chọn gói cần khôi phục và kiểm tra tính tương thích.",
                                 style = LETypography.caption,
                                 color = LEColors.textSecondary
                             )
@@ -163,16 +164,84 @@ fun DesktopRestoreDialog(
                                 Text(state.preview.createdAtUtc, style = MaterialTheme.typography.bodySmall)
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Số lượng thẻ từ vựng:", style = MaterialTheme.typography.bodySmall)
+                                Text("Tổng số thẻ từ vựng:", style = MaterialTheme.typography.bodySmall)
                                 Text("${state.preview.counts.contents} thẻ", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Tệp media & âm thanh:", style = MaterialTheme.typography.bodySmall)
                                 Text("${state.preview.counts.mediaFiles} file (${state.preview.bytes.mediaBytes / 1024} KB)", style = MaterialTheme.typography.bodySmall)
                             }
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Lịch sử ôn tập (FSRS):", style = MaterialTheme.typography.bodySmall)
-                                Text("${state.preview.counts.reviewEvents} lượt ôn", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(LESpacing.sm))
+
+                    // Package Selection & Compatibility List
+                    if (state.packagePreviews.isNotEmpty()) {
+                        Text(
+                            text = "Danh sách gói học trong bản sao lưu (${state.packagePreviews.size} gói):",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(LESpacing.xs))
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = LEColors.surfaceSubtle),
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp)
+                        ) {
+                            LazyColumn(modifier = Modifier.padding(LESpacing.xs)) {
+                                items(state.packagePreviews, key = { it.packageId }) { pkg ->
+                                    val isSelected = pkg.packageId in state.selectedPackageIds
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = LESpacing.sm, vertical = LESpacing.xs)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                            Checkbox(
+                                                checked = isSelected,
+                                                onCheckedChange = { onTogglePackage(pkg.packageId, it) },
+                                                enabled = !state.isRestoring
+                                            )
+                                            Spacer(modifier = Modifier.width(LESpacing.xs))
+                                            Column {
+                                                Text(
+                                                    text = pkg.packageName,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                                Text(
+                                                    text = "${pkg.contentCount} thẻ • ${pkg.mediaCount} media",
+                                                    style = LETypography.caption,
+                                                    color = LEColors.textSecondary
+                                                )
+                                            }
+                                        }
+                                        // Status badge
+                                        val (statusText, statusBg, statusColor) = when (pkg.status) {
+                                            vn.loi.learning.domain.sync.model.PackageCompatibilityStatus.NEW ->
+                                                Triple("MỚI", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.primary)
+                                            vn.loi.learning.domain.sync.model.PackageCompatibilityStatus.PRESENT ->
+                                                Triple("ĐÃ CÓ", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.secondary)
+                                            vn.loi.learning.domain.sync.model.PackageCompatibilityStatus.CONFLICT ->
+                                                Triple("XUNG ĐỘT", MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.error)
+                                        }
+                                        Surface(
+                                            shape = LERadius.sm,
+                                            color = statusBg,
+                                            modifier = Modifier.padding(start = LESpacing.xs)
+                                        ) {
+                                            Text(
+                                                text = statusText,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = statusColor,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -188,7 +257,7 @@ fun DesktopRestoreDialog(
                             Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             Spacer(modifier = Modifier.width(LESpacing.sm))
                             Text(
-                                text = "Lưu ý: Quá trình khôi phục sẽ thay thế dữ liệu hiện tại bằng nội dung bản sao lưu. Một bản sao an toàn (safety backup) sẽ được tự động tạo trước khi ghi đè.",
+                                text = "Lưu ý: Khôi phục sẽ thay thế nội dung các gói đã chọn. Bản sao an toàn (safety backup) sẽ được tự động tạo trước khi áp dụng.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
                             )
@@ -201,21 +270,33 @@ fun DesktopRestoreDialog(
                 // Actions
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    LESecondaryButton(
-                        text = if (state.restoreSuccessSummary != null) "Đóng" else "Hủy",
-                        onClick = onDismiss,
-                        enabled = !state.isRestoring
-                    )
                     if (state.preview != null && state.restoreSuccessSummary == null) {
-                        Spacer(modifier = Modifier.width(LESpacing.sm))
-                        LEPrimaryButton(
-                            text = if (state.isRestoring) "Đang khôi phục..." else "Xác nhận khôi phục",
-                            onClick = onConfirmRestore,
+                        Text(
+                            text = "Đã chọn: ${state.selectedPackageIds.size} gói",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LEColors.textSecondary
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+
+                    Row {
+                        LESecondaryButton(
+                            text = if (state.restoreSuccessSummary != null) "Đóng" else "Hủy",
+                            onClick = onDismiss,
                             enabled = !state.isRestoring
                         )
+                        if (state.preview != null && state.restoreSuccessSummary == null) {
+                            Spacer(modifier = Modifier.width(LESpacing.sm))
+                            LEPrimaryButton(
+                                text = if (state.isRestoring) "Đang khôi phục..." else "Khôi phục (${state.selectedPackageIds.size} gói)",
+                                onClick = onConfirmRestore,
+                                enabled = !state.isRestoring && state.selectedPackageIds.isNotEmpty()
+                            )
+                        }
                     }
                 }
             }

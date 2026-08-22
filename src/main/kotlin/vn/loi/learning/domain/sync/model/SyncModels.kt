@@ -121,3 +121,31 @@ data class SyncPreviewReport(
     val requiresFullBackup: Boolean = false,
     val warnings: List<String> = emptyList()
 )
+
+@Serializable
+enum class PackageCompatibilityStatus {
+    NEW,
+    PRESENT,
+    CONFLICT
+}
+
+@Serializable
+enum class PackageBaselineState {
+    UNKNOWN,
+    BASELINED,
+    DIRTY,
+    SYNCHRONIZED
+}
+
+@Serializable
+data class PackageRestorePreviewItem(
+    val packageId: String,
+    val packageName: String,
+    val version: String = "1.0.0",
+    val contentCount: Int = 0,
+    val learningItemCount: Int = 0,
+    val mediaCount: Int = 0,
+    val status: PackageCompatibilityStatus = PackageCompatibilityStatus.NEW,
+    val statusDetail: String? = null,
+    val isSelected: Boolean = true
+)

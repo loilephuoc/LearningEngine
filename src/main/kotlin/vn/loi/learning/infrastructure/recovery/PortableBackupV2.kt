@@ -32,14 +32,27 @@ data class PortableBackupBytesV2(
 )
 
 @Serializable
+data class PortableBackupPackageEntryV2(
+    val packageId: String,
+    val packageName: String,
+    val version: String = "1.0.0",
+    val contentCount: Int = 0,
+    val learningItemCount: Int = 0,
+    val mediaCount: Int = 0,
+    val fingerprint: String? = null
+)
+
+@Serializable
 data class PortableBackupManifestV2(
     val backupSchemaVersion: Int = 2,
+    val backupId: String? = null,
     val appVersion: String,
     val versionCode: Long? = null,
     val createdAtUtc: String,
     val sourcePlatform: String,
     val learnerIds: List<String> = emptyList(),
     val includedSections: List<String>,
+    val packages: List<PortableBackupPackageEntryV2> = emptyList(),
     val counts: PortableBackupCountsV2,
     val bytes: PortableBackupBytesV2,
     val entries: List<PortableBackupEntryV2>
@@ -49,7 +62,9 @@ data class PortableBackupV2Descriptor(
     val appVersion: String,
     val versionCode: Long? = null,
     val sourcePlatform: String,
-    val learnerIds: List<String> = emptyList()
+    val learnerIds: List<String> = emptyList(),
+    val specificPackageIds: Set<String>? = null,
+    val backupId: String? = null
 )
 
 data class PortableBackupV2Limits(
@@ -83,12 +98,15 @@ fun interface PortableBackupV2SnapshotContributor {
 @Serializable
 data class PortableBackupV2Preview(
     val backupSchemaVersion: Int,
+    val backupId: String? = null,
     val appVersion: String,
     val versionCode: Long? = null,
     val createdAtUtc: String,
     val sourcePlatform: String,
     val learnerIds: List<String> = emptyList(),
     val includedSections: List<String> = emptyList(),
+    val packages: List<PortableBackupPackageEntryV2> = emptyList(),
+    val packagePreviews: List<vn.loi.learning.domain.sync.model.PackageRestorePreviewItem> = emptyList(),
     val counts: PortableBackupCountsV2 = PortableBackupCountsV2(),
     val bytes: PortableBackupBytesV2 = PortableBackupBytesV2(),
     val totalEntries: Int = 0

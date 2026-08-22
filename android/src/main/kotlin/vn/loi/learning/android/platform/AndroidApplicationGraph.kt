@@ -36,11 +36,16 @@ class AndroidApplicationGraph internal constructor(
 
     fun previewPortableBackup(source: Path) = recovery.previewPortableBackupV2(source)
 
-    fun restorePortableBackup(source: Path, operationActive: Boolean = false) = recovery.restorePortableBackupV2(
+    fun restorePortableBackup(
+        source: Path,
+        operationActive: Boolean = false,
+        selectedPackageIds: Set<String>? = null
+    ) = recovery.restorePortableBackupV2(
         source = source,
         operationActive = operationActive,
         contributorForSafetyBackup = portableBackupSnapshot,
-        consumer = portableBackupSnapshot
+        consumer = portableBackupSnapshot,
+        selectedPackageIds = selectedPackageIds
     )
 
     fun exportSync(

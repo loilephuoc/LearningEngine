@@ -76,9 +76,14 @@ class DesktopRecoveryManager(
 
     fun restorePortableBackupV2(
         source: Path,
-        operationActive: Boolean = false
+        operationActive: Boolean = false,
+        selectedPackageIds: Set<String>? = null
     ): PortableBackupV2RestoreResult =
-        jvmRecoveryManager.restorePortableBackupV2(source, operationActive)
+        jvmRecoveryManager.restorePortableBackupV2(
+            source = source,
+            operationActive = operationActive,
+            selectedPackageIds = selectedPackageIds
+        )
 
     fun createBackup(target: Path): Path = gate.backup { createBackupLocked(target) }
 

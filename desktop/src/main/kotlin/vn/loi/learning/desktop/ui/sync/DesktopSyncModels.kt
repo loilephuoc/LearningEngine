@@ -26,8 +26,8 @@ data class DesktopBackupDialogState(
 data class DesktopRestoreDialogState(
     val stagedFilePath: String? = null,
     val preview: PortableBackupV2Preview? = null,
-    val newPackages: List<String> = emptyList(),
-    val existingPackages: List<String> = emptyList(),
+    val packagePreviews: List<vn.loi.learning.domain.sync.model.PackageRestorePreviewItem> = emptyList(),
+    val selectedPackageIds: Set<String> = emptySet(),
     val isRestoring: Boolean = false,
     val restoreSuccessSummary: String? = null,
     val errorMessage: String? = null

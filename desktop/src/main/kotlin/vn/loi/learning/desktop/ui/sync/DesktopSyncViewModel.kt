@@ -71,13 +71,19 @@ class DesktopSyncViewModel(
     fun executeBackup(targetPath: Path) {
         _backupState.value = _backupState.value.copy(isExporting = true, errorMessage = null)
         try {
+            val selectedPackageIds = if (_backupState.value.selectAllPackages) {
+                null
+            } else {
+                _backupState.value.availablePackages.filter { it.isSelected }.map { it.packageId }.toSet()
+            }
             recoveryManager.createPortableBackupV2(
                 target = targetPath,
                 descriptor = PortableBackupV2Descriptor(
                     appVersion = "2.0.0",
                     versionCode = 1,
                     sourcePlatform = "desktop",
-                    learnerIds = listOf("default-learner")
+                    learnerIds = listOf("default-learner"),
+                    specificPackageIds = selectedPackageIds
                 )
             )
             _backupState.value = _backupState.value.copy(
@@ -103,7 +109,9 @@ class DesktopSyncViewModel(
             _restoreState.value = _restoreState.value.copy(
                 isRestoring = false,
                 stagedFilePath = sourcePath.toString(),
-                preview = preview
+                preview = preview,
+                packagePreviews = preview.packagePreviews,
+                selectedPackageIds = preview.packagePreviews.map { it.packageId }.toSet()
             )
         } catch (e: Exception) {
             _restoreState.value = _restoreState.value.copy(
@@ -113,10 +121,22 @@ class DesktopSyncViewModel(
         }
     }
 
+    fun toggleRestorePackage(pkgId: String, selected: Boolean) {
+        val current = _restoreState.value.selectedPackageIds
+        val updated = if (selected) current + pkgId else current - pkgId
+        _restoreState.value = _restoreState.value.copy(selectedPackageIds = updated)
+    }
+
     fun executeRestore(sourcePath: Path) {
         _restoreState.value = _restoreState.value.copy(isRestoring = true, errorMessage = null)
         try {
-            val result = recoveryManager.restorePortableBackupV2(sourcePath, operationActive = false)
+            val selected = _restoreState.value.selectedPackageIds
+            val isAll = _restoreState.value.packagePreviews.isNotEmpty() && selected.size == _restoreState.value.packagePreviews.size
+            val result = recoveryManager.restorePortableBackupV2(
+                source = sourcePath,
+                operationActive = false,
+                selectedPackageIds = if (isAll) null else selected
+            )
             when (result) {
                 is PortableBackupV2RestoreResult.Success -> {
                     _restoreState.value = _restoreState.value.copy(
