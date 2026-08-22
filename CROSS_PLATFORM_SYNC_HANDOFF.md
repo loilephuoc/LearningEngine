@@ -35,5 +35,10 @@ Learning Engine uses a dual-layer synchronization and recovery architecture:
 - Safe cancellation is polled between files and before verification; staging/temp files are removed
   and no target is published. Success UI is based on a revalidated manifest and reports archive/media
   sizes, compression and `PASSED` verification.
-- Current checkpoint: the capability commit containing this handoff (`feat(sync): add portable backup progress and cancellation`).
-- Next exact task: physical Upper Intermediate backup/ZIP/extraction/hash UAT, followed by Android inspection without restore until preview identity is correct.
+- Physical Upper Intermediate UAT passed after archive creation, internal verification, full extraction
+  and per-entry SHA-256 verification: 2,887 contents; 14,435 learning items; 12,135 referenced media;
+  786,105,846 media bytes; 830,783,670 expanded bytes; 653,007,032 archive bytes (~21.4% reduction).
+- Selective staging no longer copies the entire 5-package media repository before filtering; it
+  snapshots canonical JSON and then copies only resolved media references for the selected package.
+- Current checkpoint: the capability commit containing this handoff (`perf(sync): stage only selected portable backup media`).
+- Next exact task: Android physical package-preview inspection of the verified archive. Do not restore until package identity and counts are correct.

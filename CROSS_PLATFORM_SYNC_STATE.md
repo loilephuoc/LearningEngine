@@ -1,6 +1,6 @@
 # Cross-Platform Sync & Portable Backup — State
 
-**Current Status**: Phase 4 in progress — media completeness, preview, naming, progress and cancellation delivered; real-package UAT remains
+**Current Status**: Phase 4 in progress — Desktop product workflow and real-package archive UAT passed; Android physical inspection remains
 **Branch**: `feat/cross-platform-sync`
 **Target Platform Interoperability**: Desktop (JVM/Compose) <-> Android (Kotlin/Jetpack Compose)
 **Verification Baseline**: 4,998 / 4,998 tests passing (`.\gradlew.bat clean test` BUILD SUCCESSFUL, 2026-08-22)
@@ -40,15 +40,17 @@
 | **Phase 1** | Repository Audit + Architecture + Interchange Contract | **COMPLETED** | Verified |
 | **Phase 2** | Differential Sync + Media Deduplication + FSRS Convergence | **COMPLETED** | Verified |
 | **Phase 3** | Selective Portable Backup/Restore + Package Identification + Compatibility Badges | **COMPLETED** | Verified (4,988 tests) |
-| **Phase 4** | Portable Backup Quality, integrity evidence, preview, progress, naming and real-package UAT | **IN PROGRESS** | Product workflow verified (4,998 tests); physical UAT pending |
+| **Phase 4** | Portable Backup Quality, integrity evidence, preview, progress, naming and real-package UAT | **IN PROGRESS** | Desktop physical archive UAT passed; Android inspection pending |
 
 ## 3. Phase 4 Continuation
 
 - **Completed capabilities**: selective backup resolves stable package identity and referenced media; read-only preview reports package/content/item/FSRS/media counts and bytes; names use a safe local timestamp; preview/archive/verification run off the Compose thread with typed phase, overall %, item and byte progress; cancellation cleans temporary work without publishing a target; verified success reports archive/media sizes and compression.
 - **Measured root cause**: `Vocabulary_In_Use_Upper_Intermediate` has package ID `package-07f8741f5da8588121a71c3a`, while its media folder is named `Vocabulary_In_Use_Upper_Intermediate`. The old ID-prefix filter excluded all 15,211 files (970,940,650 source bytes), explaining the approximately 3.7 MB metadata-only archive.
+- **Physical UAT PASS**: temporary harness created and internally validated `C:\tmp\LearningEngine_Backup_Vocabulary_In_Use_Upper_Intermediate_UAT_1787371271540.lebak`, then extracted and re-hashed every manifest entry: 2,887 contents, 14,435 learning items, 12,135 referenced media files, 786,105,846 media bytes, 830,783,670 expanded bytes, 653,007,032 archive bytes, about 21.4% size reduction. The remaining 3,076 files in the source package directory are unreferenced and intentionally excluded.
+- **Large-package hardening**: selective staging now snapshots canonical JSON first and copies only resolved referenced media instead of copying the entire multi-package media repository before filtering.
 - **Files changed**: `JvmLearningDataRecoveryManager.kt`, `SelectivePackageBackupAndRestoreTest.kt`, checkpoint documentation.
-- **Next exact capability**: run the physical `Vocabulary_In_Use_Upper_Intermediate` creation/ZIP/extraction/hash UAT, then inspect the resulting archive on Android before any restore.
-- **Current checkpoint**: the capability commit containing this state update (`feat(sync): add portable backup progress and cancellation`).
+- **Next exact capability**: copy the verified archive to the connected Android device and inspect Backup & Restore package preview; do not restore unless identity/counts are correct.
+- **Current checkpoint**: the capability commit containing this state update (`perf(sync): stage only selected portable backup media`).
 - **Expected post-commit worktree**: clean.
 
 ## 4. Decision Log

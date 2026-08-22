@@ -275,7 +275,9 @@ class JvmLearningDataRecoveryManager(
             onProgress(PortableBackupProgressV2(PortableBackupPhaseV2.PREPARING))
             temporary = Files.createTempFile(normalized.parent, ".learning-engine-backup-v2-", ".tmp")
             staging = Files.createTempDirectory(normalized.parent, ".learning-engine-snapshot-v2-")
-            val inventory = portableInventory()
+            val fullInventory = portableInventory()
+            val selective = !descriptor.specificPackageIds.isNullOrEmpty()
+            val inventory = if (selective) fullInventory.filterNot { it.first.startsWith("portable/media/") } else fullInventory
             val inventoryBytes = inventory.sumOf { Files.size(it.second) }
             var copiedBytes = 0L
             inventory.forEachIndexed { index, (logical, source) ->
@@ -290,12 +292,41 @@ class JvmLearningDataRecoveryManager(
                 copiedBytes += Files.size(source)
             }
 
-            val packageEntries = if (!descriptor.specificPackageIds.isNullOrEmpty() || !descriptor.includeLearningProgress) {
+            var packageEntries = if (selective || !descriptor.includeLearningProgress) {
                 val packageIds = descriptor.specificPackageIds?.takeIf { it.isNotEmpty() }
                     ?: extractPackageEntries(staging).map { it.packageId }.toSet()
-                scopeStagedDataForPackages(staging, packageIds, descriptor.includeLearningProgress)
+                scopeStagedDataForPackages(
+                    staging, packageIds, descriptor.includeLearningProgress, validateMedia = !selective
+                )
             } else {
                 extractPackageEntries(staging)
+            }
+            if (selective) {
+                val mediaRoot = roots["media"] ?: roots.getValue("data").resolve("media")
+                val selectedContents = readJsonArrayObjects(staging.resolve("portable/data/contents.json"))
+                val references = selectedContents.flatMap(::mediaReferences).toSortedSet()
+                val mediaBytes = references.sumOf { reference ->
+                    val source = mediaRoot.resolve(reference).normalize()
+                    if (!source.startsWith(mediaRoot.normalize()) || !Files.isRegularFile(source)) {
+                        error("Selected package media is incomplete: missing $reference")
+                    }
+                    Files.size(source)
+                }
+                var stagedMediaBytes = 0L
+                references.forEachIndexed { index, reference ->
+                    if (shouldCancel()) throw PortableBackupCancelledException()
+                    onProgress(PortableBackupProgressV2(
+                        PortableBackupPhaseV2.CALCULATING_MEDIA,
+                        index.toLong(), references.size.toLong(), stagedMediaBytes, mediaBytes, reference
+                    ))
+                    val source = mediaRoot.resolve(reference).normalize()
+                    val targetMedia = staging.resolve("portable/media").resolve(reference).normalize()
+                    require(targetMedia.startsWith(staging.resolve("portable/media").normalize()))
+                    Files.createDirectories(requireNotNull(targetMedia.parent))
+                    Files.copy(source, targetMedia)
+                    stagedMediaBytes += Files.size(source)
+                }
+                packageEntries = extractPackageEntries(staging)
             }
 
             val stagedCanonical = mutableListOf<PortableBackupSupplementV2>()
@@ -1110,7 +1141,8 @@ class JvmLearningDataRecoveryManager(
     private fun scopeStagedDataForPackages(
         staging: Path,
         specificPackageIds: Set<String>,
-        includeLearningProgress: Boolean
+        includeLearningProgress: Boolean,
+        validateMedia: Boolean = true
     ): List<PortableBackupPackageEntryV2> {
         val installedFile = staging.resolve("portable/data/installed-packages.json")
         val targetPkgIds = mutableSetOf<String>()
@@ -1295,12 +1327,14 @@ class JvmLearningDataRecoveryManager(
             }
             cleanEmptyTree(mediaDir)
         }
-        val missingMedia = targetMediaReferences.filterNot { reference ->
-            val resolved = mediaDir.resolve(reference).normalize()
-            resolved.startsWith(mediaDir.normalize()) && Files.isRegularFile(resolved)
-        }
-        if (missingMedia.isNotEmpty()) {
-            error("Selected package media is incomplete: ${missingMedia.size} referenced file(s) are missing; first=${missingMedia.first()}")
+        if (validateMedia) {
+            val missingMedia = targetMediaReferences.filterNot { reference ->
+                val resolved = mediaDir.resolve(reference).normalize()
+                resolved.startsWith(mediaDir.normalize()) && Files.isRegularFile(resolved)
+            }
+            if (missingMedia.isNotEmpty()) {
+                error("Selected package media is incomplete: ${missingMedia.size} referenced file(s) are missing; first=${missingMedia.first()}")
+            }
         }
 
         return extractPackageEntries(staging)

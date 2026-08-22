@@ -33,6 +33,16 @@
   media files/bytes, archive size, compression and verification status. Full verification passes
   4,998 tests (2,234 engine, 962 Android, 1,802 Desktop).
 
+# Cross-platform sync — large selective-backup staging and physical UAT
+
+- Selective snapshotting now stages canonical JSON first, resolves package ownership, and copies only
+  media referenced by selected Content instead of copying the complete multi-package media repository.
+- Physical `Vocabulary_In_Use_Upper_Intermediate` UAT created a 653,007,032-byte archive containing
+  2,887 contents, 14,435 learning items and 12,135 referenced media files (786,105,846 media bytes).
+  Internal validation plus full extraction and per-entry SHA-256 verification passed. Expanded size
+  was 830,783,670 bytes (~21.4% reduction); 3,076 unreferenced source-directory files were excluded.
+- Full automated verification remains 4,998 tests (2,234 engine, 962 Android, 1,802 Desktop).
+
 # Backup / Restore transaction safety
 
 - Added one application-wide recovery operation gate at the shared transaction composition root,
