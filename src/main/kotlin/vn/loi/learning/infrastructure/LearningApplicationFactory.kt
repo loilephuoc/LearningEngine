@@ -921,6 +921,18 @@ object LearningApplicationFactory {
                 studyQueueRepository, transactionRunner
             )
 
+        val syncEngine = vn.loi.learning.infrastructure.sync.SyncEngine(
+            contentRepository = contentRepository,
+            learningItemRepository = learningItemRepository,
+            memoryStateRepository = memoryStateRepository,
+            reviewEventRepository = reviewEventRepository,
+            installedPackageRepository = domainInstalledPackageRepository,
+            contentLibraryRepository = contentLibraryRepository,
+            contentPackageRepository = contentPackageRepository,
+            mediaStorage = mediaDirectory?.let { vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(it) },
+            transactionRunner = transactionRunner
+        )
+
         return LearningApplicationContext(
             engine = engine,
             studyQueue = studyQueue,
@@ -984,7 +996,8 @@ object LearningApplicationFactory {
             dailyStudyBudget = dailyStudyBudget,
             packageIntegrityChecker = packageIntegrityChecker,
             intermediatePublicTransportRepair = intermediatePublicTransportRepair,
-            recoveryOperationGate = recoveryOperationGate
+            recoveryOperationGate = recoveryOperationGate,
+            syncEngine = syncEngine
         )
 
     }

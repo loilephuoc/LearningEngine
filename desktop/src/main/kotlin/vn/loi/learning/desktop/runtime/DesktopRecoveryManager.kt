@@ -12,6 +12,12 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 import vn.loi.learning.application.port.RecoveryOperationGate
+import vn.loi.learning.infrastructure.recovery.JvmLearningDataRecoveryManager
+import vn.loi.learning.infrastructure.recovery.LearningDataRecoveryException
+import vn.loi.learning.infrastructure.recovery.PortableBackupManifestV2
+import vn.loi.learning.infrastructure.recovery.PortableBackupV2Descriptor
+import vn.loi.learning.infrastructure.recovery.PortableBackupV2Preview
+import vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult
 
 data class DesktopRecoveryFile(val path: String, val size: Long, val sha256: String)
 
@@ -38,6 +44,41 @@ class DesktopRecoveryManager(
     private val beforeRestoreWrite: (String) -> Unit = {}
 ) {
     val safetyBackupDirectory: Path = configDirectory.resolve("backups")
+
+    val jvmRecoveryManager: JvmLearningDataRecoveryManager = JvmLearningDataRecoveryManager(
+        roots = mapOf(
+            "data" to dataDirectory,
+            "media" to dataDirectory.resolve("media")
+        ),
+        safetyDirectory = safetyBackupDirectory,
+        clock = clock,
+        gate = gate,
+        stagedDomainValidator = { roots ->
+            stagedDomainValidator(requireNotNull(roots["data"]), configDirectory)
+        }
+    )
+
+    fun createPortableBackupV2(
+        target: Path,
+        descriptor: PortableBackupV2Descriptor = PortableBackupV2Descriptor(
+            appVersion = "1.0.0",
+            versionCode = 1,
+            sourcePlatform = "desktop",
+            learnerIds = listOf("default-learner")
+        )
+    ): Path = jvmRecoveryManager.createPortableBackupV2(target, descriptor)
+
+    fun previewPortableBackupV2(source: Path): PortableBackupV2Preview =
+        jvmRecoveryManager.previewPortableBackupV2(source)
+
+    fun validatePortableBackupV2(source: Path): PortableBackupManifestV2 =
+        jvmRecoveryManager.validatePortableBackupV2(source)
+
+    fun restorePortableBackupV2(
+        source: Path,
+        operationActive: Boolean = false
+    ): PortableBackupV2RestoreResult =
+        jvmRecoveryManager.restorePortableBackupV2(source, operationActive)
 
     fun createBackup(target: Path): Path = gate.backup { createBackupLocked(target) }
 
@@ -95,6 +136,16 @@ class DesktopRecoveryManager(
                 if (names.size != names.toSet().size || names.any(::unsafeName)) {
                     throw DesktopRecoveryException("Backup archive structure is invalid.")
                 }
+                val manifestV2 = zip.getEntry("manifest.json")
+                if (manifestV2 != null) {
+                    val v2 = jvmRecoveryManager.validatePortableBackupV2(source)
+                    return DesktopRecoveryManifest(
+                        formatVersion = v2.backupSchemaVersion,
+                        createdAt = Instant.parse(v2.createdAtUtc),
+                        files = v2.entries.map { DesktopRecoveryFile(it.logicalPath, it.uncompressedSize, it.sha256) }
+                    )
+                }
+
                 val manifestEntry = zip.getEntry(MANIFEST_ENTRY)
                     ?: throw DesktopRecoveryException("Backup manifest is missing.")
                 val payloadNames = names.filter { it != MANIFEST_ENTRY }.sorted()
@@ -129,6 +180,23 @@ class DesktopRecoveryManager(
         if (operationActive) {
             throw DesktopRecoveryException("Restore is unavailable during an active study or persistence operation.")
         }
+        val normalized = source.toAbsolutePath().normalize()
+        val isV2 = runCatching {
+            ZipFile(normalized.toFile()).use { it.getEntry("manifest.json") != null }
+        }.getOrDefault(false)
+
+        if (isV2) {
+            val result = restorePortableBackupV2(source, operationActive)
+            when (result) {
+                is PortableBackupV2RestoreResult.Success -> return Path.of(result.safetyBackupPath)
+                is PortableBackupV2RestoreResult.RestoreFailedRolledBack ->
+                    throw DesktopRecoveryException("Restore failed and the previous snapshot was restored: ${result.failureReason}")
+                is PortableBackupV2RestoreResult.RollbackFailed ->
+                    throw DesktopCatastrophicRecoveryException(Path.of(result.safetyBackupPath), IllegalStateException(result.rollbackFailure))
+                else -> throw DesktopRecoveryException("Restore failed: ${result.message}")
+            }
+        }
+
         return gate.restore { restoreLocked(source) }
     }
 
@@ -221,7 +289,7 @@ class DesktopRecoveryManager(
     private fun unsafeName(name: String): Boolean =
         name.isBlank() || name.startsWith('/') || name.contains('\\') ||
             name.split('/').any { it.isBlank() || it == "." || it == ".." } ||
-            (name != MANIFEST_ENTRY && !name.startsWith("data/") && !name.startsWith("config/"))
+            (name != MANIFEST_ENTRY && name != "manifest.json" && !name.startsWith("data/") && !name.startsWith("config/") && !name.startsWith("portable/"))
 
     companion object {
         const val FORMAT_VERSION = 1

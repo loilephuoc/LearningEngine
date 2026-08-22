@@ -10,6 +10,9 @@ class InMemoryReviewEventRepository : ReviewEventRepository {
     private val events =
         mutableListOf<ReviewEvent>()
 
+    override fun findAll(): List<ReviewEvent> =
+        events.sortedBy { it.reviewedAt.epochMillis }
+
     override fun append(
         event: ReviewEvent
     ) {

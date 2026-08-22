@@ -43,6 +43,28 @@ class AndroidApplicationGraph internal constructor(
         consumer = portableBackupSnapshot
     )
 
+    fun exportSync(
+        target: Path,
+        specificPackageIds: Set<String>? = null,
+        knownRemoteMediaHashes: Set<String> = emptySet(),
+        includeReviewEvents: Boolean = true
+    ): Path = requireNotNull(engine.syncEngine) { "SyncEngine is not initialized." }.exportSyncPackage(
+        target = target,
+        sourcePlatform = "android",
+        sourceDeviceId = "android-device",
+        specificPackageIds = specificPackageIds,
+        knownRemoteMediaHashes = knownRemoteMediaHashes,
+        includeReviewEvents = includeReviewEvents
+    )
+
+    fun previewSync(source: Path) =
+        requireNotNull(engine.syncEngine) { "SyncEngine is not initialized." }.previewSyncPackage(source)
+
+    fun importSync(
+        source: Path,
+        conflictStrategy: vn.loi.learning.domain.sync.model.ConflictResolutionStrategy = vn.loi.learning.domain.sync.model.ConflictResolutionStrategy.MERGE_FIELD_LEVEL
+    ) = requireNotNull(engine.syncEngine) { "SyncEngine is not initialized." }.importSyncPackage(source, conflictStrategy)
+
     companion object {
         fun create(context: Context): AndroidApplicationGraph {
             return AndroidStartupTrace.measured("application_graph_create") {

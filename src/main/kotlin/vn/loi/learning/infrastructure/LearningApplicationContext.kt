@@ -96,5 +96,6 @@ data class LearningApplicationContext(
     val activeStudySessionScopeReconciler: vn.loi.learning.application.session.ActiveStudySessionScopeReconciler? = null,
     val dailyStudyBudget: vn.loi.learning.application.study.DailyStudyBudgetQueryService? = null,
     val packageIntegrityChecker: vn.loi.learning.application.integrity.PackageIntegrityChecker? = null,
-    val intermediatePublicTransportRepair: vn.loi.learning.application.integrity.ReconcileIntermediatePublicTransportOrphan? = null
+    val intermediatePublicTransportRepair: vn.loi.learning.application.integrity.ReconcileIntermediatePublicTransportOrphan? = null,
+    val syncEngine: vn.loi.learning.infrastructure.sync.SyncEngine? = null
 )
