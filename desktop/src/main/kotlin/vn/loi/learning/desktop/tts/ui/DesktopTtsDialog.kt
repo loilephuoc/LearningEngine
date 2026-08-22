@@ -380,23 +380,6 @@ fun DesktopTtsDialog(
                                 color = LEColors.warning
                             )
                         }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
-                            OutlinedTextField(
-                                value = uiState.pitch,
-                                onValueChange = { uiState = uiState.copy(pitch = it) },
-                                label = { Text("Pitch") },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = uiState.volume,
-                                onValueChange = { uiState = uiState.copy(volume = it) },
-                                label = { Text("Volume") },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
                     }
 
                     // Voice Configuration
@@ -550,68 +533,97 @@ fun DesktopTtsDialog(
                                 }
                             }
 
-                            // Speech Rate row
+                            // Numeric Audio Parameters (Speed, Pitch, Volume)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
+                                horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                            ) {
+                                TtsNumericControl(
+                                    label = "Speed",
+                                    value = uiState.ratePercent,
+                                    unit = "%",
+                                    min = -50,
+                                    max = 50,
+                                    step = 5,
+                                    onValueChange = { newVal ->
+                                        stopAllPlayback()
+                                        uiState = uiState.copy(
+                                            ratePercent = newVal,
+                                            generationState = TtsGenerationState.Idle
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                TtsNumericControl(
+                                    label = "Pitch",
+                                    value = uiState.pitchHz,
+                                    unit = "Hz",
+                                    min = -50,
+                                    max = 50,
+                                    step = 2,
+                                    onValueChange = { newVal ->
+                                        stopAllPlayback()
+                                        uiState = uiState.copy(
+                                            pitchHz = newVal,
+                                            generationState = TtsGenerationState.Idle
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                TtsNumericControl(
+                                    label = "Volume",
+                                    value = uiState.volumePercent,
+                                    unit = "%",
+                                    min = -50,
+                                    max = 50,
+                                    step = 5,
+                                    onValueChange = { newVal ->
+                                        stopAllPlayback()
+                                        uiState = uiState.copy(
+                                            volumePercent = newVal,
+                                            generationState = TtsGenerationState.Idle
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            // Preview Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(
-                                    modifier = Modifier.width(180.dp),
-                                    verticalArrangement = Arrangement.spacedBy(LESpacing.xxs)
-                                ) {
-                                    Text(
-                                        text = "Speech Rate",
-                                        style = LETypography.caption,
-                                        color = LEColors.textMuted
-                                    )
-                                    TtsRateDropdown(
-                                        selectedRate = uiState.selectedRate,
-                                        onRateSelected = { rate ->
-                                            stopAllPlayback()
-                                            uiState = uiState.copy(
-                                                selectedRate = rate,
-                                                generationState = TtsGenerationState.Idle
-                                            )
-                                        }
-                                    )
-                                }
-
-                                Spacer(Modifier.weight(1f))
-
-                                // Preview Button
                                 val isPreviewPlaying = uiState.previewState is TtsPreviewState.Playing
                                 val isPreviewSynthesizing = uiState.previewState is TtsPreviewState.Synthesizing
 
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                                ) {
-                                    if (isPreviewSynthesizing) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(16.dp),
-                                            strokeWidth = 2.dp,
-                                            color = LEColors.primary
-                                        )
-                                    }
-
-                                    LESecondaryButton(
-                                        text = when {
-                                            isPreviewSynthesizing -> "Loading..."
-                                            isPreviewPlaying -> "■ Stop Preview"
-                                            else -> "▶ Preview"
-                                        },
-                                        onClick = {
-                                            if (isPreviewPlaying || isPreviewSynthesizing) {
-                                                stopAllPlayback()
-                                            } else {
-                                                handlePreview()
-                                            }
-                                        },
-                                        enabled = uiState.canPreview,
-                                        modifier = Modifier.testTag("tts-preview-button")
+                                if (isPreviewSynthesizing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = LEColors.primary
                                     )
+                                    Spacer(Modifier.width(LESpacing.xs))
                                 }
+
+                                LESecondaryButton(
+                                    text = when {
+                                        isPreviewSynthesizing -> "Loading..."
+                                        isPreviewPlaying -> "■ Stop Preview"
+                                        else -> "▶ Preview"
+                                    },
+                                    onClick = {
+                                        if (isPreviewPlaying || isPreviewSynthesizing) {
+                                            stopAllPlayback()
+                                        } else {
+                                            handlePreview()
+                                        }
+                                    },
+                                    enabled = uiState.canPreview,
+                                    modifier = Modifier.testTag("tts-preview-button")
+                                )
                             }
 
                             // Preview status / errors

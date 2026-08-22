@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.tts.ui
 
 import vn.loi.learning.application.contentmedia.ContentMediaAsset
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem
+import vn.loi.learning.desktop.tts.TtsAudioParameters
 import vn.loi.learning.desktop.tts.TtsField
 import vn.loi.learning.desktop.tts.TtsLanguage
 import vn.loi.learning.desktop.tts.TtsVoice
@@ -118,9 +119,9 @@ data class DesktopTtsUiState(
     val selectedRegion: String = defaultRegionForLanguage(defaultLanguageForField(target.firstMissingField())),
     val selectedGender: TtsGenderFilter = TtsGenderFilter.ALL,
     val selectedVoice: TtsVoice? = null,
-    val selectedRate: TtsRateOption = TtsRateOption.NORMAL,
-    val pitch: String = "+0Hz",
-    val volume: String = "+0%",
+    val ratePercent: Int = 0,
+    val pitchHz: Int = 0,
+    val volumePercent: Int = 0,
     val allVoices: List<TtsVoice> = emptyList(),
     val isLoadingVoices: Boolean = false,
     val voiceLoadError: String? = null,
@@ -128,6 +129,18 @@ data class DesktopTtsUiState(
     val generationState: TtsGenerationState = TtsGenerationState.Idle,
     val isPlayingGenerated: Boolean = false
 ) {
+    val rate: Int get() = ratePercent
+    val pitch: String get() = if (pitchHz >= 0) "+${pitchHz}Hz" else "${pitchHz}Hz"
+    val volume: String get() = if (volumePercent >= 0) "+${volumePercent}%" else "${volumePercent}%"
+
+    val selectedRate: TtsRateOption
+        get() = TtsRateOption.entries.firstOrNull { it.rateValue == ratePercent } ?: TtsRateOption.NORMAL
+
+    val isConfigValid: Boolean
+        get() = ratePercent in TtsAudioParameters.MIN_RATE..TtsAudioParameters.MAX_RATE &&
+                pitchHz in TtsAudioParameters.MIN_PITCH..TtsAudioParameters.MAX_PITCH &&
+                volumePercent in TtsAudioParameters.MIN_VOLUME..TtsAudioParameters.MAX_VOLUME
+
     val currentText: String get() = target.textFor(selectedField).trim()
     val isCurrentFieldAlreadyPopulated: Boolean get() = target.hasAudioFor(selectedField)
     val isTextBlank: Boolean get() = currentText.isBlank()
@@ -161,10 +174,10 @@ data class DesktopTtsUiState(
     }
 
     val canPreview: Boolean get() =
-        !isTextBlank && selectedVoice != null && previewState !is TtsPreviewState.Synthesizing && generationState !is TtsGenerationState.Generating
+        isConfigValid && !isTextBlank && selectedVoice != null && previewState !is TtsPreviewState.Synthesizing && generationState !is TtsGenerationState.Generating
 
     val canGenerate: Boolean get() =
-        !isTextBlank && !isCurrentFieldAlreadyPopulated && selectedVoice != null &&
+        isConfigValid && !isTextBlank && !isCurrentFieldAlreadyPopulated && selectedVoice != null &&
                 generationState !is TtsGenerationState.Generating &&
                 previewState !is TtsPreviewState.Synthesizing
 

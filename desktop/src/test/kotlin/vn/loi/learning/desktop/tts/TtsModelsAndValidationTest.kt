@@ -69,4 +69,69 @@ class TtsModelsAndValidationTest {
         val err5 = TtsError.Cancelled
         assertEquals("TTS operation was cancelled", err5.message)
     }
+
+    @Test
+    fun `TtsAudioParameters validates bounds strictly`() {
+        val validDefault = TtsAudioParameters()
+        assertEquals(0, validDefault.ratePercent)
+        assertEquals(0, validDefault.pitchHz)
+        assertEquals(0, validDefault.volumePercent)
+        assertEquals("+0Hz", validDefault.toProviderPitch())
+        assertEquals("+0%", validDefault.toProviderVolume())
+
+        val minParams = TtsAudioParameters(ratePercent = -50, pitchHz = -50, volumePercent = -50)
+        assertEquals(-50, minParams.toProviderRate())
+        assertEquals("-50Hz", minParams.toProviderPitch())
+        assertEquals("-50%", minParams.toProviderVolume())
+
+        val maxParams = TtsAudioParameters(ratePercent = 50, pitchHz = 50, volumePercent = 50)
+        assertEquals(50, maxParams.toProviderRate())
+        assertEquals("+50Hz", maxParams.toProviderPitch())
+        assertEquals("+50%", maxParams.toProviderVolume())
+
+        val arbitrary = TtsAudioParameters(ratePercent = 25, pitchHz = -5, volumePercent = 10)
+        assertEquals(25, arbitrary.toProviderRate())
+        assertEquals("-5Hz", arbitrary.toProviderPitch())
+        assertEquals("+10%", arbitrary.toProviderVolume())
+    }
+
+    @Test
+    fun `TtsAudioParameters throws on out of bound values`() {
+        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            TtsAudioParameters(ratePercent = -51)
+        }
+        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            TtsAudioParameters(ratePercent = 51)
+        }
+        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            TtsAudioParameters(pitchHz = -51)
+        }
+        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            TtsAudioParameters(pitchHz = 51)
+        }
+        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            TtsAudioParameters(volumePercent = -51)
+        }
+        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            TtsAudioParameters(volumePercent = 51)
+        }
+    }
+
+    @Test
+    fun `TtsAudioParameters parse and validation helpers handle edge cases`() {
+        assertEquals(null, TtsAudioParameters.validateRate(-50))
+        assertEquals(null, TtsAudioParameters.validateRate(0))
+        assertEquals(null, TtsAudioParameters.validateRate(50))
+        assertTrue(TtsAudioParameters.validateRate(-51) != null)
+        assertTrue(TtsAudioParameters.validateRate(51) != null)
+
+        assertEquals(15, TtsAudioParameters.parsePitchHz("+15Hz"))
+        assertEquals(-10, TtsAudioParameters.parsePitchHz("-10Hz"))
+        assertEquals(0, TtsAudioParameters.parsePitchHz("0"))
+        assertEquals(0, TtsAudioParameters.parsePitchHz("invalid"))
+
+        assertEquals(25, TtsAudioParameters.parseVolumePercent("+25%"))
+        assertEquals(-15, TtsAudioParameters.parseVolumePercent("-15%"))
+        assertEquals(0, TtsAudioParameters.parseVolumePercent(null))
+    }
 }

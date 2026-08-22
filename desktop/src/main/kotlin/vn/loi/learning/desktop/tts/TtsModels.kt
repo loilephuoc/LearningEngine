@@ -47,6 +47,63 @@ data class TtsVoice(
 }
 
 /**
+ * Canonical parameters for audio synthesis (Speed, Pitch, Volume) with strict bounds and unit formatting.
+ */
+data class TtsAudioParameters(
+    val ratePercent: Int = 0,
+    val pitchHz: Int = 0,
+    val volumePercent: Int = 0
+) {
+    init {
+        require(ratePercent in MIN_RATE..MAX_RATE) {
+            "Rate percent must be between $MIN_RATE and $MAX_RATE, but was $ratePercent"
+        }
+        require(pitchHz in MIN_PITCH..MAX_PITCH) {
+            "Pitch Hz must be between $MIN_PITCH and $MAX_PITCH, but was $pitchHz"
+        }
+        require(volumePercent in MIN_VOLUME..MAX_VOLUME) {
+            "Volume percent must be between $MIN_VOLUME and $MAX_VOLUME, but was $volumePercent"
+        }
+    }
+
+    fun toProviderRate(): Int = ratePercent
+    fun toProviderPitch(): String = if (pitchHz >= 0) "+${pitchHz}Hz" else "${pitchHz}Hz"
+    fun toProviderVolume(): String = if (volumePercent >= 0) "+${volumePercent}%" else "${volumePercent}%"
+
+    companion object {
+        const val MIN_RATE = -50
+        const val MAX_RATE = 50
+        const val MIN_PITCH = -50
+        const val MAX_PITCH = 50
+        const val MIN_VOLUME = -50
+        const val MAX_VOLUME = 50
+
+        val DEFAULT = TtsAudioParameters()
+
+        fun validateRate(value: Int): String? =
+            if (value in MIN_RATE..MAX_RATE) null else "Rate must be between $MIN_RATE% and +$MAX_RATE%"
+
+        fun validatePitch(value: Int): String? =
+            if (value in MIN_PITCH..MAX_PITCH) null else "Pitch must be between $MIN_PITCH Hz and +$MAX_PITCH Hz"
+
+        fun validateVolume(value: Int): String? =
+            if (value in MIN_VOLUME..MAX_VOLUME) null else "Volume must be between $MIN_VOLUME% and +$MAX_VOLUME%"
+
+        fun parsePitchHz(raw: String?, defaultHz: Int = 0): Int {
+            if (raw.isNullOrBlank()) return defaultHz
+            val clean = raw.trim().replace("Hz", "", ignoreCase = true).replace("+", "").trim()
+            return clean.toIntOrNull()?.coerceIn(MIN_PITCH, MAX_PITCH) ?: defaultHz
+        }
+
+        fun parseVolumePercent(raw: String?, defaultPercent: Int = 0): Int {
+            if (raw.isNullOrBlank()) return defaultPercent
+            val clean = raw.trim().replace("%", "").replace("+", "").trim()
+            return clean.toIntOrNull()?.coerceIn(MIN_VOLUME, MAX_VOLUME) ?: defaultPercent
+        }
+    }
+}
+
+/**
  * Request payload for text synthesis.
  */
 data class TtsSynthesisRequest(

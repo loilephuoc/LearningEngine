@@ -127,13 +127,17 @@ fun BatchTtsDialog(
         BatchTtsScanner.scanBatchScope(itemsToScan, selectedFields)
     }
 
-    // Selected Voices and Rates
+    // Selected Voices and Numeric Parameters
     var selectedEnglishVoice by remember { mutableStateOf<TtsVoice?>(null) }
     var selectedVietnameseVoice by remember { mutableStateOf<TtsVoice?>(null) }
+
     var englishRate by remember { mutableStateOf(initialProfiles.english.rate) }
+    var englishPitchHz by remember { mutableStateOf(0) }
+    var englishVolumePercent by remember { mutableStateOf(0) }
+
     var vietnameseRate by remember { mutableStateOf(initialProfiles.vietnamese.rate) }
-    var pitch by remember { mutableStateOf("+0Hz") }
-    var volume by remember { mutableStateOf("+0%") }
+    var vietnamesePitchHz by remember { mutableStateOf(0) }
+    var vietnameseVolumePercent by remember { mutableStateOf(0) }
 
     // Advanced Voice Strategy
     var englishStrategyMode by remember { mutableStateOf(VoiceStrategyMode.FALLBACK_CHAIN) }
@@ -191,13 +195,22 @@ fun BatchTtsDialog(
         isPreviewingVi = false
     }
 
-    fun handlePreview(language: TtsLanguage) {
+    fun handlePreview(text: String, language: TtsLanguage) {
         stopAudio()
         val voice = if (language == TtsLanguage.ENGLISH) selectedEnglishVoice else selectedVietnameseVoice
         val rate = if (language == TtsLanguage.ENGLISH) englishRate else vietnameseRate
-        val text = if (language == TtsLanguage.ENGLISH) scopeScan.representativeEnglishText else scopeScan.representativeVietnameseText
+        val pitch = if (language == TtsLanguage.ENGLISH) {
+            if (englishPitchHz >= 0) "+${englishPitchHz}Hz" else "${englishPitchHz}Hz"
+        } else {
+            if (vietnamesePitchHz >= 0) "+${vietnamesePitchHz}Hz" else "${vietnamesePitchHz}Hz"
+        }
+        val volume = if (language == TtsLanguage.ENGLISH) {
+            if (englishVolumePercent >= 0) "+${englishVolumePercent}%" else "${englishVolumePercent}%"
+        } else {
+            if (vietnameseVolumePercent >= 0) "+${vietnameseVolumePercent}%" else "${vietnameseVolumePercent}%"
+        }
 
-        if (voice == null || text.isNullOrBlank()) return
+        if (voice == null || text.isBlank()) return
 
         if (language == TtsLanguage.ENGLISH) isPreviewingEn = true else isPreviewingVi = true
 
@@ -246,14 +259,14 @@ fun BatchTtsDialog(
             mode = englishStrategyMode,
             primaryVoice = enVoice,
             fallbackVoices = enFallbacks,
-            rotationVoices = enRotation,
+            candidateVoices = enRotation,
             continueSequenceAcrossItems = true
         )
         val viStrategy = VoiceStrategyConfig(
             mode = vietnameseStrategyMode,
             primaryVoice = viVoice,
             fallbackVoices = viFallbacks,
-            rotationVoices = viRotation,
+            candidateVoices = viRotation,
             continueSequenceAcrossItems = true
         )
 
@@ -263,10 +276,10 @@ fun BatchTtsDialog(
             vietnameseStrategy = viStrategy,
             englishRate = englishRate,
             vietnameseRate = vietnameseRate,
-            englishPitch = pitch,
-            vietnamesePitch = pitch,
-            englishVolume = volume,
-            vietnameseVolume = volume
+            englishPitch = if (englishPitchHz >= 0) "+${englishPitchHz}Hz" else "${englishPitchHz}Hz",
+            vietnamesePitch = if (vietnamesePitchHz >= 0) "+${vietnamesePitchHz}Hz" else "${vietnamesePitchHz}Hz",
+            englishVolume = if (englishVolumePercent >= 0) "+${englishVolumePercent}%" else "${englishVolumePercent}%",
+            vietnameseVolume = if (vietnameseVolumePercent >= 0) "+${vietnameseVolumePercent}%" else "${vietnameseVolumePercent}%"
         )
         startBatch(jobs)
     }
@@ -388,38 +401,26 @@ fun BatchTtsDialog(
                                     selectedEnglishVoice = selectedEnglishVoice,
                                     selectedVietnameseVoice = selectedVietnameseVoice,
                                     englishRate = englishRate,
+                                    englishPitchHz = englishPitchHz,
+                                    englishVolumePercent = englishVolumePercent,
                                     vietnameseRate = vietnameseRate,
-                                    pitch = pitch,
-                                    volume = volume,
+                                    vietnamesePitchHz = vietnamesePitchHz,
+                                    vietnameseVolumePercent = vietnameseVolumePercent,
                                     englishStrategyMode = englishStrategyMode,
                                     vietnameseStrategyMode = vietnameseStrategyMode,
                                     onEnglishVoiceChange = { selectedEnglishVoice = it },
                                     onVietnameseVoiceChange = { selectedVietnameseVoice = it },
                                     onEnglishRateChange = { englishRate = it },
+                                    onEnglishPitchChange = { englishPitchHz = it },
+                                    onEnglishVolumeChange = { englishVolumePercent = it },
                                     onVietnameseRateChange = { vietnameseRate = it },
-                                    onPitchChange = { pitch = it },
-                                    onVolumeChange = { volume = it },
+                                    onVietnamesePitchChange = { vietnamesePitchHz = it },
+                                    onVietnameseVolumeChange = { vietnameseVolumePercent = it },
                                     onEnglishStrategyChange = { englishStrategyMode = it },
                                     onVietnameseStrategyChange = { vietnameseStrategyMode = it },
                                     isPreviewingEn = isPreviewingEn,
                                     isPreviewingVi = isPreviewingVi,
-                                    onPreviewText = { text, lang ->
-                                        stopAudio()
-                                        val voice = if (lang == TtsLanguage.ENGLISH) selectedEnglishVoice else selectedVietnameseVoice
-                                        val rate = if (lang == TtsLanguage.ENGLISH) englishRate else vietnameseRate
-                                        if (voice != null && text.isNotBlank()) {
-                                            if (lang == TtsLanguage.ENGLISH) isPreviewingEn = true else isPreviewingVi = true
-                                            previewJob = coroutineScope.launch {
-                                                try {
-                                                    val previewPath = ttsService.preview(text, voice, rate, pitch, volume)
-                                                    localAudioPlayer.play(previewPath)
-                                                } catch (_: Exception) {
-                                                    isPreviewingEn = false
-                                                    isPreviewingVi = false
-                                                }
-                                            }
-                                        }
-                                    },
+                                    onPreviewText = { text, lang -> handlePreview(text, lang) },
                                     onStopPreview = { stopAudio() }
                                 )
                             }
@@ -515,17 +516,21 @@ private fun ConfigStepContent(
     selectedEnglishVoice: TtsVoice?,
     selectedVietnameseVoice: TtsVoice?,
     englishRate: Int,
+    englishPitchHz: Int,
+    englishVolumePercent: Int,
     vietnameseRate: Int,
-    pitch: String,
-    volume: String,
+    vietnamesePitchHz: Int,
+    vietnameseVolumePercent: Int,
     englishStrategyMode: VoiceStrategyMode,
     vietnameseStrategyMode: VoiceStrategyMode,
     onEnglishVoiceChange: (TtsVoice) -> Unit,
     onVietnameseVoiceChange: (TtsVoice) -> Unit,
     onEnglishRateChange: (Int) -> Unit,
+    onEnglishPitchChange: (Int) -> Unit,
+    onEnglishVolumeChange: (Int) -> Unit,
     onVietnameseRateChange: (Int) -> Unit,
-    onPitchChange: (String) -> Unit,
-    onVolumeChange: (String) -> Unit,
+    onVietnamesePitchChange: (Int) -> Unit,
+    onVietnameseVolumeChange: (Int) -> Unit,
     onEnglishStrategyChange: (VoiceStrategyMode) -> Unit,
     onVietnameseStrategyChange: (VoiceStrategyMode) -> Unit,
     isPreviewingEn: Boolean,
@@ -629,22 +634,6 @@ private fun ConfigStepContent(
 
         // Section 3: Voice & Rate Configurations with Strategy & Preview
         Text("Voice Strategy & Preview", style = LETypography.sectionTitle)
-        Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
-            OutlinedTextField(
-                value = pitch,
-                onValueChange = onPitchChange,
-                label = { Text("Pitch (for example +0Hz)") },
-                singleLine = true,
-                modifier = Modifier.weight(1f)
-            )
-            OutlinedTextField(
-                value = volume,
-                onValueChange = onVolumeChange,
-                label = { Text("Volume (for example +0%)") },
-                singleLine = true,
-                modifier = Modifier.weight(1f)
-            )
-        }
 
         if (isLoadingVoices) {
             Row(
@@ -666,7 +655,11 @@ private fun ConfigStepContent(
                 candidateVoices = availableVoices.filter { it.language == "en" },
                 onVoiceSelect = onEnglishVoiceChange,
                 currentRate = englishRate,
+                currentPitchHz = englishPitchHz,
+                currentVolumePercent = englishVolumePercent,
                 onRateChange = onEnglishRateChange,
+                onPitchChange = onEnglishPitchChange,
+                onVolumeChange = onEnglishVolumeChange,
                 strategyMode = englishStrategyMode,
                 onStrategyChange = onEnglishStrategyChange,
                 isPreviewing = isPreviewingEn,
@@ -684,7 +677,11 @@ private fun ConfigStepContent(
                 candidateVoices = availableVoices.filter { it.language == "vi" },
                 onVoiceSelect = onVietnameseVoiceChange,
                 currentRate = vietnameseRate,
+                currentPitchHz = vietnamesePitchHz,
+                currentVolumePercent = vietnameseVolumePercent,
                 onRateChange = onVietnameseRateChange,
+                onPitchChange = onVietnamesePitchChange,
+                onVolumeChange = onVietnameseVolumeChange,
                 strategyMode = vietnameseStrategyMode,
                 onStrategyChange = onVietnameseStrategyChange,
                 isPreviewing = isPreviewingVi,
@@ -775,7 +772,11 @@ private fun VoiceStrategyCard(
     candidateVoices: List<TtsVoice>,
     onVoiceSelect: (TtsVoice) -> Unit,
     currentRate: Int,
+    currentPitchHz: Int,
+    currentVolumePercent: Int,
     onRateChange: (Int) -> Unit,
+    onPitchChange: (Int) -> Unit,
+    onVolumeChange: (Int) -> Unit,
     strategyMode: VoiceStrategyMode,
     onStrategyChange: (VoiceStrategyMode) -> Unit,
     isPreviewing: Boolean,
@@ -801,6 +802,7 @@ private fun VoiceStrategyCard(
                 Text(languageLabel, style = LETypography.caption, color = LEColors.textMuted)
             }
 
+            // Row 1: Voice & Strategy Mode Selectors
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
@@ -811,40 +813,54 @@ private fun VoiceStrategyCard(
                     currentVoice = currentVoice,
                     candidateVoices = candidateVoices,
                     onSelect = onVoiceSelect,
-                    modifier = Modifier.weight(0.48f)
+                    modifier = Modifier.weight(0.6f)
                 )
 
                 // Strategy Mode Dropdown
                 StrategyModeDropdown(
                     currentMode = strategyMode,
                     onSelectMode = onStrategyChange,
-                    modifier = Modifier.weight(0.24f)
+                    modifier = Modifier.weight(0.4f)
+                )
+            }
+
+            // Row 2: Numeric Audio Controls (Speed %, Pitch Hz, Volume %)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+            ) {
+                TtsNumericControl(
+                    label = "Speed",
+                    value = currentRate,
+                    unit = "%",
+                    min = -50,
+                    max = 50,
+                    step = 5,
+                    onValueChange = onRateChange,
+                    modifier = Modifier.weight(1f)
                 )
 
-                // Speech Rate Selector
-                RateDropdown(
-                    currentRate = currentRate,
-                    onSelectRate = onRateChange,
-                    modifier = Modifier.weight(0.14f)
+                TtsNumericControl(
+                    label = "Pitch",
+                    value = currentPitchHz,
+                    unit = "Hz",
+                    min = -50,
+                    max = 50,
+                    step = 2,
+                    onValueChange = onPitchChange,
+                    modifier = Modifier.weight(1f)
                 )
 
-                // Preview Button
-                if (isPreviewing) {
-                    LEDangerButton(
-                        text = "■ Stop",
-                        onClick = onStop,
-                        icon = LEIcons.Stop,
-                        modifier = Modifier.weight(0.14f)
-                    )
-                } else {
-                    LESecondaryButton(
-                        text = "Preview",
-                        onClick = { currentSample?.text?.let(onPreview) },
-                        icon = LEIcons.Audio,
-                        enabled = currentVoice != null && currentSample != null && currentSample.text.isNotBlank(),
-                        modifier = Modifier.weight(0.14f)
-                    )
-                }
+                TtsNumericControl(
+                    label = "Volume",
+                    value = currentVolumePercent,
+                    unit = "%",
+                    min = -50,
+                    max = 50,
+                    step = 5,
+                    onValueChange = onVolumeChange,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             // Sample Text Area with Field Selector & Precise Attribution
@@ -891,12 +907,34 @@ private fun VoiceStrategyCard(
                         )
                     }
 
-                    if (currentSample != null) {
-                        Text(
-                            text = "Source: ${currentSample.displaySource}",
-                            style = LETypography.caption,
-                            color = LEColors.textMuted
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                    ) {
+                        if (currentSample != null) {
+                            Text(
+                                text = "Source: ${currentSample.displaySource}",
+                                style = LETypography.caption,
+                                color = LEColors.textMuted
+                            )
+                        }
+
+                        if (isPreviewing) {
+                            LEDangerButton(
+                                text = "■ Stop",
+                                onClick = onStop,
+                                icon = LEIcons.Stop,
+                                modifier = Modifier.height(28.dp)
+                            )
+                        } else {
+                            LESecondaryButton(
+                                text = "▶ Preview",
+                                onClick = { currentSample?.text?.let(onPreview) },
+                                icon = LEIcons.Audio,
+                                enabled = currentVoice != null && currentSample != null && currentSample.text.isNotBlank(),
+                                modifier = Modifier.height(28.dp)
+                            )
+                        }
                     }
                 }
 

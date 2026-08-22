@@ -218,4 +218,55 @@ class BatchTtsRunnerFallbackTest {
             tempDir.toFile().deleteRecursively()
         }
     }
+
+    @Test
+    fun `Non-retryable invalid text error does not attempt subsequent fallback voices`() = testScope.runTest {
+        val tempDir = Files.createTempDirectory("tts_runner_invalid_text_test")
+
+        try {
+            // Engine fails with non-retryable InvalidText
+            val engine = object : TtsEngine {
+                var callCount = 0
+                override suspend fun listVoices(): List<TtsVoice> = emptyList()
+                override suspend fun synthesize(request: TtsSynthesisRequest, outputFile: Path): TtsSynthesisResult {
+                    callCount++
+                    throw TtsException(TtsError.InvalidText("Invalid characters"))
+                }
+            }
+            val service = DesktopTtsAudioService(
+                ttsEngine = engine,
+                mediaStorage = FakeStorage(tempDir),
+                previewStore = TtsPreviewStore(tempDir)
+            )
+            val runner = BatchTtsRunner(service, this)
+
+            val job = BatchTtsJob(
+                contentId = "c1",
+                field = TtsField.QUESTION,
+                text = "bad_text",
+                language = TtsLanguage.ENGLISH,
+                voice = ava,
+                candidateVoices = listOf(ava, jenny, guy) // 3 candidates
+            )
+
+            var finalSummary: BatchTtsSummary? = null
+            val runningJob = runner.runBatch(
+                jobs = listOf(job),
+                packageName = "test_pkg",
+                onProgress = { finalSummary = it }
+            )
+            runningJob.join()
+
+            val summary = finalSummary
+            assertNotNull(summary)
+            assertEquals(1, summary.failedCount)
+            // Call count should be exactly 1, because InvalidText is non-retryable and should NOT try jenny and guy!
+            assertEquals(1, engine.callCount)
+            val result = summary.failedResults.first()
+            assertEquals(1, result.voiceAttempts.size)
+            assertEquals(TtsErrorCategory.INVALID_TEXT, result.errorCategory)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
 }

@@ -24,6 +24,7 @@ enum class TtsErrorCategory(val displayLabel: String) {
     NETWORK_UNAVAILABLE("Network unavailable"),
     TIMEOUT("Timeout"),
     VOICE_UNAVAILABLE("Voice unavailable"),
+    INVALID_TEXT("Invalid text"),
     GENERATION_FAILED("Generation failed"),
     OUTPUT_WRITE_FAILED("Output write failed"),
     CANCELLED("Cancelled"),
@@ -114,6 +115,7 @@ data class BatchTtsJobResult(
     val errorMessage: String? = null
 ) {
     val requestedVoice: TtsVoice get() = job.requestedVoice
+    val voiceAttempts: List<VoiceAttempt> get() = attempts
 }
 
 /**

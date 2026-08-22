@@ -272,6 +272,36 @@ class DesktopTtsUiTest {
         assertEquals("Bản dịch ví dụ", target.textFor(TtsField.TRANSLATION))
     }
 
+    @Test
+    fun `DesktopTtsUiState validates numeric audio parameters bounds`() {
+        val target = TtsDialogTarget("c1", "Hello", "Xin chào")
+
+        val validState = DesktopTtsUiState(
+            target = target,
+            packageName = "pkg",
+            selectedVoice = avaVoiceEnUs,
+            ratePercent = 25,
+            pitchHz = -5,
+            volumePercent = 10
+        )
+        assertTrue(validState.isConfigValid)
+        assertTrue(validState.canPreview)
+        assertTrue(validState.canGenerate)
+        assertEquals("+25", if (validState.rate > 0) "+${validState.rate}" else "${validState.rate}")
+        assertEquals("-5Hz", validState.pitch)
+        assertEquals("+10%", validState.volume)
+
+        val invalidState = DesktopTtsUiState(
+            target = target,
+            packageName = "pkg",
+            selectedVoice = avaVoiceEnUs,
+            ratePercent = 60 // Out of max bound 50
+        )
+        assertFalse(invalidState.isConfigValid)
+        assertFalse(invalidState.canPreview)
+        assertFalse(invalidState.canGenerate)
+    }
+
     private class FakeEngine(private val voices: List<TtsVoice>) : TtsEngine {
         override suspend fun listVoices(): List<TtsVoice> = voices
 

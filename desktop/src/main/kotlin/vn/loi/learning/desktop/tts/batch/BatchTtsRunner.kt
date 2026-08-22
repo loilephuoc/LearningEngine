@@ -168,7 +168,13 @@ class BatchTtsRunner(
                                 errorMessage = message
                             )
                         )
-                        // Continue to next fallback voice in chain if available
+                        // Non-retryable errors (invalid text, disk output failure, cancellation) should not trigger further voice fallbacks
+                        if (category == TtsErrorCategory.CANCELLED ||
+                            category == TtsErrorCategory.OUTPUT_WRITE_FAILED ||
+                            (ex is TtsException && ex.error is TtsError.InvalidText)
+                        ) {
+                            break
+                        }
                     }
                 }
 
@@ -264,7 +270,7 @@ class BatchTtsRunner(
                     is TtsError.ProviderUnavailable -> TtsErrorCategory.GENERATION_FAILED to "TTS provider unavailable: ${err.details}"
                     is TtsError.GenerationFailed -> TtsErrorCategory.GENERATION_FAILED to err.details
                     is TtsError.OutputWriteFailed -> TtsErrorCategory.OUTPUT_WRITE_FAILED to "Failed to write output audio: ${err.details}"
-                    is TtsError.InvalidText -> TtsErrorCategory.GENERATION_FAILED to "Invalid text: ${err.reason}"
+                    is TtsError.InvalidText -> TtsErrorCategory.INVALID_TEXT to "Invalid text: ${err.reason}"
                     is TtsError.Cancelled -> TtsErrorCategory.CANCELLED to "Operation cancelled"
                 }
                 is SocketTimeoutException -> TtsErrorCategory.TIMEOUT to "Connection timed out"
