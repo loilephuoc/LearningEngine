@@ -64,7 +64,7 @@ class AndroidQuickReviewWidgetCoordinator(
 
     private fun resolveQueue(id: Int): Pair<QuickReviewWidgetState, AndroidReminderReviewSession>? {
         val packageId = activePackageId() ?: return null
-        val queue = selector.getReviewQueue(packageId, AndroidVocabularyReminderSelectionMode.RANDOM_ALL.name, null) ?: return null
+        val queue = selector.getReviewQueue(packageId, AndroidVocabularyReminderSelectionMode.RANDOM_LEARNED.name, null) ?: return null
         val old = load(id).takeIf { it.packageId == packageId } ?: QuickReviewWidgetState(packageId = packageId)
         val index = old.index.mod(queue.items.size)
         val candidate = queue.items[index]

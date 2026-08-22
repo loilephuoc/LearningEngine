@@ -37,7 +37,8 @@ class AndroidQuickReviewWidgetTest {
     @Test fun `coordinator uses canonical active package queue and canonical rating bridge`() {
         val coordinator = source("kotlin/vn/loi/learning/android/reminder/AndroidQuickReviewWidgetCoordinator.kt")
         assertTrue(coordinator.contains("domainLibraryRepository?.findById(libraryId)?.activePackageId"))
-        assertTrue(coordinator.contains("selector.getReviewQueue(packageId, AndroidVocabularyReminderSelectionMode.RANDOM_ALL.name"))
+        assertTrue(coordinator.contains("selector.getReviewQueue(packageId, AndroidVocabularyReminderSelectionMode.RANDOM_LEARNED.name"))
+        assertFalse(coordinator.contains("AndroidVocabularyReminderSelectionMode.RANDOM_ALL.name"))
         assertTrue(coordinator.contains("ratingBridge.submitRating(contentId, rating)"))
         assertTrue(coordinator.contains("state.contentId != expectedContentId"))
         assertTrue(coordinator.contains("!state.revealed"))
