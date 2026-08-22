@@ -15,8 +15,24 @@ data class SyncQuarantineRecord(
     val remoteRevision: Long,
     val payloadVersion: Int,
     val code: String,
-    val reason: String
+    val reason: String,
+    val contentId: String? = null,
+    val mediaSha256: String? = null
 )
+
+data class PendingMediaApply(
+    val accountId: SyncAccountId,
+    val eventId: SyncEventId,
+    val contentId: String,
+    val slot: String,
+    val sha256: String,
+    val sizeBytes: Long,
+    val mimeType: String,
+    val remoteRevision: Long,
+    val payloadVersion: Int
+)
+
+data class MediaGcCandidate(val reference: String, val sha256: String)
 
 interface LocalSyncStateRepository {
     fun enqueue(change: OutboundSyncChange)
@@ -27,6 +43,12 @@ interface LocalSyncStateRepository {
     fun cursor(accountId: SyncAccountId): SyncCursor
     fun recordQuarantine(record: SyncQuarantineRecord)
     fun quarantines(accountId: SyncAccountId): List<SyncQuarantineRecord>
+    fun recordPendingMedia(record: PendingMediaApply)
+    fun removePendingMedia(accountId: SyncAccountId, eventId: SyncEventId)
+    fun pendingMedia(accountId: SyncAccountId): List<PendingMediaApply>
+    fun recordMediaGcCandidate(candidate: MediaGcCandidate)
+    fun removeMediaGcCandidate(reference: String)
+    fun mediaGcCandidates(): List<MediaGcCandidate>
 }
 
 class LocalSyncCoordinator(

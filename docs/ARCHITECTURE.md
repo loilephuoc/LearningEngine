@@ -1898,3 +1898,19 @@ transaction boundary. A branch, gap, replay mismatch, missing/disabled item, or 
 recorded in durable quarantine before the cursor advances. Direct review does not own LearningTrajectory,
 StudySession, or StudyQueue, so incremental review apply deliberately leaves those session aggregates
 unchanged.
+
+Incremental media sync maps Question/Answer/Example/Translation audio and Image to the five existing
+`ContentMedia` properties. Blob identity is SHA-256 over bytes; the payload's `sync/<sha>.<extension>`
+reference is derived and never accepts an absolute or caller-selected filesystem path. A deterministic
+staging file validates size, checksum, MIME signature, and slot type before a content-addressed managed
+asset is materialized. JSON repositories and filesystem files cannot share one transaction, so assets
+are published before the transaction that updates exactly one Content slot plus inbox/cursor. A crash
+can therefore leave only an unreferenced managed asset, never a Content reference to missing bytes;
+retry reuses the same identity.
+
+Metadata without bytes is recorded as durable pending media state and does not advance the cursor.
+Same-slot pending local work, base-identity mismatch, invalid content/type/path/version, or materialize
+failure uses durable quarantine. Replaced managed references become GC candidates transactionally.
+Garbage collection scans every Content media slot, deletes only the exact sync-managed candidate after
+the last reference disappears, and retains a candidate after delete failure for restart-safe retry.
+Legacy/package-owned and unknown files are never inferred as collectible.

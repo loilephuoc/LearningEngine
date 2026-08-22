@@ -1070,7 +1070,9 @@ Engine core.
 4. **Learning/Review Delta — complete:** stable ReviewEvent identity deduplicates retries; sequential
    facts replay through the canonical scheduler while state proofs validate rather than overwrite
    MemoryState. Unsafe branches, gaps, invalid items, and unsupported payloads persist in quarantine.
-5. **Media Delta:** content-addressed validated transfer and reference-safe replacement/removal.
+5. **Media Delta — complete:** SHA-256-addressed staged blobs validate size/type before an isolated
+   slot reference commits; metadata-first delivery remains restart-safe pending. Same-slot conflicts
+   quarantine, while managed unreferenced assets use full-reference-scan, retryable garbage collection.
 6. **Supabase Transport:** versioned PostgreSQL/Storage/RLS adapter after core/local gates pass.
 7. **Desktop Integration.**
 8. **Android Integration.**

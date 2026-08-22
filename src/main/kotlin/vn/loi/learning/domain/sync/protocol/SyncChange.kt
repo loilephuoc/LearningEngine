@@ -51,7 +51,9 @@ data class MediaDelta(
     val sha256: String?,
     val sizeBytes: Long?,
     val mimeType: String? = null,
-    val baseRevision: SyncRevision? = null
+    val baseRevision: SyncRevision? = null,
+    /** SHA-256 of the slot value this change causally replaces; null means the slot was absent. */
+    val previousSha256: String? = null
 ) : SyncDelta {
     override val namespace: SyncNamespace = SyncNamespace.MEDIA
 
@@ -67,6 +69,9 @@ data class MediaDelta(
             require(mediaReference == null && sha256 == null && sizeBytes == null) {
                 "A media REMOVE delta must not carry object metadata."
             }
+        }
+        require(previousSha256 == null || previousSha256.matches(Regex("[0-9a-f]{64}"))) {
+            "A previous media identity must be a lowercase SHA-256 checksum."
         }
     }
 }

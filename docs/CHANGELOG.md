@@ -1,3 +1,12 @@
+# Incremental media delta
+
+- Added SHA-256-addressed, MIME/signature-validated staging and materialization for all five canonical
+  Content media slots, with atomic per-slot reference plus outbox/inbox/cursor workflows.
+- Added restart-safe missing-blob pending state, same-slot/base conflict quarantine, and retry-safe GC
+  that deletes only sync-managed assets after a complete Content reference scan.
+- Preserved Content text/custom fields and all learning/review/session state; no network or UI wiring.
+- Full clean verification passes 819 suites / 5,078 tests with zero failures, errors, or skips.
+
 # Incremental learning/review delta
 
 - Added atomic local canonical review plus outbox production and remote sequential replay through the

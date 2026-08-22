@@ -101,5 +101,6 @@ data class LearningApplicationContext(
     val localSyncStateRepository: vn.loi.learning.application.sync.LocalSyncStateRepository? = null,
     val localSyncCoordinator: vn.loi.learning.application.sync.LocalSyncCoordinator? = null,
     val contentFieldSyncService: vn.loi.learning.application.sync.ContentFieldSyncService? = null,
-    val reviewDeltaSyncService: vn.loi.learning.application.sync.ReviewDeltaSyncService? = null
+    val reviewDeltaSyncService: vn.loi.learning.application.sync.ReviewDeltaSyncService? = null,
+    val mediaDeltaSyncService: vn.loi.learning.application.sync.MediaDeltaSyncService? = null
 )

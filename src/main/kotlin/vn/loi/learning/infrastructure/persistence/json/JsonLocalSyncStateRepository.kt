@@ -7,6 +7,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import vn.loi.learning.application.sync.LocalSyncStateRepository
 import vn.loi.learning.application.sync.SyncQuarantineRecord
+import vn.loi.learning.application.sync.PendingMediaApply
+import vn.loi.learning.application.sync.MediaGcCandidate
 import vn.loi.learning.domain.sync.protocol.*
 
 class JsonLocalSyncStateRepository(
@@ -58,6 +60,38 @@ class JsonLocalSyncStateRepository(
     override fun quarantines(accountId: SyncAccountId): List<SyncQuarantineRecord> =
         load().quarantines.filter { it.accountId == accountId.value }.map(QuarantineRecord::toDomain)
 
+    override fun recordPendingMedia(record: PendingMediaApply) = update { current ->
+        val persisted = record.toRecord()
+        val existing = current.pendingMedia.firstOrNull {
+            it.accountId == persisted.accountId && it.eventId == persisted.eventId
+        }
+        require(existing == null || existing == persisted) { "Pending media event cannot change identity." }
+        if (existing == null) current.copy(pendingMedia = current.pendingMedia + persisted) else current
+    }
+
+    override fun removePendingMedia(accountId: SyncAccountId, eventId: SyncEventId) = update { current ->
+        current.copy(pendingMedia = current.pendingMedia.filterNot {
+            it.accountId == accountId.value && it.eventId == eventId.value
+        })
+    }
+
+    override fun pendingMedia(accountId: SyncAccountId): List<PendingMediaApply> =
+        load().pendingMedia.filter { it.accountId == accountId.value }.map(PendingMediaRecord::toDomain)
+
+    override fun recordMediaGcCandidate(candidate: MediaGcCandidate) = update { current ->
+        val record = MediaGcRecord(candidate.reference, candidate.sha256)
+        val existing = current.mediaGcCandidates.firstOrNull { it.reference == record.reference }
+        require(existing == null || existing == record) { "Media GC reference cannot change identity." }
+        if (existing == null) current.copy(mediaGcCandidates = current.mediaGcCandidates + record) else current
+    }
+
+    override fun removeMediaGcCandidate(reference: String) = update { current ->
+        current.copy(mediaGcCandidates = current.mediaGcCandidates.filterNot { it.reference == reference })
+    }
+
+    override fun mediaGcCandidates(): List<MediaGcCandidate> =
+        load().mediaGcCandidates.map { MediaGcCandidate(it.reference, it.sha256) }
+
     fun validate() { load() }
 
     private fun load(): LocalSyncStateRecord = JsonFileReader.read(
@@ -75,7 +109,9 @@ private data class LocalSyncStateRecord(
     val outbox: List<SyncChangeRecord> = emptyList(),
     val inbox: List<InboxRecord> = emptyList(),
     val cursors: Map<String, Long> = emptyMap(),
-    val quarantines: List<QuarantineRecord> = emptyList()
+    val quarantines: List<QuarantineRecord> = emptyList(),
+    val pendingMedia: List<PendingMediaRecord> = emptyList(),
+    val mediaGcCandidates: List<MediaGcRecord> = emptyList()
 ) {
     fun validated(): LocalSyncStateRecord {
         require(schemaVersion == 1) { "Unsupported local sync state schema version: $schemaVersion" }
@@ -86,6 +122,12 @@ private data class LocalSyncStateRecord(
         require(inbox.distinct().size == inbox.size) { "Duplicate local sync inbox event identity." }
         require(quarantines.map { it.accountId to it.eventId }.distinct().size == quarantines.size) {
             "Duplicate quarantined sync event identity."
+        }
+        require(pendingMedia.map { it.accountId to it.eventId }.distinct().size == pendingMedia.size) {
+            "Duplicate pending media event identity."
+        }
+        require(mediaGcCandidates.map { it.reference }.distinct().size == mediaGcCandidates.size) {
+            "Duplicate media GC reference."
         }
         outbox.forEach { it.toDomain() }
         return this
@@ -104,18 +146,40 @@ private data class QuarantineRecord(
     val remoteRevision: Long,
     val payloadVersion: Int,
     val code: String,
-    val reason: String
+    val reason: String,
+    val contentId: String? = null,
+    val mediaSha256: String? = null
 ) {
     fun toDomain() = SyncQuarantineRecord(
         SyncAccountId(accountId), SyncEventId(eventId), reviewEventId, learningItemId,
-        remoteRevision, payloadVersion, code, reason
+        remoteRevision, payloadVersion, code, reason, contentId, mediaSha256
     )
 }
 
 private fun SyncQuarantineRecord.toRecord() = QuarantineRecord(
     accountId.value, eventId.value, reviewEventId, learningItemId,
-    remoteRevision, payloadVersion, code, reason
+    remoteRevision, payloadVersion, code, reason, contentId, mediaSha256
 )
+
+@Serializable
+private data class PendingMediaRecord(
+    val accountId: String, val eventId: String, val contentId: String, val slot: String,
+    val sha256: String, val sizeBytes: Long, val mimeType: String,
+    val remoteRevision: Long, val payloadVersion: Int
+) {
+    fun toDomain() = PendingMediaApply(
+        SyncAccountId(accountId), SyncEventId(eventId), contentId, slot, sha256,
+        sizeBytes, mimeType, remoteRevision, payloadVersion
+    )
+}
+
+private fun PendingMediaApply.toRecord() = PendingMediaRecord(
+    accountId.value, eventId.value, contentId, slot, sha256, sizeBytes,
+    mimeType, remoteRevision, payloadVersion
+)
+
+@Serializable
+private data class MediaGcRecord(val reference: String, val sha256: String)
 
 @Serializable
 private data class SyncChangeRecord(
@@ -125,6 +189,7 @@ private data class SyncChangeRecord(
     val field: String? = null, val customFieldId: String? = null, val value: String? = null,
     val mediaReference: String? = null, val sha256: String? = null, val sizeBytes: Long? = null,
     val mimeType: String? = null, val baseRevision: Long? = null,
+    val previousSha256: String? = null,
     val reviewEventId: String? = null, val learningItemId: String? = null,
     val learnerId: String? = null, val payload: String? = null,
     val contentId: String? = null, val rating: String? = null,
@@ -143,7 +208,7 @@ private data class SyncChangeRecord(
             )
             "MEDIA" -> MediaDelta(
                 MediaSlot.valueOf(requireNotNull(field)), DeltaOperation.valueOf(requireNotNull(operation)),
-                mediaReference, sha256, sizeBytes, mimeType, baseRevision?.let(::SyncRevision)
+                mediaReference, sha256, sizeBytes, mimeType, baseRevision?.let(::SyncRevision), previousSha256
             )
             "REVIEW_EVENT" -> ReviewEventDelta(
                 requireNotNull(reviewEventId), requireNotNull(learningItemId),
@@ -166,7 +231,8 @@ private fun OutboundSyncChange.toRecord(): SyncChangeRecord = when (val payload 
         accountId.value, eventId.value, idempotencyKey.value, sourceDeviceId.value, entityId.value,
         payloadVersion, payload.namespace.name, "MEDIA", payload.operation.name, payload.slot.name,
         mediaReference = payload.mediaReference, sha256 = payload.sha256, sizeBytes = payload.sizeBytes,
-        mimeType = payload.mimeType, baseRevision = payload.baseRevision?.value
+        mimeType = payload.mimeType, baseRevision = payload.baseRevision?.value,
+        previousSha256 = payload.previousSha256
     )
     is ReviewEventDelta -> SyncChangeRecord(
         accountId.value, eventId.value, idempotencyKey.value, sourceDeviceId.value, entityId.value,

@@ -1032,6 +1032,16 @@ object LearningApplicationFactory {
                     state,
                     vn.loi.learning.application.sync.LocalSyncCoordinator(state, transactionRunner)
                 )
+            },
+            mediaDeltaSyncService = if (localSyncStateRepository != null && mediaDirectory != null) {
+                vn.loi.learning.application.sync.MediaDeltaSyncService(
+                    contentRepository,
+                    vn.loi.learning.infrastructure.contentmedia.JvmIncrementalMediaBlobStore(mediaDirectory),
+                    localSyncStateRepository,
+                    vn.loi.learning.application.sync.LocalSyncCoordinator(localSyncStateRepository, transactionRunner)
+                )
+            } else {
+                null
             }
         )
 

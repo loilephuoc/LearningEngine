@@ -31,6 +31,12 @@
   MemoryState plus ReviewEvent only, so trajectory/session/queue remain unchanged. Full clean gate:
   818 suites / 5,070 tests (root 426 / 2,281; Android 100 / 983; Desktop 292 / 1,806), zero
   failures/errors/skips. The next capability is Media delta.
+- Capability 5 maps five existing ContentMedia slots to SHA-256-addressed managed assets. Blob bytes
+  stage and validate before an isolated reference transaction; missing bytes remain durable pending
+  without cursor advance. Same-slot/base conflicts quarantine, and full-Content reference scans delete
+  only unreferenced sync-managed GC candidates. Content text/custom fields and learning/session state
+  remain unchanged. Full clean gate: 819 suites / 5,078 tests (root 427 / 2,289; Android 100 / 983;
+  Desktop 292 / 1,806), zero failures/errors/skips. The next capability is Supabase transport.
 
 ## Current autonomous UAT continuation
 
