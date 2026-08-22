@@ -79,10 +79,10 @@ fun HomeWidgetSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Home-Screen Vocabulary Widget") },
+                title = { Text("Tiện ích từ vựng màn hình chính") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
                     }
                 }
             )
@@ -248,7 +248,7 @@ fun HomeWidgetSettingsScreen(
                                     intervalTextFieldValue = nextTfv.copy(text = filteredText, selection = newSelection)
                                     applyHomeWidgetDraft(homeWidgetDraft.copy(intervalValueText = filteredText))
                                 },
-                                label = { Text("Value") },
+                                label = { Text("Giá trị") },
                                 isError = homeWidgetDraft.intervalValidationMessage != null,
                                 supportingText = homeWidgetDraft.intervalValidationMessage?.let { msg -> { Text(msg) } },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

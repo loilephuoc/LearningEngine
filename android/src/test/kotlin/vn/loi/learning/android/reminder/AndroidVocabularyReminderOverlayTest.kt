@@ -9,6 +9,14 @@ import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.InstalledPackageId
 
 class AndroidVocabularyReminderOverlayTest {
+    @Test
+    fun `big popup image uses restrained six dp corners in runtime and visual audit`() {
+        val runtime = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/reminder/AndroidVocabularyReminderOverlayController.kt"))
+        val audit = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/reminder/AndroidVocabularyReminderOverlayAudit.kt"))
+        assertTrue(runtime.contains("createRoundedCornerBitmap(rawBitmap, 6f * density)"))
+        assertTrue(audit.contains("createRoundedCornerBitmap(sampleImage, 6f * density)"))
+        assertFalse(runtime.contains("createRoundedCornerBitmap(rawBitmap, 12f * density)"))
+    }
 
     private class FakeOverlayPresenter : AndroidVocabularyReminderOverlayPresenter {
         var showCount = 0

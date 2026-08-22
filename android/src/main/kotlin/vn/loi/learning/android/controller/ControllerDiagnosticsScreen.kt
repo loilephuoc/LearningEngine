@@ -96,12 +96,12 @@ fun ControllerDiagnosticsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
                     }
                 },
                 actions = {
                     IconButton(onClick = { ControllerDiagnosticsHolder.refreshDevices(context) }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh Devices")
+                        Icon(Icons.Default.Refresh, contentDescription = "Làm mới thiết bị")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -255,7 +255,7 @@ fun ControllerDiagnosticsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Open Accessibility Settings")
+                            Text("Mở cài đặt trợ năng")
                         }
                     }
                 }
@@ -284,7 +284,7 @@ fun ControllerDiagnosticsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Global App Mute:", style = MaterialTheme.typography.bodyMedium)
+                            Text("Tắt tiếng toàn ứng dụng:", style = MaterialTheme.typography.bodyMedium)
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = if (state.isGlobalMuted) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
@@ -498,7 +498,7 @@ fun ControllerDiagnosticsScreen(
                     ) {
                         Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Clear Log")
+                        Text("Xóa nhật ký")
                     }
 
                     Button(
@@ -513,7 +513,7 @@ fun ControllerDiagnosticsScreen(
                     ) {
                         Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Copy Summary")
+                        Text("Sao chép tóm tắt")
                     }
                 }
             }
@@ -541,7 +541,7 @@ fun ControllerDiagnosticsScreen(
                         ) {
                             Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Copy Trace", fontSize = 12.sp)
+                            Text("Sao chép dấu vết", fontSize = 12.sp)
                         }
                     }
                 }

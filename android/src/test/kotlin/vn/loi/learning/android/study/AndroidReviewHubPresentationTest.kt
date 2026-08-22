@@ -46,7 +46,7 @@ class AndroidReviewHubPresentationTest {
     fun `hub exposes compact accessible availability without decorative icon speech`() {
         assertTrue(source.contains("LearningEngineCompactCard("))
         assertTrue(source.contains("defaultMinSize(minHeight = LearningSpacing.touchTarget)"))
-        assertTrue(source.contains("stateDescription = if (action.available) \"Available\" else \"Unavailable\""))
+        assertTrue(source.contains("stateDescription = if (action.available) \"Khả dụng\" else \"Không khả dụng\""))
         assertTrue(source.contains("contentDescription = null"))
         assertTrue(source.contains("clickable(enabled = action.available)"))
         assertFalse(source.contains("LearningEngineSecondaryButton("))

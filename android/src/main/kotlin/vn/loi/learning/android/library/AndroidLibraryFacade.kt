@@ -78,7 +78,7 @@ class AndroidLibraryFacade(
 
     fun loadRoot(): AndroidLibraryState = AndroidStartupTrace.measured("library_load_root_total") { runCatching {
         onRootQuery()
-        val query = requireNotNull(context.libraryQuery) { "Library query is unavailable." }
+        val query = requireNotNull(context.libraryQuery) { "Truy vấn thư viện không khả dụng." }
         AndroidStartupTrace.measured("library_navigation_tree") {
             query.getNavigationTree(libraryId)
         }?.let { tree ->
@@ -102,18 +102,18 @@ class AndroidLibraryFacade(
             }
             AndroidLibraryState.Root(packages, collections)
         }
-            ?: AndroidLibraryState.Failed("Library is unavailable.")
+            ?: AndroidLibraryState.Failed("Thư viện không khả dụng.")
     }.getOrElse { AndroidLibraryState.Failed("Library could not be loaded.") } }
 
     fun openPackage(id: InstalledPackageId, criteria: AndroidLibraryCriteria = AndroidLibraryCriteria(), selectedId: String? = null): AndroidLibraryState = AndroidStartupTrace.measured("library_open_package_total") { runCatching {
         val summary = AndroidStartupTrace.measured("library_package_summary") {
-            requireNotNull(context.installedPackages.findById(id.value)) { "Package is no longer installed." }
+            requireNotNull(context.installedPackages.findById(id.value)) { "Gói không còn được cài đặt." }
         }
         val all = AndroidStartupTrace.measured("library_package_browser_items") {
-            requireNotNull(context.packageBrowserQuery) { "Content browser is unavailable." }.getBrowserItemsForPackage(id)
+            requireNotNull(context.packageBrowserQuery) { "Trình duyệt nội dung không khả dụng." }.getBrowserItemsForPackage(id)
         }
         browser(summary, all, criteria, selectedId)
-    }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Package could not be opened.") } }
+    }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Không thể mở gói.") } }
 
     fun searchRoot(
         root: AndroidLibraryState.Root,
@@ -134,12 +134,12 @@ class AndroidLibraryFacade(
             collectionId == null && (normalized.isEmpty() || collection.title.contains(normalized, ignoreCase = true))
         }.takeIf { filter != AndroidLibraryFilter.PACKAGES }.orEmpty()
         root.copy(packages = packages, collections = collections, query = queryText, filter = filter, selectedCollectionId = collectionId)
-    }.getOrElse { AndroidLibraryState.Failed("Library search failed.") }
+    }.getOrElse { AndroidLibraryState.Failed("Tìm kiếm thư viện thất bại.") }
     fun openLessons(packageId: InstalledPackageId, search: String = ""): AndroidLibraryState = runCatching {
         AndroidLibraryState.Lessons(requireNotNull(context.installedPackages.findById(packageId.value)), requireNotNull(context.lessonBrowser).query(packageId,search), search)
-    }.getOrElse { AndroidLibraryState.Failed("Lessons could not be loaded.") }
+    }.getOrElse { AndroidLibraryState.Failed("Không thể tải bài học.") }
     fun selectLearningPackage(packageId: InstalledPackageId): AndroidLibraryState = command {
-        requireNotNull(context.libraryCommand) { "Library commands are unavailable." }
+        requireNotNull(context.libraryCommand) { "Lệnh thư viện không khả dụng." }
             .setActivePackage(libraryId, packageId)
     }
     fun startPackage(packageId: InstalledPackageId) = start(StudyContentScope.Package(packageId))
@@ -153,12 +153,12 @@ class AndroidLibraryFacade(
             is StudyContentScope.Collection -> null
         }
         if (packageId != null) {
-            require(requireNotNull(context.libraryCommand) { "Library commands are unavailable." }
+            require(requireNotNull(context.libraryCommand) { "Lệnh thư viện không khả dụng." }
                 .setActivePackage(libraryId, packageId) is vn.loi.learning.application.library.command.LibraryCommandResult.Success) {
-                "Package could not become active."
+                "Không thể đặt gói làm gói học chính."
             }
             require(context.domainLibraryRepository?.findById(libraryId)?.activePackageId == packageId) {
-                "Package selection could not be confirmed."
+                "Không thể xác nhận lựa chọn gói."
             }
             context.engine.getActiveSession(LearnerId("default-learner"))
                 ?.takeIf { it.installedPackageId != packageId }
@@ -173,18 +173,18 @@ class AndroidLibraryFacade(
                 .filter { vn.loi.learning.domain.content.model.ContentId(it.id) in scope.contentIds }
             is StudyContentScope.Collection -> emptyList()
         }.mapTo(linkedSetOf()) { vn.loi.learning.domain.content.model.ContentId(it.id) }
-        val daily = requireNotNull(context.dailyStudyBudget) { "Daily Study budget is unavailable." }
+        val daily = requireNotNull(context.dailyStudyBudget) { "Hạn mức học hằng ngày không khả dụng." }
             .execute(LearnerId("default-learner"), dailyLimits(), startedAt, zoneId(), scopeContentIds)
         require(daily.hasEligibleWork) {
-            if (daily.targetsComplete) "Today's configured Study workload is complete."
-            else "No eligible Study content is currently available."
+            if (daily.targetsComplete) "Đã hoàn thành khối lượng học được cấu hình hôm nay."
+            else "Hiện không có nội dung học phù hợp."
         }
         val session=requireNotNull(context.scopedStudy).execute(StartScopedStudyRequest(
             SessionId(UUID.randomUUID().toString()), LearnerId("default-learner"), startedAt, scope,
             vn.loi.learning.domain.study.session.model.SessionPolicy(daily.newRemainingToday, daily.reviewRemainingToday)
         ))
         AndroidLibraryState.StudyStarted(session.id.value)
-    }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Scoped Study could not start.") }
+    }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Không thể bắt đầu học theo phạm vi này.") }
 
     fun applyCriteria(state: AndroidLibraryState.PackageBrowser, criteria: AndroidLibraryCriteria) =
         browser(state.pkg, state.allItems, criteria, state.selectedContentId)
@@ -196,12 +196,12 @@ class AndroidLibraryFacade(
     }
     fun saveEdit(state: AndroidLibraryState.PackageBrowser, draft: AndroidItemDraft): AndroidLibraryState = runCatching {
         val id=state.allItems.first { it.contentId.value==state.selectedContentId }.contentId
-        requireNotNull(context.contentBrowserEdit) { "Content editor is unavailable." }.updateTextFields(id,draft.question,draft.answer,draft.pronunciation,draft.partOfSpeech,draft.example,draft.exampleTranslation)
+        requireNotNull(context.contentBrowserEdit) { "Trình sửa nội dung không khả dụng." }.updateTextFields(id,draft.question,draft.answer,draft.pronunciation,draft.partOfSpeech,draft.example,draft.exampleTranslation)
         openPackage(InstalledPackageId(state.pkg.id),state.criteria,id.value)
-    }.getOrElse { state.copy(draft=draft, message="Content validation failed; your draft was preserved.") }
+    }.getOrElse { state.copy(draft=draft, message="Xác thực nội dung thất bại; bản nháp của bạn đã được giữ lại.") }
 
     fun createCollection(name: String): AndroidLibraryState = command {
-        require(name.isNotBlank()) { "Collection name is required." }
+        require(name.isNotBlank()) { "Cần nhập tên bộ sưu tập." }
         requireNotNull(context.libraryCommand).createCollection(libraryId, CollectionName(name))
     }
 
@@ -224,12 +224,12 @@ class AndroidLibraryFacade(
     private fun command(action: () -> LibraryCommandResult<*>): AndroidLibraryState = runCatching {
         when (val result = action()) {
             is LibraryCommandResult.Success -> loadRoot()
-            is LibraryCommandResult.DuplicateCollection -> AndroidLibraryState.Failed("A collection with that name already exists.")
+            is LibraryCommandResult.DuplicateCollection -> AndroidLibraryState.Failed("Đã có bộ sưu tập mang tên này.")
             is LibraryCommandResult.InvalidState -> AndroidLibraryState.Failed(result.message)
             is LibraryCommandResult.PersistenceFailure -> AndroidLibraryState.Failed("Library changes could not be saved.")
-            else -> AndroidLibraryState.Failed("The library changed. Refresh and try again.")
+            else -> AndroidLibraryState.Failed("Thư viện đã thay đổi. Hãy làm mới và thử lại.")
         }
-    }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Library command failed.") }
+    }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Thao tác thư viện thất bại.") }
 
     private fun browser(
         pkg: InstalledPackageItem,

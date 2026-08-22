@@ -53,7 +53,7 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
     onSelectLearningPackage: (String) -> Unit = {}) {
     Box(Modifier.fillMaxSize().imePadding().padding(horizontal = LearningSpacing.screen, vertical = LearningSpacing.medium), contentAlignment=Alignment.TopCenter) {
         when (state) {
-            AndroidLibraryState.Loading -> LoadingPlaceholder("Loading library")
+            AndroidLibraryState.Loading -> LoadingPlaceholder("Đang tải thư viện")
             is AndroidLibraryState.Failed -> ErrorState(state,onRetry)
             is AndroidLibraryState.Root -> LazyColumn(Modifier.widthIn(max=840.dp).fillMaxWidth(),state=rememberLazyListState(),contentPadding=PaddingValues(bottom=LearningSpacing.extraLarge),verticalArrangement=Arrangement.spacedBy(LearningSpacing.small)) {
                 item("top-bar") { LibraryTopBar(onImport, contentState is AndroidContentOperationState.Running) }
@@ -71,7 +71,11 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
                     LearningEngineSectionHeader(if(state.selectedCollectionId==null) stringResource(R.string.library_section_packages) else stringResource(R.string.library_section_collection_packages))
                 }
                 items(state.packages,key={"package-${it.packageId}"}) { pkg ->
-                    LibraryPackageCard(pkg) { onOpenPackage(pkg.packageId) }
+                    LibraryPackageCard(
+                        pkg,
+                        onOpen = { onOpenPackage(pkg.packageId) },
+                        onActivate = { onSelectLearningPackage(pkg.packageId) }
+                    )
                 }
             }
             is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -79,8 +83,8 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
                 var confirmUninstall by remember { mutableStateOf(false) }
                 ElevatedCard(Modifier.fillMaxWidth(), colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,stringResource(R.string.action_back))};Text(androidDisplayTitle(state.pkg.name),style=MaterialTheme.typography.titleLarge,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f).semantics { contentDescription=state.pkg.name;heading() });Box{IconButton(onClick={showOperations=true}){Icon(Icons.Default.MoreVert,stringResource(R.string.library_package_details))};DropdownMenu(showOperations,{showOperations=false}){DropdownMenuItem({Text(stringResource(R.string.library_export))},{showOperations=false;onExport(state.pkg.id)});DropdownMenuItem({Text(stringResource(R.string.library_verify_package))},{showOperations=false;onVerify()});DropdownMenuItem({Text(stringResource(R.string.library_uninstall_action))},{showOperations=false;confirmUninstall=true},leadingIcon={Icon(Icons.Default.Delete,null)})}}}
-                    Text("v${state.pkg.version} • ${state.allItems.size} items",color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudyPackage,modifier=Modifier.weight(1f).semantics { contentDescription="Study package ${state.pkg.name}" }){Icon(Icons.Default.School,null);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.library_study))};OutlinedButton(onClick=onLessons){Text(stringResource(R.string.library_lessons))}}
+                    Text("v${state.pkg.version} • ${state.allItems.size} mục",color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudyPackage,modifier=Modifier.weight(1f).semantics { contentDescription="Học gói ${state.pkg.name}" }){Icon(Icons.Default.School,null);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.library_study))};OutlinedButton(onClick=onLessons){Text(stringResource(R.string.library_lessons))}}
                 } }
                 operationMessage?.let{Text(it,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite },color=MaterialTheme.colorScheme.primary)}
                 if(confirmUninstall) AlertDialog(onDismissRequest={confirmUninstall=false},title={Text(stringResource(R.string.library_uninstall_confirm_title))},text={Text(stringResource(R.string.library_uninstall_confirm_message, androidDisplayTitle(state.pkg.name)))},confirmButton={Button(onClick={confirmUninstall=false;onUninstall(state.pkg.id)}){Text(stringResource(R.string.library_uninstall_action))}},dismissButton={TextButton(onClick={confirmUninstall=false}){Text(stringResource(R.string.action_cancel))}})
@@ -96,9 +100,9 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
             }
             is AndroidLibraryState.Lessons -> Column(Modifier.widthIn(max=840.dp).fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,stringResource(R.string.action_back))};Text(stringResource(R.string.library_lessons_title, androidDisplayTitle(state.pkg.name)),style=MaterialTheme.typography.titleLarge,maxLines=2,overflow=TextOverflow.Ellipsis)}
-                LazyColumn(state=rememberLazyListState(),contentPadding=PaddingValues(bottom=24.dp)){items(state.lessons,key={"${it.group}-${it.section}-${it.lesson}"}){lesson->ListItem(headlineContent={Text(lesson.lesson)},supportingContent={Text("${lesson.itemCount} items")},trailingContent={TextButton(onClick={onStudyLesson(lesson.lesson)}){Text(stringResource(R.string.library_study))}})}}
+                LazyColumn(state=rememberLazyListState(),contentPadding=PaddingValues(bottom=24.dp)){items(state.lessons,key={"${it.group}-${it.section}-${it.lesson}"}){lesson->ListItem(headlineContent={Text(lesson.lesson)},supportingContent={Text("${lesson.itemCount} mục")},trailingContent={TextButton(onClick={onStudyLesson(lesson.lesson)}){Text(stringResource(R.string.library_study))}})}}
             }
-            is AndroidLibraryState.StudyStarted -> LoadingPlaceholder("Starting Study")
+            is AndroidLibraryState.StudyStarted -> LoadingPlaceholder("Đang bắt đầu học")
         }
     }
 }
@@ -138,7 +142,7 @@ private fun LibraryFilterRow(selected: AndroidLibraryFilter, onFilter: (AndroidL
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
-                    stateDescription = if (selected == filter) "Selected" else "Not selected"
+                    stateDescription = if (selected == filter) "Đã chọn" else "Chưa chọn"
                 }
             )
         }
@@ -148,27 +152,27 @@ private fun LibraryFilterRow(selected: AndroidLibraryFilter, onFilter: (AndroidL
 @Composable
 private fun CollectionCard(collection: AndroidLibraryCollectionItem, onOpen: () -> Unit) {
     LibrarySurfaceCard(Modifier.fillMaxWidth().clickable(onClick = onOpen).semantics(mergeDescendants = true) {
-        contentDescription = "${collection.title}, ${collection.packageCount} packages"
+        contentDescription = "${collection.title}, ${collection.packageCount} gói"
         role = Role.Button
     }) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
             Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f)) {
                 Text(collection.title, style = MaterialTheme.typography.titleMedium)
-                Text("${collection.packageCount} package(s)", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${collection.packageCount} gói", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(Icons.Default.ChevronRight, "Open collection")
+            Icon(Icons.Default.ChevronRight, "Mở bộ sưu tập")
         }
     }
 }
 
 @Composable
-private fun LibraryPackageCard(pkg: AndroidLibraryPackageItem, onOpen: () -> Unit) {
+private fun LibraryPackageCard(pkg: AndroidLibraryPackageItem, onOpen: () -> Unit, onActivate: () -> Unit) {
     val activeSemantics = if (pkg.isActivePackage) stringResource(R.string.library_active_semantics) else ""
     val contentDesc = if (pkg.isActivePackage) {
-        "${pkg.title}, $activeSemantics, ${pkg.contentCount} contents"
+        "${pkg.title}, $activeSemantics, ${pkg.contentCount} nội dung"
     } else {
-        "${pkg.title}, ${pkg.contentCount} contents"
+        "${pkg.title}, ${pkg.contentCount} nội dung"
     }
 
     val containerColor = if (pkg.isActivePackage) {
@@ -259,12 +263,11 @@ private fun LibraryPackageCard(pkg: AndroidLibraryPackageItem, onOpen: () -> Uni
                     }
                 }
             }
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (pkg.isActivePackage) {
+                Icon(Icons.Default.CheckCircle, stringResource(R.string.library_active_semantics), tint = MaterialTheme.colorScheme.primary)
+            } else {
+                TextButton(onClick = onActivate) { Text("Đặt làm gói học chính") }
+            }
         }
     }
 }
@@ -272,17 +275,17 @@ private fun LibraryPackageCard(pkg: AndroidLibraryPackageItem, onOpen: () -> Uni
 @Composable
 private fun ImportState(state: AndroidContentOperationState, onRetry: () -> Unit) {
     when (state) {
-        is AndroidContentOperationState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = "Importing package" })
+        is AndroidContentOperationState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = "Đang nhập gói" })
         is AndroidContentOperationState.Succeeded -> Text(state.detail, color = MaterialTheme.colorScheme.primary, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-        is AndroidContentOperationState.Failed -> LearningEngineErrorState("Import failed", state.failure.message, onRetry = onRetry)
+        is AndroidContentOperationState.Failed -> LearningEngineErrorState("Nhập gói thất bại", state.failure.message, onRetry = onRetry)
         AndroidContentOperationState.Idle -> Unit
     }
 }
 
 @Composable private fun ContentCard(item:vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem,onClick:()->Unit,resolveMedia:(String)->String?) = ElevatedCard(Modifier.fillMaxWidth().clickable(onClick=onClick)) { Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-    item.imageRef?.let{MediaThumbnail(it,resolveMedia,Modifier.size(72.dp))} ?: Icon(Icons.Default.ImageNotSupported,"No image",Modifier.size(48.dp))
+    item.imageRef?.let{MediaThumbnail(it,resolveMedia,Modifier.size(72.dp))} ?: Icon(Icons.Default.ImageNotSupported,"Không có ảnh",Modifier.size(48.dp))
     Column(Modifier.weight(1f)){Text(item.questionText,style=MaterialTheme.typography.titleMedium);Text(item.answerText);Text("${item.partOfSpeech} • ${item.lesson}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-    Row{if(item.hasAudio)Icon(Icons.AutoMirrored.Filled.VolumeUp,"Audio available",Modifier.semantics { stateDescription="Available" });if(item.hasImage)Icon(Icons.Default.Image,"Image available")}
+    Row{if(item.hasAudio)Icon(Icons.AutoMirrored.Filled.VolumeUp,"Có âm thanh",Modifier.semantics { stateDescription="Khả dụng" });if(item.hasImage)Icon(Icons.Default.Image,"Có ảnh")}
 } }
 
 @Composable private fun ItemDetail(item:vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem,onStudy:()->Unit,onEdit:()->Unit,resolveMedia:(String)->String?) = ElevatedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -292,7 +295,7 @@ private fun ImportState(state: AndroidContentOperationState, onRetry: () -> Unit
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudy){Text(stringResource(R.string.library_study_this_item))};OutlinedButton(onClick=onEdit){Text(stringResource(R.string.library_edit))};if(item.hasAudio)IconButton(onClick={audio=controller.replay(item.audioRef?.let(resolveMedia)){audio=it}},modifier=Modifier.semantics { stateDescription=audio.javaClass.simpleName }){Icon(Icons.AutoMirrored.Filled.VolumeUp,stringResource(R.string.library_listen_to_word))}}
 } }
 
-@Composable private fun MediaThumbnail(reference:String,resolveMedia:(String)->String?,modifier:Modifier=Modifier){val bitmap by produceState<android.graphics.Bitmap?>(null,reference){value=withContext(Dispatchers.IO){val path=resolveMedia(reference)?:return@withContext null;val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeFile(path,bounds);var sample=1;while(bounds.outWidth/sample>320||bounds.outHeight/sample>320)sample*=2;BitmapFactory.decodeFile(path,BitmapFactory.Options().apply{inSampleSize=sample})}};if(bitmap==null)Surface(modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceVariant){Box(contentAlignment=Alignment.Center){Icon(Icons.Default.ImageNotSupported,"Image unavailable")}}else Image(bitmap!!.asImageBitmap(),"Content image",modifier,contentScale=ContentScale.Crop)}
+@Composable private fun MediaThumbnail(reference:String,resolveMedia:(String)->String?,modifier:Modifier=Modifier){val bitmap by produceState<android.graphics.Bitmap?>(null,reference){value=withContext(Dispatchers.IO){val path=resolveMedia(reference)?:return@withContext null;val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeFile(path,bounds);var sample=1;while(bounds.outWidth/sample>320||bounds.outHeight/sample>320)sample*=2;BitmapFactory.decodeFile(path,BitmapFactory.Options().apply{inSampleSize=sample})}};if(bitmap==null)Surface(modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceVariant){Box(contentAlignment=Alignment.Center){Icon(Icons.Default.ImageNotSupported,"Không thể hiển thị ảnh")}}else Image(bitmap!!.asImageBitmap(),"Ảnh nội dung",modifier,contentScale=ContentScale.Crop)}
 @Composable private fun SearchField(value:String,onValueChange:(String)->Unit,label:String){val keyboard=LocalSoftwareKeyboardController.current;TextField(value,onValueChange,placeholder={Text(label)},leadingIcon={Icon(Icons.Default.Search,null,Modifier.size(LearningIconSize.action))},singleLine=true,shape=LearningEngineShapes.medium,colors=TextFieldDefaults.colors(focusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,disabledContainerColor=MaterialTheme.colorScheme.surfaceVariant,focusedIndicatorColor=androidx.compose.ui.graphics.Color.Transparent,unfocusedIndicatorColor=androidx.compose.ui.graphics.Color.Transparent,disabledIndicatorColor=androidx.compose.ui.graphics.Color.Transparent,cursorColor=MaterialTheme.colorScheme.primary),keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),trailingIcon={if(value.isNotEmpty())IconButton(onClick={onValueChange("")}){Icon(Icons.Default.Clear,stringResource(R.string.library_clear_search))}},modifier=Modifier.fillMaxWidth().defaultMinSize(minHeight=LearningSpacing.touchTarget))}
 
 @Composable

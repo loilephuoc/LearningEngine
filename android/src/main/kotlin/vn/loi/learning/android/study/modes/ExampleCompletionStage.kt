@@ -42,7 +42,7 @@ internal fun ExampleCompletionStudyStage(
                 if (density == StudyContentDensity.DENSE) StudySpacing.group else StudySpacing.section
             )
         ) {
-            Text("Complete the sentence", style = StudyTypography.metadata)
+            Text("Hoàn thành câu", style = StudyTypography.metadata)
             StudyClozeSentence(
                 state.prefix,
                 state.blank,
@@ -80,7 +80,7 @@ internal fun ExampleCompletionStudyStage(
                     onClick = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
                     enabled = currentInput.isNotBlank(),
                     modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                ) { Text("Check") }
+                ) { Text("Kiểm tra") }
             }
             feedbackContent()
         }

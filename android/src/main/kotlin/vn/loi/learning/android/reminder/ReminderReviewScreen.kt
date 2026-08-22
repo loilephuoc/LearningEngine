@@ -58,7 +58,7 @@ fun ReminderReviewScreen(
     val items = session.items
     if (items.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No reminder items available", style = MaterialTheme.typography.titleMedium)
+            Text("Không có mục nhắc học", style = MaterialTheme.typography.titleMedium)
         }
         return
     }
@@ -232,7 +232,7 @@ fun ReminderReviewScreen(
                         IconButton(onClick = onBack) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back from Reminder Review"
+                                contentDescription = "Quay lại từ ôn tập nhắc học"
                             )
                         }
                         Column {
@@ -298,7 +298,7 @@ fun ReminderReviewScreen(
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Previous")
+                        Text("Trước")
                     }
 
                     Text(
@@ -317,7 +317,7 @@ fun ReminderReviewScreen(
                         },
                         enabled = pagerState.currentPage < items.size - 1 && submissionState != QuickReviewSubmissionState.SUBMITTING
                     ) {
-                        Text("Next")
+                        Text("Tiếp")
                         Spacer(Modifier.width(6.dp))
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, Modifier.size(18.dp))
                     }
@@ -416,12 +416,12 @@ private fun ReminderReviewItemContent(
                     .clip(RoundedCornerShape(16.dp))
                     .clickable(
                         role = Role.Button,
-                        onClickLabel = "Play question audio"
+                        onClickLabel = "Phát âm thanh câu hỏi"
                     ) {
                         onPlayAudio(item.primaryAudioReference)
                     }
                     .semantics {
-                        contentDescription = "Question: ${item.primaryText}. Tap to listen."
+                        contentDescription = "Câu hỏi: ${item.primaryText}. Chạm để nghe."
                     },
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -483,12 +483,12 @@ private fun ReminderReviewItemContent(
                         .clip(RoundedCornerShape(14.dp))
                         .clickable(
                             role = Role.Button,
-                            onClickLabel = "Play meaning audio"
+                            onClickLabel = "Phát âm thanh nghĩa"
                         ) {
                             onPlayAudio(audioRef)
                         }
                         .semantics {
-                            contentDescription = "Meaning: $meaning. Tap to listen."
+                            contentDescription = "Nghĩa: $meaning. Chạm để nghe."
                         },
                     shape = RoundedCornerShape(14.dp)
                 ) {
@@ -497,7 +497,7 @@ private fun ReminderReviewItemContent(
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
-                            text = "Meaning",
+                            text = "Nghĩa",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
@@ -519,12 +519,12 @@ private fun ReminderReviewItemContent(
                         .clip(RoundedCornerShape(14.dp))
                         .clickable(
                             role = Role.Button,
-                            onClickLabel = "Play example audio"
+                            onClickLabel = "Phát âm thanh ví dụ"
                         ) {
                             onPlayAudio(item.exampleAudioReference)
                         }
                         .semantics {
-                            contentDescription = "Example: ${item.example.orEmpty()} ${item.exampleTranslation.orEmpty()}. Tap to listen."
+                            contentDescription = "Ví dụ: ${item.example.orEmpty()} ${item.exampleTranslation.orEmpty()}. Chạm để nghe."
                         },
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.outlinedCardColors(
@@ -536,7 +536,7 @@ private fun ReminderReviewItemContent(
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(
-                            text = "Example",
+                            text = "Ví dụ",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.SemiBold
@@ -696,21 +696,21 @@ private fun FsrsInspectorSection(model: AndroidFsrsInspectorUiModel?) {
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
     ) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("FSRS details", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
+            Text("Chi tiết FSRS", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
                 modifier = Modifier.semantics { heading() })
             when {
                 model == null -> CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                !model.hasFsrsData -> Text("No FSRS data", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                !model.hasFsrsData -> Text("Không có dữ liệu FSRS", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else -> {
                     InspectorFieldGrid(model)
-                    Text("Review history", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
+                    Text("Lịch sử ôn tập", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 4.dp).semantics { heading() })
                     if (model.history.isEmpty()) {
-                        Text("No reviews yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Chưa có lượt ôn tập", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
                         model.recentHistory.forEach { ReviewHistoryRow(it) }
                         if (model.hasMoreHistory) {
-                            TextButton(onClick = { showAll = true }) { Text("Show all (${model.history.size})") }
+                            TextButton(onClick = { showAll = true }) { Text("Xem tất cả (${model.history.size})") }
                         }
                     }
                 }
@@ -720,13 +720,13 @@ private fun FsrsInspectorSection(model: AndroidFsrsInspectorUiModel?) {
     if (showAll && model != null) {
         AlertDialog(
             onDismissRequest = { showAll = false },
-            title = { Text("Review history") },
+            title = { Text("Lịch sử ôn tập") },
             text = {
                 LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(model.history) { ReviewHistoryRow(it) }
                 }
             },
-            confirmButton = { TextButton(onClick = { showAll = false }) { Text("Close") } }
+            confirmButton = { TextButton(onClick = { showAll = false }) { Text("Đóng") } }
         )
     }
 }
@@ -744,7 +744,7 @@ private fun InspectorFieldGrid(model: AndroidFsrsInspectorUiModel) {
             Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
         }
     }
-    if (model.reviewCount == 0) Text("This item has not been reviewed yet.", style = MaterialTheme.typography.bodySmall,
+    if (model.reviewCount == 0) Text("Mục này chưa được ôn tập.", style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant, fontStyle = FontStyle.Italic)
 }
 
@@ -765,8 +765,8 @@ private fun ReviewHistoryRow(row: AndroidReviewHistoryRow) {
             }
             Text(row.source, style = MaterialTheme.typography.bodySmall)
             Text(row.stageTransition, style = MaterialTheme.typography.bodySmall)
-            Text("Stability ${row.stabilityTransition}", style = MaterialTheme.typography.labelSmall)
-            Text("Difficulty ${row.difficultyTransition}", style = MaterialTheme.typography.labelSmall)
+            Text("Độ ổn định ${row.stabilityTransition}", style = MaterialTheme.typography.labelSmall)
+            Text("Độ khó ${row.difficultyTransition}", style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -798,7 +798,7 @@ private fun ReminderImage(
     if (bitmap != null) {
         Image(
             bitmap = bitmap.asImageBitmap(),
-            contentDescription = "Vocabulary image",
+            contentDescription = "Ảnh từ vựng",
             modifier = modifier,
             contentScale = ContentScale.Fit
         )

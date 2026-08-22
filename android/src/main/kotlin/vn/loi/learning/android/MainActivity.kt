@@ -353,7 +353,7 @@ class MainActivity : ComponentActivity() {
                         runCatching { AndroidRootState.Ready(app.graph) }
                             .getOrElse { error ->
                                 AndroidStartupTrace.write(true,"phase=root_shell_state state=FAILURE type=${error.javaClass.simpleName}")
-                                AndroidRootState.Failed("Your learning data could not be opened safely.")
+                                AndroidRootState.Failed("Không thể mở dữ liệu học của bạn một cách an toàn.")
                             }
                     }
                 }
@@ -512,10 +512,10 @@ class MainActivity : ComponentActivity() {
                         val home = state as? AndroidStudyState.Home
                         if(home==null){
                             when(state) {
-                                AndroidStudyState.Loading -> AndroidFeatureLoading("Preparing your learning overview")
-                                is AndroidStudyState.Failed -> AndroidFeatureFailure("Learning overview unavailable",state.message,
+                                AndroidStudyState.Loading -> AndroidFeatureLoading("Đang chuẩn bị tổng quan học tập")
+                                is AndroidStudyState.Failed -> AndroidFeatureFailure("Không thể hiển thị tổng quan học tập",state.message,
                                     if (state.retryable) ({ studyViewModel.onEvent(AndroidStudyEvent.Retry) }) else null)
-                                else -> AndroidFeatureLoading("Opening Study")
+                                else -> AndroidFeatureLoading("Đang mở mục Học")
                             }
                             return@composable
                         }
@@ -650,10 +650,10 @@ class MainActivity : ComponentActivity() {
                         val home=state as? AndroidStudyState.Home
                         if(home==null) {
                             when(state) {
-                                AndroidStudyState.Loading -> AndroidFeatureLoading("Preparing Review")
-                                is AndroidStudyState.Failed -> AndroidFeatureFailure("Review unavailable",state.message,
+                                AndroidStudyState.Loading -> AndroidFeatureLoading("Đang chuẩn bị ôn tập")
+                                is AndroidStudyState.Failed -> AndroidFeatureFailure("Không thể mở ôn tập",state.message,
                                     if (state.retryable) ({ studyViewModel.onEvent(AndroidStudyEvent.Retry) }) else null)
-                                else -> AndroidFeatureLoading("Opening Study")
+                                else -> AndroidFeatureLoading("Đang mở mục Học")
                             }
                         } else ReviewHub(
                             home,
@@ -779,7 +779,7 @@ class MainActivity : ComponentActivity() {
                             )
                         } else {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("Vocabulary item is unavailable.", style = MaterialTheme.typography.titleMedium)
+                                Text("Mục từ vựng không khả dụng.", style = MaterialTheme.typography.titleMedium)
                             }
                         }
                     }
@@ -809,7 +809,7 @@ class MainActivity : ComponentActivity() {
 internal fun opensStudyFromExplicitEvent(event: AndroidStudyEvent): Boolean =
     event is AndroidStudyEvent.Start || event is AndroidStudyEvent.OpenSession || event == AndroidStudyEvent.Resume
 
-private fun AndroidPackageOperationResult.message()=when(this){is AndroidPackageOperationResult.Success->message;is AndroidPackageOperationResult.Failed->message;is AndroidPackageOperationResult.Verification->if(valid)"Package verification passed." else "Package verification failed: ${errors.joinToString()}"}
+private fun AndroidPackageOperationResult.message()=when(this){is AndroidPackageOperationResult.Success->message;is AndroidPackageOperationResult.Failed->message;is AndroidPackageOperationResult.Verification->if(valid)"Xác minh gói thành công." else "Xác minh gói thất bại: ${errors.joinToString()}"}
 
 private class LocalizedActivityContextWrapper(
     base: Context,

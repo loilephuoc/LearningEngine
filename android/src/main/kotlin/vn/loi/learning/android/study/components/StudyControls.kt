@@ -104,7 +104,7 @@ internal fun StudyActionDock(
 ) {
     if (!hasWordAudio && !hasExampleAudio && !hasImage) return
     Row(
-        modifier = modifier.semantics { contentDescription = "Study actions" },
+        modifier = modifier.semantics { contentDescription = "Thao tác học" },
         horizontalArrangement = Arrangement.spacedBy(LearningSpacing.large, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -117,7 +117,7 @@ internal fun StudyActionDock(
                 )
             }
             IconButton(onClick = onReplay, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                Icon(Icons.Default.Replay, contentDescription = "Restart word audio")
+                Icon(Icons.Default.Replay, contentDescription = "Phát lại âm thanh từ")
             }
         }
         if (hasExampleAudio) {
@@ -131,7 +131,7 @@ internal fun StudyActionDock(
         }
         if (hasImage) {
             IconButton(onClick = onFullscreenImage, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                Icon(Icons.Default.Fullscreen, contentDescription = "Open image fullscreen")
+                Icon(Icons.Default.Fullscreen, contentDescription = "Mở ảnh toàn màn hình")
             }
         }
     }

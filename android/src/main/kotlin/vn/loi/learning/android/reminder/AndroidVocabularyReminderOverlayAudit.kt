@@ -69,7 +69,7 @@ object AndroidVocabularyReminderOverlayAudit {
             val imageHeightPx = if (sampleImage != null) (145 * density).toInt() else 0
 
             if (sampleImage != null) {
-                val rounded = createRoundedCornerBitmap(sampleImage, 12f * density)
+                val rounded = createRoundedCornerBitmap(sampleImage, 6f * density)
                 val lp = thumbnailImageView.layoutParams
                 lp.width = imageWidthPx
                 lp.height = imageHeightPx

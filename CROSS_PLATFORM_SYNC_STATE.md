@@ -20,11 +20,12 @@ Current implementation status:
 - Desktop Content Studio context-menu Delete now selects the clicked row and invokes the same existing deletion request/confirmation authority as toolbar Delete.
 - Desktop TTS capability is complete: multi-selection shows `Generate Audio (N)`, all missing selected-field targets are scanned/run, single and batch share seven speed levels, pitch/volume reach preview and generation requests, and preview uses the displayed selected-field text.
 - Study daily New/Review limits now have long-press editors. Apply atomically updates the active session policy and replans/replaces its canonical queue before persisting preferences, then reloads the same session immediately.
+- Android Library package cards now expose direct canonical active-package selection without changing other packages, and Study identifies the persisted active package with a direct change-package route.
 
 Tests:
-- Focused active-session queue replan and Android Study suites: PASS.
-- `clean test`: Engine 2,255; Android 968; Desktop 1,806; total 5,029; zero failures/errors/skips.
-- Android `assembleDebug`: PASS at Phase 2 checkpoint.
+- Focused active-package/Library/Study, reminder popup, localization and complete Android suites: PASS.
+- `clean test`: PASS after the final Android UX/localization changes; exact XML counts recorded in the final report.
+- Android `assembleDebug`: PASS at the final artifact gate.
 
 Physical UAT:
 - Two-package restore baseline PASS.
@@ -33,15 +34,9 @@ Physical UAT:
 Commit: active-session limits capability follows Desktop TTS checkpoint `8babd4a1`.
 
 Next:
-- Complete Android Library/active-package and Study indicator capability.
+- Run final APK artifact verification and physical-device UAT where available.
 
 Blockers: none.
 
 Remaining issues:
-- Phase 5 Android full localization.
-- Phase 6 Android Library redesign/active package.
-- Phase 7 Study active-package indicator.
-- Phase 8 Reminder popup controls.
-- Phase 9 Reminder image radius.
-- Phase 11 global localization audit.
-- Phase 12–14 final tests, physical UAT and regression.
+- Physical-device UAT for the new interaction and visual changes remains pending.

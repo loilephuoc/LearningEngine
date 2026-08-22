@@ -119,7 +119,7 @@ fun InsightsScopeSelector(
                             onScopeChange(option.scope)
                         },
                         leadingIcon = if (isSelected) {
-                            { Icon(Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary) }
+                            { Icon(Icons.Default.Check, contentDescription = "Đã chọn", tint = MaterialTheme.colorScheme.primary) }
                         } else null
                     )
                 }

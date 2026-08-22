@@ -219,7 +219,7 @@ class AndroidVocabularyReminderOverlayController(
         val imageHeightPx = if (rawBitmap != null) (145 * density).toInt() else 0
 
         if (rawBitmap != null) {
-            val roundedBitmap = createRoundedCornerBitmap(rawBitmap, 12f * density)
+            val roundedBitmap = createRoundedCornerBitmap(rawBitmap, 6f * density)
             val lp = thumbnailImageView.layoutParams
             lp.width = imageWidthPx
             lp.height = imageHeightPx

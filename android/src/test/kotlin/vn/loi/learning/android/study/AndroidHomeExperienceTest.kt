@@ -69,7 +69,7 @@ class AndroidHomeExperienceTest {
 
         assertTrue(home.contains("LearningEngineEmptyState("))
         assertTrue(home.contains("actionLabel = stringResource(R.string.home_empty_action)"))
-        assertTrue(root.contains("AndroidFeatureFailure(\"Learning overview unavailable\""))
+        assertTrue(root.contains("AndroidFeatureFailure(\"Không thể hiển thị tổng quan học tập\""))
         assertTrue(root.contains("AndroidStudyEvent.Retry"))
     }
 

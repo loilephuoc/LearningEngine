@@ -243,7 +243,7 @@ class AndroidLockScreenVocabularyService : Service() {
                 return NotificationCompat.Builder(context, CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_notification_reminder)
                     .setContentTitle("Vocabulary Reminder Service")
-                    .setContentText("Lock-screen review and vocabulary reminders are active.")
+                    .setContentText("Ôn tập màn hình khóa và nhắc từ vựng đang hoạt động.")
                     .setPriority(NotificationCompat.PRIORITY_LOW)
                     .setCategory(NotificationCompat.CATEGORY_SERVICE)
                     .setContentIntent(contentIntent)

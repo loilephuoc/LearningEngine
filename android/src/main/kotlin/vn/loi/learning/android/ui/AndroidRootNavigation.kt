@@ -78,9 +78,9 @@ enum class AndroidRootDestination(
 ) {
     HOME("home", R.string.nav_home, "Home"),
     LIBRARY("library", R.string.nav_library, "Library"),
-    STUDY("study", R.string.nav_study, "Study"),
-    REVIEW("review", R.string.nav_review, "Review"),
-    SETTINGS("settings", R.string.nav_settings, "Settings");
+    STUDY("study", R.string.nav_study, "Học"),
+    REVIEW("review", R.string.nav_review, "Ôn tập"),
+    SETTINGS("settings", R.string.nav_settings, "Cài đặt");
 
     companion object {
         fun fromRoute(route: String?): AndroidRootDestination =
@@ -109,7 +109,7 @@ fun AndroidRootNavigation(selectedRoute: String, onSelect: (AndroidRootDestinati
                 Modifier.weight(1f).fillMaxHeight().clickable { onSelect(destination) }
                     .semantics(mergeDescendants = true) {
                         selected = isSelected
-                        stateDescription = if (isSelected) "Selected" else "Not selected"
+                        stateDescription = if (isSelected) "Đã chọn" else "Chưa chọn"
                     },
                 contentAlignment = androidx.compose.ui.Alignment.Center
             ) {
@@ -151,10 +151,10 @@ fun StudyHub(
                     when {
                         daily.targetsComplete -> stringResource(R.string.study_daily_complete_detail)
                         daily.newRemainingToday == 0 && daily.dueReviewCount == 0 ->
-                            "Today's NEW target is complete and no REVIEW work is due."
+                            "Đã hoàn thành mục tiêu TỪ MỚI hôm nay và không có mục ÔN TẬP đến hạn."
                         daily.reviewRemainingToday == 0 && daily.eligibleNewContentCount == 0 ->
-                            "Today's REVIEW target is complete and no NEW content is available."
-                        else -> "No eligible Study content is currently available."
+                            "Đã hoàn thành mục tiêu ÔN TẬP hôm nay và không có nội dung MỚI."
+                        else -> "Hiện không có nội dung học phù hợp."
                     }
                 } ?: stringResource(R.string.study_daily_complete_detail)
                 AndroidHomePrimaryAction.OpenLibrary -> stringResource(R.string.study_open_library_detail)
@@ -220,7 +220,7 @@ fun StudyHub(
                     onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
                 }
                 .semantics {
-                    stateDescription = if (home.availability.canLearnNew) "Available" else "Unavailable"
+                    stateDescription = if (home.availability.canLearnNew) "Khả dụng" else "Không khả dụng"
                 }
         ) {
             Icon(
@@ -261,7 +261,7 @@ fun StudyHub(
                     onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.ADAPTIVE))
                 }
                 .semantics {
-                    stateDescription = if (home.availability.canStartAdaptive) "Available" else "Unavailable"
+                    stateDescription = if (home.availability.canStartAdaptive) "Khả dụng" else "Không khả dụng"
                 }
         ) {
             Icon(
@@ -300,7 +300,7 @@ fun StudyHub(
                     onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.TYPING))
                 }
                 .semantics {
-                    stateDescription = if (home.availability.canStartTyping) "Available" else "Unavailable"
+                    stateDescription = if (home.availability.canStartTyping) "Khả dụng" else "Không khả dụng"
                 }
         ) {
             Icon(
@@ -399,7 +399,7 @@ fun ReviewHub(
                         onEvent(AndroidStudyEvent.Start(action.entry))
                     }
                     .semantics {
-                        stateDescription = if (action.available) "Available" else "Unavailable"
+                        stateDescription = if (action.available) "Khả dụng" else "Không khả dụng"
                     },
                 containerColor = modeContainerColor
             ) {
@@ -526,7 +526,7 @@ fun SettingsScreen(
                         label = { Text(label) },
                         modifier = Modifier
                             .defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                            .semantics { stateDescription = if (themeMode == mode) "Selected" else "Not selected" }
+                            .semantics { stateDescription = if (themeMode == mode) "Đã chọn" else "Chưa chọn" }
                     )
                 }
             }
@@ -546,7 +546,7 @@ fun SettingsScreen(
                         label = { Text(label) },
                         modifier = Modifier
                             .defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                            .semantics { stateDescription = if (currentLanguage == lang) "Selected" else "Not selected" }
+                            .semantics { stateDescription = if (currentLanguage == lang) "Đã chọn" else "Chưa chọn" }
                     )
                 }
             }

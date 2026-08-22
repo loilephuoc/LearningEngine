@@ -66,8 +66,8 @@ class AndroidStartupAndNavigationStateTest {
     fun `root routes render typed non-empty states instead of blank composables`() {
         val source = source("vn/loi/learning/android/MainActivity.kt")
         assertTrue(source.contains("AndroidRootFailure(root)"))
-        assertTrue(source.contains("AndroidFeatureLoading(\"Preparing your learning overview\")"))
-        assertTrue(source.contains("AndroidFeatureLoading(\"Preparing Review\")"))
+        assertTrue(source.contains("AndroidFeatureLoading(\"Đang chuẩn bị tổng quan học tập\")"))
+        assertTrue(source.contains("AndroidFeatureLoading(\"Đang chuẩn bị ôn tập\")"))
         assertFalse(source.contains("AndroidStudyState.Home ?: return@composable"))
     }
 

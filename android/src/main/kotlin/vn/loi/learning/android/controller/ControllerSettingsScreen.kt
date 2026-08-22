@@ -149,15 +149,15 @@ fun ControllerSettingsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showResetConfirm = true }) {
-                        Icon(Icons.Default.RestartAlt, contentDescription = "Reset Defaults")
+                        Icon(Icons.Default.RestartAlt, contentDescription = "Khôi phục mặc định")
                     }
                     IconButton(onClick = onOpenDiagnostics) {
-                        Icon(Icons.Default.BugReport, contentDescription = "Diagnostics")
+                        Icon(Icons.Default.BugReport, contentDescription = "Chẩn đoán")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -262,7 +262,7 @@ fun ControllerSettingsScreen(
                                     },
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
-                                    Text("Enable", fontSize = 11.sp)
+                                    Text("Bật", fontSize = 11.sp)
                                 }
                             }
                         }
@@ -343,7 +343,7 @@ fun ControllerSettingsScreen(
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Add Binding")
+                        Text("Thêm liên kết")
                     }
                 }
             }
@@ -366,7 +366,7 @@ fun ControllerSettingsScreen(
                             )
                             Spacer(Modifier.height(8.dp))
                             OutlinedButton(onClick = { isAddingMapping = true }) {
-                                Text("Add First Assignment")
+                                Text("Thêm gán phím đầu tiên")
                             }
                         }
                     }
@@ -537,7 +537,7 @@ fun ControllerSettingsScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Active Profile:", style = MaterialTheme.typography.bodyMedium)
+                                    Text("Hồ sơ đang dùng:", style = MaterialTheme.typography.bodyMedium)
                                     Text(activeProfile.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                 }
 
@@ -545,7 +545,7 @@ fun ControllerSettingsScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Modifier Chord Key:", style = MaterialTheme.typography.bodyMedium)
+                                    Text("Phím bổ trợ tổ hợp:", style = MaterialTheme.typography.bodyMedium)
                                     Text(
                                         activeProfile.modifierInput?.keyCodeName ?: "None",
                                         fontWeight = FontWeight.Bold,
@@ -559,7 +559,7 @@ fun ControllerSettingsScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Assignments Breakdown:", style = MaterialTheme.typography.bodyMedium)
+                                    Text("Chi tiết gán phím:", style = MaterialTheme.typography.bodyMedium)
                                     Text(
                                         "$basicCount Everywhere, $overrideCount Overrides",
                                         style = MaterialTheme.typography.bodySmall,
@@ -578,7 +578,7 @@ fun ControllerSettingsScreen(
                                     ) {
                                         Icon(Icons.Default.BugReport, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(4.dp))
-                                        Text("Open Diagnostics", fontSize = 12.sp)
+                                        Text("Mở chẩn đoán", fontSize = 12.sp)
                                     }
 
                                     OutlinedButton(
@@ -588,7 +588,7 @@ fun ControllerSettingsScreen(
                                     ) {
                                         Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(4.dp))
-                                        Text("Reset Defaults", fontSize = 12.sp)
+                                        Text("Khôi phục mặc định", fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -632,8 +632,8 @@ fun ControllerSettingsScreen(
     if (showResetConfirm) {
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
-            title = { Text("Reset to Default Mappings?") },
-            text = { Text("This will restore the standard 8BitDo Micro (K-Mode) default configuration.") },
+            title = { Text("Khôi phục ánh xạ mặc định?") },
+            text = { Text("Thao tác này sẽ khôi phục cấu hình mặc định chuẩn của 8BitDo Micro (K-Mode).") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -642,12 +642,12 @@ fun ControllerSettingsScreen(
                         Toast.makeText(context, "Restored default mappings", Toast.LENGTH_SHORT).show()
                     }
                 ) {
-                    Text("Reset")
+                    Text("Khôi phục")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResetConfirm = false }) {
-                    Text("Cancel")
+                    Text("Hủy")
                 }
             }
         )
@@ -769,7 +769,7 @@ fun UnifiedMappingCard(
                     ) {
                         Icon(
                             Icons.Default.Edit,
-                            contentDescription = "Edit assignment",
+                            contentDescription = "Sửa gán phím",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
@@ -780,7 +780,7 @@ fun UnifiedMappingCard(
                     ) {
                         Icon(
                             Icons.Default.Delete,
-                            contentDescription = "Delete assignment",
+                            contentDescription = "Xóa gán phím",
                             tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
                             modifier = Modifier.size(18.dp)
                         )
@@ -1020,7 +1020,7 @@ private fun UnifiedMappingEditDialog(
                             modifier = Modifier.padding(top = 6.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Apply In:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Text("Áp dụng trong:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
 
                             var contextExpanded by remember { mutableStateOf(false) }
                             ExposedDropdownMenuBox(
@@ -1097,12 +1097,12 @@ private fun UnifiedMappingEditDialog(
         },
         confirmButton = {
             Button(onClick = { onSave(candidateMapping) }) {
-                Text("Save")
+                Text("Lưu")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Hủy")
             }
         }
     )

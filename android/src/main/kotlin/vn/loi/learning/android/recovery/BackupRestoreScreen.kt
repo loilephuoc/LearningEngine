@@ -133,7 +133,7 @@ fun BackupRestoreScreen(
                             if (!isBusy) onBack()
                         },
                         enabled = !isBusy,
-                        modifier = Modifier.semantics { contentDescription = "Navigate back" }
+                        modifier = Modifier.semantics { contentDescription = "Quay lại" }
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
@@ -219,11 +219,11 @@ fun BackupRestoreScreen(
         is BackupRestoreUiState.BackupFailure -> {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissResult() },
-                title = { Text("Backup Failed") },
+                title = { Text("Sao lưu thất bại") },
                 text = { Text(state.message) },
                 confirmButton = {
                     Button(onClick = { viewModel.dismissResult() }) {
-                        Text("Dismiss")
+                        Text("Đóng")
                     }
                 }
             )
@@ -249,11 +249,11 @@ fun BackupRestoreScreen(
         is BackupRestoreUiState.PreviewFailure -> {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissResult() },
-                title = { Text("Invalid Backup File") },
+                title = { Text("Tệp sao lưu không hợp lệ") },
                 text = { Text(state.message) },
                 confirmButton = {
                     Button(onClick = { viewModel.dismissResult() }) {
-                        Text("Close")
+                        Text("Đóng")
                     }
                 }
             )
@@ -261,7 +261,7 @@ fun BackupRestoreScreen(
         is BackupRestoreUiState.RestoreSuccess -> {
             AlertDialog(
                 onDismissRequest = {},
-                title = { Text("Restore Completed Successfully") },
+                title = { Text("Khôi phục thành công") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
@@ -291,9 +291,9 @@ fun BackupRestoreScreen(
                             viewModel.dismissResult()
                             onReload()
                         },
-                        modifier = Modifier.semantics { contentDescription = "Reload Learning Engine after restore" }
+                        modifier = Modifier.semantics { contentDescription = "Tải lại ứng dụng sau khi khôi phục" }
                     ) {
-                        Text("Reload Learning Engine")
+                        Text("Tải lại ứng dụng")
                     }
                 },
                 properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
@@ -461,11 +461,11 @@ private fun FullBackupCard(
                 enabled = enabled,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .semantics { contentDescription = "Create full backup file" }
+                    .semantics { contentDescription = "Tạo tệp sao lưu đầy đủ" }
             ) {
                 Icon(Icons.Default.Backup, contentDescription = null)
                 Spacer(Modifier.width(LearningSpacing.small))
-                Text("Create Full Backup (.lebak)")
+                Text("Tạo bản sao lưu đầy đủ (.lebak)")
             }
         }
     }
@@ -511,7 +511,7 @@ private fun RestoreBackupCard(
             ) {
                 Icon(
                     Icons.Default.Warning,
-                    contentDescription = "Warning",
+                    contentDescription = "Cảnh báo",
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(18.dp)
                 )
@@ -528,7 +528,7 @@ private fun RestoreBackupCard(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .semantics { contentDescription = "Select backup file to restore" }
+                    .semantics { contentDescription = "Chọn tệp sao lưu để khôi phục" }
             ) {
                 Icon(Icons.Default.Restore, contentDescription = null)
                 Spacer(Modifier.width(LearningSpacing.small))
@@ -739,14 +739,14 @@ private fun BackupSuccessDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Backup Created Successfully") },
+        title = { Text("Tạo bản sao lưu thành công") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("File: ${summary.fileName}", fontWeight = FontWeight.Bold)
-                Text("Size: ${summary.fileSizeFormatted}")
-                Text("Created at: ${summary.createdAtUtc}")
+                Text("Tệp: ${summary.fileName}", fontWeight = FontWeight.Bold)
+                Text("Dung lượng: ${summary.fileSizeFormatted}")
+                Text("Thời gian tạo: ${summary.createdAtUtc}")
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Text("Archive Contents:", fontWeight = FontWeight.Medium)
+                Text("Nội dung bản sao:", fontWeight = FontWeight.Medium)
                 Text("• Packages: ${summary.counts.packages}")
                 Text("• Vocabulary Items: ${summary.counts.contents}")
                 Text("• Learning Items: ${summary.counts.learningItems}")
@@ -757,7 +757,7 @@ private fun BackupSuccessDialog(
         },
         confirmButton = {
             Button(onClick = onDismiss) {
-                Text("Done")
+                Text("Xong")
             }
         }
     )
@@ -862,7 +862,7 @@ private fun RestorePreviewDialog(
                 onClick = { onConfirm(createSafety) },
                 enabled = selectedPackageIds.isNotEmpty(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                modifier = Modifier.semantics { contentDescription = "Confirm restore" }
+                modifier = Modifier.semantics { contentDescription = "Xác nhận khôi phục" }
             ) {
                 Text("Khôi phục (${selectedPackageIds.size} gói)")
             }

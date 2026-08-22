@@ -80,6 +80,8 @@ data class AndroidHomeUiModel(
     val accuracyPercent: Int?,
     val activeMemoryCount: Int,
     val totalMemoryCount: Int,
+    val activePackageName: String? = null,
+    val activePackageContentCount: Int? = null,
     val dailyBudget: DailyStudyBudgetSnapshot? = null,
     val forecastInsights: vn.loi.learning.android.dashboard.AndroidForecastInsightsUiModel? = null
 ) {
@@ -639,6 +641,12 @@ class AndroidStudyFacade(
                 accuracyPercent = progress.accuracy?.let { (it * 100).toInt() },
                 activeMemoryCount = memories.activeMemories,
                 totalMemoryCount = memories.totalMemories,
+                activePackageName = activePackageId?.let { id -> packages.firstOrNull { it.id == id }?.name },
+                activePackageContentCount = activePackageId?.let { id ->
+                    context.packageContentQuery?.getContentsForPackage(
+                        vn.loi.learning.domain.library.model.InstalledPackageId(id)
+                    ).orEmpty().size
+                },
                 dailyBudget = daily,
                 forecastInsights = forecastInsights
             )

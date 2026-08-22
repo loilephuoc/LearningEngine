@@ -114,6 +114,18 @@ class AndroidHomeStudyLandingCompositionTest {
         assertFalse(landingSource.contains("context.engine"))
     }
 
+    @Test
+    fun `Study home identifies the canonical active package and provides a Library switch path`() {
+        val source = source("vn/loi/learning/android/study/StudyScreen.kt")
+        val card = source.substringAfter("private fun ActiveLearningPackageCard(").substringBefore("private fun ContinueLearningCard(")
+        assertTrue(source.contains("item(\"active-package\")"))
+        assertTrue(card.contains("model.activePackageName"))
+        assertTrue(card.contains("model.activePackageContentCount"))
+        assertTrue(card.contains("onClick = onLibrary"))
+        assertTrue(card.contains("GÓI ĐANG HỌC"))
+        assertTrue(card.contains("Đổi gói"))
+    }
+
     private fun home(
         canResume: Boolean,
         action: AndroidHomePrimaryAction,

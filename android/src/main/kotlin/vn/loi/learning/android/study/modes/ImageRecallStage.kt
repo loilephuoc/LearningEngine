@@ -88,7 +88,7 @@ internal fun ImageRecallStudyStage(
                     onClick = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
                     enabled = currentInput.isNotBlank() && !state.imageUnavailable,
                     modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                ) { Text("Check") }
+                ) { Text("Kiểm tra") }
             }
             feedbackContent()
         }

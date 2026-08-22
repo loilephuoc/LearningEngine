@@ -1,3 +1,15 @@
+# Android active package UX
+
+- Added direct active-package selection to compact Library package cards through the existing persisted Library command.
+- Added a Study-home active-package indicator with package content count and a direct Library switch path.
+- Preserved package data and intentional feature-specific scope overrides when the canonical active package changes.
+
+# Android reminder image and Vietnamese UI completion
+
+- Reduced only the large reminder popup image corner radius from 12dp to 6dp in both runtime rendering and the visual-audit renderer.
+- Replaced remaining English actions, dialogs, status/error text and accessibility descriptions across primary Package, Study, recording, shared component, backup/restore, reminder, lock-screen, widget, controller and Auto Play surfaces while preserving vocabulary and package content.
+- Added regression coverage for the popup image radius and representative Vietnamese primary-surface contracts.
+
 # Live Android Study daily-limit replanning
 
 - Long-pressing the New or Review HUD metric opens a validated Vietnamese editor. Applying a limit

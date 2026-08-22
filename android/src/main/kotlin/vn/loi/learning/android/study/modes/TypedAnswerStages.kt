@@ -265,7 +265,7 @@ private fun TypingInputActions(
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                 ) {
                     Icon(Icons.Default.ErrorOutline, null)
-                    Text("Keep trying", style = StudyTypography.feedback)
+                    Text("Hãy thử lại", style = StudyTypography.feedback)
                 }
             }
         }
@@ -278,18 +278,18 @@ private fun TypingInputActions(
                 TextButton(
                     onClick = onRetry,
                     modifier = Modifier.weight(1f).defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                ) { Text("Retry") }
+                ) { Text("Thử lại") }
             } else {
                 Button(
                     onClick = onSubmit,
                     enabled = answer.isNotBlank(),
                     modifier = Modifier.weight(1f).defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                ) { Text("Check") }
+                ) { Text("Kiểm tra") }
             }
             OutlinedButton(
                 onClick = onReveal,
                 modifier = Modifier.weight(1f).defaultMinSize(minHeight = LearningSpacing.touchTarget)
-            ) { Text("Reveal answer") }
+            ) { Text("Hiện đáp án") }
         }
     }
 }
@@ -576,8 +576,8 @@ internal fun StudyListeningAudioPrompt(isPlaying: Boolean, audioAvailable: Boole
                 modifier = Modifier.size(72.dp).semantics { stateDescription = if (isPlaying) "Audio playing" else "Audio idle" }
             ) { Icon(Icons.AutoMirrored.Filled.VolumeUp, if (isPlaying) "Replay listening audio, playing" else "Replay listening audio", Modifier.size(32.dp)) }
         }
-        Text("Listen carefully", style = StudyTypography.prompt)
-        if (audioAvailable) Text("Tap the speaker to replay", style = StudyTypography.metadata)
+        Text("Hãy nghe kỹ", style = StudyTypography.prompt)
+        if (audioAvailable) Text("Chạm loa để nghe lại", style = StudyTypography.metadata)
     }
 }
 
@@ -597,18 +597,18 @@ private fun TypedInputActions(
         }
     }
     if (!showRetry && visualState in setOf(StudyInputVisualState.IDLE, StudyInputVisualState.FOCUSED, StudyInputVisualState.INCORRECT)) {
-        Button(onClick = onSubmit, enabled = answer.isNotBlank(), modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)) { Text("Check") }
+        Button(onClick = onSubmit, enabled = answer.isNotBlank(), modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)) { Text("Kiểm tra") }
     }
     if (showRetry) {
         Row(horizontalArrangement = Arrangement.spacedBy(StudySpacing.micro), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onRetry, modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)) {
-                Text("Retry")
+                Text("Thử lại")
             }
             onReveal?.let { reveal ->
                 OutlinedButton(
                     onClick = reveal,
                     modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                ) { Text("Reveal answer") }
+                ) { Text("Hiện đáp án") }
             }
         }
     }

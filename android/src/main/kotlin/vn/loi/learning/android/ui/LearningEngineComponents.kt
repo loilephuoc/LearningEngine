@@ -65,7 +65,7 @@ fun LearningEnginePrimaryButton(
     shape = LearningEngineShapes.medium,
     modifier = modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
         role = Role.Button
-        stateDescription = if (enabled) "Enabled" else "Disabled"
+        stateDescription = if (enabled) "Đã bật" else "Đã tắt"
     }
 ) { Text(label) }
 
@@ -353,7 +353,7 @@ fun LearningEngineStudyTopBar(
             horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
         ) {
             IconButton(onClick = onBack, modifier = Modifier.size(LearningSpacing.touchTarget)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Exit study session")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Thoát phiên học")
             }
             Text(
                 title,
@@ -369,7 +369,7 @@ fun LearningEngineStudyTopBar(
                 ) {
                     Icon(
                         Icons.Default.PlayArrow,
-                        contentDescription = "Auto Play",
+                        contentDescription = "Tự động phát",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(LearningIconSize.card)
                     )
@@ -388,7 +388,7 @@ fun LearningEngineStudyTopBar(
                 softWrap = false,
                 modifier = Modifier.semantics {
                     if (currentPosition != null && totalItems != null && totalItems > 0) {
-                        contentDescription = "$modeLabel, item $currentPosition of $totalItems"
+                        contentDescription = "$modeLabel, mục $currentPosition trên $totalItems"
                     }
                 }
             )
@@ -459,7 +459,7 @@ fun LearningEngineAudioIndicator(
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-            contentDescription = if (isPlaying) "Audio playing, tap to stop" else "Play audio",
+            contentDescription = if (isPlaying) "Đang phát âm thanh, chạm để dừng" else "Phát âm thanh",
             tint = if (isPlaying) MaterialTheme.colorScheme.primary.copy(alpha = alpha) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
             modifier = Modifier.size(20.dp)
         )
@@ -559,7 +559,7 @@ fun LearningEngineAudioTextRow(
                 .semantics(mergeDescendants = true) {
                     role = Role.Button
                     stateDescription = if (isPlaying) "Playing" else "Idle"
-                    contentDescription = "$desc. ${if (isPlaying) "Audio playing, tap to stop" else "Tap to play audio"}"
+                    contentDescription = "$desc. ${if (isPlaying) "Đang phát âm thanh, chạm để dừng" else "Chạm để phát âm thanh"}"
                 }
         ) {
             rowContent()
@@ -590,7 +590,7 @@ fun LearningEngineAudioTextRow(
 fun LearningEngineAudioButton(
     audioPath: String?,
     modifier: Modifier = Modifier,
-    label: String = "Listen audio"
+    label: String = "Nghe âm thanh"
 ) {
     val context = LocalContext.current
     val controller = remember(context) { AndroidAudioController(context) }
@@ -629,10 +629,10 @@ fun LearningEngineAudioButton(
             }
             Text(
                 when (audioState) {
-                    AndroidAudioState.Preparing -> "Loading audio"
+                    AndroidAudioState.Preparing -> "Đang tải âm thanh"
                     AndroidAudioState.Playing -> "Playing"
-                    is AndroidAudioState.Failed -> "Audio error"
-                    AndroidAudioState.Unavailable -> "Audio unavailable"
+                    is AndroidAudioState.Failed -> "Lỗi âm thanh"
+                    AndroidAudioState.Unavailable -> "Âm thanh không khả dụng"
                     else -> label
                 }
             )
@@ -640,7 +640,7 @@ fun LearningEngineAudioButton(
 
         if (audioState is AndroidAudioState.Failed || audioState == AndroidAudioState.Unavailable) {
             Text(
-                "Audio unavailable",
+                "Âm thanh không khả dụng",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
@@ -697,14 +697,14 @@ fun LearningEngineImage(
     onOpenFullscreenSecondary: ((String) -> Unit)? = null,
     fillCanvas: Boolean = false,
     adaptiveFitBounds: LearningImageFitBounds? = null,
-    interactionDescription: String = "View full size image",
+    interactionDescription: String = "Xem ảnh toàn màn hình",
     modifier: Modifier = Modifier
 ) {
     if (imagePath == null && !imageUnavailable) return
 
     if (imageUnavailable) {
         Text(
-            "Image unavailable",
+            "Ảnh không khả dụng",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
             modifier = modifier.padding(LearningSpacing.small).semantics { liveRegion = LiveRegionMode.Polite }
@@ -737,7 +737,7 @@ fun LearningEngineImage(
         }
         ImagePresentationState.Failed -> {
             Text(
-                "Image could not be loaded",
+                "Không thể tải ảnh",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = modifier.padding(LearningSpacing.small).semantics { liveRegion = LiveRegionMode.Polite }
@@ -745,7 +745,7 @@ fun LearningEngineImage(
         }
         ImagePresentationState.Unavailable -> {
             Text(
-                "Image unavailable",
+                "Ảnh không khả dụng",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = modifier.padding(LearningSpacing.small).semantics { liveRegion = LiveRegionMode.Polite }
@@ -774,7 +774,7 @@ fun LearningEngineImage(
                             contentDescription = interactionDescription
                             onOpenFullscreenSecondary?.let { openFullscreen ->
                                 customActions = listOf(
-                                    CustomAccessibilityAction("Open image fullscreen") {
+                                    CustomAccessibilityAction("Mở ảnh toàn màn hình") {
                                         imagePath?.let(openFullscreen)
                                         true
                                     }
@@ -828,12 +828,12 @@ fun FullscreenLearningImage(
                         .defaultMinSize(minWidth = LearningSpacing.touchTarget, minHeight = LearningSpacing.touchTarget)
                         .semantics {
                             role = Role.Button
-                            contentDescription = "Close full size image"
+                            contentDescription = "Đóng ảnh toàn màn hình"
                         }
                 ) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "Close full size image",
+                        contentDescription = "Đóng ảnh toàn màn hình",
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
@@ -845,7 +845,7 @@ fun FullscreenLearningImage(
                         .clickable(onClick = onDismiss)
                         .semantics {
                             role = Role.Button
-                            contentDescription = "Full size image overlay, tap to dismiss"
+                            contentDescription = "Ảnh toàn màn hình, chạm để đóng"
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -859,13 +859,13 @@ fun FullscreenLearningImage(
                             ) {
                                 Image(
                                     bitmap = presentation.bitmap.asImageBitmap(),
-                                    contentDescription = "Full size image",
+                                    contentDescription = "Ảnh toàn màn hình",
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
                         }
-                        else -> Text("Image unavailable", color = MaterialTheme.colorScheme.onError)
+                        else -> Text("Không thể hiển thị ảnh", color = MaterialTheme.colorScheme.onError)
                     }
                 }
             }
@@ -878,7 +878,7 @@ fun LearningEngineCompletionCard(
     title: String = "Session complete",
     modeLabel: String? = null,
     summary: String? = null,
-    detail: String = "Great work! You have completed all items in this study session.",
+    detail: String = "Tuyệt vời! Bạn đã hoàn thành mọi mục trong phiên học này.",
     canUndo: Boolean = false,
     onUndo: (() -> Unit)? = null,
     onHome: () -> Unit,

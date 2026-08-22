@@ -111,7 +111,7 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(modes.contains("SelectTypingRatingOverride"))
         assertTrue(typing.contains("onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) }"))
         assertTrue(modes.contains("OutlinedButton("))
-        assertTrue(modes.contains("Text(\"Reveal answer\")"))
+        assertTrue(modes.contains("Text(\"Hiện đáp án\")"))
         assertTrue(genericFeedback.contains("is AndroidStudyState.ExampleCompletion -> true"))
         assertFalse(genericFeedback.contains("is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true"))
         assertFalse(activeTyping.contains("TypingDifferenceComparison("))
@@ -320,9 +320,9 @@ class TypedAnswerStagesCompositionTest {
 
         assertTrue(actions.contains("heightIn(min = 24.dp)"))
         assertTrue(actions.contains("if (showRetry)"))
-        assertTrue(actions.contains("Text(\"Retry\")"))
-        assertTrue(actions.contains("Text(\"Check\")"))
-        assertTrue(actions.contains("Text(\"Reveal answer\")"))
+        assertTrue(actions.contains("Text(\"Thử lại\")"))
+        assertTrue(actions.contains("Text(\"Kiểm tra\")"))
+        assertTrue(actions.contains("Text(\"Hiện đáp án\")"))
         assertEquals(2, Regex("Row\\(").findAll(actions).count())
     }
 }

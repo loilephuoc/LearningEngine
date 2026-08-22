@@ -48,7 +48,7 @@ class AndroidPackageConsolidatedUxTest {
         assertTrue(row.contains("onLongClick = onQuickEdit"))
         assertTrue(row.contains("CustomAccessibilityAction(\"Sửa từ\")"))
         assertFalse(row.contains("Icons.Default.MoreVert"))
-        assertTrue(screen.contains("Icon(Icons.Default.MoreVert, contentDescription = \"Package operations\")"))
+        assertTrue(screen.contains("Icon(Icons.Default.MoreVert, contentDescription = \"Thao tác với gói\")"))
         assertTrue(screen.contains("PackageQuickEditDialog"))
         assertTrue(screen.contains("if (result.isSuccess) editing = null"))
         assertFalse(screen.contains("if (result.isFailure) editing = null"))

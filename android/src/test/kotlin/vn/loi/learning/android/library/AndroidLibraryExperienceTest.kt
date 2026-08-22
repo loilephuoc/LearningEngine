@@ -100,6 +100,15 @@ class AndroidLibraryExperienceTest {
         assertFalse(pkgCard.contains("R.string.library_current_package"))
     }
 
+    @Test fun `inactive package card activates through the canonical package selection callback`() {
+        val source = source("vn/loi/learning/android/library/LibraryScreen.kt")
+        val pkgCard = source.substringAfter("private fun LibraryPackageCard(").substringBefore("private fun ImportState(")
+        assertTrue(pkgCard.contains("onActivate: () -> Unit"))
+        assertTrue(pkgCard.contains("onClick = onActivate"))
+        assertTrue(pkgCard.contains("Đặt làm gói học chính"))
+        assertTrue(source.contains("onActivate = { onSelectLearningPackage(pkg.packageId) }") || source.contains("onActivate={ onSelectLearningPackage(pkg.packageId) }"))
+    }
+
     @Test fun `import success refreshes once through existing operation state`() {
         val source = source("vn/loi/learning/android/MainActivity.kt")
         val effect = source.substringAfter("LaunchedEffect(contentState)").substringBefore("val navController")

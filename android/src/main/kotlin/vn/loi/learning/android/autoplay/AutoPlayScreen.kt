@@ -164,7 +164,7 @@ fun AutoPlayScreen(
                     onClick = { fullscreenImageUri = null },
                     modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = "Close full image")
+                    Icon(Icons.Default.Close, contentDescription = "Đóng ảnh toàn màn hình")
                 }
             }
         }
@@ -838,7 +838,7 @@ private fun AutoPlayDelayControl(
                         }
                     },
                     label = { Text(stringResource(R.string.autoplay_custom_seconds)) },
-                    placeholder = { Text("e.g. 1.5 or 2.75") },
+                    placeholder = { Text("Ví dụ: 1,5 hoặc 2,75") },
                     isError = isInputError,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
@@ -927,7 +927,7 @@ private fun AutoPlaySleepTimerControl(
                     }
                 },
                 label = { Text(stringResource(R.string.autoplay_custom_minutes)) },
-                placeholder = { Text("e.g. 0.5 or 37.5") },
+                placeholder = { Text("Ví dụ: 0,5 hoặc 37,5") },
                 isError = isInputError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
@@ -1061,7 +1061,7 @@ private fun AutoPlayPlayerScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onStop) {
-                        Icon(Icons.Default.Close, contentDescription = "Exit Auto Play")
+                        Icon(Icons.Default.Close, contentDescription = "Thoát Tự động phát")
                     }
                 },
                 actions = {
@@ -1140,7 +1140,7 @@ private fun AutoPlayPlayerScreen(
                             ) {
                                 Icon(
                                     Icons.Default.Timer,
-                                    contentDescription = "Sleep Timer",
+                                    contentDescription = "Hẹn giờ ngủ",
                                     modifier = Modifier.size(16.dp),
                                     tint = if (remainingSleepMillis != null && remainingSleepMillis > 0L) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1156,7 +1156,7 @@ private fun AutoPlayPlayerScreen(
                         IconButton(onClick = onStop) {
                             Icon(
                                 Icons.Default.Stop,
-                                contentDescription = "Stop Auto Play",
+                                contentDescription = "Dừng Tự động phát",
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -1180,7 +1180,7 @@ private fun AutoPlayPlayerScreen(
                         ) {
                             Icon(
                                 Icons.Default.SkipPrevious,
-                                contentDescription = "Previous item",
+                                contentDescription = "Mục trước",
                                 modifier = Modifier.size(36.dp),
                                 tint = if (hasPrevious) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             )
@@ -1207,7 +1207,7 @@ private fun AutoPlayPlayerScreen(
                         ) {
                             Icon(
                                 Icons.Default.SkipNext,
-                                contentDescription = "Next item",
+                                contentDescription = "Mục tiếp theo",
                                 modifier = Modifier.size(36.dp)
                             )
                         }
@@ -1334,7 +1334,7 @@ private fun AutoPlayPlayerScreen(
                                 if (state.stage == AutoPlayStage.ANSWER_AUDIO && direction == AutoPlayDirection.VIETNAMESE_TO_ENGLISH) {
                                     Icon(
                                         Icons.AutoMirrored.Filled.VolumeUp,
-                                        contentDescription = "Playing English word audio",
+                                        contentDescription = "Đang phát âm thanh từ tiếng Anh",
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(24.dp)
                                     )
@@ -1366,7 +1366,7 @@ private fun AutoPlayPlayerScreen(
                             if (state.stage == AutoPlayStage.ANSWER_AUDIO && direction == AutoPlayDirection.ENGLISH_TO_VIETNAMESE) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.VolumeUp,
-                                    contentDescription = "Playing Vietnamese answer audio",
+                                    contentDescription = "Đang phát âm thanh đáp án tiếng Việt",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(22.dp)
                                 )
@@ -1400,7 +1400,7 @@ private fun AutoPlayPlayerScreen(
                                             if (state.stage == AutoPlayStage.EXAMPLE_EN_AUDIO) {
                                                 Icon(
                                                     Icons.AutoMirrored.Filled.VolumeUp,
-                                                    contentDescription = "Playing English example audio",
+                                                    contentDescription = "Đang phát âm thanh ví dụ tiếng Anh",
                                                     tint = MaterialTheme.colorScheme.primary,
                                                     modifier = Modifier.size(20.dp)
                                                 )
@@ -1423,7 +1423,7 @@ private fun AutoPlayPlayerScreen(
                                             if (state.stage == AutoPlayStage.EXAMPLE_VI_AUDIO) {
                                                 Icon(
                                                     Icons.AutoMirrored.Filled.VolumeUp,
-                                                    contentDescription = "Playing Vietnamese example audio",
+                                                    contentDescription = "Đang phát âm thanh ví dụ tiếng Việt",
                                                     tint = MaterialTheme.colorScheme.primary,
                                                     modifier = Modifier.size(18.dp)
                                                 )
@@ -1455,10 +1455,10 @@ private fun AutoPlayCompletedScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Auto Play", style = MaterialTheme.typography.titleLarge) },
+                title = { Text("Tự động phát", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Về Trang chủ")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

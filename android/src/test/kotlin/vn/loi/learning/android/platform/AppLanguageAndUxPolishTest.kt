@@ -492,4 +492,29 @@ class AppLanguageAndUxPolishTest {
         assertEquals("Giá trị", extractViString("reminder_interval_value"))
         assertEquals("Đã gửi thông báo xem trước.", extractViString("reminder_preview_sent"))
     }
+
+    @Test
+    fun `primary Android surfaces expose Vietnamese actions dialogs and accessibility text`() {
+        fun source(relative: String) = java.nio.file.Files.readString(
+            java.nio.file.Path.of("src/main/kotlin").resolve(relative)
+        )
+        val surfaces = listOf(
+            "vn/loi/learning/android/packageexperience/PackageScreen.kt",
+            "vn/loi/learning/android/study/StudyScreen.kt",
+            "vn/loi/learning/android/recording/QuickVoiceRecordingsScreen.kt",
+            "vn/loi/learning/android/recovery/BackupRestoreScreen.kt",
+            "vn/loi/learning/android/reminder/ReminderReviewScreen.kt",
+            "vn/loi/learning/android/reminder/LockScreenSettingsScreen.kt",
+            "vn/loi/learning/android/reminder/HomeWidgetSettingsScreen.kt",
+            "vn/loi/learning/android/ui/LearningEngineComponents.kt"
+        ).associateWith(::source)
+
+        listOf("Text(\"Cancel\")", "Text(\"Retry\")", "Text(\"Dismiss\")", "contentDescription = \"Back\"")
+            .forEach { forbidden ->
+                assertTrue("Chuỗi UI tiếng Anh còn sót: $forbidden", surfaces.values.none { it.contains(forbidden) })
+            }
+        assertTrue(surfaces.getValue("vn/loi/learning/android/packageexperience/PackageScreen.kt").contains("Gỡ cài đặt gói?"))
+        assertTrue(surfaces.getValue("vn/loi/learning/android/recovery/BackupRestoreScreen.kt").contains("Tạo bản sao lưu thành công"))
+        assertTrue(surfaces.getValue("vn/loi/learning/android/recording/QuickVoiceRecordingsScreen.kt").contains("Bản ghi âm"))
+    }
 }

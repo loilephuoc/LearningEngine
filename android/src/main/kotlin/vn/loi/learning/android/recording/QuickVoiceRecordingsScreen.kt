@@ -72,7 +72,7 @@ fun QuickVoiceRecordingsScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Voice Recordings", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("Bản ghi âm", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text(
                             "${recordings.size} recording${if (recordings.size == 1) "" else "s"}",
                             style = MaterialTheme.typography.bodySmall,
@@ -82,7 +82,7 @@ fun QuickVoiceRecordingsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -249,7 +249,7 @@ private fun VoiceRecordingRow(
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = "Xóa",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }

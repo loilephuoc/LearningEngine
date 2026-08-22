@@ -233,7 +233,7 @@ private fun PackageTopBar(
         },
         navigationIcon = {
             IconButton(onClick = onBack, modifier = Modifier.defaultMinSize(minWidth = LearningSpacing.touchTarget, minHeight = LearningSpacing.touchTarget)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to library")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại thư viện")
             }
         },
         actions = {
@@ -243,20 +243,20 @@ private fun PackageTopBar(
                         onClick = { showMenu = true },
                         modifier = Modifier.defaultMinSize(minWidth = LearningSpacing.touchTarget, minHeight = LearningSpacing.touchTarget)
                     ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Package operations")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Thao tác với gói")
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(
-                            text = { Text("Export package") },
+                            text = { Text("Xuất gói") },
                             onClick = { showMenu = false; onExport() }
                         )
                         DropdownMenuItem(
-                            text = { Text("Verify package file") },
+                            text = { Text("Xác minh tệp gói") },
                             onClick = { showMenu = false; onVerify() }
                         )
                         HorizontalDivider()
                         DropdownMenuItem(
-                            text = { Text("Uninstall", color = MaterialTheme.colorScheme.error) },
+                            text = { Text("Gỡ cài đặt", color = MaterialTheme.colorScheme.error) },
                             leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                             onClick = { showMenu = false; confirmUninstall = true }
                         )
@@ -269,16 +269,16 @@ private fun PackageTopBar(
     if (confirmUninstall) {
         AlertDialog(
             onDismissRequest = { confirmUninstall = false },
-            title = { Text("Uninstall package?") },
-            text = { Text("This removes \"$title\" and its local learning data. This action cannot be undone.") },
+            title = { Text("Gỡ cài đặt gói?") },
+            text = { Text("Thao tác này sẽ xóa \"$title\" và dữ liệu học cục bộ của gói. Không thể hoàn tác.") },
             confirmButton = {
                 Button(
                     onClick = { confirmUninstall = false; onUninstall() },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Uninstall") }
+                ) { Text("Gỡ cài đặt") }
             },
             dismissButton = {
-                TextButton(onClick = { confirmUninstall = false }) { Text("Cancel") }
+                TextButton(onClick = { confirmUninstall = false }) { Text("Hủy") }
             }
         )
     }
@@ -360,7 +360,7 @@ private fun PackageCtaRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                    .semantics { contentDescription = "Continue your current learning session" }
+                    .semantics { contentDescription = "Tiếp tục phiên học hiện tại" }
             )
         }
         AndroidPackageCta.ContinuePackage -> {
@@ -370,7 +370,7 @@ private fun PackageCtaRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                    .semantics { contentDescription = "Continue studying this package" }
+                    .semantics { contentDescription = "Tiếp tục học gói này" }
             )
         }
         AndroidPackageCta.StudyPackage -> {
@@ -380,7 +380,7 @@ private fun PackageCtaRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                    .semantics { contentDescription = "Start a study session for this package" }
+                    .semantics { contentDescription = "Bắt đầu phiên học cho gói này" }
             )
         }
         AndroidPackageCta.NoContent -> {
@@ -432,7 +432,7 @@ private fun PackageSearchField(
         modifier = Modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 56.dp)
-            .semantics { contentDescription = "Search within this package" }
+            .semantics { contentDescription = "Tìm kiếm trong gói này" }
     )
 }
 
@@ -528,7 +528,7 @@ private fun PackageFiltersRow(
                                     Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                                     Spacer(Modifier.width(8.dp))
                                 }
-                                Text("All lessons")
+                                Text("Tất cả bài học")
                             }
                         },
                         onClick = {
@@ -584,10 +584,10 @@ private fun PackageFiltersRow(
         if (filterSpec.isFiltered) {
             AssistChip(
                 onClick = onClearFilters,
-                label = { Text("Clear filters") },
+                label = { Text("Xóa bộ lọc") },
                 leadingIcon = { Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp)) },
                 modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
-                    contentDescription = "Clear all filters"
+                    contentDescription = "Xóa tất cả bộ lọc"
                 }
             )
         }
@@ -998,7 +998,7 @@ private fun PackageQuickEditDialog(
                 saving = false; error = it.exceptionOrNull()?.message
             }
         }) { Text(if (saving) "Saving…" else "Save") } },
-        dismissButton = { TextButton(enabled = !saving, onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(enabled = !saving, onClick = onDismiss) { Text("Hủy") } }
     )
 }
 
@@ -1037,7 +1037,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.operationFeedback(
                     TextButton(
                         onClick = onDismiss,
                         modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                    ) { Text("Dismiss") }
+                    ) { Text("Đóng") }
                 }
             }
         }
@@ -1058,7 +1058,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.operationFeedback(
                     TextButton(
                         onClick = onDismiss,
                         modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                    ) { Text("Dismiss") }
+                    ) { Text("Đóng") }
                 }
             }
         }

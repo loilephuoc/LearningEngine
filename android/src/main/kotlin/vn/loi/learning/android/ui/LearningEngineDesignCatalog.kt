@@ -12,7 +12,7 @@ private fun LearningEngineDesignCatalog() {
         LearningEngineSectionHeader("Learning Engine", "Material 3 foundation · Tiếng Việt & English")
         Text("Từ vựng", style = LearningContentTypography.vocabulary)
         Text("/təˈmɑːr.oʊ/", style = LearningContentTypography.pronunciation)
-        Text("Meaning and example text", style = LearningContentTypography.example)
+        Text("Nghĩa và văn bản ví dụ", style = LearningContentTypography.example)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
             LearningEnginePrimaryButton("Primary", {})
             LearningEngineSecondaryButton("Tonal", {})
@@ -24,7 +24,7 @@ private fun LearningEngineDesignCatalog() {
             LearningEngineFeedbackBadge(LearningDifficultyTone.DIFFICULT)
             LearningEngineFeedbackBadge(LearningDifficultyTone.EASY)
         }
-        LearningEngineEmptyState("Nothing here yet", "Your next learning item will appear here.")
+        LearningEngineEmptyState("Chưa có nội dung", "Mục học tiếp theo sẽ xuất hiện tại đây.")
         LearningEngineErrorState("Could not load", "Try again when you are ready.")
     }
 }

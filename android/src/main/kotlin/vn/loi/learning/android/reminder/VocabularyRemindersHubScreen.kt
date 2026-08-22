@@ -247,7 +247,7 @@ private fun HubNavigationCard(
 
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Open $title",
+                contentDescription = "Mở $title",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

@@ -208,7 +208,7 @@ class QuickVoiceRecordingService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Learning Engine")
-            .setContentText("Recording voice...")
+            .setContentText("Đang ghi âm...")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setOngoing(true)
             .setContentIntent(openAppPendingIntent)

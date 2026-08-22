@@ -252,7 +252,7 @@ class AndroidStudyExperienceTest {
 
         // Fullscreen overlay BackHandler and close semantics
         assertTrue(componentsSource.contains("BackHandler(onBack = onDismiss)"))
-        assertTrue(componentsSource.contains("Close full size image"))
+        assertTrue(componentsSource.contains("Đóng ảnh toàn màn hình"))
     }
 
     @Test

@@ -66,10 +66,10 @@ fun LockScreenSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Lock Screen Vocabulary") },
+                title = { Text("Từ vựng màn hình khóa") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
                     }
                 }
             )
@@ -161,7 +161,7 @@ fun LockScreenSettingsScreen(
                                 ) {
                                     if (availablePackages.isEmpty()) {
                                         DropdownMenuItem(
-                                            text = { Text("No active packages available") },
+                                            text = { Text("Không có gói học đang hoạt động") },
                                             onClick = { lockScreenPackageDropdownExpanded = false }
                                         )
                                     } else {

@@ -15,6 +15,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircleOutline
@@ -141,6 +142,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
     ) {
         item("header") { HomeHeader() }
+        item("active-package") { ActiveLearningPackageCard(model, onLibrary) }
         item("content-operation") {
             when (contentState) {
                 is AndroidContentOperationState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = accessibilityStrings().loading })
@@ -148,8 +150,8 @@ fun HomeScreen(
                 is AndroidContentOperationState.Failed -> {
                     Text(contentState.failure.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = { onContentAction(contentState.kind) }) { Text("Retry") }
-                        TextButton(onClick = onContentDismiss) { Text("Dismiss") }
+                        TextButton(onClick = { onContentAction(contentState.kind) }) { Text("Thử lại") }
+                        TextButton(onClick = onContentDismiss) { Text("Đóng") }
                     }
                 }
                 AndroidContentOperationState.Idle -> Unit
@@ -189,6 +191,33 @@ fun HomeScreen(
                 actionLabel = stringResource(R.string.home_empty_action),
                 onAction = { onContentAction(AndroidOperationKind.IMPORT) }
             )
+        }
+    }
+}
+
+@Composable
+private fun ActiveLearningPackageCard(model: AndroidHomeUiModel, onLibrary: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onLibrary).semantics(mergeDescendants = true) {
+            role = Role.Button
+            contentDescription = model.activePackageName?.let { "Gói đang học $it. Nhấn để đổi gói." }
+                ?: "Chưa chọn gói học. Nhấn để chọn gói."
+        },
+        shape = LearningEngineShapes.medium,
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+        ) {
+            Icon(Icons.AutoMirrored.Filled.MenuBook, null, tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f)) {
+                Text("GÓI ĐANG HỌC", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text(model.activePackageName ?: "Chưa chọn gói học", style = MaterialTheme.typography.titleSmall)
+                model.activePackageContentCount?.let { Text("$it nội dung", style = MaterialTheme.typography.bodySmall) }
+            }
+            Text(if (model.activePackageName == null) "Chọn gói" else "Đổi gói", color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -1297,7 +1326,7 @@ private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
 private fun DifficultPracticeHud(hud: AndroidStudySessionHud) {
     Row(
         Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
-            contentDescription = "Again ${hud.againCount}. Hard ${hud.hardCount}."
+            contentDescription = "Học lại ${hud.againCount}. Khó ${hud.hardCount}."
         },
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
@@ -1315,7 +1344,7 @@ private fun LearnNewProgressHeader(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
-            contentDescription = "Learn new. Daily new ${hud.newCompleted} of ${hud.newConfiguredTarget}. " +
+            contentDescription = "Học từ mới. Hôm nay ${hud.newCompleted} trên ${hud.newConfiguredTarget}. " +
                     "Due ${hud.dueCount}."
         },
         color = Color.Transparent
@@ -1343,7 +1372,7 @@ private fun QuickReviewProgressHeader(state: AndroidStudyState.Introduction, hud
     val poolSize = state.quickReviewPoolSize ?: hud.totalLearned
     Surface(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
-            contentDescription = "Quick Review. Exposure $position from a pool of $poolSize learned items " +
+            contentDescription = "Ôn nhanh. Lượt $position trong nhóm $poolSize mục đã học " +
                 "in the current review pass. Endless learned vocabulary review."
         },
         color = Color.Transparent
