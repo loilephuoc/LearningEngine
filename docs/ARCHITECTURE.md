@@ -1855,3 +1855,6 @@ owned by `installedPackageId`, and StudyQueue is owned by its selected `sessionI
 the exact logical reference stored on Content, never a package-ID directory convention. Filtered
 persistence envelopes replace canonical `records`, and unresolved selected references fail before an
 archive is published.
+# Dedicated launcher Quick Review widget
+
+The Android `-1 Screen` Quick Review widget is a separate `AppWidgetProvider` and RemoteViews surface. It owns only per-widget presentation state (current index and reveal state). Candidate data remains package-scoped through the persisted Library active package and the existing reminder candidate projection; explicit ratings cross the existing review bridge into the canonical `LearningEngine.review` transaction. Widget rendering and navigation never create or mutate a Study session or queue, and the widget introduces no polling or foreground service.

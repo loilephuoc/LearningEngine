@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="quick_review_widget_description">Thẻ ôn nhanh từ vựng cỡ lớn</string>
     <string name="app_name">Learning Engine</string>
     <string name="controller_accessibility_service_label">Chẩn đoán Tay cầm LearningEngine</string>
     <string name="controller_accessibility_service_description">Dịch vụ chẩn đoán theo dõi sự kiện phím tay cầm 8BitDo Micro khi chạy nền/tắt màn hình.</string>

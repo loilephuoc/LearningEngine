@@ -1,3 +1,10 @@
+# Android -1 Screen Quick Review widget
+
+- Added a dedicated large, resizable launcher widget with Vietnamese Quick Review presentation, reveal, next and four explicit rating actions.
+- Widget instances keep isolated lightweight index/reveal state; active package changes are resolved from the canonical Library aggregate on every update.
+- Passive rendering performs no learning mutation. Ratings use the existing fresh-memory `AndroidReminderReviewRatingBridge` and canonical `LearningEngine.review` transaction with stale-content and submission guards.
+- Added lifecycle, localization, runtime-policy, Study-isolation and existing-widget regression coverage.
+
 # Android active package UX
 
 - Added direct active-package selection to compact Library package cards through the existing persisted Library command.

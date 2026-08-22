@@ -85,5 +85,17 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/home_vocabulary_widget_info" />
         </receiver>
+
+        <receiver
+            android:name=".reminder.AndroidQuickReviewWidgetProvider"
+            android:exported="true"
+            android:label="Ôn nhanh -1 Screen">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_review_widget_info" />
+        </receiver>
     </application>
 </manifest>

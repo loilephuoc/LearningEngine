@@ -17,6 +17,7 @@ Completed:
 - Physical UAT PASS: Desktop 2-package archive (`Vocabulary_In_Use_Elementary` + `OPD_2nd`) restored on Android with 3,376 Content, 16,880 LearningItems and 16,619 media files.
 
 Current implementation status:
+- Android now has a dedicated large `-1 Screen` Quick Review widget. It keeps transient reveal/index state per widget instance, reads the canonical active package, uses the existing eligible-candidate projection, and submits explicit ratings through the fresh-memory canonical review bridge without touching active Study sessions.
 - Desktop Content Studio context-menu Delete now selects the clicked row and invokes the same existing deletion request/confirmation authority as toolbar Delete.
 - Desktop TTS capability is complete: multi-selection shows `Generate Audio (N)`, all missing selected-field targets are scanned/run, single and batch share seven speed levels, pitch/volume reach preview and generation requests, and preview uses the displayed selected-field text.
 - Study daily New/Review limits now have long-press editors. Apply atomically updates the active session policy and replans/replaces its canonical queue before persisting preferences, then reloads the same session immediately.
@@ -34,7 +35,7 @@ Physical UAT:
 Commit: active-session limits capability follows Desktop TTS checkpoint `8babd4a1`.
 
 Next:
-- Run final APK artifact verification and physical-device UAT where available.
+- Run final verification and physical-device UAT for the dedicated Quick Review widget where the launcher supports a -1 Screen widget surface.
 
 Blockers: none.
 

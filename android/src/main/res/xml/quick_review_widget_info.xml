@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="300dp" android:minHeight="240dp"
+    android:minResizeWidth="250dp" android:minResizeHeight="180dp"
+    android:targetCellWidth="4" android:targetCellHeight="4"
+    android:maxResizeWidth="700dp" android:maxResizeHeight="700dp"
+    android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen"
+    android:initialLayout="@layout/quick_review_widget"
+    android:previewImage="@drawable/ic_notification_reminder"
+    android:description="@string/quick_review_widget_description"
+    android:updatePeriodMillis="0" />

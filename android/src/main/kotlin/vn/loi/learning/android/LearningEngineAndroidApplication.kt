@@ -100,6 +100,13 @@ class LearningEngineAndroidApplication : Application() {
             context = graph.engine
         )
     }
+    val quickReviewWidgetCoordinator: vn.loi.learning.android.reminder.AndroidQuickReviewWidgetCoordinator by lazy {
+        vn.loi.learning.android.reminder.AndroidQuickReviewWidgetCoordinator(
+            context = this,
+            selector = reminderCandidateSelector,
+            ratingBridge = reminderRatingBridge
+        )
+    }
     val reminderFsrsInspectorQuery: vn.loi.learning.android.reminder.AndroidReminderReviewFsrsInspectorQuery by lazy {
         vn.loi.learning.android.reminder.AndroidReminderReviewFsrsInspectorQuery(context = graph.engine)
     }
