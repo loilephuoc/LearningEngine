@@ -1,10 +1,10 @@
 # Cross-Platform Sync & Portable Backup — State
 
-**Current Status**: Phase 4 in progress — media completeness, creation preview and readable naming delivered; progress/UAT remains
+**Current Status**: Phase 4 in progress — media completeness, preview, naming, progress and cancellation delivered; real-package UAT remains
 **Branch**: `feat/cross-platform-sync`
 **Target Platform Interoperability**: Desktop (JVM/Compose) <-> Android (Kotlin/Jetpack Compose)
-**Verification Baseline**: 4,997 / 4,997 tests passing (`.\gradlew.bat clean test` BUILD SUCCESSFUL, 2026-08-22)
-- Engine Tests: 2,233
+**Verification Baseline**: 4,998 / 4,998 tests passing (`.\gradlew.bat clean test` BUILD SUCCESSFUL, 2026-08-22)
+- Engine Tests: 2,234
 - Android Tests: 962
 - Desktop Tests: 1,802
 
@@ -40,15 +40,15 @@
 | **Phase 1** | Repository Audit + Architecture + Interchange Contract | **COMPLETED** | Verified |
 | **Phase 2** | Differential Sync + Media Deduplication + FSRS Convergence | **COMPLETED** | Verified |
 | **Phase 3** | Selective Portable Backup/Restore + Package Identification + Compatibility Badges | **COMPLETED** | Verified (4,988 tests) |
-| **Phase 4** | Portable Backup Quality, integrity evidence, preview, progress, naming and real-package UAT | **IN PROGRESS** | Media fix + preview/naming verified (4,997 tests) |
+| **Phase 4** | Portable Backup Quality, integrity evidence, preview, progress, naming and real-package UAT | **IN PROGRESS** | Product workflow verified (4,998 tests); physical UAT pending |
 
 ## 3. Phase 4 Continuation
 
-- **Completed capabilities**: selective backup resolves stable package ID through canonical package/library ownership to Content IDs and package-name media paths; read-only creation preview reports package/content/item/FSRS/media counts and estimated bytes; selected scope uses a safe local timestamp filename. Only referenced media is retained; a missing reference aborts publication.
+- **Completed capabilities**: selective backup resolves stable package identity and referenced media; read-only preview reports package/content/item/FSRS/media counts and bytes; names use a safe local timestamp; preview/archive/verification run off the Compose thread with typed phase, overall %, item and byte progress; cancellation cleans temporary work without publishing a target; verified success reports archive/media sizes and compression.
 - **Measured root cause**: `Vocabulary_In_Use_Upper_Intermediate` has package ID `package-07f8741f5da8588121a71c3a`, while its media folder is named `Vocabulary_In_Use_Upper_Intermediate`. The old ID-prefix filter excluded all 15,211 files (970,940,650 source bytes), explaining the approximately 3.7 MB metadata-only archive.
 - **Files changed**: `JvmLearningDataRecoveryManager.kt`, `SelectivePackageBackupAndRestoreTest.kt`, checkpoint documentation.
-- **Next exact capability**: move preview/archive work off the Compose UI thread and add typed backup progress/verification/success reporting.
-- **Current checkpoint**: the capability commit containing this state update (`feat(sync): add portable backup preview and readable naming`).
+- **Next exact capability**: run the physical `Vocabulary_In_Use_Upper_Intermediate` creation/ZIP/extraction/hash UAT, then inspect the resulting archive on Android before any restore.
+- **Current checkpoint**: the capability commit containing this state update (`feat(sync): add portable backup progress and cancellation`).
 - **Expected post-commit worktree**: clean.
 
 ## 4. Decision Log

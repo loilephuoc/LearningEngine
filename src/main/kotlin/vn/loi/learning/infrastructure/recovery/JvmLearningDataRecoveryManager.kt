@@ -103,11 +103,13 @@ class JvmLearningDataRecoveryManager(
         target: Path,
         descriptor: PortableBackupV2Descriptor,
         contributor: PortableBackupV2SnapshotContributor? = null,
-        limits: PortableBackupV2Limits = PortableBackupV2Limits()
+        limits: PortableBackupV2Limits = PortableBackupV2Limits(),
+        onProgress: (PortableBackupProgressV2) -> Unit = {},
+        shouldCancel: () -> Boolean = { false }
     ): Path = try {
         gate.backup {
             failureHook("backup-v2-gate-acquired", null)
-            createPortableBackupV2Locked(target, descriptor, contributor, limits)
+                createPortableBackupV2Locked(target, descriptor, contributor, limits, onProgress, shouldCancel)
         }
     } catch (failure: RecoveryOperationBusyException) {
         throw failure
@@ -260,7 +262,9 @@ class JvmLearningDataRecoveryManager(
         target: Path,
         descriptor: PortableBackupV2Descriptor,
         contributor: PortableBackupV2SnapshotContributor?,
-        limits: PortableBackupV2Limits
+        limits: PortableBackupV2Limits,
+        onProgress: (PortableBackupProgressV2) -> Unit,
+        shouldCancel: () -> Boolean
     ): Path {
         val normalized = target.toAbsolutePath().normalize()
         if (Files.exists(normalized)) throw LearningDataRecoveryException("Backup target already exists.")
@@ -268,12 +272,22 @@ class JvmLearningDataRecoveryManager(
         var temporary: Path? = null
         var staging: Path? = null
         try {
+            onProgress(PortableBackupProgressV2(PortableBackupPhaseV2.PREPARING))
             temporary = Files.createTempFile(normalized.parent, ".learning-engine-backup-v2-", ".tmp")
             staging = Files.createTempDirectory(normalized.parent, ".learning-engine-snapshot-v2-")
-            portableInventory().forEach { (logical, source) ->
+            val inventory = portableInventory()
+            val inventoryBytes = inventory.sumOf { Files.size(it.second) }
+            var copiedBytes = 0L
+            inventory.forEachIndexed { index, (logical, source) ->
+                if (shouldCancel()) throw PortableBackupCancelledException()
+                onProgress(PortableBackupProgressV2(
+                    PortableBackupPhaseV2.SCANNING_PACKAGES,
+                    index.toLong(), inventory.size.toLong(), copiedBytes, inventoryBytes, logical
+                ))
                 val staged = staging.resolve(logical).normalize().also { require(it.startsWith(staging)) }
                 Files.createDirectories(requireNotNull(staged.parent))
                 Files.copy(source, staged)
+                copiedBytes += Files.size(source)
             }
 
             val packageEntries = if (!descriptor.specificPackageIds.isNullOrEmpty() || !descriptor.includeLearningProgress) {
@@ -296,6 +310,7 @@ class JvmLearningDataRecoveryManager(
 
             val supplements = contributor?.snapshot(staging) ?: emptyList()
             val payloads = (stagedCanonical + supplements).sortedBy { it.logicalPath }
+            onProgress(PortableBackupProgressV2(PortableBackupPhaseV2.CALCULATING_MEDIA, totalItems = payloads.size.toLong()))
             validatePayloadPlan(payloads, staging, limits)
             val records = payloads.map { payload ->
                 PortableBackupEntryV2(
@@ -326,20 +341,33 @@ class JvmLearningDataRecoveryManager(
             )
             val manifestBytes = V2_JSON.encodeToString(manifest).toByteArray(StandardCharsets.UTF_8)
             if (manifestBytes.size.toLong() > limits.maxUncompressedBytesPerEntry) error("Backup manifest is oversized.")
+            onProgress(PortableBackupProgressV2(PortableBackupPhaseV2.PREPARING_ARCHIVE))
+            var writtenBytes = 0L
+            val totalPayloadBytes = records.sumOf { it.uncompressedSize }
             ZipOutputStream(Files.newOutputStream(temporary)).use { zip ->
                 zip.putNextEntry(ZipEntry(V2_MANIFEST_ENTRY).apply { time = 0L })
                 zip.write(manifestBytes)
                 zip.closeEntry()
-                payloads.forEach { payload ->
+                payloads.forEachIndexed { index, payload ->
+                    if (shouldCancel()) throw PortableBackupCancelledException()
+                    val phase = if (payload.logicalType == "media") PortableBackupPhaseV2.WRITING_MEDIA else PortableBackupPhaseV2.WRITING_DATA
+                    onProgress(PortableBackupProgressV2(
+                        phase, index.toLong(), payloads.size.toLong(), writtenBytes, totalPayloadBytes, payload.logicalPath
+                    ))
                     zip.putNextEntry(ZipEntry(payload.logicalPath).apply { time = 0L })
                     Files.newInputStream(payload.source).buffered(limits.ioBufferBytes).use { it.copyTo(zip, limits.ioBufferBytes) }
                     zip.closeEntry()
+                    writtenBytes += Files.size(payload.source)
                 }
             }
             forceFile(temporary)
+            if (shouldCancel()) throw PortableBackupCancelledException()
+            onProgress(PortableBackupProgressV2(PortableBackupPhaseV2.VERIFYING_BACKUP))
             validatePortableBackupV2Internal(temporary, limits)
+            onProgress(PortableBackupProgressV2(PortableBackupPhaseV2.FINALIZING))
             publishAtomically(temporary, normalized)
             temporary = null
+            onProgress(PortableBackupProgressV2(PortableBackupPhaseV2.COMPLETED, 1, 1, totalPayloadBytes, totalPayloadBytes))
             return normalized
         } finally {
             temporary?.let(Files::deleteIfExists)
@@ -796,7 +824,9 @@ class JvmLearningDataRecoveryManager(
                     safety,
                     PortableBackupV2Descriptor("safety-pre-restore", null, "safety", emptyList()),
                     contributorForSafetyBackup,
-                    limits
+                    limits,
+                    {},
+                    { false }
                 )
                 validatePortableBackupV2Internal(safety, limits)
                 failureHook("restore-v2-safety-backup-verified", null)

@@ -29,6 +29,7 @@ fun DesktopBackupDialog(
     onToggleIncludeProgress: (Boolean) -> Unit,
     onRefreshPreview: () -> Unit,
     onExecuteBackup: () -> Unit,
+    onCancelBackup: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Dialog(
@@ -82,7 +83,7 @@ fun DesktopBackupDialog(
 
                 Spacer(modifier = Modifier.height(LESpacing.md))
 
-                if (state.exportSuccessPath != null) {
+                state.successReport?.let { report ->
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                         modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.sm)
@@ -97,10 +98,38 @@ fun DesktopBackupDialog(
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = state.exportSuccessPath,
+                                    text = report.path,
                                     style = MaterialTheme.typography.bodySmall
                                 )
+                                Text("${report.packageCount} gói • ${report.contentCount} nội dung")
+                                Text("${report.mediaFileCount} media / ${formatBackupBytes(report.mediaBytes)}")
+                                Text("Kích thước archive: ${formatBackupBytes(report.archiveBytes)}")
+                                Text("Tỷ lệ nén: ${"%.1f".format(report.compressionRatio)}%")
+                                Text("Xác minh: ${if (report.verificationPassed) "PASSED" else "FAILED"}")
                             }
+                        }
+                    }
+                }
+
+                if (state.isExporting) {
+                    val progress = state.progress
+                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.sm)) {
+                        Column(modifier = Modifier.padding(LESpacing.md)) {
+                            Text("Đang tạo bản sao lưu...", fontWeight = FontWeight.SemiBold)
+                            Text(progress?.phase?.let(::backupPhaseLabel) ?: "Đang chuẩn bị...")
+                            LinearProgressIndicator(
+                                progress = { progress?.overallFraction ?: 0f },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.xs)
+                            )
+                            Text("${((progress?.overallFraction ?: 0f) * 100).toInt()}%")
+                            if (progress != null && progress.totalItems > 0) {
+                                Text("${progress.processedItems} / ${progress.totalItems} tệp")
+                            }
+                            if (progress != null && progress.totalBytes > 0) {
+                                Text("${formatBackupBytes(progress.processedBytes)} / ${formatBackupBytes(progress.totalBytes)}")
+                            }
+                            progress?.currentItem?.let { Text(it, style = LETypography.caption, maxLines = 1) }
+                            Text("Thời gian: ${state.elapsedMillis / 1000}s", style = LETypography.caption)
                         }
                     }
                 }
@@ -239,9 +268,9 @@ fun DesktopBackupDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     LESecondaryButton(
-                        text = if (state.exportSuccessPath != null) "Đóng" else "Hủy",
-                        onClick = onDismiss,
-                        enabled = !state.isExporting
+                        text = if (state.isExporting) "Hủy sao lưu" else if (state.exportSuccessPath != null) "Đóng" else "Hủy",
+                        onClick = if (state.isExporting) onCancelBackup else onDismiss,
+                        enabled = true
                     )
                     Spacer(modifier = Modifier.width(LESpacing.sm))
                     LEPrimaryButton(
@@ -259,4 +288,16 @@ fun DesktopBackupDialog(
 private fun formatBackupBytes(bytes: Long): String {
     val mib = bytes / (1024.0 * 1024.0)
     return if (mib >= 1024.0) "%.2f GB".format(mib / 1024.0) else "%.2f MB".format(mib)
+}
+
+private fun backupPhaseLabel(phase: vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2): String = when (phase) {
+    vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.PREPARING -> "Đang chuẩn bị..."
+    vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.SCANNING_PACKAGES -> "Đang quét gói học..."
+    vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.CALCULATING_MEDIA -> "Đang tính media..."
+    vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.PREPARING_ARCHIVE -> "Đang chuẩn bị archive..."
+    vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.WRITING_DATA -> "Đang ghi dữ liệu..."
+    vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.WRITING_MEDIA -> "Đang ghi media..."
+    vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.VERIFYING_BACKUP -> "Đang xác minh backup..."
+    vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.FINALIZING -> "Đang hoàn tất..."
+    vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.COMPLETED -> "Hoàn thành"
 }

@@ -86,14 +86,20 @@ class SelectivePackageBackupAndRestoreTest {
             assertEquals("selected-audio".toByteArray().size.toLong(), plan.mediaBytes)
             assertTrue(plan.estimatedDataBytes > 0)
             assertEquals(plan.estimatedDataBytes + plan.mediaBytes, plan.estimatedTotalBytes)
+            val phases = mutableListOf<PortableBackupPhaseV2>()
             recovery.createPortableBackupV2(
                 backup,
                 PortableBackupV2Descriptor(
                     appVersion = "2.0.0",
                     sourcePlatform = "desktop",
                     specificPackageIds = setOf("package-upper-hash")
-                )
+                ),
+                onProgress = { phases += it.phase }
             )
+            assertEquals(PortableBackupPhaseV2.PREPARING, phases.first())
+            assertTrue(PortableBackupPhaseV2.WRITING_MEDIA in phases)
+            assertTrue(PortableBackupPhaseV2.VERIFYING_BACKUP in phases)
+            assertEquals(PortableBackupPhaseV2.COMPLETED, phases.last())
 
             val manifest = recovery.validatePortableBackupV2(backup)
             assertEquals(1, manifest.packages.single().contentCount)
@@ -139,6 +145,38 @@ class SelectivePackageBackupAndRestoreTest {
             assertNotNull(failure)
             assertTrue(failure.cause?.message.orEmpty().contains("media is incomplete"))
             assertTrue(Files.notExists(root.resolve("missing.lebak")))
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `backup cancellation removes temporary work and never publishes target`() {
+        val root = Files.createTempDirectory("portable-cancel-test-")
+        try {
+            val data = root.resolve("data")
+            Files.createDirectories(data)
+            Files.writeString(data.resolve("installed-packages.json"), "{\"records\":[]}")
+            val target = root.resolve("cancelled.lebak")
+            val recovery = JvmLearningDataRecoveryManager(
+                roots = mapOf("data" to data),
+                safetyDirectory = root.resolve("safety")
+            )
+
+            val failure = runCatching {
+                recovery.createPortableBackupV2(
+                    target,
+                    PortableBackupV2Descriptor(appVersion = "2.0.0", sourcePlatform = "desktop"),
+                    shouldCancel = { true }
+                )
+            }.exceptionOrNull()
+
+            assertNotNull(failure)
+            assertTrue(failure.cause is PortableBackupCancelledException)
+            assertTrue(Files.notExists(target))
+            assertTrue(Files.list(root).use { paths ->
+                paths.noneMatch { it.fileName.toString().startsWith(".learning-engine-") }
+            })
         } finally {
             root.toFile().deleteRecursively()
         }

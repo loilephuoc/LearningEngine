@@ -89,6 +89,50 @@ data class PortableBackupCreationPlanV2(
     val estimatedTotalBytes: Long
 )
 
+enum class PortableBackupPhaseV2 {
+    PREPARING,
+    SCANNING_PACKAGES,
+    CALCULATING_MEDIA,
+    PREPARING_ARCHIVE,
+    WRITING_DATA,
+    WRITING_MEDIA,
+    VERIFYING_BACKUP,
+    FINALIZING,
+    COMPLETED
+}
+
+class PortableBackupCancelledException : IllegalStateException("Backup cancelled safely.")
+
+data class PortableBackupProgressV2(
+    val phase: PortableBackupPhaseV2,
+    val processedItems: Long = 0,
+    val totalItems: Long = 0,
+    val processedBytes: Long = 0,
+    val totalBytes: Long = 0,
+    val currentItem: String? = null
+) {
+    val fraction: Float
+        get() = when {
+            totalBytes > 0 -> (processedBytes.toDouble() / totalBytes).coerceIn(0.0, 1.0).toFloat()
+            totalItems > 0 -> (processedItems.toDouble() / totalItems).coerceIn(0.0, 1.0).toFloat()
+            phase == PortableBackupPhaseV2.COMPLETED -> 1f
+            else -> 0f
+        }
+
+    val overallFraction: Float
+        get() = when (phase) {
+            PortableBackupPhaseV2.PREPARING -> 0.02f
+            PortableBackupPhaseV2.SCANNING_PACKAGES -> 0.05f + 0.25f * fraction
+            PortableBackupPhaseV2.CALCULATING_MEDIA -> 0.32f
+            PortableBackupPhaseV2.PREPARING_ARCHIVE -> 0.35f
+            PortableBackupPhaseV2.WRITING_DATA,
+            PortableBackupPhaseV2.WRITING_MEDIA -> 0.35f + 0.50f * fraction
+            PortableBackupPhaseV2.VERIFYING_BACKUP -> 0.88f
+            PortableBackupPhaseV2.FINALIZING -> 0.96f
+            PortableBackupPhaseV2.COMPLETED -> 1f
+        }
+}
+
 data class PortableBackupV2Limits(
     val maxArchiveEntryCount: Int = 20_000,
     val maxUncompressedBytesPerEntry: Long = 2L * 1024 * 1024 * 1024,

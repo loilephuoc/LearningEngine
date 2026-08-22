@@ -250,8 +250,8 @@ fun LearningShell(
     val effectiveRecoveryManager = remember(recoveryManager) {
         recoveryManager ?: DesktopRecoveryManager(java.nio.file.Path.of("data"), java.nio.file.Path.of("config"))
     }
-    val syncViewModel = remember(applicationContext, effectiveRecoveryManager) {
-        DesktopSyncViewModel(applicationContext, effectiveRecoveryManager)
+    val syncViewModel = remember(applicationContext, effectiveRecoveryManager, taskRunner) {
+        DesktopSyncViewModel(applicationContext, effectiveRecoveryManager, taskRunner)
     }
     val backupState by syncViewModel.backupState.collectAsState()
     val restoreState by syncViewModel.restoreState.collectAsState()
@@ -694,6 +694,7 @@ fun LearningShell(
                 onTogglePackage = syncViewModel::toggleBackupPackage,
                 onToggleIncludeProgress = syncViewModel::toggleBackupIncludeProgress,
                 onRefreshPreview = syncViewModel::refreshBackupPreview,
+                onCancelBackup = syncViewModel::cancelBackup,
                 onExecuteBackup = {
                     val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Chọn nơi lưu bản sao lưu .lebak", java.awt.FileDialog.SAVE)
                     dialog.file = syncViewModel.suggestedBackupFileName()

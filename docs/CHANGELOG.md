@@ -22,6 +22,17 @@
 - Restored discovery of seven Desktop sync ViewModel tests by moving them to the active Kotlin test
   annotations. Full verification passes 4,997 tests (2,233 engine, 962 Android, 1,802 Desktop).
 
+# Cross-platform sync — portable backup progress and cancellation
+
+- Moved Desktop preview and archive creation onto the established IO coroutine runner and added typed
+  preparation, scan, media, write, verification, finalization and completion progress with overall
+  percentage, current item, file/byte totals and elapsed time.
+- Added cooperative cancellation between files and before verification. Cancellation exercises the
+  existing `finally` cleanup and atomic publication boundary, leaving no target or temporary staging.
+- Success presentation now comes from a revalidated manifest and reports selected packages/content,
+  media files/bytes, archive size, compression and verification status. Full verification passes
+  4,998 tests (2,234 engine, 962 Android, 1,802 Desktop).
+
 # Backup / Restore transaction safety
 
 - Added one application-wide recovery operation gate at the shared transaction composition root,

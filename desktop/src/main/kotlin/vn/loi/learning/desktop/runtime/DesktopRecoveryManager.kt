@@ -16,6 +16,7 @@ import vn.loi.learning.infrastructure.recovery.JvmLearningDataRecoveryManager
 import vn.loi.learning.infrastructure.recovery.LearningDataRecoveryException
 import vn.loi.learning.infrastructure.recovery.PortableBackupManifestV2
 import vn.loi.learning.infrastructure.recovery.PortableBackupCreationPlanV2
+import vn.loi.learning.infrastructure.recovery.PortableBackupProgressV2
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2Descriptor
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2Preview
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult
@@ -66,8 +67,12 @@ class DesktopRecoveryManager(
             versionCode = 1,
             sourcePlatform = "desktop",
             learnerIds = listOf("default-learner")
-        )
-    ): Path = jvmRecoveryManager.createPortableBackupV2(target, descriptor)
+        ),
+        onProgress: (PortableBackupProgressV2) -> Unit = {},
+        shouldCancel: () -> Boolean = { false }
+    ): Path = jvmRecoveryManager.createPortableBackupV2(
+        target, descriptor, onProgress = onProgress, shouldCancel = shouldCancel
+    )
 
     fun previewPortableBackupCreation(
         descriptor: PortableBackupV2Descriptor

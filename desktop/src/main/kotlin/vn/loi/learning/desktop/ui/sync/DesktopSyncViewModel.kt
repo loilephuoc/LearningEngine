@@ -7,15 +7,24 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import vn.loi.learning.desktop.runtime.DesktopRecoveryManager
+import vn.loi.learning.desktop.ui.state.DesktopTaskRunner
+import vn.loi.learning.desktop.ui.state.ImmediateDesktopTaskRunner
 import vn.loi.learning.domain.sync.model.ConflictResolutionStrategy
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2Descriptor
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult
+import vn.loi.learning.infrastructure.recovery.PortableBackupCancelledException
 
 class DesktopSyncViewModel(
     private val applicationContext: LearningApplicationContext,
-    private val recoveryManager: DesktopRecoveryManager
+    private val recoveryManager: DesktopRecoveryManager,
+    private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner
 ) {
+    private val backupCancellationRequested = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    fun cancelBackup() {
+        if (_backupState.value.isExporting) backupCancellationRequested.set(true)
+    }
     fun suggestedBackupFileName(localTime: java.time.LocalDateTime = java.time.LocalDateTime.now()): String {
         val state = _backupState.value
         val names = if (state.selectAllPackages) emptyList() else
@@ -80,57 +89,90 @@ class DesktopSyncViewModel(
     fun refreshBackupPreview() {
         val state = _backupState.value
         _backupState.value = state.copy(isPreviewing = true, preview = null, errorMessage = null)
-        try {
-            val selectedPackageIds = if (state.selectAllPackages) null else
-                state.availablePackages.filter { it.isSelected }.map { it.packageId }.toSet()
-            val preview = recoveryManager.previewPortableBackupCreation(
-                PortableBackupV2Descriptor(
-                    appVersion = "2.0.0",
-                    versionCode = 1,
-                    sourcePlatform = "desktop",
-                    learnerIds = listOf("default-learner"),
-                    includeLearningProgress = state.includeLearningProgress,
-                    specificPackageIds = selectedPackageIds
+        val selectedPackageIds = if (state.selectAllPackages) null else
+            state.availablePackages.filter { it.isSelected }.map { it.packageId }.toSet()
+        taskRunner.run(
+            work = {
+                recoveryManager.previewPortableBackupCreation(
+                    PortableBackupV2Descriptor(
+                        appVersion = "2.0.0",
+                        versionCode = 1,
+                        sourcePlatform = "desktop",
+                        learnerIds = listOf("default-learner"),
+                        includeLearningProgress = state.includeLearningProgress,
+                        specificPackageIds = selectedPackageIds
+                    )
                 )
-            )
-            _backupState.value = _backupState.value.copy(isPreviewing = false, preview = preview)
-        } catch (e: Exception) {
-            _backupState.value = _backupState.value.copy(
+            },
+            onSuccess = { preview -> _backupState.value = _backupState.value.copy(isPreviewing = false, preview = preview) },
+            onFailure = { e -> _backupState.value = _backupState.value.copy(
                 isPreviewing = false,
                 errorMessage = e.message ?: "Failed to preview backup."
-            )
-        }
+            ) }
+        )
     }
 
     fun executeBackup(targetPath: Path) {
-        _backupState.value = _backupState.value.copy(isExporting = true, errorMessage = null)
-        try {
-            val selectedPackageIds = if (_backupState.value.selectAllPackages) {
+        val state = _backupState.value
+        val startedAt = System.nanoTime()
+        backupCancellationRequested.set(false)
+        _backupState.value = state.copy(
+            isExporting = true, errorMessage = null, progress = null, successReport = null, elapsedMillis = 0
+        )
+        val selectedPackageIds = if (state.selectAllPackages) {
                 null
             } else {
-                _backupState.value.availablePackages.filter { it.isSelected }.map { it.packageId }.toSet()
+                state.availablePackages.filter { it.isSelected }.map { it.packageId }.toSet()
             }
-            recoveryManager.createPortableBackupV2(
-                target = targetPath,
-                descriptor = PortableBackupV2Descriptor(
-                    appVersion = "2.0.0",
-                    versionCode = 1,
-                    sourcePlatform = "desktop",
-                    learnerIds = listOf("default-learner"),
-                    includeLearningProgress = _backupState.value.includeLearningProgress,
-                    specificPackageIds = selectedPackageIds
+        taskRunner.run(
+            work = {
+                recoveryManager.createPortableBackupV2(
+                    target = targetPath,
+                    descriptor = PortableBackupV2Descriptor(
+                        appVersion = "2.0.0",
+                        versionCode = 1,
+                        sourcePlatform = "desktop",
+                        learnerIds = listOf("default-learner"),
+                        includeLearningProgress = state.includeLearningProgress,
+                        specificPackageIds = selectedPackageIds
+                    ),
+                    onProgress = { progress ->
+                        _backupState.value = _backupState.value.copy(
+                            progress = progress,
+                            elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000
+                        )
+                    },
+                    shouldCancel = backupCancellationRequested::get
                 )
-            )
-            _backupState.value = _backupState.value.copy(
+                val manifest = recoveryManager.validatePortableBackupV2(targetPath)
+                val archiveBytes = Files.size(targetPath)
+                val expandedBytes = manifest.bytes.totalExpandedBytes
+                DesktopBackupSuccessReport(
+                    path = targetPath.toString(),
+                    archiveBytes = archiveBytes,
+                    packageCount = manifest.counts.packages,
+                    contentCount = manifest.counts.contents,
+                    mediaFileCount = manifest.counts.mediaFiles,
+                    mediaBytes = manifest.bytes.mediaBytes,
+                    expandedBytes = expandedBytes,
+                    compressionRatio = if (expandedBytes == 0L) 0.0 else
+                        (1.0 - archiveBytes.toDouble() / expandedBytes).coerceAtLeast(0.0) * 100.0,
+                    verificationPassed = true
+                )
+            },
+            onSuccess = { report -> _backupState.value = _backupState.value.copy(
                 isExporting = false,
-                exportSuccessPath = targetPath.toString()
-            )
-        } catch (e: Exception) {
-            _backupState.value = _backupState.value.copy(
+                exportSuccessPath = targetPath.toString(),
+                successReport = report,
+                elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000
+            ) },
+            onFailure = { e -> _backupState.value = _backupState.value.copy(
                 isExporting = false,
-                errorMessage = e.message ?: "Failed to create backup."
-            )
-        }
+                errorMessage = if (e is PortableBackupCancelledException || e.cause is PortableBackupCancelledException)
+                    "Đã hủy sao lưu an toàn; không có tệp .lebak nào được xuất bản."
+                else e.message ?: "Failed to create backup."
+            ) }
+        )
     }
 
     fun openRestoreDialog() {

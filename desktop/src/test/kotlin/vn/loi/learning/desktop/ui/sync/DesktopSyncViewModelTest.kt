@@ -93,6 +93,9 @@ class DesktopSyncViewModelTest {
         val state = viewModel.backupState.value
         assertFalse(state.isExporting)
         assertEquals(targetPath.toString(), state.exportSuccessPath)
+        assertNotNull(state.successReport)
+        assertTrue(state.successReport?.verificationPassed == true)
+        assertTrue(state.progress?.phase == vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.COMPLETED)
         assertNull(state.errorMessage)
         assertTrue(Files.exists(targetPath))
     }

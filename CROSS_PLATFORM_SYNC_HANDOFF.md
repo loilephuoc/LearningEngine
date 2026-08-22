@@ -13,8 +13,8 @@ Learning Engine uses a dual-layer synchronization and recovery architecture:
 - **Conflict Handling**: Collisions provide three options: `MERGE_FIELD_LEVEL` (default/recommended), `PRESERVE_LOCAL`, and `APPLY_INCOMING`.
 
 ## 3. Verification & Metrics
-- Total Tests: **4,997 / 4,997 passing** (`.\gradlew.bat clean test` BUILD SUCCESSFUL, 2026-08-22).
-- Engine: 2,233 tests
+- Total Tests: **4,998 / 4,998 passing** (`.\gradlew.bat clean test` BUILD SUCCESSFUL, 2026-08-22).
+- Engine: 2,234 tests
 - Android: 962 tests
 - Desktop: 1,802 tests
 
@@ -29,5 +29,11 @@ Learning Engine uses a dual-layer synchronization and recovery architecture:
   and archive creation is disabled until a valid preview exists.
 - Save-dialog names now use `LearningEngine_Backup_<scope>_yyyyMMdd_HHmmss.lebak` in local device time.
 - Seven previously undiscovered `DesktopSyncViewModelTest` tests now use the active Kotlin test runner and pass.
-- Current checkpoint: the capability commit containing this handoff (`feat(sync): add portable backup preview and readable naming`).
-- Next exact task: execute preview/backup outside the Compose UI thread and publish typed progress, verification and success details.
+- Preview and archive creation use the existing IO coroutine runner, leaving Compose responsive. Typed
+  progress covers preparation, scanning, media calculation, data/media writing, verification,
+  finalization and completion with overall percentage, item/byte counts and elapsed time.
+- Safe cancellation is polled between files and before verification; staging/temp files are removed
+  and no target is published. Success UI is based on a revalidated manifest and reports archive/media
+  sizes, compression and `PASSED` verification.
+- Current checkpoint: the capability commit containing this handoff (`feat(sync): add portable backup progress and cancellation`).
+- Next exact task: physical Upper Intermediate backup/ZIP/extraction/hash UAT, followed by Android inspection without restore until preview identity is correct.

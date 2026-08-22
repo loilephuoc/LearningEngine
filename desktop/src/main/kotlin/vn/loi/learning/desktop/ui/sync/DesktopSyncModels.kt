@@ -5,6 +5,19 @@ import vn.loi.learning.domain.sync.model.SyncPreviewReport
 import vn.loi.learning.domain.sync.model.SyncResultSummary
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2Preview
 import vn.loi.learning.infrastructure.recovery.PortableBackupCreationPlanV2
+import vn.loi.learning.infrastructure.recovery.PortableBackupProgressV2
+
+data class DesktopBackupSuccessReport(
+    val path: String,
+    val archiveBytes: Long,
+    val packageCount: Long,
+    val contentCount: Long,
+    val mediaFileCount: Long,
+    val mediaBytes: Long,
+    val expandedBytes: Long,
+    val compressionRatio: Double,
+    val verificationPassed: Boolean
+)
 
 data class DesktopPackageItem(
     val id: String,
@@ -22,6 +35,9 @@ data class DesktopBackupDialogState(
     val preview: PortableBackupCreationPlanV2? = null,
     val isPreviewing: Boolean = false,
     val isExporting: Boolean = false,
+    val progress: PortableBackupProgressV2? = null,
+    val elapsedMillis: Long = 0,
+    val successReport: DesktopBackupSuccessReport? = null,
     val exportSuccessPath: String? = null,
     val errorMessage: String? = null
 )
