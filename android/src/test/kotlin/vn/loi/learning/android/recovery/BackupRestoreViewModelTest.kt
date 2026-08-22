@@ -170,7 +170,7 @@ class BackupRestoreViewModelTest {
             testScheduler.advanceUntilIdle()
 
             val list = assertIs<SafetyBackupListState.Ready>(viewModel.safetyBackups.value)
-            val candidate = list.inventory.validV2.single()
+            val candidate = list.inventory.entries.single()
             viewModel.previewSafetyBackup(candidate)
             testScheduler.advanceUntilIdle()
 

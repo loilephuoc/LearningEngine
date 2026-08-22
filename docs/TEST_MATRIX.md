@@ -2,6 +2,9 @@
 
 ## Phase 4 safety backup inventory and retention
 
+- Fast-discovery coverage verifies empty state, no-index manifest discovery, cached validated identity,
+  changed-file invalidation, missing-file convergence, corrupt-index rebuild, corrupt-archive invalid
+  transition, verified-creation index publication, and retention index cleanup without timing assertions.
 - Validate discovery metadata for `safety-v2-*.lebak`, invalid-v2 exclusion, separate legacy
   recognition, and exclusion of unrelated/user portable archives.
 - Cover zero/one/two/three-plus valid candidates, five-to-two physical deletion, manifest-time ordering,

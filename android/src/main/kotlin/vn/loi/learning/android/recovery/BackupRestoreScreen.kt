@@ -39,7 +39,8 @@ import vn.loi.learning.domain.sync.model.SyncPreviewReport
 import vn.loi.learning.domain.sync.model.SyncResultSummary
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2Preview
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult
-import vn.loi.learning.infrastructure.recovery.SafetyBackupCandidate
+import vn.loi.learning.infrastructure.recovery.SafetyBackupListEntry
+import vn.loi.learning.infrastructure.recovery.SafetyBackupValidationStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -536,7 +537,7 @@ private fun SafetyBackupCard(
     state: SafetyBackupListState,
     enabled: Boolean,
     onRefresh: () -> Unit,
-    onPreview: (SafetyBackupCandidate) -> Unit
+    onPreview: (SafetyBackupListEntry) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -557,14 +558,11 @@ private fun SafetyBackupCard(
                 is SafetyBackupListState.Ready -> {
                     val inventory = state.inventory
                     Text(
-                        "Bản sao an toàn: ${inventory.validV2.size} bản • ${formatBytesHelper(inventory.totalValidV2Bytes)}"
+                        "Bản sao an toàn: ${inventory.entries.size} bản • ${formatBytesHelper(inventory.entries.sumOf { it.fileSizeBytes })}"
                     )
                     Text("Giữ lại: 2 bản safety-v2 hợp lệ mới nhất", style = MaterialTheme.typography.bodySmall)
-                    if (inventory.validV2.isEmpty()) Text("Chưa có bản sao an toàn khả dụng.")
-                    inventory.validV2.forEach { candidate -> SafetyBackupRow(candidate, enabled, onPreview) }
-                    if (inventory.invalidV2Count > 0) {
-                        Text("${inventory.invalidV2Count} bản safety-v2 không khả dụng.", color = MaterialTheme.colorScheme.error)
-                    }
+                    if (inventory.entries.isEmpty()) Text("Chưa có bản sao an toàn khả dụng.")
+                    inventory.entries.forEach { candidate -> SafetyBackupRow(candidate, enabled, onPreview) }
                     if (state.cleanupResult.failedDeleteCount > 0) {
                         Text(
                             "Dọn dẹp: Có cảnh báo • Không thể xóa ${state.cleanupResult.failedDeleteCount} bản sao cũ",
@@ -575,6 +573,7 @@ private fun SafetyBackupCard(
                     if (inventory.legacy.isNotEmpty()) {
                         Text("Bản sao legacy: ${inventory.legacy.size} (không tự động dọn)", style = MaterialTheme.typography.bodySmall)
                     }
+                    TextButton(onClick = onRefresh, enabled = enabled) { Text("↻ Làm mới") }
                 }
             }
         }
@@ -583,30 +582,39 @@ private fun SafetyBackupCard(
 
 @Composable
 private fun SafetyBackupRow(
-    candidate: SafetyBackupCandidate,
+    candidate: SafetyBackupListEntry,
     enabled: Boolean,
-    onPreview: (SafetyBackupCandidate) -> Unit
+    onPreview: (SafetyBackupListEntry) -> Unit
 ) {
+    val preview = candidate.preview
     val timestamp = runCatching {
-        java.time.Instant.parse(candidate.preview.createdAtUtc)
+        java.time.Instant.parse(preview?.createdAtUtc)
             .atZone(java.time.ZoneId.systemDefault())
             .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy • HH:mm"))
-    }.getOrDefault(candidate.preview.createdAtUtc)
+    }.getOrDefault(preview?.createdAtUtc ?: candidate.fileName)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         HorizontalDivider()
         Text(timestamp, fontWeight = FontWeight.SemiBold)
         Text(
-            "${formatBytesHelper(candidate.fileSizeBytes)} • ${candidate.preview.counts.packages} gói học • " +
-                "${candidate.preview.counts.contents} Content • ${candidate.preview.counts.learningItems} LearningItems"
+            "${formatBytesHelper(candidate.fileSizeBytes)} • ${preview?.counts?.packages ?: "?"} gói học • " +
+                "${preview?.counts?.contents ?: "?"} Content • ${preview?.counts?.learningItems ?: "?"} LearningItems"
         )
-        candidate.preview.packages.forEach { Text(it.packageName, style = MaterialTheme.typography.bodySmall) }
+        preview?.packages?.forEach { Text(it.packageName, style = MaterialTheme.typography.bodySmall) }
         Text(
-            "Media: ${candidate.preview.counts.mediaFiles} file / ${formatBytesHelper(candidate.preview.bytes.mediaBytes)}",
+            "Media: ${preview?.counts?.mediaFiles ?: "?"} file / ${preview?.bytes?.mediaBytes?.let(::formatBytesHelper) ?: "?"}",
             style = MaterialTheme.typography.bodySmall
         )
+        Text(when (candidate.validationStatus) {
+            SafetyBackupValidationStatus.VALIDATED -> "✓ Bản sao hợp lệ"
+            SafetyBackupValidationStatus.VALIDATING -> "⟳ Đang xác minh..."
+            SafetyBackupValidationStatus.UNKNOWN -> "⚠ Chưa xác minh"
+            SafetyBackupValidationStatus.INVALID -> "✕ Bản sao không hợp lệ"
+            SafetyBackupValidationStatus.MISSING -> "✕ Không còn trên thiết bị"
+        })
         Row(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-            OutlinedButton(onClick = { onPreview(candidate) }, enabled = enabled) { Text("Xem trước") }
-            Button(onClick = { onPreview(candidate) }, enabled = enabled) { Text("Khôi phục") }
+            val canUse = enabled && candidate.validationStatus == SafetyBackupValidationStatus.VALIDATED
+            OutlinedButton(onClick = { onPreview(candidate) }, enabled = canUse) { Text("Xem trước") }
+            Button(onClick = { onPreview(candidate) }, enabled = canUse) { Text("Khôi phục") }
         }
     }
 }

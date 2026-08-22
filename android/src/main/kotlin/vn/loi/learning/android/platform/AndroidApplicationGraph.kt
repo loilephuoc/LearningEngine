@@ -40,6 +40,12 @@ class AndroidApplicationGraph internal constructor(
 
     fun reconcileSafetyBackups() = recovery.reconcileSafetyBackupRetention()
 
+    fun discoverSafetyBackupsFast() = recovery.discoverSafetyBackupsFast()
+
+    fun markSafetyBackupValidating(path: Path) = recovery.markSafetyBackupValidating(path)
+
+    fun validateSafetyBackupForIndex(path: Path) = recovery.validateSafetyBackupForIndex(path)
+
     fun restorePortableBackup(
         source: Path,
         operationActive: Boolean = false,

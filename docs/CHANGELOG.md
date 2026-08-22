@@ -1,3 +1,13 @@
+# Android fast safety-backup discovery
+
+- Added a disposable schema-v1 index containing only file identity and manifest-derived list metadata.
+  Existing archives without an index are listed after a directory scan and manifest-only read; no
+  payload checksum or canonical extraction is required for first render.
+- Added explicit unknown/validating/validated/invalid/missing states and sequential cancellable IO
+  validation with incremental UI updates. Changed or deleted files invalidate/converge the cache.
+- Preview and restore continue to perform full archive/canonical validation; retention continues to
+  use positive full validation and removes deleted archive entries from the index.
+
 # Android safety-backup final retention and restore correction
 
 - Positively classifies retention candidates by exact name, validated v2/checksums/canonical data,

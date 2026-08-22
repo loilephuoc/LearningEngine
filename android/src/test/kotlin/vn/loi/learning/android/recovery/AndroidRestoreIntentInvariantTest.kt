@@ -43,7 +43,7 @@ class AndroidRestoreIntentInvariantTest {
         assertTrue(source.contains("Bản sao an toàn trên thiết bị"))
         assertTrue(source.contains("Chọn file sao lưu (.lebak)"))
         assertTrue(source.contains("Learning Engine tự động tạo trước khi khôi phục"))
-        assertFalse(source.contains("candidate.fileName"))
+        assertFalse(source.contains("candidate.path.toString()"))
     }
 
     private fun source(relative: String): String {

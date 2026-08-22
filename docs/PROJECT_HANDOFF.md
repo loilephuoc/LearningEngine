@@ -1,5 +1,10 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+Android safety-backup listing now renders from a disposable file-identity/manifest index before full
+archive validation. A cancellable sequential IO worker updates explicit validation states; changed and
+deleted files invalidate/converge the cache. Preview, restore and newest-two retention retain their full
+checksum, canonical-reference and positive-classification boundaries.
+
 Phase 4 recovery UX now exposes validated automatic Android safety backups without internal paths,
 keeps external `.lebak` files in the document-picker workflow, and sends both sources through the
 same portable preview/selective restore/validation/graph-reload boundary. Recovery-owned retention

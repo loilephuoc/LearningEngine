@@ -2,7 +2,7 @@
 
 ## Phase 4 safety-backup recovery UX
 
-- **Final retention/restore correction implemented and automated verification complete; physical Android UAT pending:** automatic
+- **Fast discovery/index implemented; physical Android UAT pending:** automatic
   v2 safety backups are discoverable from Android with validated metadata and storage summary, while
   external user-owned archives remain a separate document-picker source. Both share canonical
   preview/selective restore/validation/reload behavior. Retention now runs before staging and after both
@@ -10,6 +10,9 @@
   positively verified safety archives. Whole-device Android supplements apply only to explicit full
   restore, and the disk model includes safety creation and rollback peaks. Device verification of the
   existing 734 MB recovery archive remains the final gate.
+  The Android list now renders from a lightweight filesystem/manifest index before a cancellable,
+  sequential IO worker performs full validation. Changed identities invalidate cached validity;
+  preview, restore and retention retain their full safety boundaries.
 
 ## Backup / Restore transaction safety
 

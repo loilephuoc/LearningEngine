@@ -2,6 +2,11 @@
 
 ## Current Phase 4 safety-backup manager continuation
 
+- Fast Android safety discovery now uses a disposable file-identity/manifest index for first render;
+  full validation proceeds sequentially on IO with explicit per-entry state. Cache state never bypasses
+  full preview, restore, canonical validation, or retention classification.
+- `clean test` passes 2,251 Engine, 968 Android and 1,802 Desktop tests (5,021 total), with zero
+  failures/errors/skips; Android debug assembly passes. Physical large-archive UAT remains pending.
 - On `feat/cross-platform-sync` after baseline `464e2439`, Android now discovers and validates
   automatic safety-v2 archives from its canonical backup directory, presents human metadata/storage,
   separates them from external document-picker files, and routes both through the existing portable

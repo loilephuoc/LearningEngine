@@ -29,13 +29,15 @@ import vn.loi.learning.infrastructure.recovery.PortableBackupV2Preview
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult
 import vn.loi.learning.infrastructure.recovery.SafetyBackupCandidate
 import vn.loi.learning.infrastructure.recovery.SafetyBackupCleanupResult
-import vn.loi.learning.infrastructure.recovery.SafetyBackupInventory
+import vn.loi.learning.infrastructure.recovery.FastSafetyBackupInventory
+import vn.loi.learning.infrastructure.recovery.SafetyBackupListEntry
+import vn.loi.learning.infrastructure.recovery.SafetyBackupValidationStatus
 
 sealed interface SafetyBackupListState {
     data object Loading : SafetyBackupListState
     data class Ready(
-        val inventory: SafetyBackupInventory,
-        val cleanupResult: SafetyBackupCleanupResult
+        val inventory: FastSafetyBackupInventory,
+        val cleanupResult: SafetyBackupCleanupResult = SafetyBackupCleanupResult()
     ) : SafetyBackupListState
     data class Failed(val message: String) : SafetyBackupListState
 }
@@ -110,18 +112,18 @@ class BackupRestoreViewModel(
     val safetyBackups: StateFlow<SafetyBackupListState> = mutableSafetyBackups.asStateFlow()
 
     private var activeJob: Job? = null
+    private var safetyValidationJob: Job? = null
 
     init { refreshSafetyBackups() }
 
     fun refreshSafetyBackups() {
+        safetyValidationJob?.cancel()
         mutableSafetyBackups.value = SafetyBackupListState.Loading
-        viewModelScope.launch {
+        safetyValidationJob = viewModelScope.launch {
             try {
-                val reconciliation = withContext(ioDispatcher) { graphProvider().reconcileSafetyBackups() }
-                mutableSafetyBackups.value = SafetyBackupListState.Ready(
-                    reconciliation.inventory,
-                    reconciliation.cleanup
-                )
+                val inventory = withContext(ioDispatcher) { graphProvider().discoverSafetyBackupsFast() }
+                mutableSafetyBackups.value = SafetyBackupListState.Ready(inventory)
+                validateSafetyBackupsInBackground(inventory)
             } catch (failure: Exception) {
                 mutableSafetyBackups.value = SafetyBackupListState.Failed(
                     failure.message ?: "Không thể đọc danh sách bản sao an toàn."
@@ -130,7 +132,21 @@ class BackupRestoreViewModel(
         }
     }
 
-    fun previewSafetyBackup(candidate: SafetyBackupCandidate) {
+    private suspend fun validateSafetyBackupsInBackground(initial: FastSafetyBackupInventory) {
+        initial.entries.filter { it.validationStatus != SafetyBackupValidationStatus.VALIDATED }.forEach { entry ->
+            val validating = withContext(ioDispatcher) { graphProvider().markSafetyBackupValidating(entry.path) }
+            mutableSafetyBackups.value = SafetyBackupListState.Ready(validating)
+            val validated = withContext(ioDispatcher) { graphProvider().validateSafetyBackupForIndex(entry.path) }
+            mutableSafetyBackups.value = SafetyBackupListState.Ready(validated)
+        }
+        val reconciliation = withContext(ioDispatcher) { graphProvider().reconcileSafetyBackups() }
+        mutableSafetyBackups.value = SafetyBackupListState.Ready(
+            withContext(ioDispatcher) { graphProvider().discoverSafetyBackupsFast() },
+            reconciliation.cleanup
+        )
+    }
+
+    fun previewSafetyBackup(candidate: SafetyBackupListEntry) {
         if (activeJob?.isActive == true) return
         mutableState.value = BackupRestoreUiState.Previewing("Đang xác minh bản sao an toàn...")
         activeJob = viewModelScope.launch {

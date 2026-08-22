@@ -57,6 +57,8 @@ private const val FILE_COMPARISON_BUFFER_SIZE = 64 * 1024
 private const val DEFAULT_STREAMING_BUFFER_SIZE = 64 * 1024
 private const val SAFETY_V2_RETENTION_COUNT = 2
 private const val SAFETY_SOURCE_PLATFORM = "safety"
+private const val SAFETY_INDEX_FILE = "safety-backup-index.json"
+private const val FAST_MANIFEST_MAX_BYTES = 16L * 1024 * 1024
 private val SAFETY_V2_FILE = Regex("^safety-v2-[0-9]+[.]lebak$")
 private val LEGACY_SAFETY_FILE = Regex("^safety-(?!v2-).+[.]lebak$")
 private val PROGRESS_DATA_FILES = setOf(
@@ -213,6 +215,124 @@ class JvmLearningDataRecoveryManager(
             invalidV2Count = invalid
         )
     }
+
+    /** Filesystem scan plus manifest-only metadata. Never hashes payloads or extracts canonical data. */
+    @Synchronized
+    fun discoverSafetyBackupsFast(): FastSafetyBackupInventory {
+        if (!Files.isDirectory(safetyDirectory)) return FastSafetyBackupInventory()
+        val cached = readSafetyBackupIndex().associateBy { Path.of(it.path).toAbsolutePath().normalize() }
+        val entries = mutableListOf<SafetyBackupIndexEntry>()
+        val legacy = mutableListOf<LegacySafetyBackup>()
+        Files.list(safetyDirectory).use { paths -> paths.filter(Files::isRegularFile).forEach { path ->
+            val normalized = path.toAbsolutePath().normalize()
+            val name = path.fileName.toString()
+            when {
+                SAFETY_V2_FILE.matches(name) -> {
+                    val size = Files.size(path)
+                    val modified = Files.getLastModifiedTime(path).toMillis()
+                    val old = cached[normalized]
+                    val identityMatches = old?.fileSizeBytes == size && old.lastModifiedMillis == modified
+                    val lightPreview = if (identityMatches) old.preview else readPortableBackupManifestLight(path)?.toPreview()
+                    entries += SafetyBackupIndexEntry(
+                        path = normalized.toString(), fileName = name, fileSizeBytes = size,
+                        lastModifiedMillis = modified, preview = lightPreview,
+                        validationStatus = if (identityMatches) old.validationStatus else SafetyBackupValidationStatus.UNKNOWN,
+                        lastValidatedAtUtc = if (identityMatches) old.lastValidatedAtUtc else null
+                    )
+                }
+                LEGACY_SAFETY_FILE.matches(name) -> legacy += LegacySafetyBackup(normalized, name, Files.size(path))
+            }
+        } }
+        writeSafetyBackupIndex(entries)
+        return FastSafetyBackupInventory(
+            entries.map { it.toListEntry() }.sortedWith(compareByDescending<SafetyBackupListEntry> {
+                runCatching { Instant.parse(it.preview?.createdAtUtc).toEpochMilli() }.getOrDefault(it.lastModifiedMillis)
+            }.thenByDescending { it.fileName }),
+            legacy.sortedByDescending { Files.getLastModifiedTime(it.path).toMillis() }
+        )
+    }
+
+    @Synchronized
+    fun markSafetyBackupValidating(path: Path): FastSafetyBackupInventory =
+        updateSafetyIndexEntry(path) { it.copy(validationStatus = SafetyBackupValidationStatus.VALIDATING) }
+
+    @Synchronized
+    fun validateSafetyBackupForIndex(
+        path: Path,
+        limits: PortableBackupV2Limits = PortableBackupV2Limits()
+    ): FastSafetyBackupInventory {
+        val normalized = path.toAbsolutePath().normalize()
+        val sizeBefore = Files.size(normalized)
+        val modifiedBefore = Files.getLastModifiedTime(normalized).toMillis()
+        val validated = runCatching { previewPortableBackupV2(normalized, limits) }
+        val unchanged = Files.isRegularFile(normalized) && Files.size(normalized) == sizeBefore &&
+            Files.getLastModifiedTime(normalized).toMillis() == modifiedBefore
+        return updateSafetyIndexEntry(normalized) { current ->
+            if (!unchanged) current.copy(validationStatus = SafetyBackupValidationStatus.UNKNOWN, lastValidatedAtUtc = null)
+            else validated.fold(
+                onSuccess = { preview ->
+                    if (preview.sourcePlatform == SAFETY_SOURCE_PLATFORM) current.copy(
+                        preview = preview, validationStatus = SafetyBackupValidationStatus.VALIDATED,
+                        lastValidatedAtUtc = clock.instant().toString()
+                    ) else current.copy(validationStatus = SafetyBackupValidationStatus.INVALID, lastValidatedAtUtc = clock.instant().toString())
+                },
+                onFailure = { current.copy(validationStatus = SafetyBackupValidationStatus.INVALID, lastValidatedAtUtc = clock.instant().toString()) }
+            )
+        }
+    }
+
+    private fun updateSafetyIndexEntry(
+        path: Path,
+        transform: (SafetyBackupIndexEntry) -> SafetyBackupIndexEntry
+    ): FastSafetyBackupInventory {
+        val normalized = path.toAbsolutePath().normalize()
+        val current = discoverSafetyBackupsFast()
+        val updated = current.entries.map { entry ->
+            if (entry.path == normalized) transform(entry.toIndexEntry()) else entry.toIndexEntry()
+        }
+        writeSafetyBackupIndex(updated)
+        return discoverSafetyBackupsFast()
+    }
+
+    private fun readPortableBackupManifestLight(path: Path): PortableBackupManifestV2? = runCatching {
+        ZipFile(path.toFile()).use { zip ->
+            val entry = zip.getEntry(V2_MANIFEST_ENTRY) ?: return@use null
+            if (entry.size !in 0..FAST_MANIFEST_MAX_BYTES) return@use null
+            zip.getInputStream(entry).bufferedReader(StandardCharsets.UTF_8).use {
+                V2_JSON.decodeFromString<PortableBackupManifestV2>(it.readText())
+            }.takeIf { it.backupSchemaVersion == 2 && it.sourcePlatform == SAFETY_SOURCE_PLATFORM && runCatching { Instant.parse(it.createdAtUtc) }.isSuccess }
+        }
+    }.getOrNull()
+
+    private fun PortableBackupManifestV2.toPreview() = PortableBackupV2Preview(
+        backupSchemaVersion, backupId, appVersion, versionCode, createdAtUtc, sourcePlatform,
+        learnerIds, includedSections, packages, emptyList(), counts, bytes, entries.size
+    )
+
+    private fun readSafetyBackupIndex(): List<SafetyBackupIndexEntry> = runCatching {
+        val path = safetyDirectory.resolve(SAFETY_INDEX_FILE)
+        if (!Files.isRegularFile(path)) emptyList() else Files.newBufferedReader(path, StandardCharsets.UTF_8).use {
+            V2_JSON.decodeFromString<SafetyBackupIndex>(it.readText()).entries
+        }
+    }.getOrDefault(emptyList())
+
+    private fun writeSafetyBackupIndex(entries: List<SafetyBackupIndexEntry>) {
+        runCatching {
+            Files.createDirectories(safetyDirectory)
+            val target = safetyDirectory.resolve(SAFETY_INDEX_FILE)
+            val temporary = safetyDirectory.resolve(".$SAFETY_INDEX_FILE.tmp")
+            writeUtf8String(temporary, V2_JSON.encodeToString(SafetyBackupIndex(entries = entries.sortedBy { it.path })))
+            try { Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) }
+            catch (_: AtomicMoveNotSupportedException) { Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING) }
+        }
+    }
+
+    private fun SafetyBackupIndexEntry.toListEntry() = SafetyBackupListEntry(
+        Path.of(path), fileName, fileSizeBytes, lastModifiedMillis, preview, validationStatus, lastValidatedAtUtc
+    )
+    private fun SafetyBackupListEntry.toIndexEntry() = SafetyBackupIndexEntry(
+        path.toString(), fileName, fileSizeBytes, lastModifiedMillis, preview, validationStatus, lastValidatedAtUtc
+    )
 
     fun reconcileSafetyBackupRetention(
         protectedPaths: Set<Path> = emptySet(),
@@ -461,6 +581,16 @@ class JvmLearningDataRecoveryManager(
             onProgress(PortableBackupProgressV2(PortableBackupPhaseV2.FINALIZING))
             publishAtomically(temporary, normalized)
             temporary = null
+            if (descriptor.sourcePlatform == SAFETY_SOURCE_PLATFORM && SAFETY_V2_FILE.matches(normalized.fileName.toString())) {
+                val entry = SafetyBackupIndexEntry(
+                    path = normalized.toString(), fileName = normalized.fileName.toString(),
+                    fileSizeBytes = Files.size(normalized), lastModifiedMillis = Files.getLastModifiedTime(normalized).toMillis(),
+                    preview = manifest.toPreview(), validationStatus = SafetyBackupValidationStatus.VALIDATED,
+                    lastValidatedAtUtc = clock.instant().toString()
+                )
+                val retained = readSafetyBackupIndex().filterNot { Path.of(it.path).toAbsolutePath().normalize() == normalized }
+                writeSafetyBackupIndex(retained + entry)
+            }
             onProgress(PortableBackupProgressV2(PortableBackupPhaseV2.COMPLETED, 1, 1, totalPayloadBytes, totalPayloadBytes))
             return normalized
         } finally {
@@ -1131,6 +1261,7 @@ class JvmLearningDataRecoveryManager(
                 failures += (failure.message ?: "Could not delete an old safety backup.")
             }
         }
+        discoverSafetyBackupsFast()
         SafetyBackupCleanupResult(
             retainedValidV2Count = discoverSafetyBackups(limits).validV2.size,
             deletedValidV2Count = deleted,
