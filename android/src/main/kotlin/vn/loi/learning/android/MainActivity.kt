@@ -364,7 +364,7 @@ class MainActivity : ComponentActivity() {
                 if(graph==null) {
                     when(val root=rootState) {
                         AndroidRootState.Bootstrapping -> AndroidStartupShell()
-                        is AndroidRootState.Ready -> AndroidFeatureLoading("Opening Learning Engine")
+                        is AndroidRootState.Ready -> AndroidFeatureLoading("Đang mở Learning Engine")
                         is AndroidRootState.Failed -> AndroidRootFailure(root) { graphRetry += 1 }
                     }
                 } else {

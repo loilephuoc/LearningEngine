@@ -25,7 +25,7 @@ private fun LearningEngineDesignCatalog() {
             LearningEngineFeedbackBadge(LearningDifficultyTone.EASY)
         }
         LearningEngineEmptyState("Chưa có nội dung", "Mục học tiếp theo sẽ xuất hiện tại đây.")
-        LearningEngineErrorState("Could not load", "Try again when you are ready.")
+        LearningEngineErrorState("Không thể tải", "Hãy thử lại khi bạn sẵn sàng.")
     }
 }
 

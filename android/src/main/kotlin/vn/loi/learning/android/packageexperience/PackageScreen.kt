@@ -465,7 +465,7 @@ private fun PackageFiltersRow(
                 label = { Text("FSRS: ${filterSpec.fsrsFilter.label}") },
                 trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
                 modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
-                    contentDescription = "FSRS filter, ${filterSpec.fsrsFilter.label}"
+                    contentDescription = "Bộ lọc FSRS, ${filterSpec.fsrsFilter.label}"
                 }
             )
             DropdownMenu(
@@ -501,7 +501,7 @@ private fun PackageFiltersRow(
                 { Icon(Icons.Filled.Star, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.tertiary) }
             } else null,
             modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
-                contentDescription = "Marked difficult, ${if (filterSpec.difficultOnly) "enabled" else "disabled"}"
+                contentDescription = "Đánh dấu khó, ${if (filterSpec.difficultOnly) "đã bật" else "đã tắt"}"
             }
         )
 
@@ -514,7 +514,7 @@ private fun PackageFiltersRow(
                     label = { Text(filterSpec.selectedLesson?.let { "Lesson: $it" } ?: "All lessons") },
                     trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
                     modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
-                        contentDescription = "Lesson filter, ${filterSpec.selectedLesson ?: "All lessons"}"
+                        contentDescription = "Bộ lọc bài học, ${filterSpec.selectedLesson ?: "Tất cả bài học"}"
                     }
                 )
                 DropdownMenu(
@@ -564,7 +564,7 @@ private fun PackageFiltersRow(
                 label = { Text(filterSpec.mediaFilter.label) },
                 trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
                 modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
-                    contentDescription = "Media filter, ${filterSpec.mediaFilter.label}"
+                    contentDescription = "Bộ lọc phương tiện, ${filterSpec.mediaFilter.label}"
                 }
             )
             DropdownMenu(expanded = mediaMenuExpanded, onDismissRequest = { mediaMenuExpanded = false }) {

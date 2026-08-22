@@ -84,7 +84,7 @@ fun InsightsScopeSelector(
                 modifier = Modifier
                     .defaultMinSize(minHeight = LearningSpacing.touchTarget)
                     .semantics {
-                        contentDescription = "Insights scope, $currentLabel"
+                        contentDescription = "Phạm vi phân tích, $currentLabel"
                         stateDescription = if (expanded) "Expanded" else "Collapsed"
                     }
             )
@@ -173,7 +173,7 @@ fun ReviewForecastCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .semantics {
-                        contentDescription = "7-day review forecast: $totalDue7Days cards total"
+                        contentDescription = "Dự báo ôn tập 7 ngày: tổng cộng $totalDue7Days thẻ"
                     },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
@@ -497,7 +497,7 @@ private fun RatingTile(
     Surface(
         modifier = modifier
             .border(1.dp, border, MaterialTheme.shapes.medium)
-            .semantics { contentDescription = "$label: $count reviews today" },
+            .semantics { contentDescription = "$label: $count lượt ôn hôm nay" },
         shape = MaterialTheme.shapes.medium,
         color = background
     ) {
