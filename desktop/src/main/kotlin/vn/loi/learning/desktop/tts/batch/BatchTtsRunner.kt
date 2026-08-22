@@ -132,7 +132,9 @@ class BatchTtsRunner(
                             field = currentJob.field,
                             text = currentJob.text,
                             voice = voiceCandidate,
-                            rate = currentJob.rate
+                            rate = currentJob.rate,
+                            pitch = currentJob.pitch,
+                            volume = currentJob.volume
                         )
 
                         // Synthesis succeeded with this voice

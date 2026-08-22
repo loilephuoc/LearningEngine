@@ -515,8 +515,15 @@ private fun MultiSelectionActions(
                 TextButton(
                     onClick = onGenerateTts,
                     contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
-                    modifier = Modifier.semantics { contentDescription = "Generate Audio" }
-                ) { Text("Generate Audio", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold) }
+                    modifier = Modifier.semantics { contentDescription = "Generate Audio for $selectedCount selected items" }
+                ) {
+                    Text(
+                        if (selectedCount == 1) "Generate Audio" else "Generate Audio ($selectedCount)",
+                        style = LETypography.caption,
+                        color = LEColors.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             TextButton(
                 onClick = onClearSelection,

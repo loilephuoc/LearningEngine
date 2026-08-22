@@ -75,6 +75,8 @@ data class BatchTtsJob(
     val language: TtsLanguage,
     val voice: TtsVoice,
     val rate: Int = 0,
+    val pitch: String? = null,
+    val volume: String? = null,
     val previousAudioRef: String? = null,
     val candidateVoices: List<TtsVoice> = listOf(voice),
     val id: String = "${contentId}_${field.name.lowercase()}"

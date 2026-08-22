@@ -167,7 +167,11 @@ object BatchTtsScanner {
         englishStrategy: VoiceStrategyConfig,
         vietnameseStrategy: VoiceStrategyConfig,
         englishRate: Int = 0,
-        vietnameseRate: Int = 0
+        vietnameseRate: Int = 0,
+        englishPitch: String? = null,
+        vietnamesePitch: String? = null,
+        englishVolume: String? = null,
+        vietnameseVolume: String? = null
     ): List<BatchTtsJob> {
         var englishIndex = 0
         var vietnameseIndex = 0
@@ -175,16 +179,16 @@ object BatchTtsScanner {
         return targets
             .filter { it.canGenerate }
             .map { target ->
-                val (candidateChain, rate) = when (target.language) {
+                val (candidateChain, settings) = when (target.language) {
                     TtsLanguage.ENGLISH -> {
                         val chain = englishStrategy.candidateChainForTarget(englishIndex)
                         englishIndex++
-                        chain to englishRate
+                        chain to Triple(englishRate, englishPitch, englishVolume)
                     }
                     TtsLanguage.VIETNAMESE -> {
                         val chain = vietnameseStrategy.candidateChainForTarget(vietnameseIndex)
                         vietnameseIndex++
-                        chain to vietnameseRate
+                        chain to Triple(vietnameseRate, vietnamesePitch, vietnameseVolume)
                     }
                 }
                 val primaryVoice = candidateChain.first()
@@ -194,7 +198,9 @@ object BatchTtsScanner {
                     text = target.text,
                     language = target.language,
                     voice = primaryVoice,
-                    rate = rate,
+                    rate = settings.first,
+                    pitch = settings.second,
+                    volume = settings.third,
                     previousAudioRef = target.previousAudioRef,
                     candidateVoices = candidateChain
                 )

@@ -41,6 +41,7 @@ class ContentMultiSelectionProductionWiringTest {
         assertFalse(explorer.contains("Delete\") { /* handled by toolbar */"))
         assertTrue(screen.contains("Delete Selected (\$deleteTargetCount)"))
         assertFalse(explorer.contains("onDeleteSelected"))
+        assertTrue(explorer.contains("Generate Audio (\$selectedCount)"))
     }
 
     private fun source(relative: String): String {

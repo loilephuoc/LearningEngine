@@ -29,6 +29,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -131,6 +132,8 @@ fun BatchTtsDialog(
     var selectedVietnameseVoice by remember { mutableStateOf<TtsVoice?>(null) }
     var englishRate by remember { mutableStateOf(initialProfiles.english.rate) }
     var vietnameseRate by remember { mutableStateOf(initialProfiles.vietnamese.rate) }
+    var pitch by remember { mutableStateOf("+0Hz") }
+    var volume by remember { mutableStateOf("+0%") }
 
     // Advanced Voice Strategy
     var englishStrategyMode by remember { mutableStateOf(VoiceStrategyMode.FALLBACK_CHAIN) }
@@ -200,7 +203,7 @@ fun BatchTtsDialog(
 
         previewJob = coroutineScope.launch {
             try {
-                val previewPath = ttsService.preview(text, voice, rate)
+                val previewPath = ttsService.preview(text, voice, rate, pitch, volume)
                 localAudioPlayer.play(previewPath)
             } catch (_: Exception) {
                 isPreviewingEn = false
@@ -259,7 +262,11 @@ fun BatchTtsDialog(
             englishStrategy = enStrategy,
             vietnameseStrategy = viStrategy,
             englishRate = englishRate,
-            vietnameseRate = vietnameseRate
+            vietnameseRate = vietnameseRate,
+            englishPitch = pitch,
+            vietnamesePitch = pitch,
+            englishVolume = volume,
+            vietnameseVolume = volume
         )
         startBatch(jobs)
     }
@@ -373,12 +380,16 @@ fun BatchTtsDialog(
                                     selectedVietnameseVoice = selectedVietnameseVoice,
                                     englishRate = englishRate,
                                     vietnameseRate = vietnameseRate,
+                                    pitch = pitch,
+                                    volume = volume,
                                     englishStrategyMode = englishStrategyMode,
                                     vietnameseStrategyMode = vietnameseStrategyMode,
                                     onEnglishVoiceChange = { selectedEnglishVoice = it },
                                     onVietnameseVoiceChange = { selectedVietnameseVoice = it },
                                     onEnglishRateChange = { englishRate = it },
                                     onVietnameseRateChange = { vietnameseRate = it },
+                                    onPitchChange = { pitch = it },
+                                    onVolumeChange = { volume = it },
                                     onEnglishStrategyChange = { englishStrategyMode = it },
                                     onVietnameseStrategyChange = { vietnameseStrategyMode = it },
                                     isPreviewingEn = isPreviewingEn,
@@ -481,12 +492,16 @@ private fun ConfigStepContent(
     selectedVietnameseVoice: TtsVoice?,
     englishRate: Int,
     vietnameseRate: Int,
+    pitch: String,
+    volume: String,
     englishStrategyMode: VoiceStrategyMode,
     vietnameseStrategyMode: VoiceStrategyMode,
     onEnglishVoiceChange: (TtsVoice) -> Unit,
     onVietnameseVoiceChange: (TtsVoice) -> Unit,
     onEnglishRateChange: (Int) -> Unit,
     onVietnameseRateChange: (Int) -> Unit,
+    onPitchChange: (String) -> Unit,
+    onVolumeChange: (String) -> Unit,
     onEnglishStrategyChange: (VoiceStrategyMode) -> Unit,
     onVietnameseStrategyChange: (VoiceStrategyMode) -> Unit,
     isPreviewingEn: Boolean,
@@ -591,6 +606,28 @@ private fun ConfigStepContent(
 
         // Section 3: Voice & Rate Configurations with Strategy & Preview
         Text("Voice Strategy & Preview", style = LETypography.sectionTitle)
+        Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
+            OutlinedTextField(
+                value = pitch,
+                onValueChange = onPitchChange,
+                label = { Text("Pitch (for example +0Hz)") },
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedTextField(
+                value = volume,
+                onValueChange = onVolumeChange,
+                label = { Text("Volume (for example +0%)") },
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        scopeScan.representativeEnglishText?.let {
+            Text("English preview text: $it", style = LETypography.caption, color = LEColors.textSecondary)
+        }
+        scopeScan.representativeVietnameseText?.let {
+            Text("Vietnamese preview text: $it", style = LETypography.caption, color = LEColors.textSecondary)
+        }
 
         if (isLoadingVoices) {
             Row(
@@ -916,12 +953,7 @@ private fun RateDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val rateOptions = listOf(
-        -15 to "Slow (-15%)",
-        0 to "Normal (0%)",
-        15 to "Fast (+15%)",
-        30 to "Very Fast (+30%)"
-    )
+    val rateOptions = TtsRateOption.entries.map { it.rateValue to it.label }
 
     val label = rateOptions.firstOrNull { it.first == currentRate }?.second ?: if (currentRate == 0) "Normal" else "${if (currentRate > 0) "+$currentRate" else "$currentRate"}%"
 

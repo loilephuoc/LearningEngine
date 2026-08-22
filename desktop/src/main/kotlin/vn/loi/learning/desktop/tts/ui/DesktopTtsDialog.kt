@@ -159,7 +159,9 @@ fun DesktopTtsDialog(
                     ttsService.preview(
                         text = text,
                         voice = voice,
-                        rate = uiState.selectedRate.rateValue
+                        rate = uiState.selectedRate.rateValue,
+                        pitch = uiState.pitch,
+                        volume = uiState.volume
                     )
                 }
                 uiState = uiState.copy(previewState = TtsPreviewState.Playing)
@@ -190,6 +192,8 @@ fun DesktopTtsDialog(
                         text = text,
                         voice = voice,
                         rate = uiState.selectedRate.rateValue,
+                        pitch = uiState.pitch,
+                        volume = uiState.volume,
                         language = uiState.selectedLanguage.code
                     )
                 }
@@ -374,6 +378,23 @@ fun DesktopTtsDialog(
                                 text = "⚠ This field already has audio (${target.audioRefFor(uiState.selectedField)}). Overwriting is disabled.",
                                 style = LETypography.caption,
                                 color = LEColors.warning
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
+                            OutlinedTextField(
+                                value = uiState.pitch,
+                                onValueChange = { uiState = uiState.copy(pitch = it) },
+                                label = { Text("Pitch") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = uiState.volume,
+                                onValueChange = { uiState = uiState.copy(volume = it) },
+                                label = { Text("Volume") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }

@@ -75,7 +75,9 @@ class DesktopTtsAudioService(
     suspend fun preview(
         text: String,
         voice: TtsVoice,
-        rate: Int = 0
+        rate: Int = 0,
+        pitch: String? = null,
+        volume: String? = null
     ): Path = withContext(ioDispatcher) {
         val trimmed = text.trim()
         if (trimmed.isBlank()) {
@@ -88,7 +90,9 @@ class DesktopTtsAudioService(
                 TtsSynthesisRequest(
                     text = trimmed,
                     voice = voice,
-                    rate = rate
+                    rate = rate,
+                    pitch = pitch,
+                    volume = volume
                 ),
                 previewPath
             )
@@ -112,6 +116,8 @@ class DesktopTtsAudioService(
         text: String,
         voice: TtsVoice,
         rate: Int = 0,
+        pitch: String? = null,
+        volume: String? = null,
         language: String = defaultLanguageFor(field)
     ): ContentMediaAsset = withContext(ioDispatcher) {
         require(contentId.isNotBlank()) { "Content ID must not be blank" }
@@ -137,7 +143,9 @@ class DesktopTtsAudioService(
                 TtsSynthesisRequest(
                     text = trimmed,
                     voice = voice,
-                    rate = rate
+                    rate = rate,
+                    pitch = pitch,
+                    volume = volume
                 ),
                 tempWorkingFile
             )

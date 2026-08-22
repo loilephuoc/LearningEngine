@@ -69,9 +69,13 @@ data class TtsDialogTarget(
  * Supported speech rates for Desktop TTS UI.
  */
 enum class TtsRateOption(val rateValue: Int, val label: String) {
-    SLOW(-20, "Slow (-20%)"),
+    VERY_SLOW(-40, "Very Slow (-40%)"),
+    SLOW(-25, "Slow (-25%)"),
+    SLIGHTLY_SLOW(-10, "Slightly Slow (-10%)"),
     NORMAL(0, "Normal"),
-    FAST(20, "Fast (+20%)")
+    SLIGHTLY_FAST(10, "Slightly Fast (+10%)"),
+    FAST(25, "Fast (+25%)"),
+    VERY_FAST(40, "Very Fast (+40%)")
 }
 
 /**
@@ -115,6 +119,8 @@ data class DesktopTtsUiState(
     val selectedGender: TtsGenderFilter = TtsGenderFilter.ALL,
     val selectedVoice: TtsVoice? = null,
     val selectedRate: TtsRateOption = TtsRateOption.NORMAL,
+    val pitch: String = "+0Hz",
+    val volume: String = "+0%",
     val allVoices: List<TtsVoice> = emptyList(),
     val isLoadingVoices: Boolean = false,
     val voiceLoadError: String? = null,

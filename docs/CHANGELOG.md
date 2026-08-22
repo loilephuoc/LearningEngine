@@ -1,3 +1,11 @@
+# Complete Desktop selected-item batch TTS controls
+
+- Multi-selection now labels generation with the selected count and the existing scanner/runner processes
+  every missing eligible field across that exact selection, preserving existing-audio skips and partial failures.
+- Single and batch dialogs share seven speech speeds. Pitch and volume now flow through preview, batch jobs,
+  fallback attempts and permanent generation; preview continues to synthesize the displayed selected-field text.
+- Added request propagation regressions. Full verification passes 5,028 tests with zero failures/errors/skips.
+
 # Desktop Content Studio context deletion
 
 - Wired right-click Delete to select the clicked content and invoke the same existing request,

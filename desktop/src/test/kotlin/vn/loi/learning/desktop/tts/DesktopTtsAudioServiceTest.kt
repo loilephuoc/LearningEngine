@@ -113,6 +113,18 @@ class DesktopTtsAudioServiceTest {
     }
 
     @Test
+    fun `preview and permanent generation preserve rate pitch and volume`() = runBlocking {
+        service.preview("Exact selected text", enVoice, 25, "+8Hz", "-5%")
+        assertEquals(TtsSynthesisRequest("Exact selected text", enVoice, 25, "+8Hz", "-5%"), fakeEngine.lastRequest)
+
+        service.generatePermanentAudio(
+            contentId = "c1", packageName = "pkg", field = TtsField.QUESTION,
+            text = "Generated text", voice = enVoice, rate = -10, pitch = "-4Hz", volume = "+10%"
+        )
+        assertEquals(TtsSynthesisRequest("Generated text", enVoice, -10, "-4Hz", "+10%"), fakeEngine.lastRequest)
+    }
+
+    @Test
     fun `preview rejects blank text`() = runBlocking {
         val ex = assertFailsWith<TtsException> {
             service.preview("   ", enVoice)
@@ -202,6 +214,7 @@ class FakeTtsEngine(
     private val voices: List<TtsVoice> = emptyList()
 ) : TtsEngine {
     var failNextSynthesis = false
+    var lastRequest: TtsSynthesisRequest? = null
 
     override suspend fun listVoices(): List<TtsVoice> = voices
 
@@ -209,6 +222,7 @@ class FakeTtsEngine(
         request: TtsSynthesisRequest,
         outputFile: Path
     ): TtsSynthesisResult {
+        lastRequest = request
         if (request.text.isBlank()) throw TtsException(TtsError.InvalidText("Blank text"))
         if (failNextSynthesis) {
             throw TtsException(TtsError.GenerationFailed("Simulated provider failure"))

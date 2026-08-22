@@ -211,4 +211,32 @@ class BatchTtsScannerTest {
         assertEquals(viVoice.id, trJob.voice.id)
         assertEquals(-5, trJob.rate)
     }
+
+    @Test
+    fun `strategy jobs preserve batch pitch and volume for each language`() {
+        val targets = BatchTtsScanner.scanTargets(listOf(createBrowserItem(
+            id = "c-config", q = "word", a = "answer", ex = "example", tr = "nghĩa"
+        )), missingOnly = true)
+        val jobs = BatchTtsScanner.buildJobsWithStrategy(
+            targets,
+            vn.loi.learning.desktop.tts.strategy.VoiceStrategyConfig(
+                vn.loi.learning.desktop.tts.strategy.VoiceStrategyMode.SINGLE_VOICE, enVoice
+            ),
+            vn.loi.learning.desktop.tts.strategy.VoiceStrategyConfig(
+                vn.loi.learning.desktop.tts.strategy.VoiceStrategyMode.SINGLE_VOICE, viVoice
+            ),
+            englishRate = 25,
+            vietnameseRate = -10,
+            englishPitch = "+5Hz",
+            vietnamesePitch = "-3Hz",
+            englishVolume = "+8%",
+            vietnameseVolume = "-4%"
+        )
+        assertTrue(jobs.filter { it.language == TtsLanguage.ENGLISH }.all {
+            it.rate == 25 && it.pitch == "+5Hz" && it.volume == "+8%"
+        })
+        assertTrue(jobs.filter { it.language == TtsLanguage.VIETNAMESE }.all {
+            it.rate == -10 && it.pitch == "-3Hz" && it.volume == "-4%"
+        })
+    }
 }
