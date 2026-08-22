@@ -1,5 +1,21 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Current incremental cross-platform sync continuation
+
+- Baseline was clean `feat/cross-platform-sync` at `16c4cc03e09eefdf0592f03112e6693ac72f0411`.
+- Capability 1 establishes backend-neutral protocol identities, separate content/media/learning
+  deltas, revision/cursor/ACK/conflict contracts, `SyncTransport`, and a deterministic in-memory
+  adapter. Existing portable sync/backup workflows and local persistence schemas are unchanged.
+- Source audit found no trustworthy content revision or modification timestamp. Stable persisted
+  identities are ContentId, LearningItemId, ReviewEventId, learner/item MemoryState identity, and
+  package/library IDs. Media references are opaque Content-owned strings resolved under the local
+  app-private media root. ReviewEvent is append-only; MemoryState is derived learning state.
+- The existing JSON transaction runner snapshots an explicit path set, so Capability 2 can add
+  durable sync-state files to transaction membership without replacing local repositories. It must
+  prove mutation+outbox atomicity and restart/dedup/cursor safety before content merge begins.
+- Supabase credentials, migrations, deployment, network access, client integration, and physical
+  sync UAT have not been performed. Android widget physical UAT also remains pending.
+
 ## Current autonomous UAT continuation
 
 - The Desktop successful-backup state is terminal in the dialog: package/preview/execution controls

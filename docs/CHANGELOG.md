@@ -4758,3 +4758,12 @@ Searchable desktop collections now expose a polite live result status that disti
 - Reuses `StudyAnswerSection` for completed/revealed answers across Introduction and REVIEW modes;
   absent optional meaning is omitted safely. Multiple Choice, Image Recall and Example Completion
   retain their prior generic composition.
+# Incremental Sync Protocol/Core Contracts
+
+- Added backend-neutral typed account/device/event/entity/idempotency/revision/cursor contracts and
+  separate content, media, and learning delta namespaces.
+- Added field- and revision-aware conflict diagnostics, monotonic ACK contracts, and the replaceable
+  `SyncTransport` Application port.
+- Added a deterministic per-account in-memory transport with ordered pagination, retry-safe event
+  and idempotency deduplication, account isolation, monotonic ACK, and no-op pull coverage.
+- Added no Supabase dependency, network call, persistence-schema change, or Desktop/Android UI change.

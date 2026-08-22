@@ -1038,3 +1038,35 @@ pending.
   semantic groups and EN/VI examples, acknowledges ratings immediately, advances the engine without
   waiting for media, replays the active English focus once, and gates next-card presentation/audio
   behind completion, failure, missing media, or a 3.5-second fail-safe.
+# Incremental Cross-Platform Sync Phase
+
+Outcome: synchronize authoritative local Desktop and Android data through a backend-neutral,
+offline-first Push -> Pull -> Apply -> ACK workflow without making the backend part of Learning
+Engine core.
+
+## Phase Definition of Done
+
+- Content fields, media slots, and learning/review history synchronize with separate deterministic
+  merge/conflict semantics and stable identities.
+- Durable outbox, inbox deduplication, cursor/ACK persistence, transaction membership, retry, crash,
+  restart, and no-op second-sync behavior are verified.
+- A replaceable Supabase adapter provides batched paginated transport with user isolation/RLS and
+  versioned migrations; no client admin credential or Realtime dependency is required.
+- Desktop and Android expose explicit lifecycle-safe sync without blocking local/offline operation,
+  and end-to-end conflict/retry plus physical UAT gates are recorded truthfully.
+
+## Capability sequence
+
+1. **Sync Protocol/Core Contracts — complete:** typed sync identities; distinct content, media, and
+   learning deltas; revision/cursor/ACK and conflict diagnostics; `SyncTransport`; deterministic
+   in-memory adapter with ordering, pagination, duplicate, isolation, and no-op coverage.
+2. **Durable Local Outbox/Inbox/Cursor:** extend the existing JSON transaction membership so local
+   mutation and queued change can commit atomically; add retry/restart/dedup/apply recovery.
+3. **Content Field-Level Delta:** preserve unchanged and unknown fields and stable Content identity.
+4. **Learning/Review Delta:** deduplicate stable ReviewEvent identity and derive MemoryState only
+   through proven canonical scheduling semantics.
+5. **Media Delta:** content-addressed validated transfer and reference-safe replacement/removal.
+6. **Supabase Transport:** versioned PostgreSQL/Storage/RLS adapter after core/local gates pass.
+7. **Desktop Integration.**
+8. **Android Integration.**
+9. **End-to-End Conflict/Retry/UAT Gate.**

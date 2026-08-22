@@ -1858,3 +1858,17 @@ archive is published.
 # Dedicated launcher Quick Review widget
 
 The Android `-1 Screen` Quick Review widget is a separate, non-exported `AppWidgetProvider` and RemoteViews surface. It owns only per-widget presentation state (current index and reveal state), persisted after explicit reveal/next/successful-rating actions or deletion lifecycle cleanup; passive launcher redraws are read-only. Candidate data remains package-scoped through the persisted Library active package and the existing learned-item Quick Review projection. Successful Android Library/Package active-package commands trigger a best-effort widget refresh only after canonical persistence, while refresh failure cannot roll back package selection. Explicit immutable PendingIntents target the private provider, and ratings cross the existing review bridge into the canonical `LearningEngine.review` transaction with stale-content and duplicate-submission guards. Widget rendering and navigation never create or mutate a Study session or queue, and the widget introduces no polling or foreground service.
+# Incremental cross-platform sync boundary
+
+Incremental sync is a Shared Domain/Application protocol with the replaceable dependency direction
+`SyncEngine -> SyncTransport -> infrastructure transport`. Local repositories remain runtime and
+offline authority; a remote backend transports ordered changes and acknowledgements only. Account,
+device, event, entity, idempotency, revision, and cursor identities are typed independently.
+
+Content, media, and learning changes use separate namespaces. Content changes are field-scoped;
+media changes identify a logical slot and validated object metadata; learning changes carry stable
+review-event identity. Per-account revisions provide deterministic pagination, while device ACK is
+monotonic and never advances apply state by itself. Server timestamps are not conflict authority.
+The deterministic in-memory transport is the executable protocol adapter for core tests; the
+existing portable `.lesync` archive remains a separate file-transfer workflow and is not the
+incremental transport contract.
