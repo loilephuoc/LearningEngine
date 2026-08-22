@@ -22,6 +22,9 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -174,7 +177,9 @@ fun BackupRestoreScreen(
                 state = safetyBackupState,
                 enabled = !isBusy,
                 onRefresh = viewModel::refreshSafetyBackups,
-                onPreview = viewModel::previewSafetyBackup
+                onPreview = viewModel::previewSafetyBackup,
+                onCreate = viewModel::createSafetyBackup,
+                onDelete = viewModel::deleteSafetyBackup
             )
 
             // External Restore Backup Card
@@ -230,11 +235,12 @@ fun BackupRestoreScreen(
                 archiveSizeBytes = state.stagedFile.length(),
                 selectedPackageIds = state.selectedPackageIds,
                 onTogglePackage = { pkgId, checked -> viewModel.toggleRestorePackage(pkgId, checked) },
-                onConfirm = {
+                onConfirm = { createSafety ->
                     viewModel.confirmRestore(
                         state.stagedFile,
                         state.selectedPackageIds,
-                        state.deleteSourceAfterUse
+                        state.deleteSourceAfterUse,
+                        createSafety
                     )
                 },
                 onCancel = { viewModel.cancelPreview(state.stagedFile, state.deleteSourceAfterUse) }
@@ -267,8 +273,8 @@ fun BackupRestoreScreen(
                         state.cleanupResult.failureMessage?.let {
                             Text("Khôi phục thành công, nhưng không thể dọn bản sao cũ: $it")
                         }
-                        Text(
-                            "Một bản sao an toàn mới của dữ liệu trước khôi phục đã được lưu trên thiết bị.",
+                        if (state.safetyBackupPath.isNotBlank()) Text(
+                            "Bản sao an toàn bạn yêu cầu đã được tạo và xác minh trước khi khôi phục.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -537,7 +543,9 @@ private fun SafetyBackupCard(
     state: SafetyBackupListState,
     enabled: Boolean,
     onRefresh: () -> Unit,
-    onPreview: (SafetyBackupListEntry) -> Unit
+    onPreview: (SafetyBackupListEntry) -> Unit,
+    onCreate: () -> Unit,
+    onDelete: (java.nio.file.Path) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -546,7 +554,7 @@ private fun SafetyBackupCard(
         ) {
             Text("Bản sao an toàn trên thiết bị", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
-                "Các bản sao này được Learning Engine tự động tạo trước khi khôi phục. Bạn có thể xem trước hoặc khôi phục một bản sao.",
+                "Các bản sao này chỉ được tạo khi bạn yêu cầu. Bạn có thể tạo, xem trước, khôi phục hoặc xóa từng bản sao.",
                 style = MaterialTheme.typography.bodySmall
             )
             when (state) {
@@ -560,9 +568,9 @@ private fun SafetyBackupCard(
                     Text(
                         "Bản sao an toàn: ${inventory.entries.size} bản • ${formatBytesHelper(inventory.entries.sumOf { it.fileSizeBytes })}"
                     )
-                    Text("Giữ lại: 2 bản safety-v2 hợp lệ mới nhất", style = MaterialTheme.typography.bodySmall)
+                    Text("Bản sao an toàn do bạn tạo và quản lý; ứng dụng không tự động xóa.", style = MaterialTheme.typography.bodySmall)
                     if (inventory.entries.isEmpty()) Text("Chưa có bản sao an toàn khả dụng.")
-                    inventory.entries.forEach { candidate -> SafetyBackupRow(candidate, enabled, onPreview) }
+                    inventory.entries.forEach { candidate -> SafetyBackupRow(candidate, enabled, onPreview, onDelete) }
                     if (state.cleanupResult.failedDeleteCount > 0) {
                         Text(
                             "Dọn dẹp: Có cảnh báo • Không thể xóa ${state.cleanupResult.failedDeleteCount} bản sao cũ",
@@ -572,8 +580,10 @@ private fun SafetyBackupCard(
                     }
                     if (inventory.legacy.isNotEmpty()) {
                         Text("Bản sao legacy: ${inventory.legacy.size} (không tự động dọn)", style = MaterialTheme.typography.bodySmall)
+                        inventory.legacy.forEach { legacy -> LegacySafetyBackupRow(legacy, enabled, onDelete) }
                     }
                     TextButton(onClick = onRefresh, enabled = enabled) { Text("↻ Làm mới") }
+                    Button(onClick = onCreate, enabled = enabled) { Text("Tạo bản sao an toàn") }
                 }
             }
         }
@@ -584,8 +594,10 @@ private fun SafetyBackupCard(
 private fun SafetyBackupRow(
     candidate: SafetyBackupListEntry,
     enabled: Boolean,
-    onPreview: (SafetyBackupListEntry) -> Unit
+    onPreview: (SafetyBackupListEntry) -> Unit,
+    onDelete: (java.nio.file.Path) -> Unit
 ) {
+    var confirmDelete by remember(candidate.path) { mutableStateOf(false) }
     val preview = candidate.preview
     val timestamp = runCatching {
         java.time.Instant.parse(preview?.createdAtUtc)
@@ -615,8 +627,36 @@ private fun SafetyBackupRow(
             val canUse = enabled && candidate.validationStatus == SafetyBackupValidationStatus.VALIDATED
             OutlinedButton(onClick = { onPreview(candidate) }, enabled = canUse) { Text("Xem trước") }
             Button(onClick = { onPreview(candidate) }, enabled = canUse) { Text("Khôi phục") }
+            TextButton(onClick = { confirmDelete = true }, enabled = enabled) { Text("Xóa") }
         }
     }
+    if (confirmDelete) AlertDialog(
+        onDismissRequest = { confirmDelete = false },
+        title = { Text("Xóa vĩnh viễn bản sao an toàn?") },
+        text = { Text("${candidate.fileName}\n${formatBytesHelper(candidate.fileSizeBytes)}\nCác gói: ${preview?.packages?.joinToString { it.packageName } ?: "chưa xác minh"}\nThao tác này không thể hoàn tác và không ảnh hưởng dữ liệu học hiện tại.") },
+        confirmButton = { Button(onClick = { confirmDelete = false; onDelete(candidate.path) }) { Text("Xóa vĩnh viễn") } },
+        dismissButton = { OutlinedButton(onClick = { confirmDelete = false }) { Text("Hủy") } }
+    )
+}
+
+@Composable
+private fun LegacySafetyBackupRow(
+    backup: vn.loi.learning.infrastructure.recovery.LegacySafetyBackup,
+    enabled: Boolean,
+    onDelete: (java.nio.file.Path) -> Unit
+) {
+    var confirmDelete by remember(backup.path) { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text("${backup.fileName} • ${formatBytesHelper(backup.fileSizeBytes)}", style = MaterialTheme.typography.bodySmall)
+        TextButton(onClick = { confirmDelete = true }, enabled = enabled) { Text("Xóa") }
+    }
+    if (confirmDelete) AlertDialog(
+        onDismissRequest = { confirmDelete = false },
+        title = { Text("Xóa vĩnh viễn bản sao legacy?") },
+        text = { Text("${backup.fileName}\n${formatBytesHelper(backup.fileSizeBytes)}\nThao tác này không ảnh hưởng dữ liệu học hiện tại.") },
+        confirmButton = { Button(onClick = { confirmDelete = false; onDelete(backup.path) }) { Text("Xóa vĩnh viễn") } },
+        dismissButton = { OutlinedButton(onClick = { confirmDelete = false }) { Text("Hủy") } }
+    )
 }
 
 @Composable
@@ -730,9 +770,10 @@ private fun RestorePreviewDialog(
     archiveSizeBytes: Long,
     selectedPackageIds: Set<String>,
     onTogglePackage: (String, Boolean) -> Unit,
-    onConfirm: () -> Unit,
+    onConfirm: (Boolean) -> Unit,
     onCancel: () -> Unit
 ) {
+    var createSafety by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onCancel,
         title = {
@@ -804,8 +845,13 @@ private fun RestorePreviewDialog(
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = createSafety, onCheckedChange = { createSafety = it })
+                    Text("Tạo bản sao an toàn trước khi khôi phục")
+                }
                 Text(
-                    "Lưu ý: Quá trình khôi phục sẽ ghi đè các gói đã chọn. Một bản sao an toàn (safety backup) sẽ được tự động tạo trước khi áp dụng.",
+                    if (createSafety) "Bản sao có thể lớn và chỉ bắt đầu khôi phục sau khi tạo, xác minh thành công."
+                    else "Không tạo bản sao an toàn. Khôi phục vẫn dùng rollback giao dịch tạm thời.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -813,7 +859,7 @@ private fun RestorePreviewDialog(
         },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = { onConfirm(createSafety) },
                 enabled = selectedPackageIds.isNotEmpty(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier.semantics { contentDescription = "Confirm restore" }
@@ -845,18 +891,18 @@ private fun RestoreFailureDialog(
             "Operation Busy" to "Restore cannot proceed. If a Quick Voice recording is active, please stop it before restoring."
         }
         is PortableBackupV2RestoreResult.SafetyBackupFailed -> {
-            "Safety Backup Failed" to "Restore was not started because current data could not be safely backed up (${result.causeMessage ?: result.message}). Your current data remains unchanged."
+            "Safety Backup Failed" to "Restore was not started because the requested safety backup could not be created (${result.causeMessage ?: result.message}). Current data remains unchanged."
         }
         is PortableBackupV2RestoreResult.RestoreFailedRolledBack -> {
             "Restore Failed (Data Preserved)" to (
-                "Restore failed (${result.failureReason}), but your previous learning data was rolled back and preserved successfully without loss. " +
+                "Restore failed (${result.failureReason}), but previous learning data was transactionally rolled back and preserved. " +
                     cleanupWarning(result.cleanupResult)
                 )
         }
         is PortableBackupV2RestoreResult.RollbackFailed -> {
             "Critical Recovery Error" to (
                 "Restore and automatic rollback both failed. Do not continue studying. " +
-                    "Your pre-restore safety backup remains available on this device. Error: ${result.restoreFailure} / ${result.rollbackFailure}. " +
+                    "Manual recovery may be required. Error: ${result.restoreFailure} / ${result.rollbackFailure}. " +
                     cleanupWarning(result.cleanupResult)
                 )
         }

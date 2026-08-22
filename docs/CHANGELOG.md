@@ -1,3 +1,13 @@
+# Restore transaction and user-managed Safety Backup lifecycle
+
+- Removed mandatory pre-restore Safety Backup creation and all newest-two automatic deletion. Persistent
+  safety archives are created only by the explicit Create action or restore opt-in, and can be explicitly
+  deleted one at a time without touching live data.
+- Separated rollback into a hidden temporary verified snapshot cleaned in `finally`; Android supplement
+  rollback state now also has an explicit successful-commit cleanup lifecycle.
+- Added opt-in restore UI, manual Create/Delete with irreversible confirmation, opt-in-aware disk
+  preflight, and phase/operation/archive/selection/exception/root-cause/rollback/cleanup diagnostics.
+
 # Android fast safety-backup discovery
 
 - Added a disposable schema-v1 index containing only file identity and manifest-derived list metadata.

@@ -190,12 +190,13 @@ class PortableBackupV2Test {
         // Restore Backup A (Replace everything)
         val result = fixture.manager.restorePortableBackupV2(backupA)
         assertIs<PortableBackupV2RestoreResult.Success>(result)
-        assertTrue(Files.isRegularFile(Path.of(result.safetyBackupPath)))
+        assertEquals("", result.safetyBackupPath)
 
         // Verify live state matches State A
         assertEquals("[{\"id\":\"content-A\"}]", Files.readString(fixture.data.resolve("contents.json")))
         kotlin.test.assertContentEquals(byteArrayOf(1, 2, 3), Files.readAllBytes(mediaA))
         assertFalse(Files.exists(mediaB))
+        assertFalse(Files.list(fixture.root.resolve("safety")).use { paths -> paths.anyMatch { it.fileName.toString().startsWith(".transaction-rollback-") } })
     }
 
     @Test
@@ -206,7 +207,7 @@ class PortableBackupV2Test {
         fixture.manager.createPortableBackupV2(target, descriptor())
 
         Files.writeString(fixture.data.resolve("contents.json"), "[{\"id\":\"current-target\"}]")
-        val result = fixture.manager.restorePortableBackupV2(target)
+        val result = fixture.manager.restorePortableBackupV2(target, createSafetyBackupBeforeRestore = true)
         assertIs<PortableBackupV2RestoreResult.Success>(result)
 
         // Verify the safety backup can be read and contains the target state before mutation
@@ -278,6 +279,7 @@ class PortableBackupV2Test {
             assertIs<PortableBackupV2RestoreResult.RestoreFailedRolledBack>(result)
             assertEquals(1, hookCount)
             assertEquals("[{\"id\":\"live-state-before-restore\"}]", Files.readString(data.resolve("contents.json")))
+            assertFalse(Files.list(safety).use { paths -> paths.anyMatch { it.fileName.toString().startsWith(".transaction-rollback-") } })
         } finally {
             root.toFile().deleteRecursively()
         }
@@ -310,7 +312,8 @@ class PortableBackupV2Test {
 
             val result = manager.restorePortableBackupV2(backup)
             assertIs<PortableBackupV2RestoreResult.RollbackFailed>(result)
-            assertTrue(Files.isRegularFile(Path.of(result.safetyBackupPath)))
+            assertEquals("", result.safetyBackupPath)
+            assertTrue(result.restoreFailure.contains("phase=LIVE_APPLY"))
         } finally {
             root.toFile().deleteRecursively()
         }

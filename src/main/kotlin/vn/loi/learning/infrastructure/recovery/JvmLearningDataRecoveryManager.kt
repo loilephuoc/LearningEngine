@@ -55,7 +55,6 @@ internal fun filesEqual(first: Path, second: Path): Boolean {
 
 private const val FILE_COMPARISON_BUFFER_SIZE = 64 * 1024
 private const val DEFAULT_STREAMING_BUFFER_SIZE = 64 * 1024
-private const val SAFETY_V2_RETENTION_COUNT = 2
 private const val SAFETY_SOURCE_PLATFORM = "safety"
 private const val SAFETY_INDEX_FILE = "safety-backup-index.json"
 private const val FAST_MANIFEST_MAX_BYTES = 16L * 1024 * 1024
@@ -338,8 +337,20 @@ class JvmLearningDataRecoveryManager(
         protectedPaths: Set<Path> = emptySet(),
         limits: PortableBackupV2Limits = PortableBackupV2Limits()
     ): SafetyBackupReconciliation {
-        val cleanup = applySafetyBackupRetention(protectedPaths, limits)
-        return SafetyBackupReconciliation(discoverSafetyBackups(limits), cleanup)
+        return SafetyBackupReconciliation(
+            discoverSafetyBackups(limits),
+            SafetyBackupCleanupResult(retainedValidV2Count = discoverSafetyBackups(limits).validV2.size)
+        )
+    }
+
+    fun deleteSafetyBackup(path: Path): FastSafetyBackupInventory {
+        val normalized = path.toAbsolutePath().normalize()
+        val root = safetyDirectory.toAbsolutePath().normalize()
+        require(normalized.parent == root && (SAFETY_V2_FILE.matches(normalized.fileName.toString()) ||
+            LEGACY_SAFETY_FILE.matches(normalized.fileName.toString()))) { "Not a managed safety backup." }
+        safetyBackupDelete(normalized)
+        check(!Files.exists(normalized)) { "Safety backup deletion could not be verified." }
+        return discoverSafetyBackupsFast()
     }
 
     fun restorePortableBackupV2(
@@ -348,7 +359,8 @@ class JvmLearningDataRecoveryManager(
         contributorForSafetyBackup: PortableBackupV2SnapshotContributor? = null,
         consumer: PortableBackupV2RestoreConsumer? = null,
         limits: PortableBackupV2Limits = PortableBackupV2Limits(),
-        selectedPackageIds: Set<String>? = null
+        selectedPackageIds: Set<String>? = null,
+        createSafetyBackupBeforeRestore: Boolean = false
     ): PortableBackupV2RestoreResult {
         if (operationActive) return PortableBackupV2RestoreResult.Busy()
         if (selectedPackageIds != null && selectedPackageIds.isEmpty()) {
@@ -357,12 +369,15 @@ class JvmLearningDataRecoveryManager(
         return try {
             gate.restore {
                 failureHook("restore-v2-gate-acquired", null)
-                restorePortableBackupV2Locked(source, contributorForSafetyBackup, consumer, limits, selectedPackageIds)
+                restorePortableBackupV2Locked(source, contributorForSafetyBackup, consumer, limits, selectedPackageIds, createSafetyBackupBeforeRestore)
             }
         } catch (busy: RecoveryOperationBusyException) {
             PortableBackupV2RestoreResult.Busy(busy.message ?: "Recovery gate is busy.")
         } catch (e: Exception) {
-            PortableBackupV2RestoreResult.ValidationFailed("Restore failed: ${e.message}", e.message)
+            PortableBackupV2RestoreResult.ValidationFailed(
+                "Restore orchestration failed before completion.",
+                diagnostic("ORCHESTRATION", source.toAbsolutePath().normalize(), selectedPackageIds, e, "NOT_STARTED", "UNKNOWN")
+            )
         }
     }
 
@@ -1037,7 +1052,8 @@ class JvmLearningDataRecoveryManager(
         contributorForSafetyBackup: PortableBackupV2SnapshotContributor?,
         consumer: PortableBackupV2RestoreConsumer?,
         limits: PortableBackupV2Limits,
-        selectedPackageIds: Set<String>? = null
+        selectedPackageIds: Set<String>? = null,
+        createSafetyBackupBeforeRestore: Boolean
     ): PortableBackupV2RestoreResult {
         val normalized = source.toAbsolutePath().normalize()
         if (!Files.isRegularFile(normalized)) {
@@ -1048,9 +1064,8 @@ class JvmLearningDataRecoveryManager(
         } catch (_: Exception) { 0L }
 
         Files.createDirectories(safetyDirectory)
-        // Reclaim only verified old local safety archives before staging; an internal active source is protected.
-        val preStagingCleanup = reconcileSafetyBackupRetention(setOf(normalized), limits).cleanup
         val staging = Files.createTempDirectory(safetyDirectory, ".learning-engine-restore-v2-")
+        var transactionRollback: Path? = null
         try {
             val manifest = try {
                 extractAndValidateToStaging(normalized, staging, limits)
@@ -1059,7 +1074,10 @@ class JvmLearningDataRecoveryManager(
             } catch (e: InsufficientSpaceException) {
                 return PortableBackupV2RestoreResult.InsufficientSpace(e.message ?: "Insufficient space", e.requiredBytes, e.availableBytes)
             } catch (e: Exception) {
-                return PortableBackupV2RestoreResult.ValidationFailed("Archive preflight validation failed: ${e.message}", e.message)
+                return PortableBackupV2RestoreResult.ValidationFailed(
+                    "Archive preflight validation failed: ${e.message}",
+                    diagnostic("ARCHIVE_VALIDATION", normalized, selectedPackageIds, e, "NOT_STARTED", "SUCCESS")
+                )
             }
 
             try {
@@ -1068,7 +1086,10 @@ class JvmLearningDataRecoveryManager(
                 consumer?.preflight(staging)
                 failureHook("restore-v2-preflight-verified", null)
             } catch (e: Exception) {
-                return PortableBackupV2RestoreResult.ValidationFailed("Staged domain preflight validation failed: ${e.message}", e.message)
+                return PortableBackupV2RestoreResult.ValidationFailed(
+                    "Staged domain preflight validation failed: ${e.message}",
+                    diagnostic("STAGED_PREFLIGHT", normalized, selectedPackageIds, e, "NOT_STARTED", "SUCCESS")
+                )
             }
 
             val liveExpandedBytes = try {
@@ -1077,39 +1098,46 @@ class JvmLearningDataRecoveryManager(
                     contributorForSafetyBackup?.estimatedSnapshotBytes() ?: 0L
                 )
             } catch (_: Exception) { Long.MAX_VALUE }
-            val safetyAndRollbackRequired = try {
-                Math.addExact(Math.multiplyExact(liveExpandedBytes, 3L), limits.requireFreeDiskSpaceMarginBytes)
+            val rollbackRequired = try {
+                val multiplier = if (createSafetyBackupBeforeRestore) 4L else 3L
+                Math.addExact(Math.multiplyExact(liveExpandedBytes, multiplier), limits.requireFreeDiskSpaceMarginBytes)
             } catch (_: Exception) { Long.MAX_VALUE }
             val availableBeforeSafety = runCatching { safetyDirectory.toFile().usableSpace }.getOrDefault(0L)
-            if (availableBeforeSafety in 1 until safetyAndRollbackRequired) {
+            if (availableBeforeSafety in 1 until rollbackRequired) {
                 return PortableBackupV2RestoreResult.InsufficientSpace(
-                    "Insufficient free disk space for safety backup and rollback staging.",
-                    safetyAndRollbackRequired,
+                    "Insufficient free disk space for transactional rollback${if (createSafetyBackupBeforeRestore) " and requested safety backup" else ""}.",
+                    rollbackRequired,
                     availableBeforeSafety
                 )
             }
 
-            val safety = safetyDirectory.resolve("safety-v2-${clock.instant().toEpochMilli()}.lebak")
+            val safety = if (createSafetyBackupBeforeRestore) safetyDirectory.resolve("safety-v2-${clock.instant().toEpochMilli()}.lebak") else null
+            if (safety != null) try {
+                failureHook("restore-v2-opt-in-safety-backup-start", null)
+                createPortableBackupV2Locked(safety, PortableBackupV2Descriptor("user-requested-pre-restore", null, "safety", emptyList()), contributorForSafetyBackup, limits, {}, { false })
+                validatePortableBackupV2Internal(safety, limits)
+                failureHook("restore-v2-opt-in-safety-backup-verified", null)
+            } catch (e: Exception) {
+                return PortableBackupV2RestoreResult.SafetyBackupFailed("Requested safety backup creation failed; restore was not started.", diagnostic("SAFETY_BACKUP", normalized, selectedPackageIds, e, "NOT_STARTED", "SUCCESS"))
+            }
+
+            transactionRollback = Files.createTempFile(safetyDirectory, ".transaction-rollback-", ".tmp")
+            Files.deleteIfExists(transactionRollback)
             try {
-                failureHook("restore-v2-safety-backup-start", null)
+                failureHook("restore-v2-transaction-rollback-start", null)
                 createPortableBackupV2Locked(
-                    safety,
-                    PortableBackupV2Descriptor("safety-pre-restore", null, "safety", emptyList()),
+                    transactionRollback,
+                    PortableBackupV2Descriptor("transaction-rollback", null, "transaction-rollback", emptyList()),
                     contributorForSafetyBackup,
                     limits,
                     {},
                     { false }
                 )
-                validatePortableBackupV2Internal(safety, limits)
-                failureHook("restore-v2-safety-backup-verified", null)
+                validatePortableBackupV2Internal(transactionRollback, limits)
+                failureHook("restore-v2-transaction-rollback-verified", null)
             } catch (e: Exception) {
-                return PortableBackupV2RestoreResult.SafetyBackupFailed("Safety backup before restore failed.", e.message)
+                return PortableBackupV2RestoreResult.ValidationFailed("Transactional rollback preparation failed; restore was not started.", diagnostic("ROLLBACK_PREPARE", normalized, selectedPackageIds, e, "NOT_STARTED", "SUCCESS"))
             }
-
-            val protectedCleanup = mergeCleanupResults(
-                preStagingCleanup,
-                reconcileSafetyBackupRetention(setOf(safety, normalized), limits).cleanup
-            )
 
             val applyPlatformState = selectedPackageIds == null
             val capturedPlatformState = if (applyPlatformState) consumer?.captureCurrentState() else null
@@ -1139,13 +1167,14 @@ class JvmLearningDataRecoveryManager(
                     stagedDomainValidator(roots)
                     consumer?.validateLive()
                     failureHook("restore-v2-post-validation-complete", null)
+                    consumer?.commit(capturedPlatformState)
 
                     return PortableBackupV2RestoreResult.Success(
-                        safetyBackupPath = safety.toString(),
+                        safetyBackupPath = safety?.toString().orEmpty(),
                         restoredEntriesCount = manifest.counts.learningItems.toInt(),
                         appVersion = manifest.appVersion,
                         restoredCounts = manifest.counts,
-                        cleanupResult = finalSafetyCleanup(limits, protectedCleanup)
+                        cleanupResult = SafetyBackupCleanupResult()
                     )
                 } else {
                     val restoredCounts = packageScopeCounts(
@@ -1162,11 +1191,11 @@ class JvmLearningDataRecoveryManager(
                     failureHook("restore-v2-post-validation-complete", null)
 
                     return PortableBackupV2RestoreResult.Success(
-                        safetyBackupPath = safety.toString(),
+                        safetyBackupPath = safety?.toString().orEmpty(),
                         restoredEntriesCount = restoredCounts.learningItems.toInt(),
                         appVersion = manifest.appVersion,
                         restoredCounts = restoredCounts,
-                        cleanupResult = finalSafetyCleanup(limits, protectedCleanup)
+                        cleanupResult = SafetyBackupCleanupResult()
                     )
                 }
             } catch (restoreFailure: Exception) {
@@ -1174,7 +1203,7 @@ class JvmLearningDataRecoveryManager(
                     failureHook("restore-v2-rollback-start", restoreFailure.message)
                     val rollbackStaging = Files.createTempDirectory(safetyDirectory, ".learning-engine-rollback-v2-")
                     try {
-                        val safetyManifest = extractAndValidateToStaging(safety, rollbackStaging, limits)
+                        val safetyManifest = extractAndValidateToStaging(requireNotNull(transactionRollback), rollbackStaging, limits)
                         clear()
                         roots.forEach { (rootName, root) ->
                             val stagedRoot = rollbackStaging.resolve("portable/$rootName")
@@ -1199,83 +1228,33 @@ class JvmLearningDataRecoveryManager(
                         consumer?.validateLive()
                     }
                     failureHook("restore-v2-rollback-success", null)
-                    val cleanup = finalSafetyCleanup(limits, protectedCleanup)
                     return PortableBackupV2RestoreResult.RestoreFailedRolledBack(
                         "Restore failed and previous state was rolled back.",
-                        safetyBackupPath = safety.toString(),
-                        failureReason = restoreFailure.message ?: "Restore error",
-                        cleanupResult = cleanup
+                        safetyBackupPath = safety?.toString().orEmpty(),
+                        failureReason = diagnostic("LIVE_APPLY", normalized, selectedPackageIds, restoreFailure, "SUCCESS", "SUCCESS")
                     )
                 } catch (rollbackFailure: Exception) {
                     failureHook("restore-v2-rollback-failed", rollbackFailure.message)
-                    val cleanup = finalSafetyCleanup(limits, protectedCleanup)
                     return PortableBackupV2RestoreResult.RollbackFailed(
-                        "Restore failed and rollback also failed. Safety backup retained at $safety",
-                        safetyBackupPath = safety.toString(),
-                        restoreFailure = restoreFailure.message ?: "Restore error",
-                        rollbackFailure = rollbackFailure.message ?: "Rollback error",
-                        cleanupResult = cleanup
+                        "Restore failed and transactional rollback also failed.",
+                        safetyBackupPath = safety?.toString().orEmpty(),
+                        restoreFailure = diagnostic("LIVE_APPLY", normalized, selectedPackageIds, restoreFailure, "FAILED", "FAILED"),
+                        rollbackFailure = diagnostic("ROLLBACK", normalized, selectedPackageIds, rollbackFailure, "FAILED", "PENDING")
                     )
                 }
             }
         } finally {
-            deleteTree(staging)
+            runCatching { deleteTree(staging) }
+            transactionRollback?.let { runCatching { Files.deleteIfExists(it) } }
         }
     }
 
-    private fun finalSafetyCleanup(
-        limits: PortableBackupV2Limits,
-        earlier: SafetyBackupCleanupResult
-    ): SafetyBackupCleanupResult {
-        val final = reconcileSafetyBackupRetention(emptySet(), limits).cleanup
-        return mergeCleanupResults(earlier, final)
-    }
-
-    private fun mergeCleanupResults(
-        first: SafetyBackupCleanupResult,
-        second: SafetyBackupCleanupResult
-    ) = SafetyBackupCleanupResult(
-        retainedValidV2Count = second.retainedValidV2Count,
-        deletedValidV2Count = first.deletedValidV2Count + second.deletedValidV2Count,
-        failedDeleteCount = first.failedDeleteCount + second.failedDeleteCount,
-        failureMessage = listOfNotNull(first.failureMessage, second.failureMessage).distinct().joinToString("; ").ifEmpty { null }
-    )
-
-    private fun applySafetyBackupRetention(
-        protectedPaths: Set<Path>,
-        limits: PortableBackupV2Limits
-    ): SafetyBackupCleanupResult = try {
-        failureHook("restore-v2-safety-retention-start", null)
-        val protected = protectedPaths.map { it.toAbsolutePath().normalize() }.toSet()
-        val valid = discoverSafetyBackups(limits).validV2
-        val keep = valid.take(SAFETY_V2_RETENTION_COUNT).map { it.path }.toMutableSet().apply { addAll(protected) }
-        var deleted = 0
-        var failed = 0
-        val failures = mutableListOf<String>()
-        valid.asSequence().map { it.path }.filterNot(keep::contains).forEach { path ->
-            try {
-                safetyBackupDelete(path)
-                deleted++
-            } catch (failure: Exception) {
-                failed++
-                failures += (failure.message ?: "Could not delete an old safety backup.")
-            }
-        }
-        discoverSafetyBackupsFast()
-        SafetyBackupCleanupResult(
-            retainedValidV2Count = discoverSafetyBackups(limits).validV2.size,
-            deletedValidV2Count = deleted,
-            failedDeleteCount = failed,
-            failureMessage = failures.firstOrNull()
-        )
-    } catch (failure: Exception) {
-        SafetyBackupCleanupResult(
-            retainedValidV2Count = runCatching { discoverSafetyBackups(limits).validV2.size }.getOrDefault(0),
-            failedDeleteCount = 1,
-            failureMessage = failure.message ?: "Safety backup cleanup failed."
-        )
-    }
-
+    private fun diagnostic(
+        phase: String, archive: Path, selectedPackageIds: Set<String>?, failure: Throwable,
+        rollback: String, cleanup: String
+    ): String = "phase=$phase operation=RESTORE archive=${archive.fileName} selection=${selectedPackageIds?.sorted() ?: "FULL"} " +
+        "exception=${failure::class.qualifiedName} message=${failure.message} rootCause=${generateSequence(failure) { it.cause }.last().message} " +
+        "rollback=$rollback cleanup=$cleanup liveState=${if (rollback == "SUCCESS" || rollback == "NOT_STARTED") "PRESERVED" else "UNKNOWN"}"
 
     private fun inferCounts(
         records: List<PortableBackupEntryV2>,

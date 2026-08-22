@@ -16,15 +16,13 @@ graph, graph-bound Library state is recreated against that new graph generation 
 the prior facade. Restore success counts describe domain records and referenced media, never ZIP
 entry cardinality.
 
-The recovery manager also owns automatic safety-backup inventory and retention because it alone owns
-the safety directory and archive validator. Discovery positively classifies only exact automatic names
+The recovery manager owns safety-backup inventory and explicit user deletion because it owns the
+safety directory and archive validator. Discovery positively classifies only exact managed names
 whose validated v2 manifest has `sourcePlatform=safety` and a parseable creation time; legacy, corrupt,
-user and external archives are non-retention data. Old eligible archives may be reclaimed before source
-staging while the active source is protected. The verified pre-restore safety archive remains protected
-through mutation and rollback, then final reconciliation removes every valid candidate outside the two
-newest manifest times after both successful and failed restores. Cleanup failure is an independent
-warning and never changes restore/rollback truth. Android always re-scans the physical directory after
-reconciliation.
+user and external archives are never automatically deleted. Safety archives are persistent,
+user-created or explicitly requested before restore, and user-managed; opening, previewing, refreshing
+and restoring without opt-in create none. Explicit deletion is restricted to one managed file, verified
+on disk, and followed by index reconciliation.
 
 Android list discovery is a separate non-authoritative path backed by the disposable
 `safety-backup-index.json`. It scans filenames and file identity and, for uncached files, reads only
@@ -32,11 +30,12 @@ the ZIP manifest; it never hashes payloads or extracts canonical data. Identity-
 metadata can render immediately with explicit validation state. A single cancellable IO worker then
 performs the unchanged full validator sequentially and updates the index. Preview and restore always
 cross the full checksum, canonical-reference and staged-validation boundary regardless of cache state.
-Retention likewise remains based on full positive classification, not index claims.
+The index never creates or deletes an archive and is not a restore trust boundary.
 
-Restore space checks cover source extraction plus a second pre-mutation peak check. That check includes
-three live-snapshot equivalents (safety snapshot staging, worst-case published archive, and rollback
-extraction) plus the configured margin; Android contributes preferences, Quick Voice files and lockscreen
+Restore uses a hidden, temporary portable snapshot for transactional rollback, distinct from persistent
+Safety Backup and deleted in `finally`. Restore space checks cover source extraction plus a second
+pre-mutation peak check. Without opt-in it includes rollback creation/extraction and destination work;
+with opt-in it adds one persistent verified Safety Backup. Android contributes preferences, Quick Voice files and lockscreen
 background size. Platform supplements are whole-device state and therefore apply only to explicit full
 restore. Selective package restore still preflights them but mutates and validates only canonical package
 scope, preserving unrelated platform state.

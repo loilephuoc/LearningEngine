@@ -257,7 +257,7 @@ fun DesktopRestoreDialog(
                             Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             Spacer(modifier = Modifier.width(LESpacing.sm))
                             Text(
-                                text = "Lưu ý: Khôi phục sẽ thay thế nội dung các gói đã chọn. Bản sao an toàn (safety backup) sẽ được tự động tạo trước khi áp dụng.",
+                                text = "Lưu ý: Khôi phục sẽ thay thế nội dung các gói đã chọn. Rollback giao dịch tạm thời bảo vệ trạng thái hiện tại; không tự động tạo Safety Backup.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
                             )

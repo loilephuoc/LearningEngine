@@ -255,4 +255,5 @@ interface PortableBackupV2RestoreConsumer {
     fun applyRestored(stagingDirectory: Path)
     fun rollback(capturedState: Any?)
     fun validateLive()
+    fun commit(capturedState: Any?) = Unit
 }

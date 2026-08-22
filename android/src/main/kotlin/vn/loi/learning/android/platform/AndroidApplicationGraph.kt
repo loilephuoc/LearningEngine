@@ -34,6 +34,22 @@ class AndroidApplicationGraph internal constructor(
         contributor = portableBackupSnapshot
     )
 
+    fun createSafetyBackup(): Path {
+        val target = directories.backupDirectory.resolve("safety-v2-${System.currentTimeMillis()}.lebak")
+        return recovery.createPortableBackupV2(
+            target,
+            PortableBackupV2Descriptor(
+                appVersion = BuildConfig.VERSION_NAME,
+                versionCode = BuildConfig.VERSION_CODE.toLong(),
+                sourcePlatform = "safety",
+                learnerIds = listOf("default-learner")
+            ),
+            portableBackupSnapshot
+        )
+    }
+
+    fun deleteSafetyBackup(path: Path) = recovery.deleteSafetyBackup(path)
+
     fun previewPortableBackup(source: Path) = recovery.previewPortableBackupV2(source)
 
     fun discoverSafetyBackups() = recovery.discoverSafetyBackups()
@@ -49,13 +65,15 @@ class AndroidApplicationGraph internal constructor(
     fun restorePortableBackup(
         source: Path,
         operationActive: Boolean = false,
-        selectedPackageIds: Set<String>? = null
+        selectedPackageIds: Set<String>? = null,
+        createSafetyBackupBeforeRestore: Boolean = false
     ) = recovery.restorePortableBackupV2(
         source = source,
         operationActive = operationActive,
         contributorForSafetyBackup = portableBackupSnapshot,
         consumer = portableBackupSnapshot,
-        selectedPackageIds = selectedPackageIds
+        selectedPackageIds = selectedPackageIds,
+        createSafetyBackupBeforeRestore = createSafetyBackupBeforeRestore
     )
 
     fun exportSync(

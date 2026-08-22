@@ -2,14 +2,16 @@
 
 ## Phase 4 safety backup inventory and retention
 
+- Phase 5 changes retention assertions to user ownership: three-plus valid archives remain, restore
+  without opt-in creates none, opt-in creates exactly one, explicit delete reaches zero, and live bytes
+  are unchanged. Restore failure continues to assert exact rollback and actionable phase diagnostics.
 - Fast-discovery coverage verifies empty state, no-index manifest discovery, cached validated identity,
   changed-file invalidation, missing-file convergence, corrupt-index rebuild, corrupt-archive invalid
   transition, verified-creation index publication, and retention index cleanup without timing assertions.
 - Validate discovery metadata for `safety-v2-*.lebak`, invalid-v2 exclusion, separate legacy
   recognition, and exclusion of unrelated/user portable archives.
-- Cover zero/one/two/three-plus valid candidates, five-to-two physical deletion, manifest-time ordering,
-  temporary active-source protection followed by final newest-two retention, failed safety creation,
-  restore failure, rollback failure, cleanup failure and retry.
+- Cover zero/one/two/three-plus valid candidates, manifest-time ordering without automatic deletion,
+  explicit opt-in creation/delete, failed requested safety creation, restore failure and rollback failure.
 - Verify Android internal-source preview does not delete its archive, external staging remains
   disposable, exact package IDs stay selective, explicit full replacement remains available, and
   post-restore Library state is recreated from the new application graph.

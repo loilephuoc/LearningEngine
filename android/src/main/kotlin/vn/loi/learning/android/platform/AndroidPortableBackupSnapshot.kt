@@ -173,6 +173,10 @@ internal class AndroidPortableBackupSnapshot(
         }
     }
 
+    override fun commit(capturedState: Any?) {
+        (capturedState as? AndroidPlatformRestoreState)?.rollbackDir?.let { runCatching { deleteTree(it) } }
+    }
+
 
     private fun preferenceSnapshot(): JsonElement = AndroidPreferenceSnapshotGate.snapshot {
         encodePreferences(

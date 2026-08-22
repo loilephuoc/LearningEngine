@@ -1,17 +1,21 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+Phase 5 separates persistent Safety Backup from transactional rollback. Restore defaults to no persistent
+backup, offers explicit opt-in, and uses a hidden verified temporary rollback artifact cleaned after the
+operation. Automatic newest-two deletion is removed; users explicitly create and delete safety archives.
+
 Android safety-backup listing now renders from a disposable file-identity/manifest index before full
 archive validation. A cancellable sequential IO worker updates explicit validation states; changed and
-deleted files invalidate/converge the cache. Preview, restore and newest-two retention retain their full
-checksum, canonical-reference and positive-classification boundaries.
+deleted files invalidate/converge the cache. Preview and restore retain their full checksum,
+canonical-reference and positive-classification boundaries.
 
 Phase 4 recovery UX now exposes validated automatic Android safety backups without internal paths,
 keeps external `.lebak` files in the document-picker workflow, and sends both sources through the
 same portable preview/selective restore/validation/graph-reload boundary. Recovery-owned retention
-keeps the newest two positively verified v2 safety archives after successful or failed restore while
-protecting the active source/new safety archive during the operation and excluding legacy, corrupt,
-external and user-created files. Restore space preflight now includes Android supplements, safety
-creation and rollback peaks; package-selective restores preserve whole-device Android supplements.
+classifies positively verified v2 safety archives while excluding legacy, corrupt and external files.
+Archives are now user-managed without automatic retention. Restore space preflight includes Android
+supplements, transactional rollback and optional safety creation; package-selective restores preserve
+whole-device Android supplements.
 Automated verification is green; physical Android UAT with the existing 734 MB safety archive remains
 pending.
 

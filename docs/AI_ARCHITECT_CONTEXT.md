@@ -1,5 +1,15 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Current Phase 5 restore reliability continuation
+
+- Persistent Safety Backup is opt-in and user-managed; no opening, refresh, preview or default restore
+  path creates or deletes it. Restore rollback uses a separate hidden temporary verified snapshot.
+- Android provides explicit Create/Delete and restore opt-in. Full failure diagnostics preserve phase,
+  operation, archive, selection, exception/root cause, rollback, cleanup and live-state status.
+- Full verification passes 2,253 Engine, 968 Android and 1,802 Desktop tests (5,023 total), with zero
+  failures/errors/skips; Android debug assembly and diff check pass. The capability commit contains this
+  handoff; physical UAT remains.
+
 ## Current Phase 4 safety-backup manager continuation
 
 - Fast Android safety discovery now uses a disposable file-identity/manifest index for first render;
@@ -11,10 +21,9 @@
   automatic safety-v2 archives from its canonical backup directory, presents human metadata/storage,
   separates them from external document-picker files, and routes both through the existing portable
   preview/selective restore/validation/application-graph reload pipeline.
-- Recovery-owned retention positively requires the safety manifest marker, protects operation inputs,
-  and finally enforces the newest-two policy after success, rollback success, or rollback failure.
-  Cleanup failures remain warnings and Android re-scans disk. Preflight accounts for safety/rollback
-  peaks and real Android supplement bytes; selective restore preserves whole-device supplements.
+- Safety discovery positively requires the safety manifest marker. Automatic retention is superseded by
+  Phase 5 user-managed Create/Delete. Preflight accounts for rollback, optional safety creation and real
+  Android supplement bytes; selective restore preserves whole-device supplements.
 - Focused recovery tests pass. `clean test` passes 2,245 Engine, 968 Android and 1,802 Desktop tests
   (5,015 total), with zero failures/errors/skips. `:android:assembleDebug` passes; physical Android UAT
   remains pending and no install or push has been performed.

@@ -9,13 +9,43 @@ import kotlin.io.path.createDirectories
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class SafetyBackupInventoryAndRetentionTest {
     @Test
-    fun `reconciliation physically deletes three oldest of five valid safety archives`() = fixture().use { fixture ->
+    fun `restore creates exactly one persistent safety only when explicitly requested`() = fixture().use { fixture ->
+        val external = fixture.root.resolve("external.lebak")
+        fixture.managerAt("2026-08-22T01:00:00Z").createPortableBackupV2(external, fixture.descriptor())
+
+        assertIs<PortableBackupV2RestoreResult.Success>(fixture.managerAt("2026-08-22T02:00:00Z").restorePortableBackupV2(external))
+        assertEquals(0, fixture.manager().discoverSafetyBackups().validV2.size)
+
+        val result = assertIs<PortableBackupV2RestoreResult.Success>(fixture.managerAt("2026-08-22T03:00:00Z").restorePortableBackupV2(
+            external, createSafetyBackupBeforeRestore = true
+        ))
+        assertTrue(result.safetyBackupPath.isNotBlank())
+        assertEquals(1, fixture.manager().discoverSafetyBackups().validV2.size)
+    }
+
+    @Test
+    fun `explicit delete removes only selected archives and never mutates live data or creates replacement`() = fixture().use { fixture ->
+        val live = fixture.data.resolve("installed-packages.json")
+        val before = Files.readAllBytes(live)
+        fixture.createValidSafety("safety-v2-1.lebak", "2026-08-22T01:00:00Z")
+        fixture.createValidSafety("safety-v2-2.lebak", "2026-08-22T02:00:00Z")
+
+        fixture.manager().deleteSafetyBackup(fixture.safety.resolve("safety-v2-1.lebak"))
+        assertEquals(1, fixture.manager().discoverSafetyBackups().validV2.size)
+        fixture.manager().deleteSafetyBackup(fixture.safety.resolve("safety-v2-2.lebak"))
+
+        assertEquals(0, fixture.manager().discoverSafetyBackups().validV2.size)
+        kotlin.test.assertContentEquals(before, Files.readAllBytes(live))
+    }
+    @Test
+    fun `reconciliation never deletes user managed safety archives`() = fixture().use { fixture ->
         repeat(5) { index ->
             fixture.createValidSafety(
                 "safety-v2-${index + 1}.lebak",
@@ -25,20 +55,20 @@ class SafetyBackupInventoryAndRetentionTest {
 
         val reconciliation = fixture.manager().reconcileSafetyBackupRetention()
 
-        assertEquals(3, reconciliation.cleanup.deletedValidV2Count)
+        assertEquals(0, reconciliation.cleanup.deletedValidV2Count)
         assertEquals(0, reconciliation.cleanup.failedDeleteCount)
         assertEquals(
-            listOf("safety-v2-5.lebak", "safety-v2-4.lebak"),
+            listOf("safety-v2-5.lebak", "safety-v2-4.lebak", "safety-v2-3.lebak", "safety-v2-2.lebak", "safety-v2-1.lebak"),
             reconciliation.inventory.validV2.map { it.fileName }
         )
-        assertEquals(2, Files.list(fixture.safety).use { paths ->
+        assertEquals(5, Files.list(fixture.safety).use { paths ->
             paths.filter { it.fileName.toString().startsWith("safety-v2-") }.count()
         })
     }
 
     @Test
     fun `retention grows conservatively from zero and one valid backup`() {
-        listOf(0 to 1, 1 to 2).forEach { (existingCount, expectedCount) ->
+        listOf(0 to 0, 1 to 1).forEach { (existingCount, expectedCount) ->
             fixture().use { fixture ->
                 repeat(existingCount) { index ->
                     fixture.createValidSafety("safety-v2-${index + 1}.lebak", "2026-08-22T0${index + 1}:00:00Z")
@@ -50,8 +80,9 @@ class SafetyBackupInventoryAndRetentionTest {
                     fixture.managerAt("2026-08-22T04:00:00Z").restorePortableBackupV2(external)
                 )
 
-                assertEquals(expectedCount, result.cleanupResult.retainedValidV2Count)
+                assertEquals(0, result.cleanupResult.retainedValidV2Count)
                 assertEquals(0, result.cleanupResult.deletedValidV2Count)
+                assertEquals(expectedCount, fixture.manager().discoverSafetyBackups().validV2.size)
             }
         }
     }
@@ -81,7 +112,7 @@ class SafetyBackupInventoryAndRetentionTest {
     }
 
     @Test
-    fun `successful restore retains newest two valid v2 and never touches user legacy invalid or external source`() = fixture().use { fixture ->
+    fun `successful restore never deletes safety legacy invalid user or external archives`() = fixture().use { fixture ->
         fixture.createValidSafety("safety-v2-1000.lebak", "2026-08-22T01:00:00Z")
         fixture.createValidSafety("safety-v2-2000.lebak", "2026-08-22T02:00:00Z")
         fixture.createValidSafety("safety-v2-3000.lebak", "2026-08-22T03:00:00Z")
@@ -95,10 +126,10 @@ class SafetyBackupInventoryAndRetentionTest {
             fixture.managerAt("2026-08-22T05:00:00Z").restorePortableBackupV2(external)
         )
 
-        assertEquals(2, result.cleanupResult.retainedValidV2Count)
-        assertEquals(2, result.cleanupResult.deletedValidV2Count)
+        assertEquals(0, result.cleanupResult.retainedValidV2Count)
+        assertEquals(0, result.cleanupResult.deletedValidV2Count)
         assertEquals(null, result.cleanupResult.failureMessage)
-        assertEquals(2, fixture.manager().discoverSafetyBackups().validV2.size)
+        assertEquals(3, fixture.manager().discoverSafetyBackups().validV2.size)
         assertTrue(Files.exists(external))
         assertTrue(Files.exists(legacy))
         assertTrue(Files.exists(user))
@@ -106,7 +137,7 @@ class SafetyBackupInventoryAndRetentionTest {
     }
 
     @Test
-    fun `cleanup failure is reported without failing restore or compensating deletion`() = fixture().use { fixture ->
+    fun `explicit delete failure is reported and never triggers compensating deletion`() = fixture().use { fixture ->
         fixture.createValidSafety("safety-v2-1000.lebak", "2026-08-22T01:00:00Z")
         fixture.createValidSafety("safety-v2-2000.lebak", "2026-08-22T02:00:00Z")
         val external = fixture.root.resolve("external.lebak")
@@ -114,19 +145,13 @@ class SafetyBackupInventoryAndRetentionTest {
         val before = Files.list(fixture.safety).use { it.count() }
         val manager = fixture.managerAt("2026-08-22T04:00:00Z") { throw IllegalStateException("delete denied") }
 
-        val result = assertIs<PortableBackupV2RestoreResult.Success>(manager.restorePortableBackupV2(external))
-
-        assertNotNull(result.cleanupResult.failureMessage)
-        assertEquals(before + 1, Files.list(fixture.safety).use { it.count() })
+        assertFailsWith<IllegalStateException> { manager.deleteSafetyBackup(fixture.safety.resolve("safety-v2-1000.lebak")) }
+        assertEquals(before, Files.list(fixture.safety).use { it.count() })
         assertTrue(Files.exists(external))
-
-        val retry = fixture.manager().reconcileSafetyBackupRetention()
-        assertEquals(2, retry.inventory.validV2.size)
-        assertTrue(retry.cleanup.deletedValidV2Count > 0)
     }
 
     @Test
-    fun `internal restore source is protected during operation but final retention keeps newest two`() = fixture().use { fixture ->
+    fun `internal restore source is never automatically deleted`() = fixture().use { fixture ->
         val active = fixture.safety.resolve("safety-v2-9000.lebak")
         fixture.managerAt("2026-08-22T01:00:00Z").createPortableBackupV2(active, fixture.safetyDescriptor())
         fixture.createValidSafety("safety-v2-1000.lebak", "2026-08-22T02:00:00Z")
@@ -136,12 +161,12 @@ class SafetyBackupInventoryAndRetentionTest {
             fixture.managerAt("2026-08-22T04:00:00Z").restorePortableBackupV2(active)
         )
 
-        assertFalse(Files.exists(active))
-        assertEquals(2, result.cleanupResult.retainedValidV2Count)
+        assertTrue(Files.exists(active))
+        assertEquals(3, fixture.manager().discoverSafetyBackups().validV2.size)
     }
 
     @Test
-    fun `failed restore after verified safety creation rolls back and still cleans old backups`() = fixture().use { fixture ->
+    fun `failed restore rolls back without creating or deleting user safety backups`() = fixture().use { fixture ->
         repeat(5) { index -> fixture.createValidSafety(
             "safety-v2-${index + 1}.lebak", "2026-08-22T0${index + 1}:00:00Z"
         ) }
@@ -159,14 +184,13 @@ class SafetyBackupInventoryAndRetentionTest {
         )
 
         val inventory = manager.discoverSafetyBackups()
-        assertEquals(2, inventory.validV2.size)
-        assertTrue(inventory.validV2.any { it.preview.createdAtUtc == "2026-08-22T07:00:00Z" })
-        assertEquals(2, result.cleanupResult.retainedValidV2Count)
+        assertEquals(5, inventory.validV2.size)
+        assertTrue(inventory.validV2.none { it.preview.createdAtUtc == "2026-08-22T07:00:00Z" })
         assertTrue(Files.exists(external))
     }
 
     @Test
-    fun `rollback failure retains newest safety backup and still enforces final retention`() = fixture().use { fixture ->
+    fun `rollback failure does not create or delete user safety backups`() = fixture().use { fixture ->
         repeat(4) { index -> fixture.createValidSafety(
             "safety-v2-${index + 1}.lebak", "2026-08-22T0${index + 1}:00:00Z"
         ) }
@@ -189,10 +213,9 @@ class SafetyBackupInventoryAndRetentionTest {
         )
 
         val inventory = manager.discoverSafetyBackups()
-        assertEquals(2, inventory.validV2.size)
-        assertTrue(inventory.validV2.any { it.preview.createdAtUtc == "2026-08-22T06:00:00Z" })
-        assertEquals(2, result.cleanupResult.retainedValidV2Count)
-        assertTrue(Files.exists(result.safetyBackupPath.let(Path::of)))
+        assertEquals(4, inventory.validV2.size)
+        assertTrue(inventory.validV2.none { it.preview.createdAtUtc == "2026-08-22T06:00:00Z" })
+        assertEquals("", result.safetyBackupPath)
     }
 
     @Test
@@ -205,10 +228,10 @@ class SafetyBackupInventoryAndRetentionTest {
             roots = mapOf("data" to fixture.data, "media" to fixture.media),
             safetyDirectory = fixture.safety,
             clock = Clock.fixed(Instant.parse("2026-08-22T03:00:00Z"), ZoneOffset.UTC),
-            failureHook = { hook, _ -> if (hook == "restore-v2-safety-backup-start") error("cannot create") }
+            failureHook = { hook, _ -> if (hook == "restore-v2-opt-in-safety-backup-start") error("cannot create") }
         )
 
-        assertIs<PortableBackupV2RestoreResult.SafetyBackupFailed>(manager.restorePortableBackupV2(external))
+        assertIs<PortableBackupV2RestoreResult.SafetyBackupFailed>(manager.restorePortableBackupV2(external, createSafetyBackupBeforeRestore = true))
         assertTrue(Files.exists(existing))
         assertFalse(Files.exists(fixture.safety.resolve("safety-v2-1787367600000.lebak")))
     }

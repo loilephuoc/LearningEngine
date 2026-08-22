@@ -71,14 +71,14 @@ class SafetyBackupFastDiscoveryTest {
     }
 
     @Test
-    fun `verified safety creation publishes validated index and retention removes deleted entries`() = fixture().use { fixture ->
+    fun `verified safety creation publishes validated index and reconciliation never deletes entries`() = fixture().use { fixture ->
         repeat(3) { fixture.createSafety("safety-v2-${it + 10}.lebak", "2026-08-22T0${it + 1}:00:00Z") }
         assertEquals(3, fixture.manager().discoverSafetyBackupsFast().entries.count { it.validationStatus == SafetyBackupValidationStatus.VALIDATED })
 
         fixture.manager().reconcileSafetyBackupRetention()
 
         val final = fixture.manager().discoverSafetyBackupsFast()
-        assertEquals(2, final.entries.size)
+        assertEquals(3, final.entries.size)
         assertTrue(final.entries.all { Files.exists(it.path) })
     }
 

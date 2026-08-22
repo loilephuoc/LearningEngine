@@ -1,5 +1,6 @@
 package vn.loi.learning.android.recovery
 
+import java.util.logging.Logger
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -8,6 +9,7 @@ import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -32,6 +34,8 @@ import vn.loi.learning.infrastructure.recovery.SafetyBackupCleanupResult
 import vn.loi.learning.infrastructure.recovery.FastSafetyBackupInventory
 import vn.loi.learning.infrastructure.recovery.SafetyBackupListEntry
 import vn.loi.learning.infrastructure.recovery.SafetyBackupValidationStatus
+
+private val RESTORE_LOGGER = Logger.getLogger("BackupRestore")
 
 sealed interface SafetyBackupListState {
     data object Loading : SafetyBackupListState
@@ -139,11 +143,35 @@ class BackupRestoreViewModel(
             val validated = withContext(ioDispatcher) { graphProvider().validateSafetyBackupForIndex(entry.path) }
             mutableSafetyBackups.value = SafetyBackupListState.Ready(validated)
         }
-        val reconciliation = withContext(ioDispatcher) { graphProvider().reconcileSafetyBackups() }
         mutableSafetyBackups.value = SafetyBackupListState.Ready(
-            withContext(ioDispatcher) { graphProvider().discoverSafetyBackupsFast() },
-            reconciliation.cleanup
+            withContext(ioDispatcher) { graphProvider().discoverSafetyBackupsFast() }
         )
+    }
+
+    fun createSafetyBackup() {
+        if (activeJob?.isActive == true) return
+        mutableState.value = BackupRestoreUiState.BackingUp("Đang tạo và xác minh bản sao an toàn...")
+        activeJob = viewModelScope.launch {
+            try {
+                withContext(ioDispatcher) { graphProvider().createSafetyBackup() }
+                refreshSafetyBackups()
+                mutableState.value = BackupRestoreUiState.Idle
+            } catch (failure: Exception) {
+                mutableState.value = BackupRestoreUiState.BackupFailure(failure.message ?: "Không thể tạo bản sao an toàn.")
+            }
+        }
+    }
+
+    fun deleteSafetyBackup(path: Path) {
+        if (activeJob?.isActive == true) return
+        activeJob = viewModelScope.launch {
+            try {
+                val inventory = withContext(ioDispatcher) { graphProvider().deleteSafetyBackup(path) }
+                mutableSafetyBackups.value = SafetyBackupListState.Ready(inventory)
+            } catch (failure: Exception) {
+                mutableSafetyBackups.value = SafetyBackupListState.Failed(failure.message ?: "Không thể xóa bản sao an toàn.")
+            }
+        }
     }
 
     fun previewSafetyBackup(candidate: SafetyBackupListEntry) {
@@ -266,7 +294,8 @@ class BackupRestoreViewModel(
     fun confirmRestore(
         stagedFile: File,
         selectedPackageIds: Set<String>? = null,
-        deleteSourceAfterUse: Boolean = true
+        deleteSourceAfterUse: Boolean = true,
+        createSafetyBackupBeforeRestore: Boolean = false
     ) {
         val currentState = mutableState.value
         if (currentState is BackupRestoreUiState.Restoring) {
@@ -283,7 +312,8 @@ class BackupRestoreViewModel(
                         graph.restorePortableBackup(
                             source = stagedFile.toPath(),
                             operationActive = false,
-                            selectedPackageIds = selectedPackageIds
+                            selectedPackageIds = selectedPackageIds,
+                            createSafetyBackupBeforeRestore = createSafetyBackupBeforeRestore
                         )
                     } finally {
                         if (deleteSourceAfterUse) stagedFile.delete()
@@ -300,6 +330,7 @@ class BackupRestoreViewModel(
                         refreshSafetyBackups()
                     }
                     else -> {
+                        RESTORE_LOGGER.severe("Restore failed: $result")
                         mutableState.value = BackupRestoreUiState.RestoreFailure(result)
                         refreshSafetyBackups()
                     }
