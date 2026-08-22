@@ -17,13 +17,21 @@ the prior facade. Restore success counts describe domain records and referenced 
 entry cardinality.
 
 The recovery manager also owns automatic safety-backup inventory and retention because it alone owns
-the safety directory and archive validator. Discovery classifies only exact automatic naming families,
-validates v2 archives through the portable manifest/checksum contract, and treats legacy/corrupt files
-as non-retention data. Retention runs after successful live validation, orders candidates by validated
-manifest creation time, protects the newly-created safety archive and active restore source, and deletes
-only older valid `safety-v2` candidates. Cleanup failure is a separate success diagnostic and cannot
-trigger compensating deletion. Android exposes this inventory without a second parser; internal and
-document-picker sources converge at the existing preview/restore transaction boundary.
+the safety directory and archive validator. Discovery positively classifies only exact automatic names
+whose validated v2 manifest has `sourcePlatform=safety` and a parseable creation time; legacy, corrupt,
+user and external archives are non-retention data. Old eligible archives may be reclaimed before source
+staging while the active source is protected. The verified pre-restore safety archive remains protected
+through mutation and rollback, then final reconciliation removes every valid candidate outside the two
+newest manifest times after both successful and failed restores. Cleanup failure is an independent
+warning and never changes restore/rollback truth. Android always re-scans the physical directory after
+reconciliation.
+
+Restore space checks cover source extraction plus a second pre-mutation peak check. That check includes
+three live-snapshot equivalents (safety snapshot staging, worst-case published archive, and rollback
+extraction) plus the configured margin; Android contributes preferences, Quick Voice files and lockscreen
+background size. Platform supplements are whole-device state and therefore apply only to explicit full
+restore. Selective package restore still preflights them but mutates and validates only canonical package
+scope, preserving unrelated platform state.
 
 ## Constitution & Strategic Foundation
 

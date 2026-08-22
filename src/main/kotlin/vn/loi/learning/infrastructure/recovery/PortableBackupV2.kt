@@ -165,6 +165,8 @@ data class PortableBackupSupplementV2(
 fun interface PortableBackupV2SnapshotContributor {
     /** Called while the recovery gate owns the exclusive backup snapshot. */
     fun snapshot(stagingDirectory: Path): List<PortableBackupSupplementV2>
+
+    fun estimatedSnapshotBytes(): Long = 0L
 }
 
 @Serializable
@@ -214,7 +216,8 @@ sealed interface PortableBackupV2RestoreResult {
     data class RestoreFailedRolledBack(
         override val message: String,
         val safetyBackupPath: String,
-        val failureReason: String
+        val failureReason: String,
+        val cleanupResult: SafetyBackupCleanupResult = SafetyBackupCleanupResult()
     ) : PortableBackupV2RestoreResult
 
     @Serializable
@@ -222,7 +225,8 @@ sealed interface PortableBackupV2RestoreResult {
         override val message: String,
         val safetyBackupPath: String,
         val restoreFailure: String,
-        val rollbackFailure: String
+        val rollbackFailure: String,
+        val cleanupResult: SafetyBackupCleanupResult = SafetyBackupCleanupResult()
     ) : PortableBackupV2RestoreResult
 
     @Serializable

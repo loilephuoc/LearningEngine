@@ -3,9 +3,12 @@
 Phase 4 recovery UX now exposes validated automatic Android safety backups without internal paths,
 keeps external `.lebak` files in the document-picker workflow, and sends both sources through the
 same portable preview/selective restore/validation/graph-reload boundary. Recovery-owned retention
-keeps the newest two valid v2 safety archives after successful restore while protecting the active
-source/new safety archive and excluding legacy, corrupt, external and user-created files. Automated
-verification is green; physical Android UAT with the existing 734 MB safety archive remains pending.
+keeps the newest two positively verified v2 safety archives after successful or failed restore while
+protecting the active source/new safety archive during the operation and excluding legacy, corrupt,
+external and user-created files. Restore space preflight now includes Android supplements, safety
+creation and rollback peaks; package-selective restores preserve whole-device Android supplements.
+Automated verification is green; physical Android UAT with the existing 734 MB safety archive remains
+pending.
 
 Backup/restore transaction safety now has one application-wide maintenance gate, immutable staged
 backup publication, isolated full-domain restore validation, a verified safety snapshot, exact

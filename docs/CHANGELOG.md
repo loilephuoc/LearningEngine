@@ -1,3 +1,18 @@
+# Android safety-backup final retention and restore correction
+
+- Positively classifies retention candidates by exact name, validated v2/checksums/canonical data,
+  `sourcePlatform=safety`, and parseable manifest time. Final reconciliation physically keeps only the
+  newest two after success, rolled-back failure, or rollback failure; deletion failures are separate
+  warnings and are retryable.
+- Reclaims only old eligible local safety archives before staging, protects the active source and new
+  verified safety archive during the operation, and adds a pre-mutation space check for safety staging,
+  published archive, rollback extraction, Android preferences, Quick Voice, background, and margin.
+- Treats Android platform supplements as full-device state: explicit full restore applies/validates/
+  rolls them back, while package-selective restore preserves them. Added a real Android supplement
+  create-to-live-validation round trip and three-package selective regression coverage.
+- Full verification passes 5,015 tests (2,245 Engine, 968 Android, 1,802 Desktop), zero failures/errors/
+  skips, plus `:android:assembleDebug`.
+
 # Android safety-backup manager and restore-source UX
 
 - Added validated discovery for automatic `safety-v2-*.lebak` archives with human-readable creation

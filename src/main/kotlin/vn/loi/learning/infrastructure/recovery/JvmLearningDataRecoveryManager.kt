@@ -56,6 +56,7 @@ internal fun filesEqual(first: Path, second: Path): Boolean {
 private const val FILE_COMPARISON_BUFFER_SIZE = 64 * 1024
 private const val DEFAULT_STREAMING_BUFFER_SIZE = 64 * 1024
 private const val SAFETY_V2_RETENTION_COUNT = 2
+private const val SAFETY_SOURCE_PLATFORM = "safety"
 private val SAFETY_V2_FILE = Regex("^safety-v2-[0-9]+[.]lebak$")
 private val LEGACY_SAFETY_FILE = Regex("^safety-(?!v2-).+[.]lebak$")
 private val PROGRESS_DATA_FILES = setOf(
@@ -192,12 +193,14 @@ class JvmLearningDataRecoveryManager(
                 SAFETY_V2_FILE.matches(name) -> try {
                     val preview = previewPortableBackupV2(path, limits)
                     Instant.parse(preview.createdAtUtc)
-                    valid += SafetyBackupCandidate(
-                        path = path.toAbsolutePath().normalize(),
-                        fileName = name,
-                        fileSizeBytes = Files.size(path),
-                        preview = preview
-                    )
+                    if (preview.sourcePlatform == SAFETY_SOURCE_PLATFORM) {
+                        valid += SafetyBackupCandidate(
+                            path = path.toAbsolutePath().normalize(),
+                            fileName = name,
+                            fileSizeBytes = Files.size(path),
+                            preview = preview
+                        )
+                    }
                 } catch (_: Exception) { invalid++ }
                 LEGACY_SAFETY_FILE.matches(name) -> legacy += LegacySafetyBackup(
                     path.toAbsolutePath().normalize(), name, Files.size(path)
@@ -209,6 +212,14 @@ class JvmLearningDataRecoveryManager(
             legacy = legacy.sortedByDescending { Files.getLastModifiedTime(it.path).toMillis() },
             invalidV2Count = invalid
         )
+    }
+
+    fun reconcileSafetyBackupRetention(
+        protectedPaths: Set<Path> = emptySet(),
+        limits: PortableBackupV2Limits = PortableBackupV2Limits()
+    ): SafetyBackupReconciliation {
+        val cleanup = applySafetyBackupRetention(protectedPaths, limits)
+        return SafetyBackupReconciliation(discoverSafetyBackups(limits), cleanup)
     }
 
     fun restorePortableBackupV2(
@@ -907,6 +918,8 @@ class JvmLearningDataRecoveryManager(
         } catch (_: Exception) { 0L }
 
         Files.createDirectories(safetyDirectory)
+        // Reclaim only verified old local safety archives before staging; an internal active source is protected.
+        val preStagingCleanup = reconcileSafetyBackupRetention(setOf(normalized), limits).cleanup
         val staging = Files.createTempDirectory(safetyDirectory, ".learning-engine-restore-v2-")
         try {
             val manifest = try {
@@ -928,6 +941,24 @@ class JvmLearningDataRecoveryManager(
                 return PortableBackupV2RestoreResult.ValidationFailed("Staged domain preflight validation failed: ${e.message}", e.message)
             }
 
+            val liveExpandedBytes = try {
+                Math.addExact(
+                    portableInventory().sumOf { Files.size(it.second) },
+                    contributorForSafetyBackup?.estimatedSnapshotBytes() ?: 0L
+                )
+            } catch (_: Exception) { Long.MAX_VALUE }
+            val safetyAndRollbackRequired = try {
+                Math.addExact(Math.multiplyExact(liveExpandedBytes, 3L), limits.requireFreeDiskSpaceMarginBytes)
+            } catch (_: Exception) { Long.MAX_VALUE }
+            val availableBeforeSafety = runCatching { safetyDirectory.toFile().usableSpace }.getOrDefault(0L)
+            if (availableBeforeSafety in 1 until safetyAndRollbackRequired) {
+                return PortableBackupV2RestoreResult.InsufficientSpace(
+                    "Insufficient free disk space for safety backup and rollback staging.",
+                    safetyAndRollbackRequired,
+                    availableBeforeSafety
+                )
+            }
+
             val safety = safetyDirectory.resolve("safety-v2-${clock.instant().toEpochMilli()}.lebak")
             try {
                 failureHook("restore-v2-safety-backup-start", null)
@@ -945,7 +976,13 @@ class JvmLearningDataRecoveryManager(
                 return PortableBackupV2RestoreResult.SafetyBackupFailed("Safety backup before restore failed.", e.message)
             }
 
-            val capturedPlatformState = consumer?.captureCurrentState()
+            val protectedCleanup = mergeCleanupResults(
+                preStagingCleanup,
+                reconcileSafetyBackupRetention(setOf(safety, normalized), limits).cleanup
+            )
+
+            val applyPlatformState = selectedPackageIds == null
+            val capturedPlatformState = if (applyPlatformState) consumer?.captureCurrentState() else null
             try {
                 failureHook("restore-v2-live-replace-start", null)
                 if (selectedPackageIds == null) {
@@ -978,7 +1015,7 @@ class JvmLearningDataRecoveryManager(
                         restoredEntriesCount = manifest.counts.learningItems.toInt(),
                         appVersion = manifest.appVersion,
                         restoredCounts = manifest.counts,
-                        cleanupResult = applySafetyBackupRetention(setOf(safety, normalized), limits)
+                        cleanupResult = finalSafetyCleanup(limits, protectedCleanup)
                     )
                 } else {
                     val restoredCounts = packageScopeCounts(
@@ -987,11 +1024,11 @@ class JvmLearningDataRecoveryManager(
                     applySelectiveRestoreFromStaging(staging, selectedPackageIds)
                     cleanEmptyDirectories()
                     failureHook("restore-v2-canonical-copied", null)
-                    consumer?.applyRestored(staging)
-                    failureHook("restore-v2-consumer-applied", null)
+                    // Android supplements are whole-device state and do not participate in package-selective restore.
+                    failureHook("restore-v2-consumer-skipped-selective", null)
 
                     stagedDomainValidator(roots)
-                    consumer?.validateLive()
+                    // Canonical live validation above is authoritative for selective restore.
                     failureHook("restore-v2-post-validation-complete", null)
 
                     return PortableBackupV2RestoreResult.Success(
@@ -999,7 +1036,7 @@ class JvmLearningDataRecoveryManager(
                         restoredEntriesCount = restoredCounts.learningItems.toInt(),
                         appVersion = manifest.appVersion,
                         restoredCounts = restoredCounts,
-                        cleanupResult = applySafetyBackupRetention(setOf(safety, normalized), limits)
+                        cleanupResult = finalSafetyCleanup(limits, protectedCleanup)
                     )
                 }
             } catch (restoreFailure: Exception) {
@@ -1027,21 +1064,27 @@ class JvmLearningDataRecoveryManager(
                     } finally {
                         deleteTree(rollbackStaging)
                     }
-                    consumer?.rollback(capturedPlatformState)
-                    consumer?.validateLive()
+                    if (applyPlatformState) {
+                        consumer?.rollback(capturedPlatformState)
+                        consumer?.validateLive()
+                    }
                     failureHook("restore-v2-rollback-success", null)
+                    val cleanup = finalSafetyCleanup(limits, protectedCleanup)
                     return PortableBackupV2RestoreResult.RestoreFailedRolledBack(
                         "Restore failed and previous state was rolled back.",
                         safetyBackupPath = safety.toString(),
-                        failureReason = restoreFailure.message ?: "Restore error"
+                        failureReason = restoreFailure.message ?: "Restore error",
+                        cleanupResult = cleanup
                     )
                 } catch (rollbackFailure: Exception) {
                     failureHook("restore-v2-rollback-failed", rollbackFailure.message)
+                    val cleanup = finalSafetyCleanup(limits, protectedCleanup)
                     return PortableBackupV2RestoreResult.RollbackFailed(
                         "Restore failed and rollback also failed. Safety backup retained at $safety",
                         safetyBackupPath = safety.toString(),
                         restoreFailure = restoreFailure.message ?: "Restore error",
-                        rollbackFailure = rollbackFailure.message ?: "Rollback error"
+                        rollbackFailure = rollbackFailure.message ?: "Rollback error",
+                        cleanupResult = cleanup
                     )
                 }
             }
@@ -1049,6 +1092,24 @@ class JvmLearningDataRecoveryManager(
             deleteTree(staging)
         }
     }
+
+    private fun finalSafetyCleanup(
+        limits: PortableBackupV2Limits,
+        earlier: SafetyBackupCleanupResult
+    ): SafetyBackupCleanupResult {
+        val final = reconcileSafetyBackupRetention(emptySet(), limits).cleanup
+        return mergeCleanupResults(earlier, final)
+    }
+
+    private fun mergeCleanupResults(
+        first: SafetyBackupCleanupResult,
+        second: SafetyBackupCleanupResult
+    ) = SafetyBackupCleanupResult(
+        retainedValidV2Count = second.retainedValidV2Count,
+        deletedValidV2Count = first.deletedValidV2Count + second.deletedValidV2Count,
+        failedDeleteCount = first.failedDeleteCount + second.failedDeleteCount,
+        failureMessage = listOfNotNull(first.failureMessage, second.failureMessage).distinct().joinToString("; ").ifEmpty { null }
+    )
 
     private fun applySafetyBackupRetention(
         protectedPaths: Set<Path>,
@@ -1059,17 +1120,27 @@ class JvmLearningDataRecoveryManager(
         val valid = discoverSafetyBackups(limits).validV2
         val keep = valid.take(SAFETY_V2_RETENTION_COUNT).map { it.path }.toMutableSet().apply { addAll(protected) }
         var deleted = 0
+        var failed = 0
+        val failures = mutableListOf<String>()
         valid.asSequence().map { it.path }.filterNot(keep::contains).forEach { path ->
-            safetyBackupDelete(path)
-            deleted++
+            try {
+                safetyBackupDelete(path)
+                deleted++
+            } catch (failure: Exception) {
+                failed++
+                failures += (failure.message ?: "Could not delete an old safety backup.")
+            }
         }
         SafetyBackupCleanupResult(
             retainedValidV2Count = discoverSafetyBackups(limits).validV2.size,
-            deletedValidV2Count = deleted
+            deletedValidV2Count = deleted,
+            failedDeleteCount = failed,
+            failureMessage = failures.firstOrNull()
         )
     } catch (failure: Exception) {
         SafetyBackupCleanupResult(
             retainedValidV2Count = runCatching { discoverSafetyBackups(limits).validV2.size }.getOrDefault(0),
+            failedDeleteCount = 1,
             failureMessage = failure.message ?: "Safety backup cleanup failed."
         )
     }

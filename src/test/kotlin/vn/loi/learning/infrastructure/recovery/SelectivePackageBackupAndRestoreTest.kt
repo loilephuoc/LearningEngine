@@ -140,9 +140,26 @@ class SelectivePackageBackupAndRestoreTest {
             val target = JvmLearningDataRecoveryManager(
                 roots = mapOf("data" to targetData, "media" to targetMedia), safetyDirectory = root.resolve("target/safety")
             )
+            var platformPreflight = false
+            var platformCapture = false
+            var platformApply = false
+            val platformConsumer = object : PortableBackupV2RestoreConsumer {
+                override fun preflight(stagingDirectory: Path) { platformPreflight = true }
+                override fun captureCurrentState(): Any? { platformCapture = true; return null }
+                override fun applyRestored(stagingDirectory: Path) { platformApply = true }
+                override fun rollback(capturedState: Any?) = Unit
+                override fun validateLive() = Unit
+            }
             val restoreResult = assertIs<PortableBackupV2RestoreResult.Success>(
-                target.restorePortableBackupV2(archive, selectedPackageIds = setOf("package-a"))
+                target.restorePortableBackupV2(
+                    archive,
+                    consumer = platformConsumer,
+                    selectedPackageIds = setOf("package-a")
+                )
             )
+            assertTrue(platformPreflight)
+            assertFalse(platformCapture)
+            assertFalse(platformApply)
             assertEquals(manifest.counts, restoreResult.restoredCounts)
             assertEquals(listOf("item-a"), Json.parseToJsonElement(Files.readString(targetData.resolve("learning-items.json")))
                 .let { it as JsonObject }.getValue("records").let { it as JsonArray }
@@ -682,7 +699,7 @@ class SelectivePackageBackupAndRestoreTest {
                 )
             )
 
-            // Selectively restore ONLY Package Alpha to Device B
+            // Selectively restore BOTH archived packages to a device that already has an unrelated third package.
             val localRecovery = JvmLearningDataRecoveryManager(
                 roots = mapOf("data" to localData, "media" to localMedia),
                 safetyDirectory = root.resolve("safety")
@@ -690,7 +707,7 @@ class SelectivePackageBackupAndRestoreTest {
 
             val restoreResult = localRecovery.restorePortableBackupV2(
                 source = backupFile,
-                selectedPackageIds = setOf("pkg-alpha")
+                selectedPackageIds = setOf("pkg-alpha", "pkg-gamma")
             )
 
             assertTrue(restoreResult is PortableBackupV2RestoreResult.Success)
@@ -699,25 +716,24 @@ class SelectivePackageBackupAndRestoreTest {
             val reloadedLocalApp = LearningApplicationFactory.createPersisted(localData, false)
             val installed = reloadedLocalApp.installedPackageRepository!!.findAll()
 
-            // Both pkg-beta (existing) and pkg-alpha (restored) must exist, but NOT pkg-gamma
-            assertEquals(2, installed.size)
+            assertEquals(3, installed.size)
             assertTrue(installed.any { it.packageId.value == "pkg-beta" })
             assertTrue(installed.any { it.packageId.value == "pkg-alpha" })
-            assertTrue(installed.none { it.packageId.value == "pkg-gamma" })
+            assertTrue(installed.any { it.packageId.value == "pkg-gamma" })
 
             // Check content isolation
             val allContents = reloadedLocalApp.contentRepository!!.findAll()
-            assertEquals(2, allContents.size)
+            assertEquals(3, allContents.size)
             assertTrue(allContents.any { it.id.value == "content-beta-1" })
             assertTrue(allContents.any { it.id.value == "content-alpha-1" })
-            assertTrue(allContents.none { it.id.value == "content-gamma-1" })
+            assertTrue(allContents.any { it.id.value == "content-gamma-1" })
 
             // Check media isolation
             assertTrue(Files.exists(localMedia.resolve("pkg-beta/beta.mp3")))
             assertEquals("local-beta-sound", Files.readString(localMedia.resolve("pkg-beta/beta.mp3")))
             assertTrue(Files.exists(localMedia.resolve("pkg-alpha/alpha.mp3")))
             assertEquals("remote-alpha-sound", Files.readString(localMedia.resolve("pkg-alpha/alpha.mp3")))
-            assertTrue(!Files.exists(localMedia.resolve("pkg-gamma")))
+            assertTrue(Files.exists(localMedia.resolve("pkg-gamma/gamma.mp3")))
         } finally {
             root.toFile().deleteRecursively()
         }

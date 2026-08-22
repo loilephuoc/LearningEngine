@@ -565,6 +565,13 @@ private fun SafetyBackupCard(
                     if (inventory.invalidV2Count > 0) {
                         Text("${inventory.invalidV2Count} bản safety-v2 không khả dụng.", color = MaterialTheme.colorScheme.error)
                     }
+                    if (state.cleanupResult.failedDeleteCount > 0) {
+                        Text(
+                            "Dọn dẹp: Có cảnh báo • Không thể xóa ${state.cleanupResult.failedDeleteCount} bản sao cũ",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     if (inventory.legacy.isNotEmpty()) {
                         Text("Bản sao legacy: ${inventory.legacy.size} (không tự động dọn)", style = MaterialTheme.typography.bodySmall)
                     }
@@ -833,10 +840,17 @@ private fun RestoreFailureDialog(
             "Safety Backup Failed" to "Restore was not started because current data could not be safely backed up (${result.causeMessage ?: result.message}). Your current data remains unchanged."
         }
         is PortableBackupV2RestoreResult.RestoreFailedRolledBack -> {
-            "Restore Failed (Data Preserved)" to "Restore failed (${result.failureReason}), but your previous learning data was rolled back and preserved successfully without loss. Safety backup retained at: ${result.safetyBackupPath}."
+            "Restore Failed (Data Preserved)" to (
+                "Restore failed (${result.failureReason}), but your previous learning data was rolled back and preserved successfully without loss. " +
+                    cleanupWarning(result.cleanupResult)
+                )
         }
         is PortableBackupV2RestoreResult.RollbackFailed -> {
-            "Critical Recovery Error" to "Restore and automatic rollback both failed. Do not continue studying. Your pre-restore safety backup is saved at: ${result.safetyBackupPath}. Error: ${result.restoreFailure} / ${result.rollbackFailure}"
+            "Critical Recovery Error" to (
+                "Restore and automatic rollback both failed. Do not continue studying. " +
+                    "Your pre-restore safety backup remains available on this device. Error: ${result.restoreFailure} / ${result.rollbackFailure}. " +
+                    cleanupWarning(result.cleanupResult)
+                )
         }
         is PortableBackupV2RestoreResult.UnsupportedSchema -> {
             "Unsupported Backup Version" to "Backup schema version ${result.foundVersion} is not supported (expected ${result.supportedVersion})."
@@ -857,6 +871,11 @@ private fun RestoreFailureDialog(
         }
     )
 }
+
+private fun cleanupWarning(result: vn.loi.learning.infrastructure.recovery.SafetyBackupCleanupResult): String =
+    if (result.failedDeleteCount > 0) {
+        "Dọn dẹp có cảnh báo: không thể xóa ${result.failedDeleteCount} bản sao cũ."
+    } else ""
 
 @Composable
 private fun DifferentialSyncCard(

@@ -158,7 +158,10 @@ class BackupRestoreViewModelTest {
         val fixture = createFixture()
         try {
             val safetyFile = fixture.graph.directories.backupDirectory.resolve("safety-v2-1000.lebak")
-            fixture.graph.createPortableBackup(safetyFile)
+            fixture.graph.recovery.createPortableBackupV2(
+                safetyFile,
+                PortableBackupV2Descriptor("safety-pre-restore", sourcePlatform = "safety")
+            )
             val viewModel = BackupRestoreViewModel(
                 graphProvider = { fixture.graph },
                 savedState = SavedStateHandle(),

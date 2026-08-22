@@ -6,14 +6,13 @@
   automatic safety-v2 archives from its canonical backup directory, presents human metadata/storage,
   separates them from external document-picker files, and routes both through the existing portable
   preview/selective restore/validation/application-graph reload pipeline.
-- Recovery-owned retention runs only after successful restore validation, keeps the newest two valid
-  v2 archives by manifest time, protects the new archive and active source, excludes legacy/invalid/
-  external/user files, and reports cleanup failure without changing restore success. Exact selection
-  remains selective; empty selection is invalid and only explicit null means full replacement.
-- Focused recovery/Library tests pass. `clean test` passes 421 Engine suites / 2,242 tests, 98 Android
-  suites / 967 tests, and 292 Desktop suites / 1,802 tests, with zero failures/errors/skips. Remaining
-  gates are diff audit, debug APK build/hash, local commit and physical Android UAT; no install or push
-  has been performed.
+- Recovery-owned retention positively requires the safety manifest marker, protects operation inputs,
+  and finally enforces the newest-two policy after success, rollback success, or rollback failure.
+  Cleanup failures remain warnings and Android re-scans disk. Preflight accounts for safety/rollback
+  peaks and real Android supplement bytes; selective restore preserves whole-device supplements.
+- Focused recovery tests pass. `clean test` passes 2,245 Engine, 968 Android and 1,802 Desktop tests
+  (5,015 total), with zero failures/errors/skips. `:android:assembleDebug` passes; physical Android UAT
+  remains pending and no install or push has been performed.
 
 ## Current Phase 4 selective restore continuation
 

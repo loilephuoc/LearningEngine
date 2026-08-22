@@ -24,9 +24,15 @@ data class SafetyBackupInventory(
     val totalValidV2Bytes: Long get() = validV2.sumOf(SafetyBackupCandidate::fileSizeBytes)
 }
 
+data class SafetyBackupReconciliation(
+    val inventory: SafetyBackupInventory,
+    val cleanup: SafetyBackupCleanupResult
+)
+
 @Serializable
 data class SafetyBackupCleanupResult(
     val retainedValidV2Count: Int = 0,
     val deletedValidV2Count: Int = 0,
+    val failedDeleteCount: Int = 0,
     val failureMessage: String? = null
 )

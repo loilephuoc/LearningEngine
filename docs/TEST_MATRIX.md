@@ -4,11 +4,15 @@
 
 - Validate discovery metadata for `safety-v2-*.lebak`, invalid-v2 exclusion, separate legacy
   recognition, and exclusion of unrelated/user portable archives.
-- Cover zero/one/two/three-plus valid candidates, manifest-time ordering, newest-two retention,
-  protected active source, failed safety creation, and cleanup failure without compensating deletion.
+- Cover zero/one/two/three-plus valid candidates, five-to-two physical deletion, manifest-time ordering,
+  temporary active-source protection followed by final newest-two retention, failed safety creation,
+  restore failure, rollback failure, cleanup failure and retry.
 - Verify Android internal-source preview does not delete its archive, external staging remains
   disposable, exact package IDs stay selective, explicit full replacement remains available, and
   post-restore Library state is recreated from the new application graph.
+- Verify a real Android snapshot round trip for canonical/media data, preferences, Quick Voice index and
+  files, and lockscreen background. Selective restore preflights but does not apply whole-device
+  supplements, and a three-package live state preserves the unrelated package and media.
 
 ## ANDROID-STUDY-3.0V final product polish
 

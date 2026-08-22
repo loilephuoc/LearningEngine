@@ -33,7 +33,10 @@ import vn.loi.learning.infrastructure.recovery.SafetyBackupInventory
 
 sealed interface SafetyBackupListState {
     data object Loading : SafetyBackupListState
-    data class Ready(val inventory: SafetyBackupInventory) : SafetyBackupListState
+    data class Ready(
+        val inventory: SafetyBackupInventory,
+        val cleanupResult: SafetyBackupCleanupResult
+    ) : SafetyBackupListState
     data class Failed(val message: String) : SafetyBackupListState
 }
 
@@ -114,8 +117,11 @@ class BackupRestoreViewModel(
         mutableSafetyBackups.value = SafetyBackupListState.Loading
         viewModelScope.launch {
             try {
-                val inventory = withContext(ioDispatcher) { graphProvider().discoverSafetyBackups() }
-                mutableSafetyBackups.value = SafetyBackupListState.Ready(inventory)
+                val reconciliation = withContext(ioDispatcher) { graphProvider().reconcileSafetyBackups() }
+                mutableSafetyBackups.value = SafetyBackupListState.Ready(
+                    reconciliation.inventory,
+                    reconciliation.cleanup
+                )
             } catch (failure: Exception) {
                 mutableSafetyBackups.value = SafetyBackupListState.Failed(
                     failure.message ?: "Không thể đọc danh sách bản sao an toàn."
@@ -275,9 +281,11 @@ class BackupRestoreViewModel(
                             appVersion = result.appVersion,
                             cleanupResult = result.cleanupResult
                         )
+                        refreshSafetyBackups()
                     }
                     else -> {
                         mutableState.value = BackupRestoreUiState.RestoreFailure(result)
+                        refreshSafetyBackups()
                     }
                 }
             } catch (e: Exception) {

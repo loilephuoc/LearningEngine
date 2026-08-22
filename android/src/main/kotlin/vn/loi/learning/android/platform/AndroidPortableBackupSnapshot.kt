@@ -21,6 +21,16 @@ internal class AndroidPortableBackupSnapshot(
     private val context: Context,
     private val recordings: QuickVoiceRecordingRepository = QuickVoiceRecordingRepository.getInstance(context)
 ) : PortableBackupV2SnapshotContributor, PortableBackupV2RestoreConsumer {
+    override fun estimatedSnapshotBytes(): Long {
+        val recordingRoot = context.filesDir.toPath().resolve("recordings/quick_voice")
+        val recordingsBytes = if (Files.isDirectory(recordingRoot)) Files.walk(recordingRoot).use { paths ->
+            paths.filter(Files::isRegularFile).mapToLong(Files::size).sum()
+        } else 0L
+        val background = context.filesDir.toPath().resolve("lockscreen_custom_bg.png")
+        val backgroundBytes = if (Files.isRegularFile(background)) Files.size(background) else 0L
+        return Math.addExact(Math.addExact(recordingsBytes, backgroundBytes), preferenceSnapshot().toString().toByteArray().size.toLong())
+    }
+
     override fun snapshot(stagingDirectory: Path): List<PortableBackupSupplementV2> {
         val output = mutableListOf<PortableBackupSupplementV2>()
         val preferencesPath = stagingDirectory.resolve(PREFERENCES_PATH)
