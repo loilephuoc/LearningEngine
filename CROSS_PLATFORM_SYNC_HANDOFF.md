@@ -2,12 +2,13 @@
 
 ## Autonomous UAT continuation — 2026-08-22
 
-- Current completed code checkpoint before the Phase 3 commit: `c0d7d287db7b9b3ce24cb258c20115d02e5975ce`.
+- Current completed checkpoint before the Phase 4 commit: `d5b5b262`.
 - Physical Android restore of the current 2-package baseline passed: Elementary + OPD_2nd,
   3,376 Content, 16,880 LearningItems and 16,619 media files.
 - Safety Backup is now opt-in/user-managed and restore rollback is hidden/temporary/transactional.
 - Desktop backup progress now reports real checksum completion, avoids misleading `0 / N` and fixed percentage during unmeasured work, and keeps elapsed time alive.
-- Resume at Phase 4 Desktop backup completion dialog; do not repeat completed restore/progress phases.
+- Successful Desktop backup now presents only the verified report and Close action; it cannot start a second backup from that state.
+- Resume at Phase 5 Android full localization; do not repeat completed restore/Desktop backup phases.
 
 ## 1. System Overview
 Learning Engine uses a dual-layer synchronization and recovery architecture:

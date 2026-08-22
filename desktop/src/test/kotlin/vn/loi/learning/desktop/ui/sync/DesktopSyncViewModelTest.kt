@@ -32,6 +32,32 @@ class DesktopSyncViewModelTest {
         ).hasMeasurableBackupProgress())
     }
 
+    @Test
+    fun `verified success state cannot start a second backup from dialog`() {
+        val success = DesktopBackupDialogState(
+            preview = vn.loi.learning.infrastructure.recovery.PortableBackupCreationPlanV2(
+                packages = emptyList(),
+                counts = vn.loi.learning.infrastructure.recovery.PortableBackupCountsV2(),
+                estimatedDataBytes = 0,
+                mediaBytes = 0,
+                estimatedTotalBytes = 0
+            ),
+            successReport = DesktopBackupSuccessReport(
+                path = "backup.lebak",
+                archiveBytes = 1,
+                packageCount = 1,
+                contentCount = 1,
+                mediaFileCount = 1,
+                mediaBytes = 1,
+                expandedBytes = 1,
+                compressionRatio = 0.0,
+                verificationPassed = true
+            )
+        )
+
+        assertFalse(success.canStartBackupFromDialog())
+    }
+
     private lateinit var tempDir: java.nio.file.Path
     private lateinit var dataDir: java.nio.file.Path
     private lateinit var applicationContext: LearningApplicationContext

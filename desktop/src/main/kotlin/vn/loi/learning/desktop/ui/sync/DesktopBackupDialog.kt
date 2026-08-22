@@ -122,7 +122,7 @@ fun DesktopBackupDialog(
                     }
                 }
 
-                if (state.isExporting) {
+                if (state.successReport == null && state.isExporting) {
                     val progress = state.progress
                     Card(modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.sm)) {
                         Column(modifier = Modifier.padding(LESpacing.md)) {
@@ -152,7 +152,7 @@ fun DesktopBackupDialog(
                     }
                 }
 
-                state.errorMessage?.let { err ->
+                if (state.successReport == null) state.errorMessage?.let { err ->
                     Text(
                         text = err,
                         color = MaterialTheme.colorScheme.error,
@@ -161,8 +161,9 @@ fun DesktopBackupDialog(
                     )
                 }
 
-                // Scope selector
-                Row(
+                if (state.successReport == null) {
+                    // Scope selector
+                    Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -274,8 +275,9 @@ fun DesktopBackupDialog(
                         }
                     }
                 }
-                TextButton(onClick = onRefreshPreview, enabled = !state.isExporting && !state.isPreviewing) {
-                    Text(if (state.isPreviewing) "Đang tính toán..." else "Làm mới xem trước")
+                    TextButton(onClick = onRefreshPreview, enabled = !state.isExporting && !state.isPreviewing) {
+                        Text(if (state.isPreviewing) "Đang tính toán..." else "Làm mới xem trước")
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(LESpacing.sm))
@@ -286,18 +288,21 @@ fun DesktopBackupDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    LESecondaryButton(
-                        text = if (state.isExporting) "Hủy sao lưu" else if (state.exportSuccessPath != null) "Đóng" else "Hủy",
-                        onClick = if (state.isExporting) onCancelBackup else onDismiss,
-                        enabled = true
-                    )
-                    Spacer(modifier = Modifier.width(LESpacing.sm))
-                    LEPrimaryButton(
-                        text = if (state.isExporting) "Đang tạo bản sao lưu..." else "Bắt đầu sao lưu (.lebak)",
-                        onClick = onExecuteBackup,
-                        enabled = !state.isExporting && state.preview != null &&
-                            (state.selectAllPackages || state.availablePackages.any { it.isSelected })
-                    )
+                    if (state.successReport != null) {
+                        LEPrimaryButton(text = "Đóng", onClick = onDismiss)
+                    } else {
+                        LESecondaryButton(
+                            text = if (state.isExporting) "Hủy sao lưu" else "Hủy",
+                            onClick = if (state.isExporting) onCancelBackup else onDismiss,
+                            enabled = true
+                        )
+                        Spacer(modifier = Modifier.width(LESpacing.sm))
+                        LEPrimaryButton(
+                            text = if (state.isExporting) "Đang tạo bản sao lưu..." else "Bắt đầu sao lưu (.lebak)",
+                            onClick = onExecuteBackup,
+                            enabled = state.canStartBackupFromDialog()
+                        )
+                    }
                 }
             }
         }
@@ -313,6 +318,10 @@ internal fun vn.loi.learning.infrastructure.recovery.PortableBackupProgressV2.ha
     (totalBytes > 0L && processedBytes > 0L) ||
         (totalBytes == 0L && totalItems > 0L && processedItems > 0L) ||
         phase == vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.COMPLETED
+
+internal fun DesktopBackupDialogState.canStartBackupFromDialog(): Boolean =
+    successReport == null && !isExporting && preview != null &&
+        (selectAllPackages || availablePackages.any { it.isSelected })
 
 private fun backupPhaseLabel(phase: vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2): String = when (phase) {
     vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.PREPARING -> "Đang chuẩn bị..."

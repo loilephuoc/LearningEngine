@@ -1,3 +1,10 @@
+# Immutable Desktop backup completion state
+
+- Successful portable backup now hides scope, preview and execution controls and presents only the
+  verified archive report plus a single Close action, preventing accidental duplicate backup runs.
+- Added a dialog action-policy regression. Full verification passes 5,026 tests (2,254 Engine, 968
+  Android, 1,804 Desktop) with zero failures/errors/skips.
+
 # Truthful Desktop portable-backup progress
 
 - Changed unmeasured backup stages to use an explicit indeterminate presentation instead of a fixed

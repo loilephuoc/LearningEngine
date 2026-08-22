@@ -2,6 +2,10 @@
 
 ## Current autonomous UAT continuation
 
+- The Desktop successful-backup state is terminal in the dialog: package/preview/execution controls
+  are absent and only the verified result plus Close remain. The action policy rejects a second start.
+- Phase 4 full verification passes 2,254 Engine, 968 Android and 1,804 Desktop tests (5,026 total),
+  zero failures/errors/skips. Next capability is the Android-wide user-facing localization audit.
 - Desktop portable-backup preparation is indeterminate until an item/byte metric actually advances;
   checksum inventory reports real completed-file counts and the dialog elapsed timer ticks without
   depending on engine callbacks.
