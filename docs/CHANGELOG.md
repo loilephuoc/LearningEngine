@@ -1,3 +1,16 @@
+# Cross-platform sync — portable backup media completeness
+
+- Fixed selective `.lebak` scoping for production package identity: stable package IDs now resolve
+  through content-package/library ownership while media paths use the canonical package name.
+- Selective archives retain exactly the media referenced by selected Content records, calculate the
+  existing per-entry size/SHA-256 manifest over those files, and reject missing referenced media
+  before publishing a target archive.
+- Production evidence identified the approximately 3.7 MB backup as incomplete: the selected Upper
+  Intermediate package owns 15,211 media files totaling 970,940,650 bytes, but its hashed package ID
+  differs from its named media directory and the former prefix filter removed all media.
+- Added production-schema regression and missing-media rejection coverage. Full verification passes
+  4,990 tests (2,233 engine, 962 Android, 1,795 Desktop), with no Android production change.
+
 # Backup / Restore transaction safety
 
 - Added one application-wide recovery operation gate at the shared transaction composition root,

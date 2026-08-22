@@ -27,6 +27,110 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 class SelectivePackageBackupAndRestoreTest {
 
     @Test
+    fun `selective backup resolves canonical package identity to library content and named media folder`() {
+        val root = Files.createTempDirectory("selective-real-schema-test-")
+        try {
+            val data = root.resolve("data")
+            val media = data.resolve("media")
+            Files.createDirectories(media.resolve("Vocabulary_In_Use_Upper_Intermediate"))
+            Files.createDirectories(media.resolve("Other_Package"))
+            Files.writeString(media.resolve("Vocabulary_In_Use_Upper_Intermediate/word.mp3"), "selected-audio")
+            Files.writeString(media.resolve("Other_Package/other.mp3"), "unrelated-audio")
+            Files.writeString(data.resolve("installed-packages.json"), """
+                {"schemaVersion":1,"records":[
+                  {"id":"installed-upper","packageId":"package-upper-hash","name":"Vocabulary_In_Use_Upper_Intermediate","version":"1.0.0","contentCount":1,"learningItemCount":1},
+                  {"id":"installed-other","packageId":"package-other-hash","name":"Other_Package","version":"1.0.0","contentCount":1,"learningItemCount":1}
+                ]}
+            """.trimIndent())
+            Files.writeString(data.resolve("content-packages.json"), """
+                {"schemaVersion":1,"records":[
+                  {"id":"package-upper-hash","name":"Vocabulary_In_Use_Upper_Intermediate","libraryIds":["library-upper"]},
+                  {"id":"package-other-hash","name":"Other_Package","libraryIds":["library-other"]}
+                ]}
+            """.trimIndent())
+            Files.writeString(data.resolve("content-libraries.json"), """
+                {"schemaVersion":1,"records":[
+                  {"id":"library-upper","name":"Upper","contentIds":["content-upper"]},
+                  {"id":"library-other","name":"Other","contentIds":["content-other"]}
+                ]}
+            """.trimIndent())
+            Files.writeString(data.resolve("contents.json"), """
+                {"schemaVersion":1,"records":[
+                  {"id":"content-upper","primaryAudio":"Vocabulary_In_Use_Upper_Intermediate/word.mp3"},
+                  {"id":"content-other","primaryAudio":"Other_Package/other.mp3"}
+                ]}
+            """.trimIndent())
+            Files.writeString(data.resolve("learning-items.json"), """
+                {"schemaVersion":1,"records":[
+                  {"id":"item-upper","contentId":"content-upper"},
+                  {"id":"item-other","contentId":"content-other"}
+                ]}
+            """.trimIndent())
+
+            val backup = root.resolve("upper.lebak")
+            val recovery = JvmLearningDataRecoveryManager(
+                roots = mapOf("data" to data, "media" to media),
+                safetyDirectory = root.resolve("safety")
+            )
+            recovery.createPortableBackupV2(
+                backup,
+                PortableBackupV2Descriptor(
+                    appVersion = "2.0.0",
+                    sourcePlatform = "desktop",
+                    specificPackageIds = setOf("package-upper-hash")
+                )
+            )
+
+            val manifest = recovery.validatePortableBackupV2(backup)
+            assertEquals(1, manifest.packages.single().contentCount)
+            assertEquals(1, manifest.packages.single().learningItemCount)
+            assertEquals(1, manifest.packages.single().mediaCount)
+            assertEquals("selected-audio".toByteArray().size.toLong(), manifest.bytes.mediaBytes)
+            ZipFile(backup.toFile()).use { zip ->
+                val names = zip.entries().toList().map { it.name }
+                assertTrue("portable/media/Vocabulary_In_Use_Upper_Intermediate/word.mp3" in names)
+                assertTrue(names.none { "Other_Package" in it })
+            }
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `selective backup rejects a selected package with a missing referenced media file`() {
+        val root = Files.createTempDirectory("selective-missing-media-test-")
+        try {
+            val data = root.resolve("data")
+            Files.createDirectories(data.resolve("media/Named_Package"))
+            Files.writeString(data.resolve("installed-packages.json"),
+                """{"records":[{"id":"installed","packageId":"package-id","name":"Named_Package","contentCount":1,"learningItemCount":0}]}""")
+            Files.writeString(data.resolve("contents.json"),
+                """{"records":[{"id":"content-id","primaryAudio":"Named_Package/missing.mp3"}]}""")
+
+            val recovery = JvmLearningDataRecoveryManager(
+                roots = mapOf("data" to data, "media" to data.resolve("media")),
+                safetyDirectory = root.resolve("safety")
+            )
+            val failure = kotlin.runCatching {
+                recovery.createPortableBackupV2(
+                    root.resolve("missing.lebak"),
+                    PortableBackupV2Descriptor(
+                        appVersion = "2.0.0",
+                        sourcePlatform = "desktop",
+                        specificPackageIds = setOf("package-id")
+                    )
+                )
+            }.exceptionOrNull()
+
+            assertNotNull(failure)
+            assertTrue(failure.cause?.message.orEmpty().contains("media is incomplete"))
+            assertTrue(Files.notExists(root.resolve("missing.lebak")))
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `selective backup includes only selected package data and manifest package list`() {
         val root = Files.createTempDirectory("selective-backup-test-")
         try {

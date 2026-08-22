@@ -965,8 +965,14 @@ class JvmLearningDataRecoveryManager(
             val learningItemCount = item["learningItemCount"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
 
             val pkgMediaFolder = mediaDir.resolve(pkgId)
-            val mediaCount = if (Files.isDirectory(pkgMediaFolder)) {
-                Files.walk(pkgMediaFolder).use { paths -> paths.filter { Files.isRegularFile(it) }.count().toInt() }
+            val namedMediaFolder = mediaDir.resolve(name)
+            val resolvedMediaFolder = when {
+                Files.isDirectory(pkgMediaFolder) -> pkgMediaFolder
+                Files.isDirectory(namedMediaFolder) -> namedMediaFolder
+                else -> pkgMediaFolder
+            }
+            val mediaCount = if (Files.isDirectory(resolvedMediaFolder)) {
+                Files.walk(resolvedMediaFolder).use { paths -> paths.filter { Files.isRegularFile(it) }.count().toInt() }
             } else {
                 0
             }
@@ -986,6 +992,7 @@ class JvmLearningDataRecoveryManager(
     private fun scopeStagedDataForPackages(staging: Path, specificPackageIds: Set<String>): List<PortableBackupPackageEntryV2> {
         val installedFile = staging.resolve("portable/data/installed-packages.json")
         val targetPkgIds = mutableSetOf<String>()
+        val targetPackageNames = mutableSetOf<String>()
         if (Files.isRegularFile(installedFile)) {
             val text = readUtf8String(installedFile)
             val element = V2_JSON.parseToJsonElement(text)
@@ -1005,6 +1012,7 @@ class JvmLearningDataRecoveryManager(
                 obj["packageId"]?.jsonPrimitive?.content?.let { targetPkgIds.add(it) }
                 (obj["packageId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content?.let { targetPkgIds.add(it) }
                 obj["id"]?.jsonPrimitive?.content?.let { targetPkgIds.add(it) }
+                obj["name"]?.jsonPrimitive?.content?.let { targetPackageNames.add(it) }
             }
             targetPkgIds.addAll(specificPackageIds)
             val newJson = if (isEnvelope && element is JsonObject) {
@@ -1018,15 +1026,37 @@ class JvmLearningDataRecoveryManager(
         }
 
         val contentPkgFile = staging.resolve("portable/data/content-packages.json")
+        val targetLibraryIds = mutableSetOf<String>()
         if (Files.isRegularFile(contentPkgFile)) {
             filterJsonArrayFile(contentPkgFile) { obj ->
                 val pId = obj["packageId"]?.jsonPrimitive?.content ?: obj["id"]?.jsonPrimitive?.content
-                pId != null && pId in targetPkgIds
+                val matches = pId != null && pId in targetPkgIds
+                if (matches) {
+                    (obj["libraryIds"] as? JsonArray).orEmpty().forEach { libraryId ->
+                        libraryId.jsonPrimitive.content.let(targetLibraryIds::add)
+                    }
+                    obj["name"]?.jsonPrimitive?.content?.let(targetPackageNames::add)
+                }
+                matches
             }
         }
 
         val contentsFile = staging.resolve("portable/data/contents.json")
         val targetContentIds = mutableSetOf<String>()
+        val targetMediaReferences = mutableSetOf<String>()
+        val contentLibrariesFile = staging.resolve("portable/data/content-libraries.json")
+        if (Files.isRegularFile(contentLibrariesFile) && targetLibraryIds.isNotEmpty()) {
+            filterJsonArrayFile(contentLibrariesFile) { obj ->
+                val libraryId = obj["id"]?.jsonPrimitive?.content
+                val matches = libraryId != null && libraryId in targetLibraryIds
+                if (matches) {
+                    (obj["contentIds"] as? JsonArray).orEmpty().forEach { contentId ->
+                        contentId.jsonPrimitive.content.let(targetContentIds::add)
+                    }
+                }
+                matches
+            }
+        }
         if (Files.isRegularFile(contentsFile)) {
             val text = readUtf8String(contentsFile)
             val element = V2_JSON.parseToJsonElement(text)
@@ -1047,14 +1077,35 @@ class JvmLearningDataRecoveryManager(
                     ?: (obj["media"] as? JsonObject)?.get("image")?.jsonPrimitive?.content
                 val customPkg = (obj["customFields"] as? JsonObject)?.get("packageId")?.jsonPrimitive?.content
 
-                val matches = targetPkgIds.any { pkg ->
+                val matchesByIdentity = targetPkgIds.any { pkg ->
                     primaryAudio?.startsWith("$pkg/") == true ||
                     transAudio?.startsWith("$pkg/") == true ||
                     img?.startsWith("$pkg/") == true ||
                     primaryAudio?.startsWith(pkg) == true ||
                     customPkg == pkg
                 }
-                if (matches) targetContentIds.add(id)
+                val matchesByName = targetPackageNames.any { packageName ->
+                    primaryAudio?.startsWith("$packageName/") == true ||
+                    transAudio?.startsWith("$packageName/") == true ||
+                    img?.startsWith("$packageName/") == true
+                }
+                val matches = id in targetContentIds || matchesByIdentity || matchesByName
+                if (matches) {
+                    targetContentIds.add(id)
+                    listOf(
+                        "primaryAudio",
+                        "translatedAudio",
+                        "image",
+                        "exampleAudio",
+                        "exampleTranslatedAudio"
+                    ).forEach { field ->
+                        val reference = obj[field]?.jsonPrimitive?.content
+                            ?: (obj["media"] as? JsonObject)?.get(field)?.jsonPrimitive?.content
+                        reference?.trim()?.replace('\\', '/')
+                            ?.takeIf { it.isNotEmpty() && it != "null" }
+                            ?.let(targetMediaReferences::add)
+                    }
+                }
                 matches
             }
             val newJson = if (isEnvelope && element is JsonObject) {
@@ -1115,13 +1166,20 @@ class JvmLearningDataRecoveryManager(
             Files.walk(mediaDir).use { paths ->
                 paths.filter { Files.isRegularFile(it) }.forEach { file ->
                     val rel = mediaDir.relativize(file).toString().replace('\\', '/')
-                    val belongsToTarget = targetPkgIds.any { rel.startsWith("$it/") || rel.startsWith(it) }
+                    val belongsToTarget = rel in targetMediaReferences
                     if (!belongsToTarget) {
                         Files.deleteIfExists(file)
                     }
                 }
             }
             cleanEmptyTree(mediaDir)
+        }
+        val missingMedia = targetMediaReferences.filterNot { reference ->
+            val resolved = mediaDir.resolve(reference).normalize()
+            resolved.startsWith(mediaDir.normalize()) && Files.isRegularFile(resolved)
+        }
+        if (missingMedia.isNotEmpty()) {
+            error("Selected package media is incomplete: ${missingMedia.size} referenced file(s) are missing; first=${missingMedia.first()}")
         }
 
         return extractPackageEntries(staging)
