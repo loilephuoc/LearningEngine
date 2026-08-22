@@ -57,7 +57,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem
 import vn.loi.learning.application.port.ContentMediaStorage
+import vn.loi.learning.desktop.runtime.DesktopRuntimeDirectoryResolver
 import vn.loi.learning.desktop.tts.DesktopTtsAudioService
+import vn.loi.learning.desktop.tts.TtsAudioParameters
 import vn.loi.learning.desktop.tts.TtsField
 import vn.loi.learning.desktop.tts.TtsLanguage
 import vn.loi.learning.desktop.tts.TtsVoice
@@ -68,6 +70,10 @@ import vn.loi.learning.desktop.tts.batch.BatchTtsRunner
 import vn.loi.learning.desktop.tts.batch.BatchTtsScanner
 import vn.loi.learning.desktop.tts.batch.BatchTtsScopeScan
 import vn.loi.learning.desktop.tts.batch.BatchTtsSummary
+import vn.loi.learning.desktop.tts.preset.TtsLanguagePresetConfig
+import vn.loi.learning.desktop.tts.preset.TtsPreset
+import vn.loi.learning.desktop.tts.preset.TtsPresetRepository
+import vn.loi.learning.desktop.tts.preset.TtsPresetStore
 import vn.loi.learning.desktop.tts.profile.TtsVoiceProfiles
 import vn.loi.learning.desktop.tts.strategy.VoiceStrategyConfig
 import vn.loi.learning.desktop.tts.strategy.VoiceStrategyMode
@@ -105,6 +111,7 @@ fun BatchTtsDialog(
     targetField: TtsField? = null,
     ttsService: DesktopTtsAudioService,
     contentMediaStorage: ContentMediaStorage? = null,
+    presetRepository: TtsPresetRepository? = null,
     audioPlayer: AudioPlayer? = null,
     initialProfiles: TtsVoiceProfiles = TtsVoiceProfiles(),
     onApplyBatch: (results: List<BatchTtsJobResult>) -> Unit,
@@ -113,13 +120,27 @@ fun BatchTtsDialog(
     val coroutineScope = rememberCoroutineScope()
     val localAudioPlayer = remember { audioPlayer ?: DesktopAudioPlayer() }
 
+    val resolvedPresetRepo = remember(presetRepository) {
+        presetRepository ?: TtsPresetStore(DesktopRuntimeDirectoryResolver.resolve().config.resolve("tts-presets.json"))
+    }
+
+    var availablePresets by remember { mutableStateOf(resolvedPresetRepo.listPresets()) }
+    var selectedPreset by remember { mutableStateOf(resolvedPresetRepo.getDefaultPreset()) }
+    var isDirty by remember { mutableStateOf(false) }
+    var presetErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    var showSaveAsDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var dialogInputName by remember { mutableStateOf("") }
+
     var currentStep by remember { mutableStateOf(BatchTtsDialogStep.CONFIG) }
     var availableVoices by remember { mutableStateOf<List<TtsVoice>>(emptyList()) }
     var isLoadingVoices by remember { mutableStateOf(true) }
 
     // Selected Audio Fields (Default: all 4 fields or specific field)
     var selectedFields by remember(targetField) {
-        mutableStateOf(if (targetField != null) setOf(targetField) else TtsField.entries.toSet())
+        mutableStateOf(if (targetField != null) setOf(targetField) else selectedPreset.selectedFields)
     }
 
     // Scanned Scope analysis
@@ -131,17 +152,144 @@ fun BatchTtsDialog(
     var selectedEnglishVoice by remember { mutableStateOf<TtsVoice?>(null) }
     var selectedVietnameseVoice by remember { mutableStateOf<TtsVoice?>(null) }
 
-    var englishRate by remember { mutableStateOf(initialProfiles.english.rate) }
-    var englishPitchHz by remember { mutableStateOf(0) }
-    var englishVolumePercent by remember { mutableStateOf(0) }
+    var englishRate by remember { mutableStateOf(selectedPreset.english.audioParameters.ratePercent) }
+    var englishPitchHz by remember { mutableStateOf(selectedPreset.english.audioParameters.pitchHz) }
+    var englishVolumePercent by remember { mutableStateOf(selectedPreset.english.audioParameters.volumePercent) }
 
-    var vietnameseRate by remember { mutableStateOf(initialProfiles.vietnamese.rate) }
-    var vietnamesePitchHz by remember { mutableStateOf(0) }
-    var vietnameseVolumePercent by remember { mutableStateOf(0) }
+    var vietnameseRate by remember { mutableStateOf(selectedPreset.vietnamese.audioParameters.ratePercent) }
+    var vietnamesePitchHz by remember { mutableStateOf(selectedPreset.vietnamese.audioParameters.pitchHz) }
+    var vietnameseVolumePercent by remember { mutableStateOf(selectedPreset.vietnamese.audioParameters.volumePercent) }
 
     // Advanced Voice Strategy
-    var englishStrategyMode by remember { mutableStateOf(VoiceStrategyMode.FALLBACK_CHAIN) }
-    var vietnameseStrategyMode by remember { mutableStateOf(VoiceStrategyMode.FALLBACK_CHAIN) }
+    var englishStrategyMode by remember { mutableStateOf(selectedPreset.english.strategyMode) }
+    var vietnameseStrategyMode by remember { mutableStateOf(selectedPreset.vietnamese.strategyMode) }
+
+    fun applyPreset(preset: TtsPreset) {
+        selectedPreset = preset
+        presetErrorMessage = null
+        if (targetField == null) {
+            selectedFields = preset.selectedFields
+        }
+        englishRate = preset.english.audioParameters.ratePercent
+        englishPitchHz = preset.english.audioParameters.pitchHz
+        englishVolumePercent = preset.english.audioParameters.volumePercent
+        englishStrategyMode = preset.english.strategyMode
+
+        vietnameseRate = preset.vietnamese.audioParameters.ratePercent
+        vietnamesePitchHz = preset.vietnamese.audioParameters.pitchHz
+        vietnameseVolumePercent = preset.vietnamese.audioParameters.volumePercent
+        vietnameseStrategyMode = preset.vietnamese.strategyMode
+
+        if (availableVoices.isNotEmpty()) {
+            selectedEnglishVoice = availableVoices.firstOrNull { it.id == preset.english.primaryVoiceId }
+                ?: availableVoices.firstOrNull { it.isEnglish }
+            selectedVietnameseVoice = availableVoices.firstOrNull { it.id == preset.vietnamese.primaryVoiceId }
+                ?: availableVoices.firstOrNull { it.isVietnamese }
+        }
+        isDirty = false
+    }
+
+    fun currentDraftPreset(): TtsPreset = TtsPreset(
+        id = selectedPreset.id,
+        name = selectedPreset.name,
+        selectedFields = selectedFields,
+        english = TtsLanguagePresetConfig(
+            strategyMode = englishStrategyMode,
+            primaryVoiceId = selectedEnglishVoice?.id.orEmpty(),
+            fallbackVoiceIds = availableVoices.filter { it.isEnglish && it.id != selectedEnglishVoice?.id }.map { it.id }.take(3),
+            candidateVoiceIds = listOfNotNull(selectedEnglishVoice?.id) + availableVoices.filter { it.isEnglish && it.id != selectedEnglishVoice?.id }.map { it.id }.take(3),
+            audioParameters = TtsAudioParameters(
+                ratePercent = englishRate,
+                pitchHz = englishPitchHz,
+                volumePercent = englishVolumePercent
+            )
+        ),
+        vietnamese = TtsLanguagePresetConfig(
+            strategyMode = vietnameseStrategyMode,
+            primaryVoiceId = selectedVietnameseVoice?.id.orEmpty(),
+            fallbackVoiceIds = availableVoices.filter { it.isVietnamese && it.id != selectedVietnameseVoice?.id }.map { it.id }.take(2),
+            candidateVoiceIds = listOfNotNull(selectedVietnameseVoice?.id) + availableVoices.filter { it.isVietnamese && it.id != selectedVietnameseVoice?.id }.map { it.id }.take(2),
+            audioParameters = TtsAudioParameters(
+                ratePercent = vietnameseRate,
+                pitchHz = vietnamesePitchHz,
+                volumePercent = vietnameseVolumePercent
+            )
+        ),
+        isBuiltIn = selectedPreset.isBuiltIn
+    )
+
+    fun handleSavePreset() {
+        if (selectedPreset.isBuiltIn) {
+            dialogInputName = "${selectedPreset.name} (Custom)"
+            showSaveAsDialog = true
+        } else {
+            try {
+                val saved = resolvedPresetRepo.savePreset(currentDraftPreset())
+                availablePresets = resolvedPresetRepo.listPresets()
+                selectedPreset = saved
+                isDirty = false
+                presetErrorMessage = null
+            } catch (ex: Exception) {
+                presetErrorMessage = ex.message ?: "Failed to save preset"
+            }
+        }
+    }
+
+    fun handleSaveAsPreset(name: String) {
+        try {
+            val created = resolvedPresetRepo.saveAsPreset(name, currentDraftPreset())
+            availablePresets = resolvedPresetRepo.listPresets()
+            selectedPreset = created
+            isDirty = false
+            showSaveAsDialog = false
+            presetErrorMessage = null
+        } catch (ex: Exception) {
+            presetErrorMessage = ex.message ?: "Failed to create preset"
+        }
+    }
+
+    fun handleDuplicatePreset() {
+        try {
+            val duplicated = resolvedPresetRepo.duplicatePreset(selectedPreset.id)
+            availablePresets = resolvedPresetRepo.listPresets()
+            selectedPreset = duplicated
+            isDirty = false
+            presetErrorMessage = null
+        } catch (ex: Exception) {
+            presetErrorMessage = ex.message ?: "Failed to duplicate preset"
+        }
+    }
+
+    fun handleRenamePreset(newName: String) {
+        try {
+            val renamed = resolvedPresetRepo.renamePreset(selectedPreset.id, newName)
+            availablePresets = resolvedPresetRepo.listPresets()
+            selectedPreset = renamed
+            showRenameDialog = false
+            presetErrorMessage = null
+        } catch (ex: Exception) {
+            presetErrorMessage = ex.message ?: "Failed to rename preset"
+        }
+    }
+
+    fun handleDeletePreset() {
+        try {
+            resolvedPresetRepo.deletePreset(selectedPreset.id)
+            availablePresets = resolvedPresetRepo.listPresets()
+            val nextPreset = resolvedPresetRepo.getDefaultPreset()
+            applyPreset(nextPreset)
+            showDeleteConfirmDialog = false
+            presetErrorMessage = null
+        } catch (ex: Exception) {
+            presetErrorMessage = ex.message ?: "Failed to delete preset"
+        }
+    }
+
+    fun handleResetToDefaults() {
+        val defaultPreset = TtsPreset.createDefault()
+        applyPreset(defaultPreset)
+        isDirty = true
+    }
 
     // Voice Preview States
     var isPreviewingEn by remember { mutableStateOf(false) }
@@ -158,9 +306,11 @@ fun BatchTtsDialog(
         try {
             val voices = ttsService.listVoices()
             availableVoices = voices
-            selectedEnglishVoice = initialProfiles.resolveVoice(TtsLanguage.ENGLISH, voices)
+            selectedEnglishVoice = voices.firstOrNull { it.id == selectedPreset.english.primaryVoiceId }
+                ?: initialProfiles.resolveVoice(TtsLanguage.ENGLISH, voices)
                 ?: ttsService.defaultVoiceFor("en", voices)
-            selectedVietnameseVoice = initialProfiles.resolveVoice(TtsLanguage.VIETNAMESE, voices)
+            selectedVietnameseVoice = voices.firstOrNull { it.id == selectedPreset.vietnamese.primaryVoiceId }
+                ?: initialProfiles.resolveVoice(TtsLanguage.VIETNAMESE, voices)
                 ?: ttsService.defaultVoiceFor("vi", voices)
         } catch (_: Exception) {
             // Safe fallback
@@ -293,214 +443,276 @@ fun BatchTtsDialog(
 
     fun handleApply() {
         stopAudio()
-        val successfulResults = summary.successfulResults
-        if (successfulResults.isNotEmpty()) {
-            onApplyBatch(successfulResults)
-        }
+        onApplyBatch(summary.jobResults)
         onDismiss()
+    }
+
+    val isEntirePackageScope = title.contains("All Missing", ignoreCase = true) || title.contains("Entire Package", ignoreCase = true)
+    val scopeSubtitle = if (isEntirePackageScope) {
+        "Package: $packageName · Scope: Entire Package (${itemsToScan.size} items)"
+    } else {
+        val count = itemsToScan.size
+        "Package: $packageName · Scope: $count ${if (count == 1) "selected item" else "selected items"}"
     }
 
     Dialog(
         onDismissRequest = {
             stopAudio()
-            if (currentStep == BatchTtsDialogStep.RUNNING) {
-                runner.cancel()
-            }
             onDismiss()
         },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Box(
+        Surface(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
-                .onKeyEvent { event ->
-                    if (event.key == Key.Escape) {
+                .widthIn(min = 720.dp, max = 920.dp)
+                .heightIn(min = 520.dp, max = 800.dp)
+                .fillMaxWidth(0.92f)
+                .fillMaxSize(0.92f)
+                .clip(LERadius.md)
+                .border(1.dp, LEColors.borderSubtle, LERadius.md)
+                .onKeyEvent { keyEvent ->
+                    if (keyEvent.key == Key.Escape) {
                         stopAudio()
-                        if (currentStep == BatchTtsDialogStep.RUNNING) {
-                            runner.cancel()
-                        }
                         onDismiss()
                         true
                     } else false
                 },
-            contentAlignment = Alignment.Center
+            color = LEColors.surface,
+            shape = LERadius.md,
+            shadowElevation = 8.dp
         ) {
-            Surface(
-                modifier = Modifier
-                    .width(680.dp)
-                    .heightIn(min = 420.dp, max = 740.dp)
-                    .clip(LERadius.md)
-                    .animateContentSize(),
-                color = LEColors.surface,
-                shape = LERadius.md,
-                tonalElevation = LEElevation.popup,
-                shadowElevation = 8.dp,
-                border = BorderStroke(1.dp, LEColors.borderSubtle)
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // HEADER
-                    // HEADER
-                    val isEntirePackageScope = title.contains("All Missing", ignoreCase = true) || title.contains("Entire Package", ignoreCase = true)
-                    val scopeSubtitle = if (isEntirePackageScope) {
-                        "Package: $packageName · Scope: Entire Package (${itemsToScan.size} items)"
-                    } else {
-                        val count = itemsToScan.size
-                        "Package: $packageName · Scope: $count ${if (count == 1) "selected item" else "selected items"}"
+            Column(modifier = Modifier.fillMaxSize()) {
+                // HEADER
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(LEColors.surfaceElevated)
+                        .padding(horizontal = LESpacing.lg, vertical = LESpacing.md),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = title,
+                            style = LETypography.paneTitle,
+                            fontWeight = FontWeight.Bold,
+                            color = LEColors.textPrimary
+                        )
+                        Text(
+                            text = scopeSubtitle,
+                            style = LETypography.secondaryMetadata,
+                            color = LEColors.textMuted
+                        )
                     }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = LESpacing.lg, vertical = LESpacing.md),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = title,
-                                style = LETypography.paneTitle,
-                                color = LEColors.textPrimary
-                            )
-                            Text(
-                                text = scopeSubtitle,
-                                style = LETypography.secondaryMetadata,
-                                color = LEColors.textMuted
+                    if (currentStep != BatchTtsDialogStep.RUNNING) {
+                        LESecondaryButton(
+                            text = "✕",
+                            onClick = {
+                                stopAudio()
+                                onDismiss()
+                            }
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = LEColors.borderSubtle)
+
+                // CONTENT STEP
+                Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(LESpacing.lg)) {
+                    when (currentStep) {
+                        BatchTtsDialogStep.CONFIG -> {
+                            ConfigStepContent(
+                                availablePresets = availablePresets,
+                                selectedPreset = selectedPreset,
+                                isDirty = isDirty,
+                                onSelectPreset = { preset -> applyPreset(preset) },
+                                onSavePreset = { handleSavePreset() },
+                                onSaveAsPreset = {
+                                    dialogInputName = "${selectedPreset.name} (Copy)"
+                                    showSaveAsDialog = true
+                                },
+                                onDuplicatePreset = { handleDuplicatePreset() },
+                                onRenamePreset = {
+                                    dialogInputName = selectedPreset.name
+                                    showRenameDialog = true
+                                },
+                                onDeletePreset = { showDeleteConfirmDialog = true },
+                                onResetDefaults = { handleResetToDefaults() },
+                                presetErrorMessage = presetErrorMessage,
+                                scopeScan = scopeScan,
+                                selectedFields = selectedFields,
+                                onToggleField = { field ->
+                                    selectedFields = if (field in selectedFields) {
+                                        selectedFields - field
+                                    } else {
+                                        selectedFields + field
+                                    }
+                                    isDirty = true
+                                },
+                                isLoadingVoices = isLoadingVoices,
+                                availableVoices = availableVoices,
+                                selectedEnglishVoice = selectedEnglishVoice,
+                                selectedVietnameseVoice = selectedVietnameseVoice,
+                                englishRate = englishRate,
+                                englishPitchHz = englishPitchHz,
+                                englishVolumePercent = englishVolumePercent,
+                                vietnameseRate = vietnameseRate,
+                                vietnamesePitchHz = vietnamesePitchHz,
+                                vietnameseVolumePercent = vietnameseVolumePercent,
+                                englishStrategyMode = englishStrategyMode,
+                                vietnameseStrategyMode = vietnameseStrategyMode,
+                                onEnglishVoiceChange = {
+                                    selectedEnglishVoice = it
+                                    isDirty = true
+                                },
+                                onVietnameseVoiceChange = {
+                                    selectedVietnameseVoice = it
+                                    isDirty = true
+                                },
+                                onEnglishRateChange = {
+                                    englishRate = it
+                                    isDirty = true
+                                },
+                                onEnglishPitchChange = {
+                                    englishPitchHz = it
+                                    isDirty = true
+                                },
+                                onEnglishVolumeChange = {
+                                    englishVolumePercent = it
+                                    isDirty = true
+                                },
+                                onVietnameseRateChange = {
+                                    vietnameseRate = it
+                                    isDirty = true
+                                },
+                                onVietnamesePitchChange = {
+                                    vietnamesePitchHz = it
+                                    isDirty = true
+                                },
+                                onVietnameseVolumeChange = {
+                                    vietnameseVolumePercent = it
+                                    isDirty = true
+                                },
+                                onEnglishStrategyChange = {
+                                    englishStrategyMode = it
+                                    isDirty = true
+                                },
+                                onVietnameseStrategyChange = {
+                                    vietnameseStrategyMode = it
+                                    isDirty = true
+                                },
+                                isPreviewingEn = isPreviewingEn,
+                                isPreviewingVi = isPreviewingVi,
+                                onPreviewText = { text, lang -> handlePreview(text, lang) },
+                                onStopPreview = { stopAudio() }
                             )
                         }
+                        BatchTtsDialogStep.RUNNING -> {
+                            RunningStepContent(
+                                summary = summary,
+                                onCancel = { runner.cancel() }
+                            )
+                        }
+                        BatchTtsDialogStep.COMPLETED -> {
+                            CompletedStepContent(
+                                summary = summary,
+                                contentMediaStorage = contentMediaStorage,
+                                localAudioPlayer = localAudioPlayer,
+                                onRetryFailed = { handleRetryFailed() }
+                            )
+                        }
+                    }
+                }
 
-                        if (currentStep != BatchTtsDialogStep.RUNNING) {
+                HorizontalDivider(color = LEColors.borderSubtle)
+
+                // FOOTER
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = LESpacing.lg, vertical = LESpacing.md),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    when (currentStep) {
+                        BatchTtsDialogStep.CONFIG -> {
                             LESecondaryButton(
-                                text = "✕",
+                                text = "Cancel",
                                 onClick = {
                                     stopAudio()
                                     onDismiss()
                                 }
                             )
+                            Spacer(modifier = Modifier.width(LESpacing.sm))
+                            LEPrimaryButton(
+                                text = if (scopeScan.totalValidTargets == 0) "No Missing Targets" else "Generate (${scopeScan.totalValidTargets} Targets)",
+                                onClick = { handleStartInitialBatch() },
+                                enabled = scopeScan.hasTargets && !isLoadingVoices && selectedEnglishVoice != null && selectedVietnameseVoice != null,
+                                icon = LEIcons.Audio
+                            )
                         }
-                    }
-
-                    HorizontalDivider(color = LEColors.borderSubtle)
-
-                    // CONTENT STEP
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(LESpacing.lg)) {
-                        when (currentStep) {
-                            BatchTtsDialogStep.CONFIG -> {
-                                ConfigStepContent(
-                                    scopeScan = scopeScan,
-                                    selectedFields = selectedFields,
-                                    onToggleField = { field ->
-                                        selectedFields = if (field in selectedFields) {
-                                            selectedFields - field
-                                        } else {
-                                            selectedFields + field
-                                        }
-                                    },
-                                    isLoadingVoices = isLoadingVoices,
-                                    availableVoices = availableVoices,
-                                    selectedEnglishVoice = selectedEnglishVoice,
-                                    selectedVietnameseVoice = selectedVietnameseVoice,
-                                    englishRate = englishRate,
-                                    englishPitchHz = englishPitchHz,
-                                    englishVolumePercent = englishVolumePercent,
-                                    vietnameseRate = vietnameseRate,
-                                    vietnamesePitchHz = vietnamesePitchHz,
-                                    vietnameseVolumePercent = vietnameseVolumePercent,
-                                    englishStrategyMode = englishStrategyMode,
-                                    vietnameseStrategyMode = vietnameseStrategyMode,
-                                    onEnglishVoiceChange = { selectedEnglishVoice = it },
-                                    onVietnameseVoiceChange = { selectedVietnameseVoice = it },
-                                    onEnglishRateChange = { englishRate = it },
-                                    onEnglishPitchChange = { englishPitchHz = it },
-                                    onEnglishVolumeChange = { englishVolumePercent = it },
-                                    onVietnameseRateChange = { vietnameseRate = it },
-                                    onVietnamesePitchChange = { vietnamesePitchHz = it },
-                                    onVietnameseVolumeChange = { vietnameseVolumePercent = it },
-                                    onEnglishStrategyChange = { englishStrategyMode = it },
-                                    onVietnameseStrategyChange = { vietnameseStrategyMode = it },
-                                    isPreviewingEn = isPreviewingEn,
-                                    isPreviewingVi = isPreviewingVi,
-                                    onPreviewText = { text, lang -> handlePreview(text, lang) },
-                                    onStopPreview = { stopAudio() }
-                                )
-                            }
-                            BatchTtsDialogStep.RUNNING -> {
-                                RunningStepContent(
-                                    summary = summary,
-                                    onCancel = { runner.cancel() }
-                                )
-                            }
-                            BatchTtsDialogStep.COMPLETED -> {
-                                CompletedStepContent(
-                                    summary = summary,
-                                    contentMediaStorage = contentMediaStorage,
-                                    localAudioPlayer = localAudioPlayer,
-                                    onRetryFailed = { handleRetryFailed() }
-                                )
-                            }
+                        BatchTtsDialogStep.RUNNING -> {
+                            LEDangerButton(
+                                text = "■ Cancel Batch",
+                                onClick = { runner.cancel() },
+                                icon = LEIcons.Stop
+                            )
                         }
-                    }
-
-                    HorizontalDivider(color = LEColors.borderSubtle)
-
-                    // FOOTER
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = LESpacing.lg, vertical = LESpacing.md),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        when (currentStep) {
-                            BatchTtsDialogStep.CONFIG -> {
+                        BatchTtsDialogStep.COMPLETED -> {
+                            if (summary.hasFailures) {
                                 LESecondaryButton(
-                                    text = "Cancel",
-                                    onClick = {
-                                        stopAudio()
-                                        onDismiss()
-                                    }
+                                    text = "🔁 Retry Failed (${summary.failedCount})",
+                                    onClick = { handleRetryFailed() }
                                 )
                                 Spacer(modifier = Modifier.width(LESpacing.sm))
-                                LEPrimaryButton(
-                                    text = if (scopeScan.totalValidTargets == 0) "No Missing Targets" else "Generate (${scopeScan.totalValidTargets} Targets)",
-                                    onClick = { handleStartInitialBatch() },
-                                    enabled = scopeScan.hasTargets && !isLoadingVoices && selectedEnglishVoice != null && selectedVietnameseVoice != null,
-                                    icon = LEIcons.Audio
-                                )
                             }
-                            BatchTtsDialogStep.RUNNING -> {
-                                LEDangerButton(
-                                    text = "■ Cancel Batch",
-                                    onClick = { runner.cancel() },
-                                    icon = LEIcons.Stop
-                                )
-                            }
-                            BatchTtsDialogStep.COMPLETED -> {
-                                if (summary.hasFailures) {
-                                    LESecondaryButton(
-                                        text = "🔁 Retry Failed (${summary.failedCount})",
-                                        onClick = { handleRetryFailed() }
-                                    )
-                                    Spacer(modifier = Modifier.width(LESpacing.sm))
+                            LESecondaryButton(
+                                text = "Discard",
+                                onClick = {
+                                    stopAudio()
+                                    onDismiss()
                                 }
-                                LESecondaryButton(
-                                    text = "Discard",
-                                    onClick = {
-                                        stopAudio()
-                                        onDismiss()
-                                    }
-                                )
-                                Spacer(modifier = Modifier.width(LESpacing.sm))
-                                LEPrimaryButton(
-                                    text = "Apply (${summary.successCount} Targets)",
-                                    onClick = { handleApply() },
-                                    enabled = summary.successCount > 0,
-                                    icon = LEIcons.Save
-                                )
-                            }
+                            )
+                            Spacer(modifier = Modifier.width(LESpacing.sm))
+                            LEPrimaryButton(
+                                text = "Apply (${summary.successCount} Targets)",
+                                onClick = { handleApply() },
+                                enabled = summary.successCount > 0,
+                                icon = LEIcons.Save
+                            )
                         }
                     }
                 }
+            }
+
+            // MODALS / SUB-DIALOGS FOR PRESETS
+            if (showSaveAsDialog) {
+                PresetNameInputDialog(
+                    title = "Save Preset As",
+                    initialValue = dialogInputName,
+                    confirmLabel = "Save Preset",
+                    onConfirm = { name -> handleSaveAsPreset(name) },
+                    onDismiss = { showSaveAsDialog = false }
+                )
+            }
+
+            if (showRenameDialog) {
+                PresetNameInputDialog(
+                    title = "Rename Preset",
+                    initialValue = dialogInputName,
+                    confirmLabel = "Rename",
+                    onConfirm = { name -> handleRenamePreset(name) },
+                    onDismiss = { showRenameDialog = false }
+                )
+            }
+
+            if (showDeleteConfirmDialog) {
+                PresetDeleteConfirmDialog(
+                    presetName = selectedPreset.name,
+                    onConfirm = { handleDeletePreset() },
+                    onDismiss = { showDeleteConfirmDialog = false }
+                )
             }
         }
     }
@@ -508,6 +720,17 @@ fun BatchTtsDialog(
 
 @Composable
 private fun ConfigStepContent(
+    availablePresets: List<TtsPreset>,
+    selectedPreset: TtsPreset,
+    isDirty: Boolean,
+    onSelectPreset: (TtsPreset) -> Unit,
+    onSavePreset: () -> Unit,
+    onSaveAsPreset: () -> Unit,
+    onDuplicatePreset: () -> Unit,
+    onRenamePreset: () -> Unit,
+    onDeletePreset: () -> Unit,
+    onResetDefaults: () -> Unit,
+    presetErrorMessage: String?,
     scopeScan: BatchTtsScopeScan,
     selectedFields: Set<TtsField>,
     onToggleField: (TtsField) -> Unit,
@@ -544,6 +767,21 @@ private fun ConfigStepContent(
         modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(LESpacing.md)
     ) {
+        // Section 0: Reusable Preset Toolbar
+        PresetToolbar(
+            availablePresets = availablePresets,
+            selectedPreset = selectedPreset,
+            isDirty = isDirty,
+            onSelectPreset = onSelectPreset,
+            onSavePreset = onSavePreset,
+            onSaveAsPreset = onSaveAsPreset,
+            onDuplicatePreset = onDuplicatePreset,
+            onRenamePreset = onRenamePreset,
+            onDeletePreset = onDeletePreset,
+            onResetDefaults = onResetDefaults,
+            errorMessage = presetErrorMessage
+        )
+
         // Section 1: Audio Fields to Generate
         Text("Audio Fields to Generate", style = LETypography.sectionTitle)
 
@@ -1366,6 +1604,310 @@ private fun FailedJobRow(result: BatchTtsJobResult) {
                 style = LETypography.caption,
                 color = LEColors.textMuted
             )
+        }
+    }
+}
+
+@Composable
+private fun PresetToolbar(
+    availablePresets: List<TtsPreset>,
+    selectedPreset: TtsPreset,
+    isDirty: Boolean,
+    onSelectPreset: (TtsPreset) -> Unit,
+    onSavePreset: () -> Unit,
+    onSaveAsPreset: () -> Unit,
+    onDuplicatePreset: () -> Unit,
+    onRenamePreset: () -> Unit,
+    onDeletePreset: () -> Unit,
+    onResetDefaults: () -> Unit,
+    errorMessage: String?,
+    modifier: Modifier = Modifier
+) {
+    var expandedDropdown by remember { mutableStateOf(false) }
+
+    Surface(
+        color = LEColors.surfaceElevated,
+        shape = LERadius.sm,
+        border = BorderStroke(1.dp, LEColors.borderSubtle),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.sm), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    Text(
+                        text = "Preset:",
+                        style = LETypography.caption,
+                        fontWeight = FontWeight.Bold,
+                        color = LEColors.textSecondary
+                    )
+
+                    // Preset Dropdown
+                    Box {
+                        Surface(
+                            shape = LERadius.xs,
+                            border = BorderStroke(1.dp, LEColors.borderSubtle),
+                            color = LEColors.surface,
+                            modifier = Modifier
+                                .widthIn(min = 160.dp, max = 260.dp)
+                                .height(32.dp)
+                                .clip(LERadius.xs)
+                                .clickable { expandedDropdown = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = LESpacing.sm),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.weight(1f, fill = false)
+                                ) {
+                                    Text(
+                                        text = selectedPreset.name,
+                                        style = LETypography.caption,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (isDirty) {
+                                        Text(
+                                            text = "(Modified)",
+                                            style = LETypography.caption,
+                                            color = LEColors.warning,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                                Text("▾", style = LETypography.caption, color = LEColors.textMuted)
+                            }
+                        }
+
+                        DropdownMenu(
+                            expanded = expandedDropdown,
+                            onDismissRequest = { expandedDropdown = false }
+                        ) {
+                            availablePresets.forEach { preset ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                preset.name,
+                                                style = LETypography.caption,
+                                                fontWeight = if (preset.id == selectedPreset.id) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (preset.id == selectedPreset.id) LEColors.primary else LEColors.textPrimary
+                                            )
+                                            if (preset.isBuiltIn) {
+                                                Text(" (Default)", style = LETypography.caption, color = LEColors.textMuted)
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        expandedDropdown = false
+                                        onSelectPreset(preset)
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Action buttons
+                    LESecondaryButton(
+                        text = "Save",
+                        onClick = onSavePreset,
+                        enabled = isDirty || selectedPreset.isBuiltIn,
+                        modifier = Modifier.height(30.dp)
+                    )
+
+                    LESecondaryButton(
+                        text = "Save As...",
+                        onClick = onSaveAsPreset,
+                        modifier = Modifier.height(30.dp)
+                    )
+
+                    LESecondaryButton(
+                        text = "Duplicate",
+                        onClick = onDuplicatePreset,
+                        modifier = Modifier.height(30.dp)
+                    )
+
+                    if (!selectedPreset.isBuiltIn) {
+                        LESecondaryButton(
+                            text = "Rename",
+                            onClick = onRenamePreset,
+                            modifier = Modifier.height(30.dp)
+                        )
+
+                        LEDangerButton(
+                            text = "Delete",
+                            onClick = onDeletePreset,
+                            modifier = Modifier.height(30.dp)
+                        )
+                    }
+                }
+
+                LESecondaryButton(
+                    text = "Reset Defaults",
+                    onClick = onResetDefaults,
+                    modifier = Modifier.height(30.dp)
+                )
+            }
+
+            if (errorMessage != null) {
+                Text(
+                    text = "⚠ $errorMessage",
+                    style = LETypography.caption,
+                    color = LEColors.danger,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun PresetNameInputDialog(
+    title: String,
+    initialValue: String,
+    confirmLabel: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var nameText by remember { mutableStateOf(initialValue) }
+    var errorText by remember { mutableStateOf<String?>(null) }
+
+    fun tryConfirm() {
+        val trimmed = nameText.trim()
+        if (trimmed.isBlank()) {
+            errorText = "Preset name cannot be blank."
+            return
+        }
+        if (trimmed.length > TtsPreset.MAX_NAME_LENGTH) {
+            errorText = "Name cannot exceed ${TtsPreset.MAX_NAME_LENGTH} characters."
+            return
+        }
+        onConfirm(trimmed)
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .width(420.dp)
+                .clip(LERadius.md)
+                .border(1.dp, LEColors.borderSubtle, LERadius.md)
+                .onKeyEvent { event ->
+                    if (event.key == Key.Escape) {
+                        onDismiss()
+                        true
+                    } else if (event.key == Key.Enter) {
+                        tryConfirm()
+                        true
+                    } else false
+                },
+            color = LEColors.surface,
+            shape = LERadius.md,
+            shadowElevation = 8.dp
+        ) {
+            Column(modifier = Modifier.padding(LESpacing.lg), verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                Text(title, style = LETypography.sectionTitle, fontWeight = FontWeight.Bold)
+
+                OutlinedTextField(
+                    value = nameText,
+                    onValueChange = {
+                        nameText = it
+                        errorText = null
+                    },
+                    label = { Text("Preset Name", style = LETypography.caption) },
+                    singleLine = true,
+                    isError = errorText != null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (errorText != null) {
+                    Text(errorText!!, style = LETypography.caption, color = LEColors.danger)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LESecondaryButton(text = "Cancel", onClick = onDismiss)
+                    Spacer(modifier = Modifier.width(LESpacing.sm))
+                    LEPrimaryButton(
+                        text = confirmLabel,
+                        onClick = { tryConfirm() },
+                        enabled = nameText.isNotBlank()
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun PresetDeleteConfirmDialog(
+    presetName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .width(400.dp)
+                .clip(LERadius.md)
+                .border(1.dp, LEColors.borderSubtle, LERadius.md)
+                .onKeyEvent { event ->
+                    if (event.key == Key.Escape) {
+                        onDismiss()
+                        true
+                    } else false
+                },
+            color = LEColors.surface,
+            shape = LERadius.md,
+            shadowElevation = 8.dp
+        ) {
+            Column(modifier = Modifier.padding(LESpacing.lg), verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                Text("Delete Preset", style = LETypography.sectionTitle, fontWeight = FontWeight.Bold, color = LEColors.danger)
+
+                Text(
+                    text = "Are you sure you want to delete preset '$presetName'? This action cannot be undone.",
+                    style = LETypography.caption,
+                    color = LEColors.textPrimary
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LESecondaryButton(text = "Cancel", onClick = onDismiss)
+                    Spacer(modifier = Modifier.width(LESpacing.sm))
+                    LEDangerButton(
+                        text = "Delete Preset",
+                        onClick = onConfirm
+                    )
+                }
+            }
         }
     }
 }

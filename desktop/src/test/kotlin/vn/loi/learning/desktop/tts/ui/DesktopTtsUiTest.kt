@@ -11,6 +11,7 @@ import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowse
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.desktop.tts.DesktopTtsAudioService
+import vn.loi.learning.desktop.tts.TtsAudioParameters
 import vn.loi.learning.desktop.tts.TtsAudioFileNamer
 import vn.loi.learning.desktop.tts.TtsEngine
 import vn.loi.learning.desktop.tts.TtsError
@@ -21,6 +22,7 @@ import vn.loi.learning.desktop.tts.TtsPreviewStore
 import vn.loi.learning.desktop.tts.TtsSynthesisRequest
 import vn.loi.learning.desktop.tts.TtsSynthesisResult
 import vn.loi.learning.desktop.tts.TtsVoice
+import vn.loi.learning.desktop.tts.strategy.VoiceStrategyMode
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -301,6 +303,61 @@ class DesktopTtsUiTest {
         assertFalse(invalidState.canPreview)
         assertFalse(invalidState.canGenerate)
     }
+
+    @Test
+    fun `preset application correctly updates configuration fields and parameters`() {
+        val preset = vn.loi.learning.desktop.tts.preset.TtsPreset(
+            id = "test-preset-1",
+            name = "Bilingual Fast",
+            selectedFields = setOf(TtsField.QUESTION, TtsField.EXAMPLE),
+            english = vn.loi.learning.desktop.tts.preset.TtsLanguagePresetConfig(
+                strategyMode = VoiceStrategyMode.ROUND_ROBIN,
+                primaryVoiceId = "en-US-GuyNeural",
+                audioParameters = TtsAudioParameters(ratePercent = 20, pitchHz = -2, volumePercent = 5)
+            ),
+            vietnamese = vn.loi.learning.desktop.tts.preset.TtsLanguagePresetConfig(
+                strategyMode = VoiceStrategyMode.SINGLE_VOICE,
+                primaryVoiceId = "vi-VN-NamMinhNeural",
+                audioParameters = TtsAudioParameters(ratePercent = 10, pitchHz = 3, volumePercent = -2)
+            )
+        )
+
+        assertEquals(2, preset.selectedFields.size)
+        assertEquals(VoiceStrategyMode.ROUND_ROBIN, preset.english.strategyMode)
+        assertEquals("en-US-GuyNeural", preset.english.primaryVoiceId)
+        assertEquals(20, preset.english.audioParameters.ratePercent)
+        assertEquals(-2, preset.english.audioParameters.pitchHz)
+        assertEquals(5, preset.english.audioParameters.volumePercent)
+
+        assertEquals(VoiceStrategyMode.SINGLE_VOICE, preset.vietnamese.strategyMode)
+        assertEquals("vi-VN-NamMinhNeural", preset.vietnamese.primaryVoiceId)
+        assertEquals(10, preset.vietnamese.audioParameters.ratePercent)
+    }
+
+    @Test
+    fun `preset with missing voice in catalog resolves safely without crashing`() {
+        val missingVoiceId = "en-US-UnknownNonExistentVoice"
+        val presetWithMissingVoice = vn.loi.learning.desktop.tts.preset.TtsPreset(
+            id = "preset-missing-voice",
+            name = "Missing Voice Preset",
+            selectedFields = setOf(TtsField.QUESTION),
+            english = vn.loi.learning.desktop.tts.preset.TtsLanguagePresetConfig(
+                primaryVoiceId = missingVoiceId
+            ),
+            vietnamese = vn.loi.learning.desktop.tts.preset.TtsLanguagePresetConfig(
+                primaryVoiceId = "vi-VN-HoaiMyNeural"
+            )
+        )
+
+        // Attempting to resolve primary voice against available test voices
+        val resolvedEnglishVoice = testVoices.firstOrNull { it.id == presetWithMissingVoice.english.primaryVoiceId }
+        val resolvedVietnameseVoice = testVoices.firstOrNull { it.id == presetWithMissingVoice.vietnamese.primaryVoiceId }
+
+        assertNull(resolvedEnglishVoice)
+        assertNotNull(resolvedVietnameseVoice)
+        assertEquals("vi-VN-HoaiMyNeural", resolvedVietnameseVoice.id)
+    }
+
 
     private class FakeEngine(private val voices: List<TtsVoice>) : TtsEngine {
         override suspend fun listVoices(): List<TtsVoice> = voices
