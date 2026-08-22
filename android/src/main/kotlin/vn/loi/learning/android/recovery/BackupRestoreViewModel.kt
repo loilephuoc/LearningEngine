@@ -59,7 +59,7 @@ sealed interface BackupRestoreUiState {
 
     data class Restoring(val message: String = "Restoring backup... Please do not close the app.") : BackupRestoreUiState
     data class RestoreSuccess(
-        val restoredEntriesCount: Int,
+        val restoredCounts: PortableBackupCountsV2,
         val safetyBackupPath: String,
         val appVersion: String
     ) : BackupRestoreUiState
@@ -213,7 +213,7 @@ class BackupRestoreViewModel(
                 when (result) {
                     is PortableBackupV2RestoreResult.Success -> {
                         mutableState.value = BackupRestoreUiState.RestoreSuccess(
-                            restoredEntriesCount = result.restoredEntriesCount,
+                            restoredCounts = result.restoredCounts,
                             safetyBackupPath = result.safetyBackupPath,
                             appVersion = result.appVersion
                         )

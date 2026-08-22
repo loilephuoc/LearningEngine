@@ -935,10 +935,14 @@ class JvmLearningDataRecoveryManager(
 
                     return PortableBackupV2RestoreResult.Success(
                         safetyBackupPath = safety.toString(),
-                        restoredEntriesCount = manifest.entries.size,
-                        appVersion = manifest.appVersion
+                        restoredEntriesCount = manifest.counts.learningItems.toInt(),
+                        appVersion = manifest.appVersion,
+                        restoredCounts = manifest.counts
                     )
                 } else {
+                    val restoredCounts = packageScopeCounts(
+                        buildPackageBackupScope(staging.resolve("portable/data"), selectedPackageIds, includeLearningProgress = true)
+                    )
                     applySelectiveRestoreFromStaging(staging, selectedPackageIds)
                     cleanEmptyDirectories()
                     failureHook("restore-v2-canonical-copied", null)
@@ -951,8 +955,9 @@ class JvmLearningDataRecoveryManager(
 
                     return PortableBackupV2RestoreResult.Success(
                         safetyBackupPath = safety.toString(),
-                        restoredEntriesCount = selectedPackageIds.size,
-                        appVersion = manifest.appVersion
+                        restoredEntriesCount = restoredCounts.learningItems.toInt(),
+                        appVersion = manifest.appVersion,
+                        restoredCounts = restoredCounts
                     )
                 }
             } catch (restoreFailure: Exception) {
@@ -1243,6 +1248,18 @@ class JvmLearningDataRecoveryManager(
             )
         )
     }
+
+    private fun packageScopeCounts(scope: PackageBackupScope): PortableBackupCountsV2 = PortableBackupCountsV2(
+        packages = scope.records.getValue("installed-packages.json").size.toLong(),
+        contents = scope.records.getValue("contents.json").size.toLong(),
+        learningItems = scope.records.getValue("learning-items.json").size.toLong(),
+        memoryStates = scope.records.getValue("memory-states.json").size.toLong(),
+        reviewEvents = scope.records.getValue("review-events.json").size.toLong(),
+        learningTrajectories = scope.records.getValue("learning-trajectories.json").size.toLong(),
+        studySessions = scope.records.getValue("study-sessions.json").size.toLong(),
+        studyQueues = scope.records.getValue("study-queues.json").size.toLong(),
+        mediaFiles = scope.mediaReferences.size.toLong()
+    )
 
     private fun validatePackageBackupScope(scope: PackageBackupScope, requireMedia: Boolean, mediaRoot: Path? = null) {
         val records = scope.records

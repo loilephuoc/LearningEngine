@@ -159,6 +159,7 @@ class BackupRestoreViewModelTest {
         try {
             val validBackup = fixture.tempDir.resolve("to-restore.lebak")
             fixture.graph.createPortableBackup(validBackup)
+            val expectedCounts = fixture.graph.previewPortableBackup(validBackup).counts
             val stagedFile = File.createTempFile("staged_", ".lebak", fixture.contextDir)
             Files.copy(validBackup, stagedFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
 
@@ -172,6 +173,7 @@ class BackupRestoreViewModelTest {
 
             val state = viewModel.state.value
             assertIs<BackupRestoreUiState.RestoreSuccess>(state)
+            assertEquals(expectedCounts, state.restoredCounts)
             assertFalse(stagedFile.exists())
         } finally {
             fixture.cleanup()

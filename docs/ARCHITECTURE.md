@@ -9,6 +9,13 @@ copy. Restore validates and domain-loads isolated staging, verifies a safety arc
 verifies canonical bytes, reloads persisted stores, and either succeeds fully or byte-exactly rolls
 back. Catastrophic rollback failure retains its safety archive as recovery evidence.
 
+Portable restore intent is independent of archive cardinality. A non-null package-ID set always
+means selective merge of exactly that canonical package scope; only an explicit null selection means
+full replacement. After Android completes either operation and reloads the persisted application
+graph, graph-bound Library state is recreated against that new graph generation rather than retaining
+the prior facade. Restore success counts describe domain records and referenced media, never ZIP
+entry cardinality.
+
 ## Constitution & Strategic Foundation
 
 Android owns one visual system in `LearningEngineTheme`, `LearningEngineDesignTokens`, and

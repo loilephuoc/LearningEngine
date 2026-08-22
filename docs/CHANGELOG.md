@@ -1,3 +1,19 @@
+# Android selective restore intent and post-restore graph refresh
+
+- Preserved the exact package selection as an explicit selective-merge intent even when it selects
+  every package present in an archive; full replacement remains available only through an explicit
+  full-restore call.
+- Recreated the Android Library ViewModel when the application graph generation changes, so a
+  successful restore reads the new persisted graph instead of retaining the pre-restore facade and
+  package list.
+- Restore success now reports semantic package, Content, LearningItem and media counts rather than
+  presenting ZIP entry count as restored learning items. The archive format, validation, safety
+  backup, rollback and Desktop backup generation are unchanged.
+- Regression coverage proves a one-package selective restore preserves an unrelated installed
+  package, the restored dependency/session/queue graph remains valid, full replacement remains
+  covered, and Android forwards selection/reloads Library state correctly. Full verification passes
+  5,003 tests (2,236 engine, 965 Android, 1,802 Desktop), with zero failures/errors/skips.
+
 # Cross-platform sync — selective portable backup referential integrity
 
 - Replaced media-name ownership heuristics with one canonical package dependency scope shared by

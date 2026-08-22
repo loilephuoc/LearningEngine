@@ -1,5 +1,19 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Current Phase 4 selective restore continuation
+
+- CASE B is fixed on `feat/cross-platform-sync`: Android now passes an explicit selected package set
+  through one-package and multi-package restore flows, while null remains the explicit full-replace
+  engine contract. A graph-generation key recreates `AndroidLibraryViewModel` after successful
+  restore/reload, eliminating the stale pre-restore package projection.
+- Restore results expose semantic package, Content, LearningItem and media counts. Existing portable
+  format, referential validation, safety snapshot, selective merge, full replacement and rollback
+  behavior remain intact. Focused Engine/Android/Desktop recovery and Library tests pass.
+- `clean test` passes 420 Engine suites / 2,236 tests, 98 Android suites / 965 tests, and 292 Desktop
+  suites / 1,802 tests, with zero failures/errors/skips. Diff audit and Android debug APK assembly
+  also pass; the checkpoint is ready for its single local capability commit. No install or push was
+  performed.
+
 ## Current backup / restore continuation
 
 - Baseline is `f8de0de9a5f7b13f313cff74c188ca13b315119a` on `develop`. Backup/restore

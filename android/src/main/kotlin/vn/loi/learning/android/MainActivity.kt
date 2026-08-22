@@ -400,7 +400,7 @@ class MainActivity : ComponentActivity() {
                     AndroidContentViewModel(AndroidContentOperations(graph), createSavedStateHandle())
                 }
                 val contentState = contentViewModel.state.collectAsStateWithLifecycle().value
-                val libraryViewModel = viewModel<AndroidLibraryViewModel> {
+                val libraryViewModel = viewModel<AndroidLibraryViewModel>(key = "library-graph-$graphRetry") {
                     AndroidLibraryViewModel(AndroidLibraryFacade(
                         graph.engine, app.studyPreferencesController::current
                     ), createSavedStateHandle())

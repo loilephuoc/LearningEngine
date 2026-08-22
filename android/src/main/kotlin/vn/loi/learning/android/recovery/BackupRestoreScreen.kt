@@ -213,14 +213,12 @@ fun BackupRestoreScreen(
             )
         }
         is BackupRestoreUiState.PreviewReady -> {
-            val isAll = state.selectedPackageIds.size == state.preview.packagePreviews.size
             RestorePreviewDialog(
                 preview = state.preview,
                 selectedPackageIds = state.selectedPackageIds,
                 onTogglePackage = { pkgId, checked -> viewModel.toggleRestorePackage(pkgId, checked) },
                 onConfirm = {
-                    val sel = if (isAll) null else state.selectedPackageIds
-                    viewModel.confirmRestore(state.stagedFile, sel)
+                    viewModel.confirmRestore(state.stagedFile, state.selectedPackageIds)
                 },
                 onCancel = { viewModel.cancelPreview(state.stagedFile) }
             )
@@ -243,7 +241,12 @@ fun BackupRestoreScreen(
                 title = { Text("Restore Completed Successfully") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Your learning data has been restored (${state.restoredEntriesCount} items restored).")
+                        Text(
+                            "Restored ${state.restoredCounts.packages} package(s), " +
+                                "${state.restoredCounts.contents} content records, " +
+                                "${state.restoredCounts.learningItems} learning items, and " +
+                                "${state.restoredCounts.mediaFiles} media files."
+                        )
                         Text(
                             "A safety backup of your previous data was saved to: ${state.safetyBackupPath}",
                             style = MaterialTheme.typography.bodySmall,

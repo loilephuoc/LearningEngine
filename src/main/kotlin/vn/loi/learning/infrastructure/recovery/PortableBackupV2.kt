@@ -193,7 +193,8 @@ sealed interface PortableBackupV2RestoreResult {
         override val message: String = "Restore completed successfully.",
         val safetyBackupPath: String,
         val restoredEntriesCount: Int,
-        val appVersion: String
+        val appVersion: String,
+        val restoredCounts: PortableBackupCountsV2 = PortableBackupCountsV2()
     ) : PortableBackupV2RestoreResult
 
     @Serializable

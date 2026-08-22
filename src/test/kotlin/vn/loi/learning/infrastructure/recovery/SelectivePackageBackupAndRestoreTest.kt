@@ -7,6 +7,7 @@ import java.util.zip.ZipFile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
@@ -113,6 +114,21 @@ class SelectivePackageBackupAndRestoreTest {
             assertEquals(1, manifest.counts.studyQueues)
             assertEquals(1, manifest.counts.learningTrajectories)
 
+            val mergeResult = assertIs<PortableBackupV2RestoreResult.Success>(
+                manager.restorePortableBackupV2(archive, selectedPackageIds = setOf("package-a"))
+            )
+            assertEquals(1, mergeResult.restoredCounts.packages)
+            assertEquals(1, mergeResult.restoredCounts.contents)
+            assertEquals(1, mergeResult.restoredCounts.learningItems)
+            assertEquals(1, mergeResult.restoredCounts.mediaFiles)
+            assertEquals(1, mergeResult.restoredEntriesCount)
+            assertEquals(
+                setOf("package-a", "package-b"),
+                Json.parseToJsonElement(Files.readString(source.resolve("installed-packages.json")))
+                    .let { it as JsonObject }.getValue("records").let { it as JsonArray }
+                    .map { (it as JsonObject)["packageId"]!!.jsonPrimitive.content }.toSet()
+            )
+
             val noProgressArchive = root.resolve("a-no-progress.lebak")
             manager.createPortableBackupV2(noProgressArchive, descriptor.copy(includeLearningProgress = false))
             ZipFile(noProgressArchive.toFile()).use { zip ->
@@ -124,8 +140,10 @@ class SelectivePackageBackupAndRestoreTest {
             val target = JvmLearningDataRecoveryManager(
                 roots = mapOf("data" to targetData, "media" to targetMedia), safetyDirectory = root.resolve("target/safety")
             )
-            val restoreResult = target.restorePortableBackupV2(archive, selectedPackageIds = setOf("package-a"))
-            assertTrue(restoreResult is PortableBackupV2RestoreResult.Success, restoreResult.toString())
+            val restoreResult = assertIs<PortableBackupV2RestoreResult.Success>(
+                target.restorePortableBackupV2(archive, selectedPackageIds = setOf("package-a"))
+            )
+            assertEquals(manifest.counts, restoreResult.restoredCounts)
             assertEquals(listOf("item-a"), Json.parseToJsonElement(Files.readString(targetData.resolve("learning-items.json")))
                 .let { it as JsonObject }.getValue("records").let { it as JsonArray }
                 .map { (it as JsonObject)["id"]!!.jsonPrimitive.content })
