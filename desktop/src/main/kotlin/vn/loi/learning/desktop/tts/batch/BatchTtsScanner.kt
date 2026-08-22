@@ -39,10 +39,14 @@ object BatchTtsScanner {
         var existingSkipped = 0
         var emptyTextSkipped = 0
 
+        val samplesByField = mutableMapOf<TtsField, BatchTtsSample>()
         var repEnglish: String? = null
         var repVietnamese: String? = null
 
-        for (item in items) {
+        for ((index, item) in items.withIndex()) {
+            val itemIndex = index + 1
+            val itemLabel = item.questionText.trim().ifBlank { item.contentId.value }
+
             for (field in TtsField.entries) {
                 val (text, audioRef) = when (field) {
                     TtsField.QUESTION -> item.questionText to item.questionAudioRef
@@ -55,6 +59,16 @@ object BatchTtsScanner {
                 val isMissing = !hasAudio
                 val trimmedText = text.orEmpty().trim()
                 val language = defaultLanguageFor(field)
+
+                if (trimmedText.isNotBlank() && !samplesByField.containsKey(field)) {
+                    samplesByField[field] = BatchTtsSample(
+                        field = field,
+                        text = trimmedText,
+                        contentId = item.contentId.value,
+                        itemIndex = itemIndex,
+                        itemLabel = itemLabel
+                    )
+                }
 
                 if (isMissing && trimmedText.isNotBlank()) {
                     missingCountByField[field] = (missingCountByField[field] ?: 0) + 1
@@ -89,6 +103,16 @@ object BatchTtsScanner {
             }
         }
 
+        // If no missing text found for representative, fallback to first available sample in scope
+        if (repEnglish == null) {
+            repEnglish = samplesByField[TtsField.QUESTION]?.text
+                ?: samplesByField[TtsField.ANSWER]?.text
+                ?: samplesByField[TtsField.EXAMPLE]?.text
+        }
+        if (repVietnamese == null) {
+            repVietnamese = samplesByField[TtsField.TRANSLATION]?.text
+        }
+
         val englishCount = validTargets.count { it.language == TtsLanguage.ENGLISH }
         val vietnameseCount = validTargets.count { it.language == TtsLanguage.VIETNAMESE }
 
@@ -101,8 +125,9 @@ object BatchTtsScanner {
             emptyTextSkippedCount = emptyTextSkipped,
             englishTargetsCount = englishCount,
             vietnameseTargetsCount = vietnameseCount,
-            representativeEnglishText = repEnglish ?: "Hello, this is a sample English preview sentence.",
-            representativeVietnameseText = repVietnamese ?: "Xin chào, đây là câu phát âm tiếng Việt mẫu."
+            representativeEnglishText = repEnglish,
+            representativeVietnameseText = repVietnamese,
+            samplesByField = samplesByField
         )
     }
 

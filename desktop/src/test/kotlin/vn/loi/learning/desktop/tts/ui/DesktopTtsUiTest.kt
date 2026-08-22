@@ -256,6 +256,22 @@ class DesktopTtsUiTest {
         assertEquals("Audio generation failed: timeout", (failedState.generationState as TtsGenerationState.Failed).message)
     }
 
+    @Test
+    fun `canonical field mapping extracts correct text for question answer example translation`() {
+        val target = TtsDialogTarget(
+            contentId = "c-target",
+            questionText = "Question content",
+            answerText = "Answer definition",
+            exampleText = "Example sentence",
+            exampleTranslation = "Bản dịch ví dụ"
+        )
+
+        assertEquals("Question content", target.textFor(TtsField.QUESTION))
+        assertEquals("Answer definition", target.textFor(TtsField.ANSWER))
+        assertEquals("Example sentence", target.textFor(TtsField.EXAMPLE))
+        assertEquals("Bản dịch ví dụ", target.textFor(TtsField.TRANSLATION))
+    }
+
     private class FakeEngine(private val voices: List<TtsVoice>) : TtsEngine {
         override suspend fun listVoices(): List<TtsVoice> = voices
 

@@ -239,4 +239,68 @@ class BatchTtsScannerTest {
             it.rate == -10 && it.pitch == "-3Hz" && it.volume == "-4%"
         })
     }
+
+    @Test
+    fun `scanBatchScope records exact samples with item attribution by field in deterministic order`() {
+        val item1 = createBrowserItem(
+            id = "c-item1",
+            q = "genuine",
+            a = "authentic",
+            ex = "", // blank example
+            tr = "da thật"
+        )
+        val item2 = createBrowserItem(
+            id = "c-item2",
+            q = "resilient",
+            a = "flexible",
+            ex = "Resilient structure",
+            tr = "kiên cường"
+        )
+
+        val scan = BatchTtsScanner.scanBatchScope(listOf(item1, item2))
+
+        val qSample = scan.sampleFor(TtsField.QUESTION)
+        val aSample = scan.sampleFor(TtsField.ANSWER)
+        val exSample = scan.sampleFor(TtsField.EXAMPLE)
+        val trSample = scan.sampleFor(TtsField.TRANSLATION)
+
+        // Question sample should come from item #1
+        assertEquals("genuine", qSample?.text)
+        assertEquals("c-item1", qSample?.contentId)
+        assertEquals(1, qSample?.itemIndex)
+        assertEquals("Item #1 (genuine)", qSample?.displaySource)
+
+        // Answer sample should come from item #1
+        assertEquals("authentic", aSample?.text)
+        assertEquals(1, aSample?.itemIndex)
+
+        // Example was empty on item #1, so should come from item #2
+        assertEquals("Resilient structure", exSample?.text)
+        assertEquals("c-item2", exSample?.contentId)
+        assertEquals(2, exSample?.itemIndex)
+        assertEquals("Item #2 (resilient)", exSample?.displaySource)
+
+        // Translation sample should come from item #1
+        assertEquals("da thật", trSample?.text)
+        assertEquals(1, trSample?.itemIndex)
+    }
+
+    @Test
+    fun `scanBatchScope returns null representatives when scope has no text`() {
+        val itemBlank = createBrowserItem(
+            id = "c-blank",
+            q = "",
+            a = "  ",
+            ex = "",
+            tr = "   "
+        )
+
+        val scan = BatchTtsScanner.scanBatchScope(listOf(itemBlank))
+
+        assertEquals(0, scan.totalValidTargets)
+        assertEquals(null, scan.representativeEnglishText)
+        assertEquals(null, scan.representativeVietnameseText)
+        assertEquals(null, scan.sampleFor(TtsField.QUESTION))
+        assertEquals(null, scan.sampleFor(TtsField.TRANSLATION))
+    }
 }

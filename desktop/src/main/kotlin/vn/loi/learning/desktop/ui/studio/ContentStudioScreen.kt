@@ -158,7 +158,8 @@ fun ContentStudioScreen(
     val handleRequestTtsBatch: (Set<String>) -> Unit = { selectedIds ->
         batchTtsScopeItems = uiState.allItems.filter { it.contentId.value in selectedIds }
         batchTtsTargetField = null
-        batchTtsTitle = "Batch Generate Audio (${selectedIds.size} Selected Items)"
+        val count = selectedIds.size
+        batchTtsTitle = if (count == 1) "Batch Generate Audio (1 Selected Item)" else "Batch Generate Audio ($count Selected Items)"
         showBatchTtsDialog = true
     }
 

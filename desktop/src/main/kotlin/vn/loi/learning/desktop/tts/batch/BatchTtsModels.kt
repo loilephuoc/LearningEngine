@@ -47,6 +47,19 @@ data class BatchTtsTarget(
 }
 
 /**
+ * Representative sample text with precise source attribution for preview in batch dialog.
+ */
+data class BatchTtsSample(
+    val field: TtsField,
+    val text: String,
+    val contentId: String,
+    val itemIndex: Int,
+    val itemLabel: String
+) {
+    val displaySource: String get() = "Item #$itemIndex ($itemLabel)"
+}
+
+/**
  * Comprehensive analysis of a selected item scope across chosen audio fields.
  */
 data class BatchTtsScopeScan(
@@ -59,10 +72,13 @@ data class BatchTtsScopeScan(
     val englishTargetsCount: Int,
     val vietnameseTargetsCount: Int,
     val representativeEnglishText: String?,
-    val representativeVietnameseText: String?
+    val representativeVietnameseText: String?,
+    val samplesByField: Map<TtsField, BatchTtsSample> = emptyMap()
 ) {
     val totalValidTargets: Int get() = validTargets.size
     val hasTargets: Boolean get() = validTargets.isNotEmpty()
+
+    fun sampleFor(field: TtsField): BatchTtsSample? = samplesByField[field]
 }
 
 /**

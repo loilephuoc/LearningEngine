@@ -327,6 +327,15 @@ fun BatchTtsDialog(
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // HEADER
+                    // HEADER
+                    val isEntirePackageScope = title.contains("All Missing", ignoreCase = true) || title.contains("Entire Package", ignoreCase = true)
+                    val scopeSubtitle = if (isEntirePackageScope) {
+                        "Package: $packageName · Scope: Entire Package (${itemsToScan.size} items)"
+                    } else {
+                        val count = itemsToScan.size
+                        "Package: $packageName · Scope: $count ${if (count == 1) "selected item" else "selected items"}"
+                    }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -341,7 +350,7 @@ fun BatchTtsDialog(
                                 color = LEColors.textPrimary
                             )
                             Text(
-                                text = "Package: $packageName · Scope: ${itemsToScan.size} items",
+                                text = scopeSubtitle,
                                 style = LETypography.secondaryMetadata,
                                 color = LEColors.textMuted
                             )
@@ -394,8 +403,23 @@ fun BatchTtsDialog(
                                     onVietnameseStrategyChange = { vietnameseStrategyMode = it },
                                     isPreviewingEn = isPreviewingEn,
                                     isPreviewingVi = isPreviewingVi,
-                                    onPreviewEn = { handlePreview(TtsLanguage.ENGLISH) },
-                                    onPreviewVi = { handlePreview(TtsLanguage.VIETNAMESE) },
+                                    onPreviewText = { text, lang ->
+                                        stopAudio()
+                                        val voice = if (lang == TtsLanguage.ENGLISH) selectedEnglishVoice else selectedVietnameseVoice
+                                        val rate = if (lang == TtsLanguage.ENGLISH) englishRate else vietnameseRate
+                                        if (voice != null && text.isNotBlank()) {
+                                            if (lang == TtsLanguage.ENGLISH) isPreviewingEn = true else isPreviewingVi = true
+                                            previewJob = coroutineScope.launch {
+                                                try {
+                                                    val previewPath = ttsService.preview(text, voice, rate, pitch, volume)
+                                                    localAudioPlayer.play(previewPath)
+                                                } catch (_: Exception) {
+                                                    isPreviewingEn = false
+                                                    isPreviewingVi = false
+                                                }
+                                            }
+                                        }
+                                    },
                                     onStopPreview = { stopAudio() }
                                 )
                             }
@@ -506,8 +530,7 @@ private fun ConfigStepContent(
     onVietnameseStrategyChange: (VoiceStrategyMode) -> Unit,
     isPreviewingEn: Boolean,
     isPreviewingVi: Boolean,
-    onPreviewEn: () -> Unit,
-    onPreviewVi: () -> Unit,
+    onPreviewText: (text: String, language: TtsLanguage) -> Unit,
     onStopPreview: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -622,12 +645,6 @@ private fun ConfigStepContent(
                 modifier = Modifier.weight(1f)
             )
         }
-        scopeScan.representativeEnglishText?.let {
-            Text("English preview text: $it", style = LETypography.caption, color = LEColors.textSecondary)
-        }
-        scopeScan.representativeVietnameseText?.let {
-            Text("Vietnamese preview text: $it", style = LETypography.caption, color = LEColors.textSecondary)
-        }
 
         if (isLoadingVoices) {
             Row(
@@ -643,6 +660,8 @@ private fun ConfigStepContent(
             VoiceStrategyCard(
                 title = "English Voice Configuration",
                 languageLabel = "English (en-US)",
+                managedFields = listOf(TtsField.QUESTION, TtsField.ANSWER, TtsField.EXAMPLE),
+                scopeScan = scopeScan,
                 currentVoice = selectedEnglishVoice,
                 candidateVoices = availableVoices.filter { it.language == "en" },
                 onVoiceSelect = onEnglishVoiceChange,
@@ -651,7 +670,7 @@ private fun ConfigStepContent(
                 strategyMode = englishStrategyMode,
                 onStrategyChange = onEnglishStrategyChange,
                 isPreviewing = isPreviewingEn,
-                onPreview = onPreviewEn,
+                onPreview = { text -> onPreviewText(text, TtsLanguage.ENGLISH) },
                 onStop = onStopPreview
             )
 
@@ -659,6 +678,8 @@ private fun ConfigStepContent(
             VoiceStrategyCard(
                 title = "Vietnamese Voice Configuration",
                 languageLabel = "Vietnamese (vi-VN)",
+                managedFields = listOf(TtsField.TRANSLATION),
+                scopeScan = scopeScan,
                 currentVoice = selectedVietnameseVoice,
                 candidateVoices = availableVoices.filter { it.language == "vi" },
                 onVoiceSelect = onVietnameseVoiceChange,
@@ -667,7 +688,7 @@ private fun ConfigStepContent(
                 strategyMode = vietnameseStrategyMode,
                 onStrategyChange = onVietnameseStrategyChange,
                 isPreviewing = isPreviewingVi,
-                onPreview = onPreviewVi,
+                onPreview = { text -> onPreviewText(text, TtsLanguage.VIETNAMESE) },
                 onStop = onStopPreview
             )
         }
@@ -748,6 +769,8 @@ private fun MetricCard(
 private fun VoiceStrategyCard(
     title: String,
     languageLabel: String,
+    managedFields: List<TtsField>,
+    scopeScan: BatchTtsScopeScan,
     currentVoice: TtsVoice?,
     candidateVoices: List<TtsVoice>,
     onVoiceSelect: (TtsVoice) -> Unit,
@@ -756,9 +779,12 @@ private fun VoiceStrategyCard(
     strategyMode: VoiceStrategyMode,
     onStrategyChange: (VoiceStrategyMode) -> Unit,
     isPreviewing: Boolean,
-    onPreview: () -> Unit,
+    onPreview: (text: String) -> Unit,
     onStop: () -> Unit
 ) {
+    var selectedSampleField by remember(managedFields) { mutableStateOf(managedFields.first()) }
+    val currentSample = scopeScan.sampleFor(selectedSampleField)
+
     Surface(
         color = LEColors.surfaceElevated,
         shape = LERadius.sm,
@@ -813,10 +839,81 @@ private fun VoiceStrategyCard(
                 } else {
                     LESecondaryButton(
                         text = "Preview",
-                        onClick = onPreview,
+                        onClick = { currentSample?.text?.let(onPreview) },
                         icon = LEIcons.Audio,
-                        enabled = currentVoice != null,
+                        enabled = currentVoice != null && currentSample != null && currentSample.text.isNotBlank(),
                         modifier = Modifier.weight(0.14f)
+                    )
+                }
+            }
+
+            // Sample Text Area with Field Selector & Precise Attribution
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(LERadius.xs)
+                    .background(LEColors.surface)
+                    .border(1.dp, LEColors.borderSubtle, LERadius.xs)
+                    .padding(horizontal = LESpacing.sm, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (managedFields.size > 1) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            managedFields.forEach { field ->
+                                val isSelected = field == selectedSampleField
+                                Surface(
+                                    color = if (isSelected) LEColors.primarySoft else LEColors.surfaceElevated,
+                                    shape = LERadius.xs,
+                                    border = BorderStroke(1.dp, if (isSelected) LEColors.primary else LEColors.borderSubtle),
+                                    modifier = Modifier.clickable { selectedSampleField = field }
+                                ) {
+                                    Text(
+                                        text = field.displayName,
+                                        style = LETypography.caption,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) LEColors.primary else LEColors.textSecondary,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "${managedFields.first().displayName} Sample",
+                            style = LETypography.caption,
+                            fontWeight = FontWeight.Bold,
+                            color = LEColors.textSecondary
+                        )
+                    }
+
+                    if (currentSample != null) {
+                        Text(
+                            text = "Source: ${currentSample.displaySource}",
+                            style = LETypography.caption,
+                            color = LEColors.textMuted
+                        )
+                    }
+                }
+
+                if (currentSample != null) {
+                    Text(
+                        text = "\"${currentSample.text}\"",
+                        style = LETypography.caption,
+                        fontWeight = FontWeight.Medium,
+                        color = LEColors.textPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else {
+                    Text(
+                        text = "No sample text available for ${selectedSampleField.displayName} in current scope",
+                        style = LETypography.caption,
+                        color = LEColors.textMuted
                     )
                 }
             }
