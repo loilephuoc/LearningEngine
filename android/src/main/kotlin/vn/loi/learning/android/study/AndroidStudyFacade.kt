@@ -824,6 +824,14 @@ class AndroidStudyFacade(
         return attachHud(state, item.session)
     }
 
+    fun updateDailyLimits(state: AndroidStudyState.Runtime, newLimit: Int, reviewLimit: Int): AndroidStudyState {
+        val item = currentItem ?: return state
+        return runCatching {
+            context.engine.updateActiveSessionLimits(item.session.id, newLimit, reviewLimit)
+            loadExact(item.session.id.value)
+        }.getOrElse { AndroidStudyState.Failed(it.message ?: "Không thể cập nhật giới hạn phiên học.", item.session.id.value) }
+    }
+
     fun loadExact(sessionId: String): AndroidStudyState {
         reconcileActiveSession()
         val session = context.engine.getSession(SessionId(sessionId))

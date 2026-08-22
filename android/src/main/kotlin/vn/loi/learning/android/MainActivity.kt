@@ -380,7 +380,8 @@ class MainActivity : ComponentActivity() {
                         ),
                         createSavedStateHandle(),
                         typingViMutedInitially = app.studyPreferencesController.typingViMuted(),
-                        onTypingViMutedChanged = app.studyPreferencesController::updateTypingViMuted
+                        onTypingViMutedChanged = app.studyPreferencesController::updateTypingViMuted,
+                        onDailyLimitsChanged = app.studyPreferencesController::updateLimits
                     )
                 }
                 val studyBackgroundAudioController = remember(app) {

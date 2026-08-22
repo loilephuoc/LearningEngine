@@ -19,21 +19,21 @@ Completed:
 Current implementation status:
 - Desktop Content Studio context-menu Delete now selects the clicked row and invokes the same existing deletion request/confirmation authority as toolbar Delete.
 - Desktop TTS capability is complete: multi-selection shows `Generate Audio (N)`, all missing selected-field targets are scanned/run, single and batch share seven speed levels, pitch/volume reach preview and generation requests, and preview uses the displayed selected-field text.
-- Study audit established persisted limits in `AndroidStudyPreferencesController`; `RefreshHud` updates counters but the active session queue/policy is still fixed at session creation, so immediate limit enforcement requires a canonical replan/update boundary rather than a display-only callback.
+- Study daily New/Review limits now have long-press editors. Apply atomically updates the active session policy and replans/replaces its canonical queue before persisting preferences, then reloads the same session immediately.
 
 Tests:
-- Focused Desktop TTS and production-wiring suites: PASS.
-- `clean test`: Engine 2,254; Android 968; Desktop 1,806; total 5,028; zero failures/errors/skips.
+- Focused active-session queue replan and Android Study suites: PASS.
+- `clean test`: Engine 2,255; Android 968; Desktop 1,806; total 5,029; zero failures/errors/skips.
 - Android `assembleDebug`: PASS at Phase 2 checkpoint.
 
 Physical UAT:
 - Two-package restore baseline PASS.
 - Remaining UI phases and their physical checks are pending.
 
-Commit: Desktop TTS capability follows context-delete checkpoint `e7cfdde5`.
+Commit: active-session limits capability follows Desktop TTS checkpoint `8babd4a1`.
 
 Next:
-- Implement the active-session study-limit replan boundary and long-press editors.
+- Complete Android Library/active-package and Study indicator capability.
 
 Blockers: none.
 

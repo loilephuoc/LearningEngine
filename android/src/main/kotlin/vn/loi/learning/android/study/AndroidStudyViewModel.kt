@@ -49,6 +49,7 @@ sealed interface AndroidStudyEvent {
     data object ProjectHome : AndroidStudyEvent
     data object RefreshHomeIfIdle : AndroidStudyEvent
     data object RefreshHud : AndroidStudyEvent
+    data class UpdateDailyLimits(val newLimit: Int, val reviewLimit: Int) : AndroidStudyEvent
     data class ChangeInsightsScope(val scope: vn.loi.learning.android.dashboard.AndroidInsightsScope) : AndroidStudyEvent
 }
 
@@ -57,7 +58,8 @@ class AndroidStudyViewModel(
     private val savedState: SavedStateHandle,
     private val workerDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1),
     typingViMutedInitially: Boolean = false,
-    private val onTypingViMutedChanged: (Boolean) -> Unit = {}
+    private val onTypingViMutedChanged: (Boolean) -> Unit = {},
+    private val onDailyLimitsChanged: (Int, Int) -> Boolean = { _, _ -> true }
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<AndroidStudyState>(AndroidStudyState.Loading)
     val state: StateFlow<AndroidStudyState> = mutableState.asStateFlow()
@@ -415,6 +417,14 @@ class AndroidStudyViewModel(
                     if (current is AndroidStudyState.Home) facade.home() else current
                 AndroidStudyEvent.RefreshHud ->
                     (current as? AndroidStudyState.Runtime)?.let(facade::refreshHud) ?: current
+                is AndroidStudyEvent.UpdateDailyLimits -> {
+                    val runtime = current as? AndroidStudyState.Runtime ?: current
+                    if (runtime !is AndroidStudyState.Runtime) runtime else {
+                        val updated = facade.updateDailyLimits(runtime, event.newLimit, event.reviewLimit)
+                        if (updated !is AndroidStudyState.Failed) onDailyLimitsChanged(event.newLimit, event.reviewLimit)
+                        updated
+                    }
+                }
                 is AndroidStudyEvent.ChangeInsightsScope -> {
                     facade.updateInsightsScope(event.scope)
                     facade.home()

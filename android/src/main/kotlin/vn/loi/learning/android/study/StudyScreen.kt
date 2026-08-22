@@ -12,6 +12,7 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
@@ -596,6 +597,7 @@ private fun StudyRuntimeScreen(
     onOpenFullscreenImage: (String) -> Unit,
     onAutoPlay: (() -> Unit)? = null
 ) {
+    var limitEditor by rememberSaveable { mutableStateOf<String?>(null) }
     val quickReview = state is AndroidStudyState.Introduction && state.focusedPracticeKind ==
         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
     val focusedSkimUx = state is AndroidStudyState.Introduction && usesFocusedSkimUx(state.focusedPracticeKind)
@@ -1104,7 +1106,12 @@ private fun StudyRuntimeScreen(
                             DifficultPracticeHud(hud)
                         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW ->
                             QuickReviewProgressHeader(state, hud)
-                        else -> LearnNewProgressHeader(hud, pendingIntroductionHudRating)
+                        else -> LearnNewProgressHeader(
+                            hud,
+                            pendingIntroductionHudRating,
+                            onEditNew = { limitEditor = "new" },
+                            onEditReview = { limitEditor = "review" }
+                        )
                     }
                 }
                 else LearningEngineCompactHud(hud)
@@ -1183,6 +1190,44 @@ private fun StudyRuntimeScreen(
             onTypingStageTap = toggleTypingRevealedAudioLoop,
             onEvent = stopAudioAndDispatch,
             onOpenFullscreenImage = onOpenFullscreenImage
+        )
+    }
+
+    limitEditor?.let { target ->
+        val hud = state.hud ?: return@let
+        var input by remember(target) { mutableStateOf(
+            if (target == "new") hud.newConfiguredTarget.toString() else hud.reviewConfiguredTarget.toString()
+        ) }
+        val value = input.toIntOrNull()
+        val minimum = if (target == "new") hud.newCompleted else hud.reviewCompleted
+        AlertDialog(
+            onDismissRequest = { limitEditor = null },
+            title = { Text(if (target == "new") "Từ mới mỗi ngày" else "Ôn tập mỗi ngày") },
+            text = {
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = { input = it.filter(Char::isDigit) },
+                    label = { Text("Giới hạn từ 1 đến 999") },
+                    supportingText = {
+                        if (value == null || value !in maxOf(1, minimum)..999) {
+                            Text("Giá trị phải từ ${maxOf(1, minimum)} đến 999.")
+                        }
+                    },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = value != null && value in maxOf(1, minimum)..999,
+                    onClick = {
+                        val newLimit = if (target == "new") value!! else hud.newConfiguredTarget
+                        val reviewLimit = if (target == "review") value!! else hud.reviewConfiguredTarget
+                        onEvent(AndroidStudyEvent.UpdateDailyLimits(newLimit, reviewLimit))
+                        limitEditor = null
+                    }
+                ) { Text("Áp dụng") }
+            },
+            dismissButton = { TextButton(onClick = { limitEditor = null }) { Text("Hủy") } }
         )
     }
 }
@@ -1264,7 +1309,9 @@ private fun DifficultPracticeHud(hud: AndroidStudySessionHud) {
 @Composable
 private fun LearnNewProgressHeader(
     hud: AndroidStudySessionHud,
-    pendingRating: PendingIntroductionHudRating?
+    pendingRating: PendingIntroductionHudRating?,
+    onEditNew: () -> Unit,
+    onEditReview: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
@@ -1276,8 +1323,8 @@ private fun LearnNewProgressHeader(
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 CompactLearnMetric(stringResource(R.string.hud_total), hud.totalLearned.toString())
-                CompactLearnMetric(stringResource(R.string.hud_new), "${hud.newCompleted}/${hud.newConfiguredTarget}")
-                CompactLearnMetric(stringResource(R.string.hud_review), "${hud.reviewCompleted}/${hud.reviewConfiguredTarget}")
+                CompactLearnMetric(stringResource(R.string.hud_new), "${hud.newCompleted}/${hud.newConfiguredTarget}", onLongPress = onEditNew)
+                CompactLearnMetric(stringResource(R.string.hud_review), "${hud.reviewCompleted}/${hud.reviewConfiguredTarget}", onLongPress = onEditReview)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 CompactLearnMetric(stringResource(R.string.hud_due), hud.dueCount.toString())
@@ -1321,7 +1368,8 @@ private fun CompactLearnMetric(
     label: String,
     value: String,
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
-    pulseKey: String? = null
+    pulseKey: String? = null,
+    onLongPress: (() -> Unit)? = null
 ) {
     val reducedMotion = isReducedMotionEnabled()
     val scale = remember { Animatable(1f) }
@@ -1333,7 +1381,11 @@ private fun CompactLearnMetric(
         }
     }
     Row(
-        modifier = Modifier.graphicsLayer { scaleX = scale.value; scaleY = scale.value },
+        modifier = Modifier
+            .graphicsLayer { scaleX = scale.value; scaleY = scale.value }
+            .then(if (onLongPress != null) Modifier.pointerInput(onLongPress) {
+                detectTapGestures(onLongPress = { onLongPress() })
+            } else Modifier),
         horizontalArrangement = Arrangement.spacedBy(3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -1,3 +1,11 @@
+# Live Android Study daily-limit replanning
+
+- Long-pressing the New or Review HUD metric opens a validated Vietnamese editor. Applying a limit
+  updates the current active session policy and atomically replaces its canonical queue from the
+  existing planner before preferences are persisted, then reloads the same session immediately.
+- Added integration coverage proving a live queue contracts and expands without leaving the session.
+  Full verification passes 5,029 tests with zero failures/errors/skips.
+
 # Complete Desktop selected-item batch TTS controls
 
 - Multi-selection now labels generation with the selected count and the existing scanner/runner processes

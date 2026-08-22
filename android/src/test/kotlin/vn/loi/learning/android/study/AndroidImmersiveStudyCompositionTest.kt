@@ -123,7 +123,7 @@ class AndroidImmersiveStudyCompositionTest {
 
     @Test
     fun `HUD stays projected state and composition has no data authority`() {
-        assertTrue(screen.contains("LearnNewProgressHeader(hud, pendingIntroductionHudRating)"))
+        assertTrue(screen.contains("LearnNewProgressHeader("))
         assertTrue(screen.contains("LearningEngineCompactHud(hud)"))
         assertFalse(screen.contains("StudyHeaderStatisticsQueryService"))
         assertFalse(screen.contains("Repository"))

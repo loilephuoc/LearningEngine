@@ -37,6 +37,7 @@ class AndroidStudyPreferencesController(private val store: AndroidStudyPreferenc
     }
     fun updateNew(value: Int): Boolean = update(value, mutableLimits.value.reviewPerDay)
     fun updateReview(value: Int): Boolean = update(mutableLimits.value.newPerDay, value)
+    fun updateLimits(newLimit: Int, reviewLimit: Int): Boolean = update(newLimit, reviewLimit)
     private fun update(newLimit: Int, reviewLimit: Int): Boolean = runCatching {
         DailyStudyBudgetLimits(newLimit, reviewLimit)
     }.fold(

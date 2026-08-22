@@ -92,7 +92,8 @@ class AndroidFocusedPracticeCompositionTest {
         assertTrue(screen.contains("Endless learned vocabulary review."))
         assertTrue(screen.contains("currentPosition = if (focusedSkimUx) null"))
         assertTrue(screen.contains("totalItems = if (focusedSkimUx) null"))
-        assertTrue(screen.contains("else -> LearnNewProgressHeader(hud, pendingIntroductionHudRating)"))
+        assertTrue(screen.contains("else -> LearnNewProgressHeader("))
+        assertTrue(screen.contains("onEditNew = { limitEditor = \"new\" }"))
         assertTrue(facade.contains("FocusedPracticeKind.QUICK_REVIEW -> \"Quick Review\""))
     }
 

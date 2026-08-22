@@ -48,6 +48,7 @@ import vn.loi.learning.application.session.StartContinuousSkimPracticeResult
 import vn.loi.learning.application.session.CompletedStudySessionReplayResult
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.application.session.StartStudySessionUseCase
+import vn.loi.learning.application.session.UpdateActiveStudySessionLimitsUseCase
 import vn.loi.learning.application.session.StudyQueueProgress
 import vn.loi.learning.application.session.StudyQueueService
 import vn.loi.learning.application.session.StudyQueueSnapshot
@@ -181,6 +182,13 @@ class LearningEngine(
             studyQueueService =
                 studyQueueService
         )
+
+    private val updateActiveSessionLimitsUseCase = UpdateActiveStudySessionLimitsUseCase(
+        sessions = sessionRepository,
+        planning = studyQueuePlanningService,
+        queues = studyQueueService,
+        transactions = transactionRunner
+    )
 
     private val continueGeneralStudyUseCase =
         ContinueGeneralStudyUseCase(
@@ -639,6 +647,9 @@ class LearningEngine(
         sessionRepository.findById(
             sessionId
         )
+
+    fun updateActiveSessionLimits(sessionId: SessionId, newLimit: Int, reviewLimit: Int): StudySession =
+        updateActiveSessionLimitsUseCase.execute(sessionId, newLimit, reviewLimit)
 
     fun getLearningTrajectory(learnerId: LearnerId, contentId: ContentId) =
         learningTrajectoryRepository?.find(learnerId, contentId)

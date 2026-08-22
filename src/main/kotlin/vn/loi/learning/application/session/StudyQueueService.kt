@@ -8,6 +8,7 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
+import vn.loi.learning.application.study.StudyQueuePlan
 
 /**
  * Application service quản lý vòng đời StudyQueueSnapshot.
@@ -22,6 +23,22 @@ class StudyQueueService(
     private val coverageReinforcementPolicy: CoverageReinforcementPolicy =
         CoverageReinforcementPolicy.DEFAULT
 ) {
+
+    fun replace(plan: StudyQueuePlan): StudyQueueSnapshot {
+        val snapshot = StudyQueueSnapshot.create(
+            sessionId = plan.sessionId,
+            createdAt = plan.plannedAt,
+            learningItemIds = plan.learningItemIds,
+            itemOrigins = plan.itemOrigins,
+            itemContentIds = plan.itemContentIds,
+            configuredNewTarget = plan.configuredNewTarget,
+            effectiveNewWorkload = plan.effectiveNewWorkload,
+            configuredReviewTarget = plan.configuredReviewTarget,
+            effectiveReviewWorkload = plan.effectiveReviewWorkload
+        )
+        repository.save(snapshot)
+        return snapshot
+    }
 
     fun create(
         sessionId: SessionId,

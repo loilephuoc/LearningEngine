@@ -28,6 +28,27 @@ class SessionQueueStrategyIntegrationTest {
         LearnerId("learner-1")
 
     @Test
+    fun `active session limit update replans the canonical queue immediately`() {
+        val fixture = createMixedFixture()
+        val sessionId = SessionId("live-limit-session")
+        fixture.engine.startSession(StartStudySessionCommand(
+            sessionId, learnerId, fixture.dueAt, SessionPolicy(newItemLimit = 2, reviewItemLimit = 2)
+        ))
+        assertEquals(4, fixture.engine.getStudyQueue(sessionId)?.learningItemIds?.size)
+
+        val lowered = fixture.engine.updateActiveSessionLimits(sessionId, newLimit = 1, reviewLimit = 1)
+        val loweredQueue = requireNotNull(fixture.engine.getStudyQueue(sessionId))
+        assertEquals(1, lowered.policy.newItemLimit)
+        assertEquals(1, lowered.policy.reviewItemLimit)
+        assertEquals(1, loweredQueue.configuredNewTarget)
+        assertEquals(1, loweredQueue.configuredReviewTarget)
+        assertEquals(2, loweredQueue.learningItemIds.size)
+
+        fixture.engine.updateActiveSessionLimits(sessionId, newLimit = 2, reviewLimit = 2)
+        assertEquals(4, fixture.engine.getStudyQueue(sessionId)?.learningItemIds?.size)
+    }
+
+    @Test
     fun `default session policy keeps review first behavior`() {
         val fixture =
             createMixedFixture()
