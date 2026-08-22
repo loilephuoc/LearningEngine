@@ -4,6 +4,7 @@
 - Widget instances keep isolated lightweight index/reveal state; active package changes are resolved from the canonical Library aggregate on every update.
 - Passive rendering performs no learning mutation. Ratings use the existing fresh-memory `AndroidReminderReviewRatingBridge` and canonical `LearningEngine.review` transaction with stale-content and submission guards.
 - Added lifecycle, localization, runtime-policy, Study-isolation and existing-widget regression coverage.
+- Hardened passive redraws to perform zero presentation writes, moved every widget-owned label and accessibility description to Vietnamese resources, refreshed the widget best-effort after successful canonical active-package persistence, and made the provider private while retaining explicit immutable action intents.
 
 # Android active package UX
 

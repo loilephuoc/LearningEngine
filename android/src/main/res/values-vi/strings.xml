@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="quick_review_widget_description">Thẻ ôn nhanh từ vựng cỡ lớn</string>
+    <string name="quick_review_widget_label">Ôn nhanh -1 Screen</string>
+    <string name="quick_review_widget_content_description">Tiện ích ôn nhanh từ vựng</string>
+    <string name="quick_review_widget_title">ÔN NHANH</string>
+    <string name="quick_review_widget_word_content_description">Từ vựng hiện tại</string>
+    <string name="quick_review_widget_meaning_content_description">Nghĩa tiếng Việt</string>
+    <string name="quick_review_widget_reveal_hint">Chạm Hiện đáp án để xem nghĩa</string>
+    <string name="quick_review_widget_reveal">Hiện đáp án</string>
+    <string name="quick_review_widget_again">Học lại</string>
+    <string name="quick_review_widget_hard">Khó</string>
+    <string name="quick_review_widget_good">Tốt</string>
+    <string name="quick_review_widget_easy">Dễ</string>
+    <string name="quick_review_widget_next">Tiếp theo</string>
+    <string name="quick_review_widget_next_content_description">Chuyển sang từ tiếp theo</string>
+    <string name="quick_review_widget_empty_title">Chưa có từ để ôn</string>
+    <string name="quick_review_widget_empty_message">Hãy chọn gói học chính trong Learning Engine.</string>
+    <string name="quick_review_widget_error_title">Chưa thể tải từ ôn tập</string>
+    <string name="quick_review_widget_error_message">Hãy thử làm mới tiện ích sau.</string>
+    <string name="quick_review_widget_missing_meaning">Chưa có nghĩa</string>
     <string name="app_name">Learning Engine</string>
     <string name="controller_accessibility_service_label">Chẩn đoán Tay cầm LearningEngine</string>
     <string name="controller_accessibility_service_description">Dịch vụ chẩn đoán theo dõi sự kiện phím tay cầm 8BitDo Micro khi chạy nền/tắt màn hình.</string>

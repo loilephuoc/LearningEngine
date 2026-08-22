@@ -88,8 +88,8 @@
 
         <receiver
             android:name=".reminder.AndroidQuickReviewWidgetProvider"
-            android:exported="true"
-            android:label="Ôn nhanh -1 Screen">
+            android:exported="false"
+            android:label="@string/quick_review_widget_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

@@ -24,14 +24,27 @@ class AndroidQuickReviewWidgetTest {
         assertTrue(info.contains("android:resizeMode=\"horizontal|vertical\""))
         assertTrue(info.contains("android:updatePeriodMillis=\"0\""))
         assertFalse(manifest.substringAfter("AndroidQuickReviewWidgetProvider").substringBefore("</receiver>").contains("HomeVocabularyWidgetRuntimeService"))
+        val receiver = manifest.substringAfter("AndroidQuickReviewWidgetProvider").substringBefore("</receiver>")
+        assertTrue(receiver.contains("android:exported=\"false\""))
+        assertTrue(receiver.contains("android:label=\"@string/quick_review_widget_label\""))
     }
 
     @Test fun `widget presentation is Vietnamese readable and exposes reveal next and ratings`() {
         val layout = source("res/layout/quick_review_widget.xml")
-        listOf("ÔN NHANH", "34sp", "23sp", "Hiện đáp án", "Tiếp theo", "Học lại", "Khó", "Tốt", "Dễ", "48dp")
+        listOf("@string/quick_review_widget_title", "34sp", "23sp", "@string/quick_review_widget_reveal", "@string/quick_review_widget_next", "@string/quick_review_widget_again", "@string/quick_review_widget_hard", "@string/quick_review_widget_good", "@string/quick_review_widget_easy", "48dp")
             .forEach { assertTrue(layout.contains(it), it) }
-        assertFalse(layout.contains("Reveal answer"))
-        assertFalse(layout.contains("Next"))
+        assertFalse(Regex("android:(text|contentDescription)=\"(?!@string/)[^\"]*[A-Za-zÀ-ỹ][^\"]*\"").containsMatchIn(layout))
+
+        val keys = Regex("@string/(quick_review_widget_[a-z_]+)")
+            .findAll(layout + source("AndroidManifest.xml") + source("res/xml/quick_review_widget_info.xml"))
+            .map { it.groupValues[1] }.toSet()
+        val defaults = source("res/values/strings.xml")
+        val vietnamese = source("res/values-vi/strings.xml")
+        keys.forEach { key ->
+            assertTrue(defaults.contains("name=\"$key\""), "default $key")
+            assertTrue(vietnamese.contains("name=\"$key\""), "values-vi $key")
+        }
+        assertFalse(defaults.contains("Large quick vocabulary review card"))
     }
 
     @Test fun `coordinator uses canonical active package queue and canonical rating bridge`() {
@@ -54,7 +67,40 @@ class AndroidQuickReviewWidgetTest {
         assertFalse(render.contains("submitRating"))
         assertFalse(render.contains("engine.review"))
         assertFalse(render.contains("StudySession"))
+        assertFalse(render.contains("save("))
+        assertFalse(render.contains("prefs.edit"))
         assertTrue(render.contains("manager.updateAppWidget"))
+    }
+
+    @Test fun `passive render boundary only resolves and presents without mutation authority`() {
+        var resolves = 0
+        var presentations = 0
+        var writes = 0
+        var ratings = 0
+        val boundary = PassiveQuickReviewWidgetRenderBoundary<String>(
+            resolve = { resolves += 1; "card" },
+            present = { _, result ->
+                assertEquals(PassiveQuickReviewWidgetRenderResult.Content("card"), result)
+                presentations += 1
+            }
+        )
+
+        boundary.render(7)
+
+        assertEquals(1, resolves)
+        assertEquals(1, presentations)
+        assertEquals(0, writes)
+        assertEquals(0, ratings)
+    }
+
+    @Test fun `pending intents remain explicit immutable and stale content is guarded`() {
+        val coordinator = source("kotlin/vn/loi/learning/android/reminder/AndroidQuickReviewWidgetCoordinator.kt")
+        assertTrue(coordinator.contains("Intent(context, AndroidQuickReviewWidgetProvider::class.java)"))
+        assertTrue(coordinator.contains("PendingIntent.FLAG_IMMUTABLE"))
+        assertTrue(coordinator.contains("state.contentId != expectedContentId"))
+        val bridge = source("kotlin/vn/loi/learning/android/reminder/AndroidReminderReviewRatingBridge.kt")
+        assertTrue(bridge.contains("AtomicBoolean(false)"))
+        assertTrue(bridge.contains("compareAndSet(false, true)"))
     }
 
     @Test fun `widget deletion cleans only instance scoped state`() {

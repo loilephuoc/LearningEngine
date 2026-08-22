@@ -72,7 +72,8 @@ class AndroidLibraryFacade(
     },
     private val now: () -> Long = System::currentTimeMillis,
     private val zoneId: () -> java.time.ZoneId = java.time.ZoneId::systemDefault,
-    private val onRootQuery: () -> Unit = {}
+    private val onRootQuery: () -> Unit = {},
+    private val onActivePackageChanged: () -> Unit = {}
 ) {
     private val libraryId get() = context.defaultLibraryId ?: LibraryId("default-library")
 
@@ -138,7 +139,7 @@ class AndroidLibraryFacade(
     fun openLessons(packageId: InstalledPackageId, search: String = ""): AndroidLibraryState = runCatching {
         AndroidLibraryState.Lessons(requireNotNull(context.installedPackages.findById(packageId.value)), requireNotNull(context.lessonBrowser).query(packageId,search), search)
     }.getOrElse { AndroidLibraryState.Failed("Không thể tải bài học.") }
-    fun selectLearningPackage(packageId: InstalledPackageId): AndroidLibraryState = command {
+    fun selectLearningPackage(packageId: InstalledPackageId): AndroidLibraryState = command(onActivePackageChanged) {
         requireNotNull(context.libraryCommand) { "Lệnh thư viện không khả dụng." }
             .setActivePackage(libraryId, packageId)
     }
@@ -160,6 +161,7 @@ class AndroidLibraryFacade(
             require(context.domainLibraryRepository?.findById(libraryId)?.activePackageId == packageId) {
                 "Không thể xác nhận lựa chọn gói."
             }
+            runCatching(onActivePackageChanged)
             context.engine.getActiveSession(LearnerId("default-learner"))
                 ?.takeIf { it.installedPackageId != packageId }
                 ?.let { context.engine.finishSession(it.id, Moment(now())) }
@@ -221,9 +223,15 @@ class AndroidLibraryFacade(
         requireNotNull(context.libraryCommand).removePackageFromCollection(libraryId, collectionId, packageId)
     }
 
-    private fun command(action: () -> LibraryCommandResult<*>): AndroidLibraryState = runCatching {
+    private fun command(
+        onSuccess: () -> Unit = {},
+        action: () -> LibraryCommandResult<*>
+    ): AndroidLibraryState = runCatching {
         when (val result = action()) {
-            is LibraryCommandResult.Success -> loadRoot()
+            is LibraryCommandResult.Success -> {
+                runCatching(onSuccess)
+                loadRoot()
+            }
             is LibraryCommandResult.DuplicateCollection -> AndroidLibraryState.Failed("Đã có bộ sưu tập mang tên này.")
             is LibraryCommandResult.InvalidState -> AndroidLibraryState.Failed(result.message)
             is LibraryCommandResult.PersistenceFailure -> AndroidLibraryState.Failed("Library changes could not be saved.")

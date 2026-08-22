@@ -33,7 +33,8 @@ class AndroidPackageFacade(
     private val dailyLimits: () -> DailyStudyBudgetLimits = { DailyStudyBudgetLimits() },
     private val difficultMarkers: AndroidVocabularyReminderDifficultMarkers? = null,
     private val now: () -> Long = System::currentTimeMillis,
-    private val zoneId: () -> ZoneId = ZoneId::systemDefault
+    private val zoneId: () -> ZoneId = ZoneId::systemDefault,
+    private val onActivePackageChanged: () -> Unit = {}
 ) {
     fun saveQuickEdit(draft: AndroidPackageQuickEditDraft): Result<Unit> = runCatching {
         require(draft.question.isNotBlank()) { "Question is required." }
@@ -240,6 +241,7 @@ class AndroidPackageFacade(
         require(context.domainLibraryRepository?.findById(libraryId)?.activePackageId == id) {
             "Package selection could not be confirmed."
         }
+        runCatching(onActivePackageChanged)
         context.engine.getActiveSession(learnerId)
             ?.takeIf { it.installedPackageId != id }
             ?.let { context.engine.finishSession(it.id, Moment(now())) }
@@ -275,6 +277,7 @@ class AndroidPackageFacade(
         require(context.domainLibraryRepository?.findById(libraryId)?.activePackageId == id) {
             "Package selection could not be confirmed."
         }
+        runCatching(onActivePackageChanged)
     }
 
     /**

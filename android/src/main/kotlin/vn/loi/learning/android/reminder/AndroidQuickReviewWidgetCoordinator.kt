@@ -17,6 +17,27 @@ internal fun advanceQuickReviewWidget(state: QuickReviewWidgetState, size: Int):
     if (size <= 0) state.copy(contentId = null, index = 0, revealed = false)
     else state.copy(contentId = null, index = (state.index + 1) % size, revealed = false)
 
+internal sealed interface PassiveQuickReviewWidgetRenderResult<out T> {
+    data class Content<T>(val value: T) : PassiveQuickReviewWidgetRenderResult<T>
+    data object Empty : PassiveQuickReviewWidgetRenderResult<Nothing>
+    data object Failure : PassiveQuickReviewWidgetRenderResult<Nothing>
+}
+
+internal class PassiveQuickReviewWidgetRenderBoundary<T>(
+    private val resolve: (Int) -> T?,
+    private val present: (Int, PassiveQuickReviewWidgetRenderResult<T>) -> Unit
+) {
+    fun render(id: Int) {
+        val result = try {
+            resolve(id)?.let { PassiveQuickReviewWidgetRenderResult.Content(it) }
+                ?: PassiveQuickReviewWidgetRenderResult.Empty
+        } catch (_: Throwable) {
+            PassiveQuickReviewWidgetRenderResult.Failure
+        }
+        present(id, result)
+    }
+}
+
 class AndroidQuickReviewWidgetCoordinator(
     private val context: Context,
     private val selector: AndroidVocabularyReminderCandidateSelector,
@@ -24,6 +45,7 @@ class AndroidQuickReviewWidgetCoordinator(
 ) {
     private val prefs = context.getSharedPreferences("quick_review_widget_instances", Context.MODE_PRIVATE)
     private val manager get() = AppWidgetManager.getInstance(context)
+    private val passiveRender = PassiveQuickReviewWidgetRenderBoundary(::resolveQueue, ::present)
 
     fun update(ids: IntArray = manager.getAppWidgetIds(ComponentName(context, AndroidQuickReviewWidgetProvider::class.java))) =
         ids.forEach(::render)
@@ -74,12 +96,17 @@ class AndroidQuickReviewWidgetCoordinator(
 
     private fun resolve(id: Int): QuickReviewWidgetState? = resolveQueue(id)?.first
 
-    private fun render(id: Int) {
+    private fun render(id: Int) = passiveRender.render(id)
+
+    private fun present(
+        id: Int,
+        result: PassiveQuickReviewWidgetRenderResult<Pair<QuickReviewWidgetState, AndroidReminderReviewSession>>
+    ) {
         val views = RemoteViews(context.packageName, R.layout.quick_review_widget)
-        val resolved = runCatching { resolveQueue(id) }.getOrNull()
-        if (resolved == null) {
-            views.setTextViewText(R.id.quick_review_word, "Chưa có từ để ôn")
-            views.setTextViewText(R.id.quick_review_meaning, "Hãy chọn gói học chính trong Learning Engine.")
+        if (result !is PassiveQuickReviewWidgetRenderResult.Content) {
+            val failed = result == PassiveQuickReviewWidgetRenderResult.Failure
+            views.setTextViewText(R.id.quick_review_word, context.getString(if (failed) R.string.quick_review_widget_error_title else R.string.quick_review_widget_empty_title))
+            views.setTextViewText(R.id.quick_review_meaning, context.getString(if (failed) R.string.quick_review_widget_error_message else R.string.quick_review_widget_empty_message))
             views.setViewVisibility(R.id.quick_review_reveal, View.GONE)
             views.setViewVisibility(R.id.quick_review_next, View.GONE)
             val open = PendingIntent.getActivity(context, id, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -87,14 +114,14 @@ class AndroidQuickReviewWidgetCoordinator(
             manager.updateAppWidget(id, views)
             return
         }
+        val resolved = result.value
         val (state, queue) = resolved
         val candidate = queue.items[state.index]
-        save(id, state)
         views.setTextViewText(R.id.quick_review_package, candidate.packageName)
         views.setTextViewText(R.id.quick_review_word, candidate.primaryText)
         views.setTextViewText(R.id.quick_review_pronunciation, listOfNotNull(candidate.ipa?.let { "/$it/" }, candidate.partOfSpeech).joinToString(" · "))
-        val meaning = candidate.translation ?: candidate.answer ?: "Chưa có nghĩa"
-        views.setTextViewText(R.id.quick_review_meaning, if (state.revealed) meaning else "Chạm Hiện đáp án để xem nghĩa")
+        val meaning = candidate.translation ?: candidate.answer ?: context.getString(R.string.quick_review_widget_missing_meaning)
+        views.setTextViewText(R.id.quick_review_meaning, if (state.revealed) meaning else context.getString(R.string.quick_review_widget_reveal_hint))
         views.setTextViewText(R.id.quick_review_example, candidate.example.orEmpty())
         views.setViewVisibility(R.id.quick_review_example, if (state.revealed && !candidate.example.isNullOrBlank()) View.VISIBLE else View.GONE)
         views.setViewVisibility(R.id.quick_review_reveal, if (state.revealed) View.GONE else View.VISIBLE)

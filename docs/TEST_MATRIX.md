@@ -1747,3 +1747,9 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   revealed Introduction roles; aspect-aware image fitting remains owned by `LearningEngineImage`.
 - Verify quick < standard < emphasis durations and zero-duration reduced motion, plus shared shell,
   card, media, prompt, input and choice source/composition contracts and all Introduction regressions.
+
+## Android dedicated Quick Review widget
+
+- Verify passive render has no presentation/learning write authority, empty and failure rendering use complete Vietnamese resources, and each widget instance retains isolated reveal/index state.
+- Verify successful canonical active-package persistence triggers exactly one best-effort refresh, failed selection triggers none, and refresh failure does not roll back selection.
+- Verify the provider is not exported, action PendingIntents remain explicit and immutable, stale content is rejected, and duplicate rating submission remains guarded.

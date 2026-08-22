@@ -174,6 +174,39 @@ class AndroidActivePackageNavigationAcceptanceTest {
     }
 
     @Test
+    fun `successful Library package switch refreshes quick widget once and refresh failure is best effort`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "widget-refresh-library")
+        var refreshes = 0
+        val facade = vn.loi.learning.android.library.AndroidLibraryFacade(
+            context,
+            onActivePackageChanged = { refreshes += 1; error("launcher unavailable") }
+        )
+
+        assertIs<vn.loi.learning.android.library.AndroidLibraryState.Root>(facade.selectLearningPackage(selected))
+
+        assertEquals(1, refreshes)
+        assertEquals(selected, context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
+    }
+
+    @Test
+    fun `failed Library package switch does not refresh quick widget`() {
+        val context = LearningApplicationFactory.createInMemory()
+        var refreshes = 0
+        val facade = vn.loi.learning.android.library.AndroidLibraryFacade(
+            context,
+            onActivePackageChanged = { refreshes += 1 }
+        )
+
+        assertIs<vn.loi.learning.android.library.AndroidLibraryState.Failed>(
+            facade.selectLearningPackage(InstalledPackageId("missing-widget-package"))
+        )
+
+        assertEquals(0, refreshes)
+        assertNull(context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
+    }
+
+    @Test
     fun `long lived Study ViewModel refreshes Home after Library selection`() = runTest(dispatcher) {
         val context = LearningApplicationFactory.createInMemory()
         val selected = install(context, "view-model-selection", 50)
@@ -265,6 +298,19 @@ class AndroidActivePackageNavigationAcceptanceTest {
         assertTrue(context.studySessionRepository!!.findAll().isEmpty())
         val detail = assertIs<AndroidPackageContentState.Content>(AndroidPackageFacade(context).openPackage(selected))
         assertTrue(detail.header.isActivePackage)
+    }
+
+    @Test
+    fun `package detail switch refreshes quick widget once after canonical persistence`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "widget-refresh-detail")
+        var refreshes = 0
+
+        AndroidPackageFacade(context, onActivePackageChanged = { refreshes += 1 })
+            .selectLearningPackage(selected).getOrThrow()
+
+        assertEquals(1, refreshes)
+        assertEquals(selected, context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
     }
 
     @Test

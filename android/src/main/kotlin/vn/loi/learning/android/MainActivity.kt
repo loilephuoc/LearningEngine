@@ -403,7 +403,9 @@ class MainActivity : ComponentActivity() {
                 val contentState = contentViewModel.state.collectAsStateWithLifecycle().value
                 val libraryViewModel = viewModel<AndroidLibraryViewModel>(key = "library-graph-$graphRetry") {
                     AndroidLibraryViewModel(AndroidLibraryFacade(
-                        graph.engine, app.studyPreferencesController::current
+                        graph.engine,
+                        app.studyPreferencesController::current,
+                        onActivePackageChanged = app.quickReviewWidgetCoordinator::update
                     ), createSavedStateHandle())
                 }
                 val libraryState = libraryViewModel.state.collectAsStateWithLifecycle().value
@@ -567,7 +569,8 @@ class MainActivity : ComponentActivity() {
                             AndroidPackageViewModel(AndroidPackageFacade(
                                 context = graph.engine,
                                 dailyLimits = app.studyPreferencesController::current,
-                                difficultMarkers = app.reminderDifficultStore
+                                difficultMarkers = app.reminderDifficultStore,
+                                onActivePackageChanged = app.quickReviewWidgetCoordinator::update
                             ), createSavedStateHandle())
                         }
                         LaunchedEffect(packageId) { packageViewModel.open(packageId) }
