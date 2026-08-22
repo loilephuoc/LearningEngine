@@ -2,6 +2,16 @@
 
 ## Current incremental cross-platform sync continuation
 
+- Capability 6 adds secure, replaceable Supabase REST event and Storage blob adapters. Versioned SQL
+  owns per-user revisions, idempotent push, monotonic device ACK, least-privilege grants/RLS, a private
+  user-prefixed content-addressed bucket, and pgTAP security tests. Authenticated session identity is
+  never accepted from an envelope; local repositories remain authority and server ACK follows committed
+  local apply. Remote UPDATE/DELETE/GC, credentials, deployment, login UI, background sync, Realtime,
+  and automatic network wiring remain absent. Supabase CLI/Docker were unavailable, so migrations and
+  pgTAP have not received live security validation. Full clean gate: 822 suites / 5,093 tests (root
+  430 / 2,304; Android 100 / 983; Desktop 292 / 1,806), zero failures/errors/skips. Next capability is
+  Desktop integration.
+
 - Baseline was clean `feat/cross-platform-sync` at `16c4cc03e09eefdf0592f03112e6693ac72f0411`.
 - Capability 1 establishes backend-neutral protocol identities, separate content/media/learning
   deltas, revision/cursor/ACK/conflict contracts, `SyncTransport`, and a deterministic in-memory

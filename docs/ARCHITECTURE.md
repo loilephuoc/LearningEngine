@@ -1923,3 +1923,11 @@ user-scoped RLS, while push and monotonic device ACK use narrowly granted functi
 sends a server ACK only after application code has committed the corresponding local cursor. REST
 requests are explicit, paginated, bounded-retry operations; configuration absence leaves local runtime
 enabled and performs no network request.
+
+Supabase media transport implements `RemoteMediaBlobTransport` without changing local media authority.
+The object name is derived only as `<authenticated-user-uuid>/<sha256>` in the private `sync-media`
+bucket; event filenames and paths are never accepted. A HEAD probe makes content-addressed upload
+idempotent, and downloaded bytes must match the requested SHA-256 before the existing
+`MediaDeltaSyncService.provideBlob` size, MIME/signature, and slot validator may stage them. Missing
+objects remain pending. Storage policies permit authenticated SELECT/INSERT only within the caller's
+prefix; UPDATE/DELETE and remote GC are deliberately absent.

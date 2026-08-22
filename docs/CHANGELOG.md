@@ -1,3 +1,15 @@
+# Supabase media blob transport
+
+- Added a private `sync-media` bucket migration with authenticated user-prefix SELECT/INSERT policies
+  and no UPDATE/DELETE policy, keeping destructive remote GC explicitly deferred.
+- Added a replaceable content-addressed blob port and Supabase Storage adapter. Upload probes avoid
+  duplicate bytes; object paths derive only from authenticated UUID plus SHA-256; download verifies
+  checksum before the existing size/MIME/signature/slot staging validator can accept bytes.
+- Missing blobs remain pending and corrupt blobs never reach Content apply. No UI, automatic network,
+  credential, deployment, local schema, package, backup/restore, or remote-delete behavior changed.
+- Full clean verification passes 822 suites / 5,093 tests with zero failures, errors, or skips;
+  Storage pgTAP was authored but not run because Supabase CLI/Docker are unavailable.
+
 # Secure Supabase event transport
 
 - Added versioned Supabase tables, indexes, least-privilege grants/RLS, transaction-safe per-user
