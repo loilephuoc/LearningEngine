@@ -115,7 +115,7 @@ class DesktopSyncViewModelTest {
         assertEquals("desktop", state.preview?.sourcePlatform)
         assertNull(state.errorMessage)
 
-        viewModel.executeRestore(validBackup)
+        viewModel.executeRestore(validBackup, fullReplacement = true)
         val restoreResultState = viewModel.restoreState.value
         assertNotNull(restoreResultState.restoreSuccessSummary)
     }

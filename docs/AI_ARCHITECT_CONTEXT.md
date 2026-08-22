@@ -1,5 +1,20 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Current Phase 4 safety-backup manager continuation
+
+- On `feat/cross-platform-sync` after baseline `464e2439`, Android now discovers and validates
+  automatic safety-v2 archives from its canonical backup directory, presents human metadata/storage,
+  separates them from external document-picker files, and routes both through the existing portable
+  preview/selective restore/validation/application-graph reload pipeline.
+- Recovery-owned retention runs only after successful restore validation, keeps the newest two valid
+  v2 archives by manifest time, protects the new archive and active source, excludes legacy/invalid/
+  external/user files, and reports cleanup failure without changing restore success. Exact selection
+  remains selective; empty selection is invalid and only explicit null means full replacement.
+- Focused recovery/Library tests pass. `clean test` passes 421 Engine suites / 2,242 tests, 98 Android
+  suites / 967 tests, and 292 Desktop suites / 1,802 tests, with zero failures/errors/skips. Remaining
+  gates are diff audit, debug APK build/hash, local commit and physical Android UAT; no install or push
+  has been performed.
+
 ## Current Phase 4 selective restore continuation
 
 - CASE B is fixed on `feat/cross-platform-sync`: Android now passes an explicit selected package set

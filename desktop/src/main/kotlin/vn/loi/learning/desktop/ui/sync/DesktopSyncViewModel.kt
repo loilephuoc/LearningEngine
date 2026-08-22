@@ -204,21 +204,22 @@ class DesktopSyncViewModel(
         _restoreState.value = _restoreState.value.copy(selectedPackageIds = updated)
     }
 
-    fun executeRestore(sourcePath: Path) {
+    fun executeRestore(sourcePath: Path, fullReplacement: Boolean = false) {
         _restoreState.value = _restoreState.value.copy(isRestoring = true, errorMessage = null)
         try {
             val selected = _restoreState.value.selectedPackageIds
-            val isAll = _restoreState.value.packagePreviews.isNotEmpty() && selected.size == _restoreState.value.packagePreviews.size
             val result = recoveryManager.restorePortableBackupV2(
                 source = sourcePath,
                 operationActive = false,
-                selectedPackageIds = if (isAll) null else selected
+                selectedPackageIds = if (fullReplacement) null else selected
             )
             when (result) {
                 is PortableBackupV2RestoreResult.Success -> {
                     _restoreState.value = _restoreState.value.copy(
                         isRestoring = false,
-                        restoreSuccessSummary = "Khôi phục thành công ${result.restoredEntriesCount} mục. Bản sao an toàn lưu tại: ${result.safetyBackupPath}"
+                        restoreSuccessSummary = "Khôi phục thành công ${result.restoredCounts.packages} gói, " +
+                            "${result.restoredCounts.contents} Content, ${result.restoredCounts.learningItems} LearningItems " +
+                            "và ${result.restoredCounts.mediaFiles} media."
                     )
                 }
                 else -> {

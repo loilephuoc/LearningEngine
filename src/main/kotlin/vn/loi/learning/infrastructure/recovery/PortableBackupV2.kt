@@ -194,7 +194,8 @@ sealed interface PortableBackupV2RestoreResult {
         val safetyBackupPath: String,
         val restoredEntriesCount: Int,
         val appVersion: String,
-        val restoredCounts: PortableBackupCountsV2 = PortableBackupCountsV2()
+        val restoredCounts: PortableBackupCountsV2 = PortableBackupCountsV2(),
+        val cleanupResult: SafetyBackupCleanupResult = SafetyBackupCleanupResult()
     ) : PortableBackupV2RestoreResult
 
     @Serializable

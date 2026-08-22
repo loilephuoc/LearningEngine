@@ -39,6 +39,7 @@ import vn.loi.learning.domain.sync.model.SyncPreviewReport
 import vn.loi.learning.domain.sync.model.SyncResultSummary
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2Preview
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult
+import vn.loi.learning.infrastructure.recovery.SafetyBackupCandidate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +50,7 @@ fun BackupRestoreScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.state.collectAsStateWithLifecycle()
+    val safetyBackupState by viewModel.safetyBackups.collectAsStateWithLifecycle()
 
     val createBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream")
@@ -94,7 +96,8 @@ fun BackupRestoreScreen(
             return@BackHandler
         }
         if (uiState is BackupRestoreUiState.PreviewReady) {
-            viewModel.cancelPreview((uiState as BackupRestoreUiState.PreviewReady).stagedFile)
+            val preview = uiState as BackupRestoreUiState.PreviewReady
+            viewModel.cancelPreview(preview.stagedFile, preview.deleteSourceAfterUse)
             return@BackHandler
         }
         if (uiState is BackupRestoreUiState.SyncPreviewReady) {
@@ -166,7 +169,14 @@ fun BackupRestoreScreen(
                 }
             )
 
-            // Restore Backup Card
+            SafetyBackupCard(
+                state = safetyBackupState,
+                enabled = !isBusy,
+                onRefresh = viewModel::refreshSafetyBackups,
+                onPreview = viewModel::previewSafetyBackup
+            )
+
+            // External Restore Backup Card
             RestoreBackupCard(
                 enabled = !isBusy,
                 onSelectBackup = {
@@ -215,12 +225,18 @@ fun BackupRestoreScreen(
         is BackupRestoreUiState.PreviewReady -> {
             RestorePreviewDialog(
                 preview = state.preview,
+                isSafetyBackup = state.isSafetyBackup,
+                archiveSizeBytes = state.stagedFile.length(),
                 selectedPackageIds = state.selectedPackageIds,
                 onTogglePackage = { pkgId, checked -> viewModel.toggleRestorePackage(pkgId, checked) },
                 onConfirm = {
-                    viewModel.confirmRestore(state.stagedFile, state.selectedPackageIds)
+                    viewModel.confirmRestore(
+                        state.stagedFile,
+                        state.selectedPackageIds,
+                        state.deleteSourceAfterUse
+                    )
                 },
-                onCancel = { viewModel.cancelPreview(state.stagedFile) }
+                onCancel = { viewModel.cancelPreview(state.stagedFile, state.deleteSourceAfterUse) }
             )
         }
         is BackupRestoreUiState.PreviewFailure -> {
@@ -247,8 +263,11 @@ fun BackupRestoreScreen(
                                 "${state.restoredCounts.learningItems} learning items, and " +
                                 "${state.restoredCounts.mediaFiles} media files."
                         )
+                        state.cleanupResult.failureMessage?.let {
+                            Text("Khôi phục thành công, nhưng không thể dọn bản sao cũ: $it")
+                        }
                         Text(
-                            "A safety backup of your previous data was saved to: ${state.safetyBackupPath}",
+                            "Một bản sao an toàn mới của dữ liệu trước khôi phục đã được lưu trên thiết bị.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -469,13 +488,13 @@ private fun RestoreBackupCard(
                     modifier = Modifier.size(28.dp)
                 )
                 Text(
-                    "Restore from Backup",
+                    "File sao lưu bên ngoài",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
             }
             Text(
-                "Restores your learning data from a selected .lebak file.",
+                "Chọn một file .lebak từ bộ nhớ thiết bị hoặc thư mục Downloads.",
                 style = MaterialTheme.typography.bodyMedium
             )
             Row(
@@ -490,7 +509,7 @@ private fun RestoreBackupCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    "Replace Everything Mode: Restoring replaces all current learning data. A safety backup of current data will be created automatically before restore.",
+                    "File được xác minh và xem trước trước khi khôi phục. File bên ngoài không được đưa vào retention hoặc tự động xóa.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -506,8 +525,81 @@ private fun RestoreBackupCard(
             ) {
                 Icon(Icons.Default.Restore, contentDescription = null)
                 Spacer(Modifier.width(LearningSpacing.small))
-                Text("Select Backup File (.lebak)")
+                Text("Chọn file sao lưu (.lebak)")
             }
+        }
+    }
+}
+
+@Composable
+private fun SafetyBackupCard(
+    state: SafetyBackupListState,
+    enabled: Boolean,
+    onRefresh: () -> Unit,
+    onPreview: (SafetyBackupCandidate) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(LearningSpacing.medium),
+            verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+        ) {
+            Text("Bản sao an toàn trên thiết bị", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Các bản sao này được Learning Engine tự động tạo trước khi khôi phục. Bạn có thể xem trước hoặc khôi phục một bản sao.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            when (state) {
+                SafetyBackupListState.Loading -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                is SafetyBackupListState.Failed -> {
+                    Text(state.message, color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = onRefresh, enabled = enabled) { Text("Thử lại") }
+                }
+                is SafetyBackupListState.Ready -> {
+                    val inventory = state.inventory
+                    Text(
+                        "Bản sao an toàn: ${inventory.validV2.size} bản • ${formatBytesHelper(inventory.totalValidV2Bytes)}"
+                    )
+                    Text("Giữ lại: 2 bản safety-v2 hợp lệ mới nhất", style = MaterialTheme.typography.bodySmall)
+                    if (inventory.validV2.isEmpty()) Text("Chưa có bản sao an toàn khả dụng.")
+                    inventory.validV2.forEach { candidate -> SafetyBackupRow(candidate, enabled, onPreview) }
+                    if (inventory.invalidV2Count > 0) {
+                        Text("${inventory.invalidV2Count} bản safety-v2 không khả dụng.", color = MaterialTheme.colorScheme.error)
+                    }
+                    if (inventory.legacy.isNotEmpty()) {
+                        Text("Bản sao legacy: ${inventory.legacy.size} (không tự động dọn)", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SafetyBackupRow(
+    candidate: SafetyBackupCandidate,
+    enabled: Boolean,
+    onPreview: (SafetyBackupCandidate) -> Unit
+) {
+    val timestamp = runCatching {
+        java.time.Instant.parse(candidate.preview.createdAtUtc)
+            .atZone(java.time.ZoneId.systemDefault())
+            .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy • HH:mm"))
+    }.getOrDefault(candidate.preview.createdAtUtc)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        HorizontalDivider()
+        Text(timestamp, fontWeight = FontWeight.SemiBold)
+        Text(
+            "${formatBytesHelper(candidate.fileSizeBytes)} • ${candidate.preview.counts.packages} gói học • " +
+                "${candidate.preview.counts.contents} Content • ${candidate.preview.counts.learningItems} LearningItems"
+        )
+        candidate.preview.packages.forEach { Text(it.packageName, style = MaterialTheme.typography.bodySmall) }
+        Text(
+            "Media: ${candidate.preview.counts.mediaFiles} file / ${formatBytesHelper(candidate.preview.bytes.mediaBytes)}",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+            OutlinedButton(onClick = { onPreview(candidate) }, enabled = enabled) { Text("Xem trước") }
+            Button(onClick = { onPreview(candidate) }, enabled = enabled) { Text("Khôi phục") }
         }
     }
 }
@@ -619,6 +711,8 @@ private fun BackupSuccessDialog(
 @Composable
 private fun RestorePreviewDialog(
     preview: PortableBackupV2Preview,
+    isSafetyBackup: Boolean,
+    archiveSizeBytes: Long,
     selectedPackageIds: Set<String>,
     onTogglePackage: (String, Boolean) -> Unit,
     onConfirm: () -> Unit,
@@ -628,7 +722,7 @@ private fun RestorePreviewDialog(
         onDismissRequest = onCancel,
         title = {
             Text(
-                "Khôi phục bản sao lưu (.lebak)",
+                if (isSafetyBackup) "BẢN SAO AN TOÀN" else "Khôi phục file sao lưu (.lebak)",
                 fontWeight = FontWeight.Bold
             )
         },
@@ -639,8 +733,14 @@ private fun RestorePreviewDialog(
             ) {
                 Text("Thông tin bản sao lưu:", fontWeight = FontWeight.Bold)
                 Text("• Nền tảng tạo: ${preview.sourcePlatform.uppercase()} (${preview.appVersion})")
-                Text("• Thời gian: ${preview.createdAtUtc}")
-                Text("• Tổng số thẻ từ vựng: ${preview.counts.contents}")
+                val previewTime = runCatching {
+                    java.time.Instant.parse(preview.createdAtUtc).atZone(java.time.ZoneId.systemDefault())
+                        .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy • HH:mm"))
+                }.getOrDefault(preview.createdAtUtc)
+                Text("• Thời gian: $previewTime")
+                Text("• Kích thước file: ${formatBytesHelper(archiveSizeBytes)}")
+                Text("• Content: ${preview.counts.contents}")
+                Text("• LearningItems: ${preview.counts.learningItems}")
                 Text("• Tệp media & âm thanh: ${preview.counts.mediaFiles} (${formatBytesHelper(preview.bytes.mediaBytes)})")
                 Text("• Lịch sử ôn tập (FSRS): ${preview.counts.reviewEvents} lượt ôn")
 

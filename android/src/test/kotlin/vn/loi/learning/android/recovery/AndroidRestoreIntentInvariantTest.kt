@@ -11,7 +11,10 @@ class AndroidRestoreIntentInvariantTest {
     fun `selected packages are always passed as an explicit selective restore intent`() {
         val source = source("vn/loi/learning/android/recovery/BackupRestoreScreen.kt")
 
-        assertTrue(source.contains("viewModel.confirmRestore(state.stagedFile, state.selectedPackageIds)"))
+        assertTrue(source.contains("viewModel.confirmRestore("))
+        assertTrue(source.contains("state.stagedFile,"))
+        assertTrue(source.contains("state.selectedPackageIds,"))
+        assertTrue(source.contains("state.deleteSourceAfterUse"))
         assertFalse(source.contains("if (isAll) null else state.selectedPackageIds"))
     }
 
@@ -31,6 +34,16 @@ class AndroidRestoreIntentInvariantTest {
         assertTrue(source.contains("state.restoredCounts.learningItems"))
         assertTrue(source.contains("state.restoredCounts.mediaFiles"))
         assertFalse(source.contains("restoredEntriesCount} items restored"))
+    }
+
+    @Test
+    fun `backup screen separates internal safety backups from external picker`() {
+        val source = source("vn/loi/learning/android/recovery/BackupRestoreScreen.kt")
+
+        assertTrue(source.contains("Bản sao an toàn trên thiết bị"))
+        assertTrue(source.contains("Chọn file sao lưu (.lebak)"))
+        assertTrue(source.contains("Learning Engine tự động tạo trước khi khôi phục"))
+        assertFalse(source.contains("candidate.fileName"))
     }
 
     private fun source(relative: String): String {

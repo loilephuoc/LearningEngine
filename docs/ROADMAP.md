@@ -1,5 +1,14 @@
 # Roadmap
 
+## Phase 4 safety-backup recovery UX
+
+- **Implementation and automated verification complete; physical Android UAT pending:** automatic
+  v2 safety backups are discoverable from Android with validated metadata and storage summary, while
+  external user-owned archives remain a separate document-picker source. Both share canonical
+  preview/selective restore/validation/reload behavior. Conservative post-success retention keeps the
+  newest two valid v2 candidates without touching legacy, corrupt, external, user-created or active
+  restore files. Device verification of the existing 734 MB recovery archive remains the final gate.
+
 ## Backup / Restore transaction safety
 
 - **Complete; Windows physical UAT passed:** recovery

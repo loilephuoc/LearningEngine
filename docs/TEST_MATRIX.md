@@ -1,5 +1,15 @@
 # Test Matrix
 
+## Phase 4 safety backup inventory and retention
+
+- Validate discovery metadata for `safety-v2-*.lebak`, invalid-v2 exclusion, separate legacy
+  recognition, and exclusion of unrelated/user portable archives.
+- Cover zero/one/two/three-plus valid candidates, manifest-time ordering, newest-two retention,
+  protected active source, failed safety creation, and cleanup failure without compensating deletion.
+- Verify Android internal-source preview does not delete its archive, external staging remains
+  disposable, exact package IDs stay selective, explicit full replacement remains available, and
+  post-restore Library state is recreated from the new application graph.
+
 ## ANDROID-STUDY-3.0V final product polish
 
 - Verify all six runtime modes delegate explicit stages and obsolete generic prompt/input rendering

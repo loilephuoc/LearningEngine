@@ -1,3 +1,20 @@
+# Android safety-backup manager and restore-source UX
+
+- Added validated discovery for automatic `safety-v2-*.lebak` archives with human-readable creation
+  time, size, package names, Content/LearningItem/media/FSRS metadata and aggregate storage usage.
+  Corrupt v2 candidates are unavailable; legacy `safety-*.lebak` files are recognized separately.
+- Android Backup & Restore now separates on-device automatic safety backups from the existing
+  document-picker workflow for user-owned external `.lebak` files. Both enter the same canonical
+  preview, exact package-selection, restore, validation and graph-reload pipeline; internal source
+  files are never treated as disposable cache staging.
+- After a successful restore, retention keeps the newest two valid v2 safety backups by validated
+  manifest timestamp. It never targets legacy, user-created, external, invalid or active-source
+  files. Cleanup runs only after the new verified safety archive and live restore validation; a
+  cleanup failure is reported separately without failing restore or compensating with another delete.
+- Empty package selection is rejected and only explicit null remains full replacement. Desktop's
+  restore consumer now follows the same intent rule and semantic result counters. Full verification
+  passes 5,011 tests (2,242 Engine, 967 Android, 1,802 Desktop), with zero failures/errors/skips.
+
 # Android selective restore intent and post-restore graph refresh
 
 - Preserved the exact package selection as an explicit selective-merge intent even when it selects

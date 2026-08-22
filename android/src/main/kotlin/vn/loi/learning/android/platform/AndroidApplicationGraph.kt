@@ -36,6 +36,8 @@ class AndroidApplicationGraph internal constructor(
 
     fun previewPortableBackup(source: Path) = recovery.previewPortableBackupV2(source)
 
+    fun discoverSafetyBackups() = recovery.discoverSafetyBackups()
+
     fun restorePortableBackup(
         source: Path,
         operationActive: Boolean = false,

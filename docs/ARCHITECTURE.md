@@ -16,6 +16,15 @@ graph, graph-bound Library state is recreated against that new graph generation 
 the prior facade. Restore success counts describe domain records and referenced media, never ZIP
 entry cardinality.
 
+The recovery manager also owns automatic safety-backup inventory and retention because it alone owns
+the safety directory and archive validator. Discovery classifies only exact automatic naming families,
+validates v2 archives through the portable manifest/checksum contract, and treats legacy/corrupt files
+as non-retention data. Retention runs after successful live validation, orders candidates by validated
+manifest creation time, protects the newly-created safety archive and active restore source, and deletes
+only older valid `safety-v2` candidates. Cleanup failure is a separate success diagnostic and cannot
+trigger compensating deletion. Android exposes this inventory without a second parser; internal and
+document-picker sources converge at the existing preview/restore transaction boundary.
+
 ## Constitution & Strategic Foundation
 
 Android owns one visual system in `LearningEngineTheme`, `LearningEngineDesignTokens`, and

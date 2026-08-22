@@ -27,6 +27,15 @@ import vn.loi.learning.domain.sync.model.SyncResultSummary
 import vn.loi.learning.infrastructure.recovery.PortableBackupCountsV2
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2Preview
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult
+import vn.loi.learning.infrastructure.recovery.SafetyBackupCandidate
+import vn.loi.learning.infrastructure.recovery.SafetyBackupCleanupResult
+import vn.loi.learning.infrastructure.recovery.SafetyBackupInventory
+
+sealed interface SafetyBackupListState {
+    data object Loading : SafetyBackupListState
+    data class Ready(val inventory: SafetyBackupInventory) : SafetyBackupListState
+    data class Failed(val message: String) : SafetyBackupListState
+}
 
 data class BackupSuccessSummary(
     val fileName: String,
@@ -53,6 +62,8 @@ sealed interface BackupRestoreUiState {
     data class PreviewReady(
         val preview: PortableBackupV2Preview,
         val stagedFile: File,
+        val deleteSourceAfterUse: Boolean = true,
+        val isSafetyBackup: Boolean = false,
         val selectedPackageIds: Set<String> = preview.packagePreviews.map { it.packageId }.toSet()
     ) : BackupRestoreUiState
     data class PreviewFailure(val message: String) : BackupRestoreUiState
@@ -61,7 +72,8 @@ sealed interface BackupRestoreUiState {
     data class RestoreSuccess(
         val restoredCounts: PortableBackupCountsV2,
         val safetyBackupPath: String,
-        val appVersion: String
+        val appVersion: String,
+        val cleanupResult: SafetyBackupCleanupResult
     ) : BackupRestoreUiState
     data class RestoreFailure(val result: PortableBackupV2RestoreResult) : BackupRestoreUiState
 
@@ -91,8 +103,49 @@ class BackupRestoreViewModel(
 
     private val mutableState = MutableStateFlow<BackupRestoreUiState>(BackupRestoreUiState.Idle)
     val state: StateFlow<BackupRestoreUiState> = mutableState.asStateFlow()
+    private val mutableSafetyBackups = MutableStateFlow<SafetyBackupListState>(SafetyBackupListState.Loading)
+    val safetyBackups: StateFlow<SafetyBackupListState> = mutableSafetyBackups.asStateFlow()
 
     private var activeJob: Job? = null
+
+    init { refreshSafetyBackups() }
+
+    fun refreshSafetyBackups() {
+        mutableSafetyBackups.value = SafetyBackupListState.Loading
+        viewModelScope.launch {
+            try {
+                val inventory = withContext(ioDispatcher) { graphProvider().discoverSafetyBackups() }
+                mutableSafetyBackups.value = SafetyBackupListState.Ready(inventory)
+            } catch (failure: Exception) {
+                mutableSafetyBackups.value = SafetyBackupListState.Failed(
+                    failure.message ?: "Không thể đọc danh sách bản sao an toàn."
+                )
+            }
+        }
+    }
+
+    fun previewSafetyBackup(candidate: SafetyBackupCandidate) {
+        if (activeJob?.isActive == true) return
+        mutableState.value = BackupRestoreUiState.Previewing("Đang xác minh bản sao an toàn...")
+        activeJob = viewModelScope.launch {
+            try {
+                val preview = withContext(ioDispatcher) {
+                    graphProvider().previewPortableBackup(candidate.path)
+                }
+                mutableState.value = BackupRestoreUiState.PreviewReady(
+                    preview = preview,
+                    stagedFile = candidate.path.toFile(),
+                    deleteSourceAfterUse = false,
+                    isSafetyBackup = true
+                )
+            } catch (failure: Exception) {
+                mutableState.value = BackupRestoreUiState.PreviewFailure(
+                    failure.message ?: "Bản sao an toàn không còn khả dụng."
+                )
+                refreshSafetyBackups()
+            }
+        }
+    }
 
     fun generateDefaultBackupFilename(): String {
         val now = LocalDateTime.now()
@@ -188,7 +241,11 @@ class BackupRestoreViewModel(
         }
     }
 
-    fun confirmRestore(stagedFile: File, selectedPackageIds: Set<String>? = null) {
+    fun confirmRestore(
+        stagedFile: File,
+        selectedPackageIds: Set<String>? = null,
+        deleteSourceAfterUse: Boolean = true
+    ) {
         val currentState = mutableState.value
         if (currentState is BackupRestoreUiState.Restoring) {
             return
@@ -207,7 +264,7 @@ class BackupRestoreViewModel(
                             selectedPackageIds = selectedPackageIds
                         )
                     } finally {
-                        stagedFile.delete()
+                        if (deleteSourceAfterUse) stagedFile.delete()
                     }
                 }
                 when (result) {
@@ -215,7 +272,8 @@ class BackupRestoreViewModel(
                         mutableState.value = BackupRestoreUiState.RestoreSuccess(
                             restoredCounts = result.restoredCounts,
                             safetyBackupPath = result.safetyBackupPath,
-                            appVersion = result.appVersion
+                            appVersion = result.appVersion,
+                            cleanupResult = result.cleanupResult
                         )
                     }
                     else -> {
@@ -353,8 +411,8 @@ class BackupRestoreViewModel(
         }
     }
 
-    fun cancelPreview(stagedFile: File?) {
-        stagedFile?.delete()
+    fun cancelPreview(stagedFile: File?, deleteSourceAfterUse: Boolean = true) {
+        if (deleteSourceAfterUse) stagedFile?.delete()
         if (mutableState.value is BackupRestoreUiState.PreviewReady || mutableState.value is BackupRestoreUiState.PreviewFailure ||
             mutableState.value is BackupRestoreUiState.SyncPreviewReady || mutableState.value is BackupRestoreUiState.SyncPreviewFailure) {
             mutableState.value = BackupRestoreUiState.Idle

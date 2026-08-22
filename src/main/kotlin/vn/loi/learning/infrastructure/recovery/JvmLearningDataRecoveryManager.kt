@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.time.Clock
+import java.time.Instant
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -54,6 +55,9 @@ internal fun filesEqual(first: Path, second: Path): Boolean {
 
 private const val FILE_COMPARISON_BUFFER_SIZE = 64 * 1024
 private const val DEFAULT_STREAMING_BUFFER_SIZE = 64 * 1024
+private const val SAFETY_V2_RETENTION_COUNT = 2
+private val SAFETY_V2_FILE = Regex("^safety-v2-[0-9]+[.]lebak$")
+private val LEGACY_SAFETY_FILE = Regex("^safety-(?!v2-).+[.]lebak$")
 private val PROGRESS_DATA_FILES = setOf(
     "memory-states.json",
     "review-events.json",
@@ -101,7 +105,8 @@ class JvmLearningDataRecoveryManager(
     private val clock: Clock = Clock.systemUTC(),
     private val gate: RecoveryOperationGate = RecoveryOperationGate(),
     private val stagedDomainValidator: (Map<String, Path>) -> Unit = {},
-    private val failureHook: (String, String?) -> Unit = { _, _ -> }
+    private val failureHook: (String, String?) -> Unit = { _, _ -> },
+    private val safetyBackupDelete: (Path) -> Unit = Files::delete
 ) {
     private val roots = roots.toSortedMap().mapValues { it.value.toAbsolutePath().normalize() }
 
@@ -174,6 +179,38 @@ class JvmLearningDataRecoveryManager(
         )
     }
 
+    fun discoverSafetyBackups(
+        limits: PortableBackupV2Limits = PortableBackupV2Limits()
+    ): SafetyBackupInventory {
+        if (!Files.isDirectory(safetyDirectory)) return SafetyBackupInventory()
+        val valid = mutableListOf<SafetyBackupCandidate>()
+        val legacy = mutableListOf<LegacySafetyBackup>()
+        var invalid = 0
+        Files.list(safetyDirectory).use { paths -> paths.filter(Files::isRegularFile).forEach { path ->
+            val name = path.fileName.toString()
+            when {
+                SAFETY_V2_FILE.matches(name) -> try {
+                    val preview = previewPortableBackupV2(path, limits)
+                    Instant.parse(preview.createdAtUtc)
+                    valid += SafetyBackupCandidate(
+                        path = path.toAbsolutePath().normalize(),
+                        fileName = name,
+                        fileSizeBytes = Files.size(path),
+                        preview = preview
+                    )
+                } catch (_: Exception) { invalid++ }
+                LEGACY_SAFETY_FILE.matches(name) -> legacy += LegacySafetyBackup(
+                    path.toAbsolutePath().normalize(), name, Files.size(path)
+                )
+            }
+        } }
+        return SafetyBackupInventory(
+            validV2 = valid.sortedByDescending { Instant.parse(it.preview.createdAtUtc) },
+            legacy = legacy.sortedByDescending { Files.getLastModifiedTime(it.path).toMillis() },
+            invalidV2Count = invalid
+        )
+    }
+
     fun restorePortableBackupV2(
         source: Path,
         operationActive: Boolean = false,
@@ -183,6 +220,9 @@ class JvmLearningDataRecoveryManager(
         selectedPackageIds: Set<String>? = null
     ): PortableBackupV2RestoreResult {
         if (operationActive) return PortableBackupV2RestoreResult.Busy()
+        if (selectedPackageIds != null && selectedPackageIds.isEmpty()) {
+            return PortableBackupV2RestoreResult.ValidationFailed("Select at least one package for selective restore.")
+        }
         return try {
             gate.restore {
                 failureHook("restore-v2-gate-acquired", null)
@@ -908,7 +948,7 @@ class JvmLearningDataRecoveryManager(
             val capturedPlatformState = consumer?.captureCurrentState()
             try {
                 failureHook("restore-v2-live-replace-start", null)
-                if (selectedPackageIds == null || selectedPackageIds.isEmpty()) {
+                if (selectedPackageIds == null) {
                     clear()
                     roots.forEach { (rootName, root) ->
                         val stagedRoot = staging.resolve("portable/$rootName")
@@ -937,7 +977,8 @@ class JvmLearningDataRecoveryManager(
                         safetyBackupPath = safety.toString(),
                         restoredEntriesCount = manifest.counts.learningItems.toInt(),
                         appVersion = manifest.appVersion,
-                        restoredCounts = manifest.counts
+                        restoredCounts = manifest.counts,
+                        cleanupResult = applySafetyBackupRetention(setOf(safety, normalized), limits)
                     )
                 } else {
                     val restoredCounts = packageScopeCounts(
@@ -957,7 +998,8 @@ class JvmLearningDataRecoveryManager(
                         safetyBackupPath = safety.toString(),
                         restoredEntriesCount = restoredCounts.learningItems.toInt(),
                         appVersion = manifest.appVersion,
-                        restoredCounts = restoredCounts
+                        restoredCounts = restoredCounts,
+                        cleanupResult = applySafetyBackupRetention(setOf(safety, normalized), limits)
                     )
                 }
             } catch (restoreFailure: Exception) {
@@ -1006,6 +1048,30 @@ class JvmLearningDataRecoveryManager(
         } finally {
             deleteTree(staging)
         }
+    }
+
+    private fun applySafetyBackupRetention(
+        protectedPaths: Set<Path>,
+        limits: PortableBackupV2Limits
+    ): SafetyBackupCleanupResult = try {
+        failureHook("restore-v2-safety-retention-start", null)
+        val protected = protectedPaths.map { it.toAbsolutePath().normalize() }.toSet()
+        val valid = discoverSafetyBackups(limits).validV2
+        val keep = valid.take(SAFETY_V2_RETENTION_COUNT).map { it.path }.toMutableSet().apply { addAll(protected) }
+        var deleted = 0
+        valid.asSequence().map { it.path }.filterNot(keep::contains).forEach { path ->
+            safetyBackupDelete(path)
+            deleted++
+        }
+        SafetyBackupCleanupResult(
+            retainedValidV2Count = discoverSafetyBackups(limits).validV2.size,
+            deletedValidV2Count = deleted
+        )
+    } catch (failure: Exception) {
+        SafetyBackupCleanupResult(
+            retainedValidV2Count = runCatching { discoverSafetyBackups(limits).validV2.size }.getOrDefault(0),
+            failureMessage = failure.message ?: "Safety backup cleanup failed."
+        )
     }
 
 

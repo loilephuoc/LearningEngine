@@ -154,6 +154,35 @@ class BackupRestoreViewModelTest {
     }
 
     @Test
+    fun `safety backup discovery and preview use validated internal source without deleting it`() = runTest {
+        val fixture = createFixture()
+        try {
+            val safetyFile = fixture.graph.directories.backupDirectory.resolve("safety-v2-1000.lebak")
+            fixture.graph.createPortableBackup(safetyFile)
+            val viewModel = BackupRestoreViewModel(
+                graphProvider = { fixture.graph },
+                savedState = SavedStateHandle(),
+                ioDispatcher = dispatcher
+            )
+            testScheduler.advanceUntilIdle()
+
+            val list = assertIs<SafetyBackupListState.Ready>(viewModel.safetyBackups.value)
+            val candidate = list.inventory.validV2.single()
+            viewModel.previewSafetyBackup(candidate)
+            testScheduler.advanceUntilIdle()
+
+            val preview = assertIs<BackupRestoreUiState.PreviewReady>(viewModel.state.value)
+            assertTrue(preview.isSafetyBackup)
+            assertFalse(preview.deleteSourceAfterUse)
+            assertEquals(safetyFile.toAbsolutePath().normalize(), preview.stagedFile.toPath().toAbsolutePath().normalize())
+            viewModel.cancelPreview(preview.stagedFile, preview.deleteSourceAfterUse)
+            assertTrue(Files.exists(safetyFile))
+        } finally {
+            fixture.cleanup()
+        }
+    }
+
+    @Test
     fun `confirmRestore invokes restore and transitions to RestoreSuccess`() = runTest {
         val fixture = createFixture()
         try {
@@ -299,7 +328,7 @@ class BackupRestoreViewModelTest {
         val media = JvmContentMediaStorage(mediaDir)
         val recovery = JvmLearningDataRecoveryManager(
             roots = mapOf("data" to dataDir, "media" to mediaDir),
-            safetyDirectory = temp.resolve("safety")
+            safetyDirectory = directories.backupDirectory
         )
         val graph = AndroidApplicationGraph(engine, media, recovery, directories)
         return TestFixture(temp, contextDir, graph)
