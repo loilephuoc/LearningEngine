@@ -1914,3 +1914,12 @@ failure uses durable quarantine. Replaced managed references become GC candidate
 Garbage collection scans every Content media slot, deletes only the exact sync-managed candidate after
 the last reference disappears, and retains a candidate after delete failure for restart-safe retry.
 Legacy/package-owned and unknown files are never inferred as collectible.
+
+Supabase event transport is an infrastructure adapter behind `SyncTransport`. The authenticated
+session, not an event envelope, supplies user identity. PostgreSQL allocates monotonically increasing
+per-user revisions inside an idempotent batch RPC; clients have read-only direct table grants and
+user-scoped RLS, while push and monotonic device ACK use narrowly granted functions with fixed
+`search_path`. `SyncSessionCoordinator` removes only explicitly acknowledged outbox identities and
+sends a server ACK only after application code has committed the corresponding local cursor. REST
+requests are explicit, paginated, bounded-retry operations; configuration absence leaves local runtime
+enabled and performs no network request.

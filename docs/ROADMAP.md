@@ -1073,7 +1073,10 @@ Engine core.
 5. **Media Delta — complete:** SHA-256-addressed staged blobs validate size/type before an isolated
    slot reference commits; metadata-first delivery remains restart-safe pending. Same-slot conflicts
    quarantine, while managed unreferenced assets use full-reference-scan, retryable garbage collection.
-6. **Supabase Transport:** versioned PostgreSQL/Storage/RLS adapter after core/local gates pass.
+6. **Supabase Transport — in progress:** secure versioned PostgreSQL event transport, user-scoped
+   RLS/grants, transactional per-user revision allocation, idempotent push RPC, monotonic device ACK,
+   REST adapter, and explicit post-apply session orchestration are complete. Private Storage/blob
+   transport remains the next increment; live RLS validation awaits a Supabase CLI/Docker environment.
 7. **Desktop Integration.**
 8. **Android Integration.**
 9. **End-to-End Conflict/Retry/UAT Gate.**

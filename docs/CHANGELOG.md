@@ -1,3 +1,15 @@
+# Secure Supabase event transport
+
+- Added versioned Supabase tables, indexes, least-privilege grants/RLS, transaction-safe per-user
+  revision allocation, idempotent batch push, and monotonic device ACK RPCs with pgTAP security tests.
+- Added a replaceable REST `SyncTransport` adapter with authenticated-session identity, exact v1 delta
+  serialization, pagination, partial acknowledgement, sanitized diagnostics, and bounded retries.
+- Added explicit Push/Pull/Apply/ACK orchestration so server ACK follows committed local apply and
+  only server-confirmed events leave the durable outbox. No UI, background sync, credential, SDK,
+  Realtime, deployment, or local persistence-schema change was introduced.
+- Full clean verification passes 821 suites / 5,087 tests with zero failures, errors, or skips;
+  pgTAP was authored but not run because Supabase CLI/Docker are unavailable.
+
 # Incremental media delta
 
 - Added SHA-256-addressed, MIME/signature-validated staging and materialization for all five canonical
