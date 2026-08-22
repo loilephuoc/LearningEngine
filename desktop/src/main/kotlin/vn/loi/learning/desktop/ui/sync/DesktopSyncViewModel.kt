@@ -16,6 +16,13 @@ class DesktopSyncViewModel(
     private val applicationContext: LearningApplicationContext,
     private val recoveryManager: DesktopRecoveryManager
 ) {
+    fun suggestedBackupFileName(localTime: java.time.LocalDateTime = java.time.LocalDateTime.now()): String {
+        val state = _backupState.value
+        val names = if (state.selectAllPackages) emptyList() else
+            state.availablePackages.filter { it.isSelected }.map { it.name }
+        return portableBackupFileName(names, localTime)
+    }
+
     private val _backupState = MutableStateFlow(DesktopBackupDialogState())
     val backupState: StateFlow<DesktopBackupDialogState> = _backupState.asStateFlow()
 
@@ -50,6 +57,7 @@ class DesktopSyncViewModel(
     fun toggleBackupSelectAll(selectAll: Boolean) {
         _backupState.value = _backupState.value.copy(
             selectAllPackages = selectAll,
+            preview = null,
             availablePackages = _backupState.value.availablePackages.map { it.copy(isSelected = selectAll) }
         )
     }
@@ -60,12 +68,38 @@ class DesktopSyncViewModel(
         }
         _backupState.value = _backupState.value.copy(
             availablePackages = updated,
+            preview = null,
             selectAllPackages = updated.all { it.isSelected }
         )
     }
 
     fun toggleBackupIncludeProgress(include: Boolean) {
-        _backupState.value = _backupState.value.copy(includeLearningProgress = include)
+        _backupState.value = _backupState.value.copy(includeLearningProgress = include, preview = null)
+    }
+
+    fun refreshBackupPreview() {
+        val state = _backupState.value
+        _backupState.value = state.copy(isPreviewing = true, preview = null, errorMessage = null)
+        try {
+            val selectedPackageIds = if (state.selectAllPackages) null else
+                state.availablePackages.filter { it.isSelected }.map { it.packageId }.toSet()
+            val preview = recoveryManager.previewPortableBackupCreation(
+                PortableBackupV2Descriptor(
+                    appVersion = "2.0.0",
+                    versionCode = 1,
+                    sourcePlatform = "desktop",
+                    learnerIds = listOf("default-learner"),
+                    includeLearningProgress = state.includeLearningProgress,
+                    specificPackageIds = selectedPackageIds
+                )
+            )
+            _backupState.value = _backupState.value.copy(isPreviewing = false, preview = preview)
+        } catch (e: Exception) {
+            _backupState.value = _backupState.value.copy(
+                isPreviewing = false,
+                errorMessage = e.message ?: "Failed to preview backup."
+            )
+        }
     }
 
     fun executeBackup(targetPath: Path) {
@@ -83,6 +117,7 @@ class DesktopSyncViewModel(
                     versionCode = 1,
                     sourcePlatform = "desktop",
                     learnerIds = listOf("default-learner"),
+                    includeLearningProgress = _backupState.value.includeLearningProgress,
                     specificPackageIds = selectedPackageIds
                 )
             )

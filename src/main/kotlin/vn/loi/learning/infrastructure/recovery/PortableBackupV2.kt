@@ -64,7 +64,29 @@ data class PortableBackupV2Descriptor(
     val sourcePlatform: String,
     val learnerIds: List<String> = emptyList(),
     val specificPackageIds: Set<String>? = null,
+    val includeLearningProgress: Boolean = true,
     val backupId: String? = null
+)
+
+data class PortableBackupPackagePlanV2(
+    val packageId: String,
+    val packageName: String,
+    val version: String,
+    val contentCount: Int,
+    val learningItemCount: Int,
+    val memoryStateCount: Int,
+    val reviewEventCount: Int,
+    val mediaFileCount: Int,
+    val mediaBytes: Long,
+    val estimatedDataBytes: Long
+)
+
+data class PortableBackupCreationPlanV2(
+    val packages: List<PortableBackupPackagePlanV2>,
+    val counts: PortableBackupCountsV2,
+    val estimatedDataBytes: Long,
+    val mediaBytes: Long,
+    val estimatedTotalBytes: Long
 )
 
 data class PortableBackupV2Limits(

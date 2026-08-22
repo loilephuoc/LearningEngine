@@ -1,14 +1,15 @@
 package vn.loi.learning.desktop.ui.sync
 
 import java.nio.file.Files
+import java.time.LocalDateTime
 import kotlin.test.assertEquals
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
 import vn.loi.learning.desktop.runtime.DesktopRecoveryManager
 import vn.loi.learning.domain.sync.model.ConflictResolutionStrategy
 import vn.loi.learning.infrastructure.LearningApplicationContext
@@ -22,7 +23,7 @@ class DesktopSyncViewModelTest {
     private lateinit var recoveryManager: DesktopRecoveryManager
     private lateinit var viewModel: DesktopSyncViewModel
 
-    @Before
+    @BeforeTest
     fun setUp() {
         tempDir = Files.createTempDirectory("desktop_sync_vm_test_")
         dataDir = tempDir.resolve("data")
@@ -35,7 +36,7 @@ class DesktopSyncViewModelTest {
         viewModel = DesktopSyncViewModel(applicationContext, recoveryManager)
     }
 
-    @After
+    @AfterTest
     fun tearDown() {
         tempDir.toFile().deleteRecursively()
     }
@@ -54,6 +55,34 @@ class DesktopSyncViewModelTest {
 
         viewModel.toggleBackupIncludeProgress(false)
         assertFalse(viewModel.backupState.value.includeLearningProgress)
+    }
+
+    @Test
+    fun `refreshBackupPreview publishes read only scope estimates`() {
+        viewModel.openBackupDialog()
+        viewModel.refreshBackupPreview()
+
+        val state = viewModel.backupState.value
+        assertFalse(state.isPreviewing)
+        assertNotNull(state.preview)
+        assertEquals(0, state.preview?.counts?.packages)
+        assertEquals(0, state.preview?.estimatedTotalBytes)
+        assertNull(state.errorMessage)
+    }
+
+    @Test
+    fun `portable backup filename uses readable local timestamp and safe scope`() {
+        assertEquals(
+            "LearningEngine_Backup_Vocabulary_In_Use_Upper_Intermediate_20260822_095012.lebak",
+            portableBackupFileName(
+                listOf("Vocabulary_In_Use_Upper_Intermediate"),
+                LocalDateTime.of(2026, 8, 22, 9, 50, 12)
+            )
+        )
+        assertEquals(
+            "LearningEngine_Backup_3Packages_20260822_095012.lebak",
+            portableBackupFileName(listOf("A", "B", "C"), LocalDateTime.of(2026, 8, 22, 9, 50, 12))
+        )
     }
 
     @Test

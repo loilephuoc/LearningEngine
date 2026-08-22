@@ -33,6 +33,7 @@
 
 ### 4. UI & Workflow
 - [x] Desktop Settings provides clear actions: Sao lưu (.lebak), Khôi phục (.lebak), Xuất đồng bộ (.lesync), Nạp đồng bộ (.lesync).
+- [x] Desktop full-backup creation requires a read-only package/content/learning/media/size preview before archive publication.
 - [x] Desktop displays informative preview on sync import (content items updated, media reused, review events merged, conflicts).
 - [x] Android UI displays Differential Sync card alongside Full Backup card with conflict strategy selector.
 

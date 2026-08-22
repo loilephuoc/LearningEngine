@@ -4,6 +4,7 @@ import vn.loi.learning.domain.sync.model.ConflictResolutionStrategy
 import vn.loi.learning.domain.sync.model.SyncPreviewReport
 import vn.loi.learning.domain.sync.model.SyncResultSummary
 import vn.loi.learning.infrastructure.recovery.PortableBackupV2Preview
+import vn.loi.learning.infrastructure.recovery.PortableBackupCreationPlanV2
 
 data class DesktopPackageItem(
     val id: String,
@@ -18,6 +19,8 @@ data class DesktopBackupDialogState(
     val availablePackages: List<DesktopPackageItem> = emptyList(),
     val selectAllPackages: Boolean = true,
     val includeLearningProgress: Boolean = true,
+    val preview: PortableBackupCreationPlanV2? = null,
+    val isPreviewing: Boolean = false,
     val isExporting: Boolean = false,
     val exportSuccessPath: String? = null,
     val errorMessage: String? = null

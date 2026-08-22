@@ -170,6 +170,92 @@ class JvmLearningDataRecoveryManager(
         }
     }
 
+    fun previewPortableBackupCreation(descriptor: PortableBackupV2Descriptor): PortableBackupCreationPlanV2 {
+        val dataRoot = roots["data"] ?: error("Portable backup requires a data root.")
+        val mediaRoot = roots["media"] ?: dataRoot.resolve("media")
+        val installed = readJsonArrayObjects(dataRoot.resolve("installed-packages.json"))
+        val selected = installed.filter { pkg ->
+            val packageId = jsonString(pkg, "packageId") ?: jsonString(pkg, "id")
+            descriptor.specificPackageIds.isNullOrEmpty() || packageId in descriptor.specificPackageIds
+        }
+        if (!descriptor.specificPackageIds.isNullOrEmpty()) {
+            val found = selected.mapNotNull { jsonString(it, "packageId") ?: jsonString(it, "id") }.toSet()
+            val missing = descriptor.specificPackageIds - found
+            if (missing.isNotEmpty()) error("Unknown selected package ID(s): ${missing.sorted().joinToString()}")
+        }
+
+        val contentPackages = readJsonArrayObjects(dataRoot.resolve("content-packages.json"))
+        val contentLibraries = readJsonArrayObjects(dataRoot.resolve("content-libraries.json"))
+        val contents = readJsonArrayObjects(dataRoot.resolve("contents.json"))
+        val learningItems = readJsonArrayObjects(dataRoot.resolve("learning-items.json"))
+        val memoryStates = readJsonArrayObjects(dataRoot.resolve("memory-states.json"))
+        val reviewEvents = readJsonArrayObjects(dataRoot.resolve("review-events.json"))
+        val libraryContentIds = contentLibraries.associate { library ->
+            jsonString(library, "id").orEmpty() to jsonStringArray(library, "contentIds").toSet()
+        }
+        val packagePlans = selected.map { installedPackage ->
+            val packageId = jsonString(installedPackage, "packageId") ?: jsonString(installedPackage, "id")
+                ?: error("Installed package identity is missing.")
+            val packageName = jsonString(installedPackage, "name") ?: packageId
+            val packageRecord = contentPackages.firstOrNull {
+                (jsonString(it, "packageId") ?: jsonString(it, "id")) == packageId
+            }
+            val ownedContentIds = packageRecord?.let { record ->
+                jsonStringArray(record, "libraryIds").flatMap { libraryContentIds[it].orEmpty() }.toSet()
+            }.orEmpty()
+            val packageContents = contents.filter { content ->
+                val contentId = jsonString(content, "id")
+                contentId in ownedContentIds || mediaReferences(content).any { it == packageName || it.startsWith("$packageName/") }
+            }
+            val contentIds = packageContents.mapNotNull { jsonString(it, "id") }.toSet()
+            val packageItems = learningItems.filter { jsonString(it, "contentId") in contentIds }
+            val itemIds = packageItems.mapNotNull { jsonString(it, "id") }.toSet()
+            val packageMemory = if (descriptor.includeLearningProgress)
+                memoryStates.filter { learningItemReference(it) in itemIds } else emptyList()
+            val packageReviews = if (descriptor.includeLearningProgress)
+                reviewEvents.filter { learningItemReference(it) in itemIds } else emptyList()
+            val references = packageContents.flatMap(::mediaReferences).toSortedSet()
+            val mediaFiles = references.map { reference ->
+                val resolved = mediaRoot.resolve(reference).normalize()
+                if (!resolved.startsWith(mediaRoot.normalize()) || !Files.isRegularFile(resolved)) {
+                    error("Selected package media is incomplete: missing $reference")
+                }
+                resolved
+            }
+            val dataBytes = (listOf(installedPackage) + listOfNotNull(packageRecord) +
+                contentLibraries.filter { jsonString(it, "id") in jsonStringArray(packageRecord, "libraryIds") } +
+                packageContents + packageItems + packageMemory + packageReviews).sumOf(::estimatedJsonBytes)
+            PortableBackupPackagePlanV2(
+                packageId = packageId,
+                packageName = packageName,
+                version = jsonString(installedPackage, "version") ?: "1.0.0",
+                contentCount = packageContents.size,
+                learningItemCount = packageItems.size,
+                memoryStateCount = packageMemory.size,
+                reviewEventCount = packageReviews.size,
+                mediaFileCount = mediaFiles.size,
+                mediaBytes = mediaFiles.sumOf(Files::size),
+                estimatedDataBytes = dataBytes
+            )
+        }
+        val totalDataBytes = packagePlans.sumOf { it.estimatedDataBytes }
+        val totalMediaBytes = packagePlans.sumOf { it.mediaBytes }
+        return PortableBackupCreationPlanV2(
+            packages = packagePlans,
+            counts = PortableBackupCountsV2(
+                packages = packagePlans.size.toLong(),
+                contents = packagePlans.sumOf { it.contentCount }.toLong(),
+                learningItems = packagePlans.sumOf { it.learningItemCount }.toLong(),
+                memoryStates = packagePlans.sumOf { it.memoryStateCount }.toLong(),
+                reviewEvents = packagePlans.sumOf { it.reviewEventCount }.toLong(),
+                mediaFiles = packagePlans.sumOf { it.mediaFileCount }.toLong()
+            ),
+            estimatedDataBytes = totalDataBytes,
+            mediaBytes = totalMediaBytes,
+            estimatedTotalBytes = Math.addExact(totalDataBytes, totalMediaBytes)
+        )
+    }
+
     private fun createPortableBackupV2Locked(
         target: Path,
         descriptor: PortableBackupV2Descriptor,
@@ -190,8 +276,10 @@ class JvmLearningDataRecoveryManager(
                 Files.copy(source, staged)
             }
 
-            val packageEntries = if (descriptor.specificPackageIds != null && descriptor.specificPackageIds.isNotEmpty()) {
-                scopeStagedDataForPackages(staging, descriptor.specificPackageIds)
+            val packageEntries = if (!descriptor.specificPackageIds.isNullOrEmpty() || !descriptor.includeLearningProgress) {
+                val packageIds = descriptor.specificPackageIds?.takeIf { it.isNotEmpty() }
+                    ?: extractPackageEntries(staging).map { it.packageId }.toSet()
+                scopeStagedDataForPackages(staging, packageIds, descriptor.includeLearningProgress)
             } else {
                 extractPackageEntries(staging)
             }
@@ -989,7 +1077,11 @@ class JvmLearningDataRecoveryManager(
         }
     }
 
-    private fun scopeStagedDataForPackages(staging: Path, specificPackageIds: Set<String>): List<PortableBackupPackageEntryV2> {
+    private fun scopeStagedDataForPackages(
+        staging: Path,
+        specificPackageIds: Set<String>,
+        includeLearningProgress: Boolean
+    ): List<PortableBackupPackageEntryV2> {
         val installedFile = staging.resolve("portable/data/installed-packages.json")
         val targetPkgIds = mutableSetOf<String>()
         val targetPackageNames = mutableSetOf<String>()
@@ -1085,9 +1177,7 @@ class JvmLearningDataRecoveryManager(
                     customPkg == pkg
                 }
                 val matchesByName = targetPackageNames.any { packageName ->
-                    primaryAudio?.startsWith("$packageName/") == true ||
-                    transAudio?.startsWith("$packageName/") == true ||
-                    img?.startsWith("$packageName/") == true
+                    mediaReferences(obj).any { it == packageName || it.startsWith("$packageName/") }
                 }
                 val matches = id in targetContentIds || matchesByIdentity || matchesByName
                 if (matches) {
@@ -1134,17 +1224,18 @@ class JvmLearningDataRecoveryManager(
 
         val memoryFile = staging.resolve("portable/data/memory-states.json")
         if (Files.isRegularFile(memoryFile)) {
-            filterJsonArrayFile(memoryFile) { obj ->
-                val itemId = obj["learningItemId"]?.jsonPrimitive?.content
-                    ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
-                    ?: obj["itemId"]?.jsonPrimitive?.content
-                itemId != null && itemId in targetItemIds
-            }
+            if (!includeLearningProgress) Files.delete(memoryFile) else
+                filterJsonArrayFile(memoryFile) { obj ->
+                    val itemId = obj["learningItemId"]?.jsonPrimitive?.content
+                        ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+                        ?: obj["itemId"]?.jsonPrimitive?.content
+                    itemId != null && itemId in targetItemIds
+                }
         }
 
         val reviewFile = staging.resolve("portable/data/review-events.json")
         if (Files.isRegularFile(reviewFile)) {
-            filterJsonArrayFile(reviewFile) { obj ->
+            if (!includeLearningProgress) Files.delete(reviewFile) else filterJsonArrayFile(reviewFile) { obj ->
                 val itemId = obj["learningItemId"]?.jsonPrimitive?.content
                     ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
                     ?: obj["itemId"]?.jsonPrimitive?.content
@@ -1154,7 +1245,7 @@ class JvmLearningDataRecoveryManager(
 
         val trajFile = staging.resolve("portable/data/learning-trajectories.json")
         if (Files.isRegularFile(trajFile)) {
-            filterJsonArrayFile(trajFile) { obj ->
+            if (!includeLearningProgress) Files.delete(trajFile) else filterJsonArrayFile(trajFile) { obj ->
                 val itemId = obj["learningItemId"]?.jsonPrimitive?.content
                     ?: (obj["learningItemId"] as? JsonObject)?.get("value")?.jsonPrimitive?.content
                 itemId != null && itemId in targetItemIds
@@ -1437,6 +1528,7 @@ class JvmLearningDataRecoveryManager(
     }
 
     private fun readJsonArrayObjects(file: Path): List<JsonObject> {
+        if (!Files.isRegularFile(file)) return emptyList()
         val text = readUtf8String(file)
         val element = try { V2_JSON.parseToJsonElement(text) } catch (_: Exception) { return emptyList() }
         val array = when (element) {
@@ -1446,6 +1538,36 @@ class JvmLearningDataRecoveryManager(
         }
         return array.filterIsInstance<JsonObject>()
     }
+
+    private fun jsonString(obj: JsonObject?, field: String): String? {
+        val value = obj?.get(field) ?: return null
+        return when (value) {
+            is JsonObject -> value["value"]?.jsonPrimitive?.content
+            else -> value.jsonPrimitive.content
+        }?.takeUnless { it == "null" }
+    }
+
+    private fun jsonStringArray(obj: JsonObject?, field: String): List<String> =
+        (obj?.get(field) as? JsonArray).orEmpty().mapNotNull { element ->
+            element.jsonPrimitive.content.takeUnless { it == "null" }
+        }
+
+    private fun learningItemReference(obj: JsonObject): String? =
+        jsonString(obj, "learningItemId") ?: jsonString(obj, "itemId")
+
+    private fun mediaReferences(obj: JsonObject): List<String> = listOf(
+        "primaryAudio",
+        "translatedAudio",
+        "image",
+        "exampleAudio",
+        "exampleTranslatedAudio"
+    ).mapNotNull { field ->
+        (jsonString(obj, field) ?: jsonString(obj["media"] as? JsonObject, field))
+            ?.trim()?.replace('\\', '/')?.takeIf(String::isNotEmpty)
+    }
+
+    private fun estimatedJsonBytes(obj: JsonObject): Long =
+        obj.toString().toByteArray(StandardCharsets.UTF_8).size.toLong()
 
     private fun writeJsonArrayObjects(file: Path, objects: List<JsonObject>) {
         Files.createDirectories(requireNotNull(file.parent))

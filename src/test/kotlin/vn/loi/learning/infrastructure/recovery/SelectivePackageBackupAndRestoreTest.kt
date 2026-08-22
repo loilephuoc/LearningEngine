@@ -72,6 +72,20 @@ class SelectivePackageBackupAndRestoreTest {
                 roots = mapOf("data" to data, "media" to media),
                 safetyDirectory = root.resolve("safety")
             )
+            val plan = recovery.previewPortableBackupCreation(
+                PortableBackupV2Descriptor(
+                    appVersion = "2.0.0",
+                    sourcePlatform = "desktop",
+                    specificPackageIds = setOf("package-upper-hash")
+                )
+            )
+            assertEquals(1, plan.counts.packages)
+            assertEquals(1, plan.counts.contents)
+            assertEquals(1, plan.counts.learningItems)
+            assertEquals(1, plan.counts.mediaFiles)
+            assertEquals("selected-audio".toByteArray().size.toLong(), plan.mediaBytes)
+            assertTrue(plan.estimatedDataBytes > 0)
+            assertEquals(plan.estimatedDataBytes + plan.mediaBytes, plan.estimatedTotalBytes)
             recovery.createPortableBackupV2(
                 backup,
                 PortableBackupV2Descriptor(

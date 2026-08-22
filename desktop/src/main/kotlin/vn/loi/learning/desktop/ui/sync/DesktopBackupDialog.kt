@@ -27,6 +27,7 @@ fun DesktopBackupDialog(
     onToggleSelectAll: (Boolean) -> Unit,
     onTogglePackage: (String, Boolean) -> Unit,
     onToggleIncludeProgress: (Boolean) -> Unit,
+    onRefreshPreview: () -> Unit,
     onExecuteBackup: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -195,7 +196,41 @@ fun DesktopBackupDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(LESpacing.lg))
+                Spacer(modifier = Modifier.height(LESpacing.sm))
+
+                Text("Xem trước bản sao lưu", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                state.preview?.let { preview ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = LEColors.surfaceSubtle),
+                        modifier = Modifier.fillMaxWidth().padding(top = LESpacing.xs)
+                    ) {
+                        Column(modifier = Modifier.padding(LESpacing.sm)) {
+                            preview.packages.forEach { pkg ->
+                                Text("${pkg.packageName} (${pkg.packageId})", fontWeight = FontWeight.Medium)
+                                Text(
+                                    "v${pkg.version} • ${pkg.contentCount} nội dung • ${pkg.learningItemCount} mục học • " +
+                                        "${pkg.mediaFileCount} media / ${formatBackupBytes(pkg.mediaBytes)}",
+                                    style = LETypography.caption,
+                                    color = LEColors.textSecondary
+                                )
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(vertical = LESpacing.xs))
+                            Text("Đã chọn: ${preview.counts.packages} gói")
+                            Text("Nội dung: ${preview.counts.contents} • Mục học: ${preview.counts.learningItems}")
+                            if (state.includeLearningProgress) {
+                                Text("Trạng thái nhớ: ${preview.counts.memoryStates} • Lượt ôn: ${preview.counts.reviewEvents}")
+                            }
+                            Text("Media: ${preview.counts.mediaFiles} tệp / ${formatBackupBytes(preview.mediaBytes)}")
+                            Text("Dữ liệu ước tính: ${formatBackupBytes(preview.estimatedDataBytes)}")
+                            Text("Tổng dung lượng nguồn ước tính: ${formatBackupBytes(preview.estimatedTotalBytes)}")
+                        }
+                    }
+                }
+                TextButton(onClick = onRefreshPreview, enabled = !state.isExporting && !state.isPreviewing) {
+                    Text(if (state.isPreviewing) "Đang tính toán..." else "Làm mới xem trước")
+                }
+
+                Spacer(modifier = Modifier.height(LESpacing.sm))
 
                 // Actions
                 Row(
@@ -212,10 +247,16 @@ fun DesktopBackupDialog(
                     LEPrimaryButton(
                         text = if (state.isExporting) "Đang tạo bản sao lưu..." else "Bắt đầu sao lưu (.lebak)",
                         onClick = onExecuteBackup,
-                        enabled = !state.isExporting && (state.selectAllPackages || state.availablePackages.any { it.isSelected })
+                        enabled = !state.isExporting && state.preview != null &&
+                            (state.selectAllPackages || state.availablePackages.any { it.isSelected })
                     )
                 }
             }
         }
     }
+}
+
+private fun formatBackupBytes(bytes: Long): String {
+    val mib = bytes / (1024.0 * 1024.0)
+    return if (mib >= 1024.0) "%.2f GB".format(mib / 1024.0) else "%.2f MB".format(mib)
 }

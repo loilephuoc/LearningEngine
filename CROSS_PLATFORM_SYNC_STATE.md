@@ -1,12 +1,12 @@
 # Cross-Platform Sync & Portable Backup — State
 
-**Current Status**: Phase 4 in progress — portable backup media completeness fixed; preview/progress UAT remains
+**Current Status**: Phase 4 in progress — media completeness, creation preview and readable naming delivered; progress/UAT remains
 **Branch**: `feat/cross-platform-sync`
 **Target Platform Interoperability**: Desktop (JVM/Compose) <-> Android (Kotlin/Jetpack Compose)
-**Verification Baseline**: 4,990 / 4,990 tests passing (`.\gradlew.bat clean test` BUILD SUCCESSFUL, 2026-08-22)
+**Verification Baseline**: 4,997 / 4,997 tests passing (`.\gradlew.bat clean test` BUILD SUCCESSFUL, 2026-08-22)
 - Engine Tests: 2,233
 - Android Tests: 962
-- Desktop Tests: 1,795
+- Desktop Tests: 1,802
 
 ---
 
@@ -40,15 +40,15 @@
 | **Phase 1** | Repository Audit + Architecture + Interchange Contract | **COMPLETED** | Verified |
 | **Phase 2** | Differential Sync + Media Deduplication + FSRS Convergence | **COMPLETED** | Verified |
 | **Phase 3** | Selective Portable Backup/Restore + Package Identification + Compatibility Badges | **COMPLETED** | Verified (4,988 tests) |
-| **Phase 4** | Portable Backup Quality, integrity evidence, preview, progress, naming and real-package UAT | **IN PROGRESS** | Media identity/scoping fix verified (4,990 tests) |
+| **Phase 4** | Portable Backup Quality, integrity evidence, preview, progress, naming and real-package UAT | **IN PROGRESS** | Media fix + preview/naming verified (4,997 tests) |
 
 ## 3. Phase 4 Continuation
 
-- **Completed capability**: selective backup resolves stable package ID through canonical package/library ownership to Content IDs and package-name media paths. Only referenced media is retained; a missing reference aborts publication.
+- **Completed capabilities**: selective backup resolves stable package ID through canonical package/library ownership to Content IDs and package-name media paths; read-only creation preview reports package/content/item/FSRS/media counts and estimated bytes; selected scope uses a safe local timestamp filename. Only referenced media is retained; a missing reference aborts publication.
 - **Measured root cause**: `Vocabulary_In_Use_Upper_Intermediate` has package ID `package-07f8741f5da8588121a71c3a`, while its media folder is named `Vocabulary_In_Use_Upper_Intermediate`. The old ID-prefix filter excluded all 15,211 files (970,940,650 source bytes), explaining the approximately 3.7 MB metadata-only archive.
 - **Files changed**: `JvmLearningDataRecoveryManager.kt`, `SelectivePackageBackupAndRestoreTest.kt`, checkpoint documentation.
-- **Next exact capability**: add a read-only backup preview/size audit contract and Desktop presentation, reusing the corrected canonical scope without creating an archive.
-- **Current checkpoint**: the capability commit containing this state update (`fix(sync): validate portable backup media completeness`).
+- **Next exact capability**: move preview/archive work off the Compose UI thread and add typed backup progress/verification/success reporting.
+- **Current checkpoint**: the capability commit containing this state update (`feat(sync): add portable backup preview and readable naming`).
 - **Expected post-commit worktree**: clean.
 
 ## 4. Decision Log

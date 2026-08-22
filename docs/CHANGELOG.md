@@ -11,6 +11,17 @@
 - Added production-schema regression and missing-media rejection coverage. Full verification passes
   4,990 tests (2,233 engine, 962 Android, 1,795 Desktop), with no Android production change.
 
+# Cross-platform sync — portable backup creation preview and naming
+
+- Added read-only creation planning over canonical package/library ownership. Desktop shows per-package
+  and aggregate content, learning-item, FSRS, media-file and byte estimates before archive creation.
+- Preview validation resolves every referenced media file and fails truthfully when the selected scope
+  is incomplete. Selection or FSRS-scope changes invalidate the prior preview.
+- The FSRS toggle now controls the actual selective archive, and save-dialog names use a safe package
+  scope plus local `yyyyMMdd_HHmmss` timestamp instead of epoch milliseconds.
+- Restored discovery of seven Desktop sync ViewModel tests by moving them to the active Kotlin test
+  annotations. Full verification passes 4,997 tests (2,233 engine, 962 Android, 1,802 Desktop).
+
 # Backup / Restore transaction safety
 
 - Added one application-wide recovery operation gate at the shared transaction composition root,

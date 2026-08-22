@@ -693,9 +693,10 @@ fun LearningShell(
                 onToggleSelectAll = syncViewModel::toggleBackupSelectAll,
                 onTogglePackage = syncViewModel::toggleBackupPackage,
                 onToggleIncludeProgress = syncViewModel::toggleBackupIncludeProgress,
+                onRefreshPreview = syncViewModel::refreshBackupPreview,
                 onExecuteBackup = {
                     val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Chọn nơi lưu bản sao lưu .lebak", java.awt.FileDialog.SAVE)
-                    dialog.file = "LearningEngine_Backup_${System.currentTimeMillis()}.lebak"
+                    dialog.file = syncViewModel.suggestedBackupFileName()
                     dialog.isVisible = true
                     val dir = dialog.directory
                     val file = dialog.file
