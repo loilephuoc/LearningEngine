@@ -2228,3 +2228,17 @@ or skipped tests.
   queue, or daily budget until one final automatic or `RatingSource.MANUAL_USER` rating commits.
 - Physical-device active/incorrect/exact/manual/auto Typing UAT and Introduction WORD/EXAMPLE tap
   confirmation remain required.
+# Cross-platform sync Phase 4 handoff — 2026-08-22
+
+- Branch: `feat/cross-platform-sync`.
+- Verified capability commits: `3f8f6b73` media completeness, `36e67c50` creation preview/naming,
+  `62735f79` progress/cancellation, `d28ac963` selected-media staging/performance and physical UAT.
+- Automated baseline: 4,998/4,998 passing (`clean test`): engine 2,234; Android 962; Desktop 1,802.
+- Physical Upper Intermediate archive UAT passed full ZIP validation, extraction and per-entry SHA-256:
+  2,887 contents, 14,435 learning items, 12,135 referenced media, 786,105,846 media bytes,
+  830,783,670 expanded bytes, 653,007,032 archive bytes.
+- Android device `24090RA29C` contains the verified archive at
+  `/sdcard/Download/LearningEngine_Backup_Vocabulary_In_Use_Upper_Intermediate_20260822_UAT.lebak`.
+- Blocker: device is locked by pattern/fingerprint. No credential attempt and no restore occurred.
+- Next: after user unlock, inspect Android Backup & Restore preview. Require the exact package/counts
+  above before restore. Phase 4 remains incomplete until Android inspection/round-trip acceptance.

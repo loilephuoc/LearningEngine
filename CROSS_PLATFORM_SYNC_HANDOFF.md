@@ -40,5 +40,10 @@ Learning Engine uses a dual-layer synchronization and recovery architecture:
   786,105,846 media bytes; 830,783,670 expanded bytes; 653,007,032 archive bytes (~21.4% reduction).
 - Selective staging no longer copies the entire 5-package media repository before filtering; it
   snapshots canonical JSON and then copies only resolved media references for the selected package.
-- Current checkpoint: the capability commit containing this handoff (`perf(sync): stage only selected portable backup media`).
-- Next exact task: Android physical package-preview inspection of the verified archive. Do not restore until package identity and counts are correct.
+- The verified archive was copied byte-exactly to Android device `24090RA29C` at
+  `/sdcard/Download/LearningEngine_Backup_Vocabulary_In_Use_Upper_Intermediate_20260822_UAT.lebak`.
+  No restore was attempted.
+- Current checkpoint: the documentation handoff commit containing this handoff (`docs: record Android backup preview handoff`).
+- Blocker/next exact task: the device requires pattern/fingerprint unlock. After the user unlocks it,
+  open Backup & Restore and inspect the transferred archive. Do not restore unless package identity,
+  2,887 content count, 14,435 learning-item count and 12,135 media count are correct.

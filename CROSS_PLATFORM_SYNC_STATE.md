@@ -1,6 +1,6 @@
 # Cross-Platform Sync & Portable Backup — State
 
-**Current Status**: Phase 4 in progress — Desktop product workflow and real-package archive UAT passed; Android physical inspection remains
+**Current Status**: Phase 4 in progress — Desktop workflow/UAT passed; verified archive copied to Android; preview blocked by device lock
 **Branch**: `feat/cross-platform-sync`
 **Target Platform Interoperability**: Desktop (JVM/Compose) <-> Android (Kotlin/Jetpack Compose)
 **Verification Baseline**: 4,998 / 4,998 tests passing (`.\gradlew.bat clean test` BUILD SUCCESSFUL, 2026-08-22)
@@ -48,9 +48,10 @@
 - **Measured root cause**: `Vocabulary_In_Use_Upper_Intermediate` has package ID `package-07f8741f5da8588121a71c3a`, while its media folder is named `Vocabulary_In_Use_Upper_Intermediate`. The old ID-prefix filter excluded all 15,211 files (970,940,650 source bytes), explaining the approximately 3.7 MB metadata-only archive.
 - **Physical UAT PASS**: temporary harness created and internally validated `C:\tmp\LearningEngine_Backup_Vocabulary_In_Use_Upper_Intermediate_UAT_1787371271540.lebak`, then extracted and re-hashed every manifest entry: 2,887 contents, 14,435 learning items, 12,135 referenced media files, 786,105,846 media bytes, 830,783,670 expanded bytes, 653,007,032 archive bytes, about 21.4% size reduction. The remaining 3,076 files in the source package directory are unreferenced and intentionally excluded.
 - **Large-package hardening**: selective staging now snapshots canonical JSON first and copies only resolved referenced media instead of copying the entire multi-package media repository before filtering.
+- **Android transfer**: the verified 653,007,032-byte archive was copied to `/sdcard/Download/LearningEngine_Backup_Vocabulary_In_Use_Upper_Intermediate_20260822_UAT.lebak` on connected device `24090RA29C`. No restore was attempted.
 - **Files changed**: `JvmLearningDataRecoveryManager.kt`, `SelectivePackageBackupAndRestoreTest.kt`, checkpoint documentation.
-- **Next exact capability**: copy the verified archive to the connected Android device and inspect Backup & Restore package preview; do not restore unless identity/counts are correct.
-- **Current checkpoint**: the capability commit containing this state update (`perf(sync): stage only selected portable backup media`).
+- **Blocker**: Android requires user pattern/fingerprint unlock. Do not attempt credentials. After the user unlocks, open Backup & Restore, select the transferred archive, and verify Upper Intermediate identity/counts before any restore.
+- **Current checkpoint**: the documentation handoff commit containing this state update (`docs: record Android backup preview handoff`).
 - **Expected post-commit worktree**: clean.
 
 ## 4. Decision Log
