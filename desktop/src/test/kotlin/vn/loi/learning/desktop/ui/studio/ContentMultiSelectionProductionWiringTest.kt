@@ -37,6 +37,8 @@ class ContentMultiSelectionProductionWiringTest {
         assertTrue(screen.contains("event.key == Key.Delete"))
         assertTrue(screen.contains("onDeleteClick = { onRequestDelete?.invoke() }"))
         assertTrue(screen.contains("onConfirmBatchDelete()"))
+        assertTrue(explorer.contains("onSelect()\n                    onRequestDelete()"))
+        assertFalse(explorer.contains("Delete\") { /* handled by toolbar */"))
         assertTrue(screen.contains("Delete Selected (\$deleteTargetCount)"))
         assertFalse(explorer.contains("onDeleteSelected"))
     }

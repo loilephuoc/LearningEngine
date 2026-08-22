@@ -17,11 +17,11 @@ Completed:
 - Physical UAT PASS: Desktop 2-package archive (`Vocabulary_In_Use_Elementary` + `OPD_2nd`) restored on Android with 3,376 Content, 16,880 LearningItems and 16,619 media files.
 
 Current implementation status:
-- Phase 4 implementation and full verification are complete; its local commit is being created with this state update.
-- Next source boundary: complete Android user-facing string localization audit and fixes.
+- Desktop Content Studio context-menu Delete now selects the clicked row and invokes the same existing deletion request/confirmation authority as toolbar Delete.
+- Next source boundary: Android active-session daily New/Review limit editing and immediate scheduler refresh.
 
 Tests:
-- Focused `DesktopSyncViewModelTest`: PASS.
+- Focused `ContentMultiSelectionProductionWiringTest`: PASS.
 - `clean test`: Engine 2,254; Android 968; Desktop 1,804; total 5,026; zero failures/errors/skips.
 - Android `assembleDebug`: PASS at Phase 2 checkpoint.
 
@@ -29,10 +29,10 @@ Physical UAT:
 - Two-package restore baseline PASS.
 - Remaining UI phases and their physical checks are pending.
 
-Commit: Phase 4 commit containing this state follows Phase 3 checkpoint `d5b5b262`.
+Commit: context-menu Delete capability follows checkpoint `3d787c69`.
 
 Next:
-- Audit all Android user-facing strings, localize remaining English while preserving technical identifiers, then run focused/full verification and commit Phase 5.
+- Implement and verify long-press daily New/Review editors against the canonical persisted study budget and active-session policy.
 
 Blockers: none.
 
@@ -42,6 +42,5 @@ Remaining issues:
 - Phase 7 Study active-package indicator.
 - Phase 8 Reminder popup controls.
 - Phase 9 Reminder image radius.
-- Phase 10 Desktop Content Studio context Delete.
 - Phase 11 global localization audit.
 - Phase 12–14 final tests, physical UAT and regression.

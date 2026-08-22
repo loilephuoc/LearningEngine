@@ -117,6 +117,7 @@ fun ContentExplorerPane(
     onDuplicateItem: ((String) -> Unit)? = null,
     onCopyQuestion: ((String) -> Unit)? = null,
     onCopyAnswer: ((String) -> Unit)? = null,
+    onRequestDelete: (() -> Unit)? = null,
     onRequestGenerateTts: ((contentId: String, field: vn.loi.learning.desktop.tts.TtsField?) -> Unit)? = null,
     onRequestGenerateTtsBatch: ((contentIds: Set<String>) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -379,6 +380,7 @@ fun ContentExplorerPane(
                                     onDuplicateItem = onDuplicateItem,
                                     onCopyQuestion = onCopyQuestion,
                                     onCopyAnswer = onCopyAnswer,
+                                    onRequestDelete = onRequestDelete,
                                     onRequestGenerateTts = onRequestGenerateTts
                                 )
                             }
@@ -409,6 +411,7 @@ fun ContentExplorerPane(
                                     onDuplicateItem = onDuplicateItem,
                                     onCopyQuestion = onCopyQuestion,
                                     onCopyAnswer = onCopyAnswer,
+                                    onRequestDelete = onRequestDelete,
                                     onRequestGenerateTts = onRequestGenerateTts
                                 )
                             }
@@ -875,6 +878,7 @@ private fun ExplorerRowItem(
     onDuplicateItem: ((String) -> Unit)? = null,
     onCopyQuestion: ((String) -> Unit)? = null,
     onCopyAnswer: ((String) -> Unit)? = null,
+    onRequestDelete: (() -> Unit)? = null,
     onRequestGenerateTts: ((contentId: String, field: vn.loi.learning.desktop.tts.TtsField?) -> Unit)? = null
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
@@ -903,7 +907,10 @@ private fun ExplorerRowItem(
                 ContextMenuItem("Edit") { onSelect() },
                 if (onRequestGenerateTts != null) ContextMenuItem("Generate Audio (TTS)") { onRequestGenerateTts(item.contentId.value, null) } else null,
                 ContextMenuItem("Duplicate") { onDuplicateItem?.invoke(item.contentId.value) },
-                ContextMenuItem("Delete") { /* handled by toolbar */ },
+                if (onRequestDelete != null) ContextMenuItem("Delete") {
+                    onSelect()
+                    onRequestDelete()
+                } else null,
                 ContextMenuItem("Copy Question") { onCopyQuestion?.invoke(item.questionText) },
                 ContextMenuItem("Copy Answer") { onCopyAnswer?.invoke(item.answerText) }
             )
@@ -1298,6 +1305,7 @@ private fun DuplicateGroupCard(
     onDuplicateItem: ((String) -> Unit)?,
     onCopyQuestion: ((String) -> Unit)?,
     onCopyAnswer: ((String) -> Unit)?,
+    onRequestDelete: (() -> Unit)?,
     onRequestGenerateTts: ((contentId: String, field: vn.loi.learning.desktop.tts.TtsField?) -> Unit)? = null
 ) {
     Surface(
@@ -1374,6 +1382,7 @@ private fun DuplicateGroupCard(
                     onDuplicateItem = onDuplicateItem,
                     onCopyQuestion = onCopyQuestion,
                     onCopyAnswer = onCopyAnswer,
+                    onRequestDelete = onRequestDelete,
                     onRequestGenerateTts = onRequestGenerateTts
                 )
             }

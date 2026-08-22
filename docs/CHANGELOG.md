@@ -1,3 +1,10 @@
+# Desktop Content Studio context deletion
+
+- Wired right-click Delete to select the clicked content and invoke the same existing request,
+  confirmation, deletion, refresh and undo authority used by toolbar/keyboard deletion.
+- Added production-wiring regression coverage; the full 5,026-test matrix passes with zero failures,
+  errors or skips.
+
 # Immutable Desktop backup completion state
 
 - Successful portable backup now hides scope, preview and execution controls and presents only the

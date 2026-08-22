@@ -300,6 +300,7 @@ fun ContentStudioScreen(
                     onDuplicateItem = onDuplicateItem,
                     onCopyQuestion = onCopyQuestion,
                     onCopyAnswer = onCopyAnswer,
+                    onRequestDelete = onRequestDelete,
                     onRequestGenerateTts = handleRequestTts,
                     onRequestGenerateTtsBatch = handleRequestTtsBatch
                 )
