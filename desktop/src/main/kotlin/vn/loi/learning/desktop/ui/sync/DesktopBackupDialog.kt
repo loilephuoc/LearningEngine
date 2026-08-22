@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.delay
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.LEPrimaryButton
 import vn.loi.learning.desktop.ui.designsystem.components.LESecondaryButton
@@ -32,6 +33,16 @@ fun DesktopBackupDialog(
     onCancelBackup: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    var liveElapsedMillis by remember(state.isExporting) { mutableLongStateOf(state.elapsedMillis) }
+    LaunchedEffect(state.isExporting, state.elapsedMillis) {
+        liveElapsedMillis = state.elapsedMillis
+        if (state.isExporting) {
+            while (true) {
+                delay(1_000L)
+                liveElapsedMillis += 1_000L
+            }
+        }
+    }
     Dialog(
         onDismissRequest = { if (!state.isExporting) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -117,19 +128,26 @@ fun DesktopBackupDialog(
                         Column(modifier = Modifier.padding(LESpacing.md)) {
                             Text("Đang tạo bản sao lưu...", fontWeight = FontWeight.SemiBold)
                             Text(progress?.phase?.let(::backupPhaseLabel) ?: "Đang chuẩn bị...")
-                            LinearProgressIndicator(
-                                progress = { progress?.overallFraction ?: 0f },
-                                modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.xs)
-                            )
-                            Text("${((progress?.overallFraction ?: 0f) * 100).toInt()}%")
-                            if (progress != null && progress.totalItems > 0) {
+                            if (progress?.hasMeasurableBackupProgress() == true) {
+                                LinearProgressIndicator(
+                                    progress = { progress.overallFraction },
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.xs)
+                                )
+                                Text("${(progress.overallFraction * 100).toInt()}%")
+                            } else {
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.xs)
+                                )
+                                Text("Đang xử lý...", style = LETypography.caption)
+                            }
+                            if (progress != null && progress.processedItems > 0 && progress.totalItems > 0) {
                                 Text("${progress.processedItems} / ${progress.totalItems} tệp")
                             }
                             if (progress != null && progress.totalBytes > 0) {
                                 Text("${formatBackupBytes(progress.processedBytes)} / ${formatBackupBytes(progress.totalBytes)}")
                             }
                             progress?.currentItem?.let { Text(it, style = LETypography.caption, maxLines = 1) }
-                            Text("Thời gian: ${state.elapsedMillis / 1000}s", style = LETypography.caption)
+                            Text("Thời gian: ${liveElapsedMillis / 1000}s", style = LETypography.caption)
                         }
                     }
                 }
@@ -290,6 +308,11 @@ private fun formatBackupBytes(bytes: Long): String {
     val mib = bytes / (1024.0 * 1024.0)
     return if (mib >= 1024.0) "%.2f GB".format(mib / 1024.0) else "%.2f MB".format(mib)
 }
+
+internal fun vn.loi.learning.infrastructure.recovery.PortableBackupProgressV2.hasMeasurableBackupProgress(): Boolean =
+    (totalBytes > 0L && processedBytes > 0L) ||
+        (totalBytes == 0L && totalItems > 0L && processedItems > 0L) ||
+        phase == vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.COMPLETED
 
 private fun backupPhaseLabel(phase: vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2): String = when (phase) {
     vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2.PREPARING -> "Đang chuẩn bị..."

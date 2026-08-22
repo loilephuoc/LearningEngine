@@ -34,7 +34,7 @@
 ### 4. UI & Workflow
 - [x] Desktop Settings provides clear actions: Sao lưu (.lebak), Khôi phục (.lebak), Xuất đồng bộ (.lesync), Nạp đồng bộ (.lesync).
 - [x] Desktop full-backup creation requires a read-only package/content/learning/media/size preview before archive publication.
-- [x] Desktop full-backup creation runs off the UI thread with typed phase/percent/item/byte progress, safe cancellation, verified success metrics, and no false target publication.
+- [x] Desktop full-backup creation runs off the UI thread with truthful typed stage/item/byte progress, indeterminate presentation for unmeasured work, a live elapsed timer, safe cancellation, verified success metrics, and no false target publication.
 - [x] Physical Upper Intermediate selective backup passes ZIP inventory, full extraction and SHA-256 verification (12,135 referenced media; 653,007,032-byte archive).
 - [x] Desktop displays informative preview on sync import (content items updated, media reused, review events merged, conflicts).
 - [x] Android UI displays Differential Sync card alongside Full Backup card with conflict strategy selector.

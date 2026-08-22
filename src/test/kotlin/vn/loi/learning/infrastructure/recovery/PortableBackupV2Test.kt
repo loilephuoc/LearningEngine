@@ -16,6 +16,28 @@ import kotlin.test.assertTrue
 
 class PortableBackupV2Test {
     @Test
+    fun `checksum planning reports real completed file counts`() = fixture().use { fixture ->
+        Files.writeString(fixture.data.resolve("contents.json"), "[]")
+        Files.writeString(fixture.data.resolve("learning-items.json"), "[]")
+        val progress = mutableListOf<PortableBackupProgressV2>()
+
+        fixture.manager.createPortableBackupV2(
+            fixture.root.resolve("progress.lebak"),
+            descriptor(),
+            onProgress = progress::add
+        )
+
+        val checksumProgress = progress.filter {
+            it.phase == PortableBackupPhaseV2.CALCULATING_MEDIA && it.processedItems > 0
+        }
+        assertTrue(checksumProgress.isNotEmpty())
+        assertEquals(checksumProgress.last().totalItems, checksumProgress.last().processedItems)
+        assertTrue(checksumProgress.zipWithNext().all { (first, second) ->
+            second.processedItems > first.processedItems
+        })
+    }
+
+    @Test
     fun `v2 writes deterministic portable structure and inventories nested media once`() = fixture().use { fixture ->
         Files.writeString(fixture.data.resolve("memory-states.json"), "[{\"id\":\"m-1\"},{\"id\":\"m-2\"}]")
         Files.writeString(fixture.data.resolve("contents.json"), "[{\"id\":\"c-1\"}]")

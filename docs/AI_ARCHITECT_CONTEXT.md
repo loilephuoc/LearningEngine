@@ -1,5 +1,14 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Current autonomous UAT continuation
+
+- Desktop portable-backup preparation is indeterminate until an item/byte metric actually advances;
+  checksum inventory reports real completed-file counts and the dialog elapsed timer ticks without
+  depending on engine callbacks.
+- Focused recovery/Desktop tests pass. Full verification passes 2,254 Engine, 968 Android and 1,803
+  Desktop tests (5,025 total), with zero failures/errors/skips. Next capability is the immutable
+  successful-backup dialog action state.
+
 ## Current Phase 5 restore reliability continuation
 
 - Persistent Safety Backup is opt-in and user-managed; no opening, refresh, preview or default restore

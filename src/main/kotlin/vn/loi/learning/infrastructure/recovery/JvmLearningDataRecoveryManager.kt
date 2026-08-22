@@ -540,14 +540,21 @@ class JvmLearningDataRecoveryManager(
             val payloads = (stagedCanonical + supplements).sortedBy { it.logicalPath }
             onProgress(PortableBackupProgressV2(PortableBackupPhaseV2.CALCULATING_MEDIA, totalItems = payloads.size.toLong()))
             validatePayloadPlan(payloads, staging, limits)
-            val records = payloads.map { payload ->
-                PortableBackupEntryV2(
+            val records = payloads.mapIndexed { index, payload ->
+                val record = PortableBackupEntryV2(
                     logicalPath = payload.logicalPath,
                     section = payload.section,
                     logicalType = payload.logicalType,
                     uncompressedSize = Files.size(payload.source),
                     sha256 = sha256(payload.source, limits.ioBufferBytes)
                 )
+                onProgress(PortableBackupProgressV2(
+                    PortableBackupPhaseV2.CALCULATING_MEDIA,
+                    processedItems = (index + 1).toLong(),
+                    totalItems = payloads.size.toLong(),
+                    currentItem = payload.logicalPath
+                ))
+                record
             }
             val manifest = PortableBackupManifestV2(
                 backupSchemaVersion = 2,

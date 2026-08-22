@@ -1,3 +1,11 @@
+# Truthful Desktop portable-backup progress
+
+- Changed unmeasured backup stages to use an explicit indeterminate presentation instead of a fixed
+  percentage or misleading `0 / N` file count, while keeping the elapsed timer active independently
+  of engine progress callbacks.
+- Portable archive checksum planning now emits completed-file progress for every payload. Focused
+  Engine/Desktop regressions and the full 5,025-test matrix pass with zero failures/errors/skips.
+
 # Restore transaction and user-managed Safety Backup lifecycle
 
 - Removed mandatory pre-restore Safety Backup creation and all newest-two automatic deletion. Persistent

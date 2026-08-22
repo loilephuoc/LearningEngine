@@ -5,8 +5,8 @@
 1. Phase 0 recovery/audit — PASS.
 2. Safety semantics — PASS at `595444fb`.
 3. Restore robustness — automated PASS and 2-package physical restore PASS.
-4. Desktop truthful backup progress — IN PROGRESS.
-5. Desktop success dialog.
+4. Desktop truthful backup progress — PASS (real checksum counts, indeterminate preparation, live elapsed timer).
+5. Desktop success dialog — IN PROGRESS.
 6. Android localization.
 7. Android Library/active package and Study indicator.
 8. Reminder controls and image radius.

@@ -14,8 +14,23 @@ import vn.loi.learning.desktop.runtime.DesktopRecoveryManager
 import vn.loi.learning.domain.sync.model.ConflictResolutionStrategy
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
+import vn.loi.learning.infrastructure.recovery.PortableBackupPhaseV2
+import vn.loi.learning.infrastructure.recovery.PortableBackupProgressV2
 
 class DesktopSyncViewModelTest {
+
+    @Test
+    fun `backup progress is indeterminate until a real metric advances`() {
+        assertFalse(PortableBackupProgressV2(
+            phase = PortableBackupPhaseV2.CALCULATING_MEDIA,
+            totalItems = 16_627
+        ).hasMeasurableBackupProgress())
+        assertTrue(PortableBackupProgressV2(
+            phase = PortableBackupPhaseV2.CALCULATING_MEDIA,
+            processedItems = 1,
+            totalItems = 16_627
+        ).hasMeasurableBackupProgress())
+    }
 
     private lateinit var tempDir: java.nio.file.Path
     private lateinit var dataDir: java.nio.file.Path
