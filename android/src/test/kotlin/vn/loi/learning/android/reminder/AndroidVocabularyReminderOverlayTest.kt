@@ -774,4 +774,19 @@ class AndroidVocabularyReminderOverlayTest {
         assertFalse(hasResumeAction)
         assertFalse(hasResumeBodyTap)
     }
+    @Test
+    fun `overlay exposes tap long press mute and image-only six dp radius`() {
+        val controller = java.io.File("src/main/kotlin/vn/loi/learning/android/reminder/AndroidVocabularyReminderOverlayController.kt").readText()
+        val layout = java.io.File("src/main/res/layout/overlay_vocabulary_reminder.xml").readText()
+        assertTrue(controller.contains("onQuickPause?.invoke(5L)"))
+        assertTrue(controller.contains("pause5mBtn.setOnLongClickListener"))
+        listOf("30L", "60L", "240L", "Long.MAX_VALUE").forEach { duration ->
+            assertTrue(controller.contains("onQuickPause?.invoke($duration)"))
+        }
+        assertTrue(controller.contains("LearningEngineAudioPolicy.toggleMuted()"))
+        assertTrue(controller.contains("createRoundedCornerBitmap(rawBitmap, 6f * density)"))
+        assertTrue(layout.contains("@+id/overlay_toggle_mute"))
+        assertFalse(layout.contains("@+id/overlay_pause_30m"))
+        assertFalse(layout.contains("@+id/overlay_pause_1h"))
+    }
 }

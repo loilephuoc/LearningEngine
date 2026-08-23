@@ -1,3 +1,10 @@
+# Android reminder popup controls integration
+
+- Kept single-tap five-minute pause and moved 30-minute, one-hour, four-hour, and indefinite pause
+  choices behind a long press; the existing explicit Resume path remains available in pause status.
+- Added an overlay-local mute toggle and retained the image-only 6dp corner radius without changing
+  global reminder, widget, or lock-screen geometry.
+
 # Android widget and lock-screen localization integration
 
 - Moved the remaining Home Widget and Lock Screen settings labels to paired English/Vietnamese

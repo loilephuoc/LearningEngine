@@ -107,7 +107,7 @@
                     android:includeFontPadding="false"
                     android:lineSpacingMultiplier="1.1" />
 
-                <!-- Compact Equal-Weight Quick-Pause Row Directly Below Text Column -->
+                <!-- Compact Quick-Pause and Audio Control Row -->
                 <LinearLayout
                     android:id="@+id/overlay_quick_pause_row"
                     android:layout_width="match_parent"
@@ -116,7 +116,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
-                    <!-- 5 min compact pill (weight=1) -->
+                    <!-- 5 min compact pill (weight=1, tap=5m, long-press=options) -->
                     <LinearLayout
                         android:id="@+id/overlay_pause_5m"
                         android:layout_width="0dp"
@@ -138,7 +138,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="3dp"
+                            android:layout_marginStart="4dp"
                             android:text="5′"
                             android:textSize="12.5sp"
                             android:textStyle="bold"
@@ -146,67 +146,24 @@
                             android:includeFontPadding="false" />
                     </LinearLayout>
 
-                    <!-- 30 min compact pill (weight=1) -->
-                    <LinearLayout
-                        android:id="@+id/overlay_pause_30m"
-                        android:layout_width="0dp"
+                    <!-- Mute / Unmute Toggle Button -->
+                    <FrameLayout
+                        android:id="@+id/overlay_toggle_mute"
+                        android:layout_width="40dp"
                         android:layout_height="36dp"
-                        android:layout_weight="1"
-                        android:layout_marginStart="5dp"
+                        android:layout_marginStart="8dp"
                         android:background="@drawable/bg_overlay_pause_compact"
-                        android:gravity="center"
-                        android:orientation="horizontal"
-                        android:paddingHorizontal="4dp"
                         android:clickable="true"
                         android:focusable="true">
 
                         <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:src="@drawable/ic_overlay_pause_later"
-                            android:contentDescription="Pause 30m" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="3dp"
-                            android:text="30′"
-                            android:textSize="12.5sp"
-                            android:textStyle="bold"
-                            android:textColor="#93C5FD"
-                            android:includeFontPadding="false" />
-                    </LinearLayout>
-
-                    <!-- 1 hour compact pill (weight=1) -->
-                    <LinearLayout
-                        android:id="@+id/overlay_pause_1h"
-                        android:layout_width="0dp"
-                        android:layout_height="36dp"
-                        android:layout_weight="1"
-                        android:layout_marginStart="5dp"
-                        android:background="@drawable/bg_overlay_pause_compact"
-                        android:gravity="center"
-                        android:orientation="horizontal"
-                        android:paddingHorizontal="4dp"
-                        android:clickable="true"
-                        android:focusable="true">
-
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:src="@drawable/ic_overlay_pause_later"
-                            android:contentDescription="Pause 1h" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="3dp"
-                            android:text="1h"
-                            android:textSize="12.5sp"
-                            android:textStyle="bold"
-                            android:textColor="#93C5FD"
-                            android:includeFontPadding="false" />
-                    </LinearLayout>
+                            android:id="@+id/overlay_mute_icon"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_autoplay_unmute"
+                            android:contentDescription="Toggle Mute" />
+                    </FrameLayout>
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

@@ -177,8 +177,8 @@ class AndroidVocabularyReminderOverlayController(
         val closeButton = view.findViewById<ImageView>(R.id.overlay_close_button)
         val quickPauseRow = view.findViewById<LinearLayout>(R.id.overlay_quick_pause_row)
         val pause5mBtn = view.findViewById<View>(R.id.overlay_pause_5m)
-        val pause30mBtn = view.findViewById<View>(R.id.overlay_pause_30m)
-        val pause1hBtn = view.findViewById<View>(R.id.overlay_pause_1h)
+        val toggleMuteBtn = view.findViewById<View>(R.id.overlay_toggle_mute)
+        val muteIcon = view.findViewById<ImageView>(R.id.overlay_mute_icon)
         val countdownTrack = view.findViewById<FrameLayout>(R.id.overlay_countdown_track)
         val countdownProgress = view.findViewById<View>(R.id.overlay_countdown_progress)
 
@@ -274,7 +274,7 @@ class AndroidVocabularyReminderOverlayController(
         meaningTextView.maxLines = 3
         meaningTextView.text = meaningText
 
-        // 7. Compact Quick Pause Actions
+        // 7. Compact Quick Pause & Audio Controls
         quickPauseRow.visibility = View.VISIBLE
         pause5mBtn.setOnClickListener {
             requestDismiss(instanceId, "USER_PAUSE_5M") {
@@ -282,17 +282,85 @@ class AndroidVocabularyReminderOverlayController(
                 onQuickPause?.invoke(5L)
             }
         }
-        pause30mBtn.setOnClickListener {
-            requestDismiss(instanceId, "USER_PAUSE_30M") {
-                Log.i(TAG, "[UnlockedPause] duration=30m userAction=TAP")
-                onQuickPause?.invoke(30L)
+        pause5mBtn.setOnLongClickListener {
+            autoDismissRunnable?.let { mainHandler.removeCallbacks(it) }
+            currentCountdownAnimator?.cancel()
+
+            val wrapper = android.view.ContextThemeWrapper(context, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            val popup = android.widget.PopupMenu(wrapper, pause5mBtn)
+            popup.menu.add(0, 1, 0, context.getString(R.string.reminder_pause_option_30m))
+            popup.menu.add(0, 2, 1, context.getString(R.string.reminder_pause_option_1h))
+            popup.menu.add(0, 3, 2, context.getString(R.string.reminder_pause_option_4h))
+            popup.menu.add(0, 4, 3, context.getString(R.string.reminder_pause_option_indefinite))
+            popup.menu.add(0, 5, 4, context.getString(R.string.action_cancel))
+            popup.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    1 -> {
+                        requestDismiss(instanceId, "USER_PAUSE_30M") {
+                            Log.i(TAG, "[UnlockedPause] duration=30m userAction=LONG_PRESS_MENU")
+                            onQuickPause?.invoke(30L)
+                        }
+                        true
+                    }
+                    2 -> {
+                        requestDismiss(instanceId, "USER_PAUSE_1H") {
+                            Log.i(TAG, "[UnlockedPause] duration=1h userAction=LONG_PRESS_MENU")
+                            onQuickPause?.invoke(60L)
+                        }
+                        true
+                    }
+                    3 -> {
+                        requestDismiss(instanceId, "USER_PAUSE_4H") {
+                            Log.i(TAG, "[UnlockedPause] duration=4h userAction=LONG_PRESS_MENU")
+                            onQuickPause?.invoke(240L)
+                        }
+                        true
+                    }
+                    4 -> {
+                        requestDismiss(instanceId, "USER_PAUSE_INDEFINITE") {
+                            Log.i(TAG, "[UnlockedPause] duration=INDEFINITE userAction=LONG_PRESS_MENU")
+                            onQuickPause?.invoke(Long.MAX_VALUE)
+                        }
+                        true
+                    }
+                    else -> {
+                        val remainingMs = 3000L
+                        val dismissRunnable = Runnable {
+                            if (state == OverlayState.VISIBLE && currentView == view && currentInstanceId == instanceId) {
+                                requestDismiss(instanceId, "AUTO_DISMISS")
+                            }
+                        }
+                        autoDismissRunnable = dismissRunnable
+                        mainHandler.postDelayed(dismissRunnable, remainingMs)
+                        true
+                    }
+                }
             }
+            popup.setOnDismissListener {
+                if (state == OverlayState.VISIBLE && currentView == view && autoDismissRunnable == null) {
+                    val remainingMs = 3000L
+                    val dismissRunnable = Runnable {
+                        if (state == OverlayState.VISIBLE && currentView == view && currentInstanceId == instanceId) {
+                            requestDismiss(instanceId, "AUTO_DISMISS")
+                        }
+                    }
+                    autoDismissRunnable = dismissRunnable
+                    mainHandler.postDelayed(dismissRunnable, remainingMs)
+                }
+            }
+            popup.show()
+            true
         }
-        pause1hBtn.setOnClickListener {
-            requestDismiss(instanceId, "USER_PAUSE_1H") {
-                Log.i(TAG, "[UnlockedPause] duration=1h userAction=TAP")
-                onQuickPause?.invoke(60L)
-            }
+
+        fun updateMuteIcon() {
+            val isMuted = vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value
+            muteIcon?.setImageResource(if (isMuted) R.drawable.ic_autoplay_mute else R.drawable.ic_autoplay_unmute)
+            muteIcon?.contentDescription = if (isMuted) "Unmute" else "Mute"
+        }
+        updateMuteIcon()
+        toggleMuteBtn?.setOnClickListener {
+            vn.loi.learning.android.media.LearningEngineAudioPolicy.toggleMuted()
+            updateMuteIcon()
         }
 
         // 8. Close Button & Review Tap

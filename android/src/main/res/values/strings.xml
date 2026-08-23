@@ -466,4 +466,8 @@
     <string name="size_huge">Huge</string>
     <string name="size_max">Max</string>
     <string name="delay_instant">Instant</string>
+    <string name="reminder_pause_option_30m">30 minutes</string>
+    <string name="reminder_pause_option_1h">1 hour</string>
+    <string name="reminder_pause_option_4h">4 hours</string>
+    <string name="reminder_pause_option_indefinite">Indefinitely</string>
 </resources>

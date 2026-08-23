@@ -466,5 +466,9 @@
     <string name="size_huge">Cực lớn</string>
     <string name="size_max">Tối đa</string>
     <string name="delay_instant">Tức thì</string>
+    <string name="reminder_pause_option_30m">30 phút</string>
+    <string name="reminder_pause_option_1h">1 giờ</string>
+    <string name="reminder_pause_option_4h">4 giờ</string>
+    <string name="reminder_pause_option_indefinite">Vô thời hạn</string>
 </resources>
 
