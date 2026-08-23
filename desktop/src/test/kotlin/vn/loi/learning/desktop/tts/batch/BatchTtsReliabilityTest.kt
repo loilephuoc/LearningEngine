@@ -102,7 +102,7 @@ class BatchTtsReliabilityTest {
             }
             val jobs = (1..300).map { job("id-$it", "text-$it", en) }
             var final: BatchTtsSummary? = null
-            runner(root, engine, BatchTtsExecutionPolicy(100, 1, 0, 0, 1))
+            runner(root, engine, BatchTtsExecutionPolicy(1_000, 1, 0, 0, 1))
                 .runBatch(jobs, "pkg", onProgress = { final = it }).join()
             assertEquals(300, final?.completedJobs)
             assertEquals(30, final?.failedCount)

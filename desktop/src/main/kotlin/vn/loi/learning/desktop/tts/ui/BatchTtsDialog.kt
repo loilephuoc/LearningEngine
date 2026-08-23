@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -477,12 +478,12 @@ fun BatchTtsDialog(
         },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(
-            modifier = Modifier
-                .widthIn(min = 720.dp, max = 920.dp)
-                .heightIn(min = 520.dp, max = 800.dp)
-                .fillMaxWidth(0.92f)
-                .fillMaxSize(0.92f)
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val workspace = BatchTtsWorkspaceLayout.resolve(maxWidth.value, maxHeight.value)
+            Surface(
+                modifier = Modifier
+                .width(workspace.widthDp.dp)
+                .height(workspace.heightDp.dp)
                 .clip(LERadius.md)
                 .border(1.dp, LEColors.borderSubtle, LERadius.md)
                 .onKeyEvent { keyEvent ->
@@ -495,7 +496,7 @@ fun BatchTtsDialog(
             color = LEColors.surface,
             shape = LERadius.md,
             shadowElevation = 8.dp
-        ) {
+            ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // HEADER
                 Row(
@@ -755,7 +756,26 @@ fun BatchTtsDialog(
                     onDismiss = { showOverwriteConfirmation = false }
                 )
             }
+            }
         }
+    }
+}
+
+internal data class BatchTtsWorkspaceSize(val widthDp: Float, val heightDp: Float)
+
+internal object BatchTtsWorkspaceLayout {
+    private const val LARGE_FRACTION = 0.95f
+    private const val STANDARD_FRACTION = 0.94f
+    private const val COMPACT_FRACTION = 0.98f
+
+    fun resolve(availableWidthDp: Float, availableHeightDp: Float): BatchTtsWorkspaceSize {
+        require(availableWidthDp > 0f && availableHeightDp > 0f)
+        val fraction = when {
+            availableWidthDp >= 1440f && availableHeightDp >= 900f -> LARGE_FRACTION
+            availableWidthDp < 720f || availableHeightDp < 560f -> COMPACT_FRACTION
+            else -> STANDARD_FRACTION
+        }
+        return BatchTtsWorkspaceSize(availableWidthDp * fraction, availableHeightDp * fraction)
     }
 }
 
@@ -826,7 +846,7 @@ private fun ConfigStepContent(
         )
 
         // Section 1: Audio Fields to Generate
-        Text("Audio Fields to Generate", style = LETypography.sectionTitle)
+        Text("Audio Fields to Generate", style = LETypography.fieldValueEmphasized)
 
         Surface(
             color = LEColors.surfaceElevated,
@@ -926,7 +946,7 @@ private fun ConfigStepContent(
         }
 
         // Section 3: Voice & Rate Configurations with Strategy & Preview
-        Text("Voice Strategy & Preview", style = LETypography.sectionTitle)
+        Text("Voice Strategy & Preview", style = LETypography.fieldValueEmphasized)
 
         if (isLoadingVoices) {
             Row(
@@ -1091,7 +1111,7 @@ private fun VoiceStrategyCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(title, style = LETypography.caption, fontWeight = FontWeight.Bold, color = LEColors.textPrimary)
+                Text(title, style = LETypography.fieldValue, fontWeight = FontWeight.Bold, color = LEColors.textPrimary)
                 Text(languageLabel, style = LETypography.caption, color = LEColors.textMuted)
             }
 
