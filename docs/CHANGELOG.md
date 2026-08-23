@@ -1,3 +1,19 @@
+# Android Hotfix 4 — multi-session daily caps and Study foreground audio
+
+- Fixed Android live-limit replanning so absolute daily NEW/REVIEW limits are no longer interpreted as
+  current-session targets. The canonical `DailyStudyBudgetQueryService` supplies learner-global completed
+  counts and remaining capacity; Android converts that capacity to session targets while preserving the
+  displayed current card.
+- Added multi-session regressions for 39 completed NEW plus limit 45 (exactly six additional admissions),
+  already-over-cap/live-decrease safety, and REVIEW work completed by previous sessions. Existing
+  NEW → DUE → SKIM and practice-only non-mutation coverage remains green.
+- Stopped all active Study-owned playback on Activity pause and Study-surface disposal, including local and
+  bridge-owned word/example loops, manual one-shot and autoplay. Playback state is cleared and controller
+  generation cancellation prevents a late prepared callback from resurrecting stopped audio.
+- Verification: `clean test` passes 839 suites / 5,239 tests (root 432 / 2,322; Android 109 / 1,053;
+  Desktop 301 / 1,864), zero failures/errors/skips. Android debug assemble, Desktop assemble, and
+  `git diff --check` pass.
+
 # Desktop batch TTS workspace and checkpoint completion
 
 - Replaced the fixed 920x800 Batch TTS cap with viewport-relative 94–98% sizing, retained scroll-safe

@@ -1,5 +1,19 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Android Hotfix 4 — multi-session daily caps and Study foreground audio
+
+- Android live limit updates now translate canonical learner-global daily remaining capacity into an
+  active-session effective target (`sessionCompleted + dailyRemaining`), with one already-presented
+  current-card allowance. Previous-session NEW and REVIEW work therefore cannot be admitted again as
+  apparent session quota; over-cap history is retained without further tail admission.
+- Study foreground loss is handled at Activity `onPause` and Study-surface disposal. Local owners and
+  bridge-owned playback stop, bridge state is cleared, and the audio controller's generation invalidates
+  pending preparation callbacks. Returning foreground does not resume the old loop; explicit new playback
+  remains available. Reminder, Lock Screen, Widget, and other background-owned audio paths are unchanged.
+- Commits: `42a34df6` daily caps and `2f866dbe` Study audio lifecycle. Full clean verification passes
+  root 2,322, Android 1,053, and Desktop 1,864 tests (5,239 total), zero failures/errors/skips;
+  Android debug assemble, Desktop assemble, and `git diff --check` pass. Physical-device UAT remains.
+
 ## Desktop batch TTS reliability follow-up
 
 - Completion follow-up starts from clean HEAD `2789418509de782e6268bbcdaaa149e939a14833` and delivers

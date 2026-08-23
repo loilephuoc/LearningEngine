@@ -1,5 +1,15 @@
 # Roadmap
 
+## Android Hotfix 4 — daily admission and foreground Study audio
+
+- **Automated implementation complete; physical Android UAT pending:** live NEW and REVIEW limit edits
+  now derive active-session targets from learner-global daily completion across all sessions, preserve one
+  already-presented current card safely, and prevent any subsequent over-cap tail. LEARN_NEW continues
+  through DUE and optional practice-only SKIM without SKIM mutating scored counters or scheduling.
+- Study word/example loops, one-shot playback and autoplay stop when the Activity or Study surface loses
+  foreground. Old playback cannot resume on return; explicit new playback remains functional. Independent
+  Reminder, Lock Screen, Widget, and background-owned audio behavior is unchanged.
+
 ## Phase 5 restore reliability and opt-in safety backups
 
 - **Implementation in verification; physical Android UAT pending:** user-managed
