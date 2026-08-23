@@ -66,10 +66,10 @@ fun LockScreenSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Từ vựng màn hình khóa") },
+                title = { Text(stringResource(R.string.lock_screen_settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 }
             )
@@ -98,12 +98,12 @@ fun LockScreenSettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                             Text(
-                                text = "Lock-Screen Wallpaper Vocabulary",
+                                text = stringResource(R.string.lock_screen_wallpaper_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Displays vocabulary on the lock screen via wallpaper. Native fingerprint and SystemUI Keyguard remain 100% functional.",
+                                text = stringResource(R.string.lock_screen_wallpaper_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -122,7 +122,7 @@ fun LockScreenSettingsScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "Note: Vocabulary is displayed by updating the lock-screen wallpaper. Your lock-screen wallpaper will be updated automatically on screen lock. Home screen wallpaper remains unchanged.",
+                                text = stringResource(R.string.lock_screen_note_desc),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(10.dp)
@@ -130,18 +130,20 @@ fun LockScreenSettingsScreen(
                         }
 
                         // Lock-Screen Package Selector
-                        val selectedPackageName = remember(availablePackages, lockScreenDraft.selectedPackageId) {
+                        val noPackagesInstalledLabel = stringResource(R.string.lock_screen_no_packages)
+                        val packageUnavailableLabel = stringResource(R.string.lock_screen_package_unavailable)
+                        val selectedPackageName = remember(availablePackages, lockScreenDraft.selectedPackageId, noPackagesInstalledLabel, packageUnavailableLabel) {
                             val id = lockScreenDraft.selectedPackageId
                             if (id == null) {
-                                availablePackages.firstOrNull()?.name ?: "No packages installed"
+                                availablePackages.firstOrNull()?.name ?: noPackagesInstalledLabel
                             } else {
-                                availablePackages.firstOrNull { it.id == id }?.name ?: "Package unavailable"
+                                availablePackages.firstOrNull { it.id == id }?.name ?: packageUnavailableLabel
                             }
                         }
 
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = "Lock-Screen Package",
+                                text = stringResource(R.string.lock_screen_package_title),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -161,7 +163,7 @@ fun LockScreenSettingsScreen(
                                 ) {
                                     if (availablePackages.isEmpty()) {
                                         DropdownMenuItem(
-                                            text = { Text("Không có gói học đang hoạt động") },
+                                            text = { Text(stringResource(R.string.lock_screen_no_active_packages)) },
                                             onClick = { lockScreenPackageDropdownExpanded = false }
                                         )
                                     } else {
@@ -170,7 +172,7 @@ fun LockScreenSettingsScreen(
                                                 text = {
                                                     Column {
                                                         Text(pkg.name, fontWeight = FontWeight.Medium)
-                                                        Text("${pkg.totalItemCount} items", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        Text(stringResource(R.string.reminder_package_items_count, pkg.totalItemCount), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                     }
                                                 },
                                                 trailingIcon = {
@@ -191,17 +193,17 @@ fun LockScreenSettingsScreen(
 
                         // Lock-Screen Selection Mode Dropdown
                         val modeNames = mapOf(
-                            AndroidLockScreenVocabularyMode.AGAIN_HARD to "Again / Hard",
-                            AndroidLockScreenVocabularyMode.DUE to "Due",
-                            AndroidLockScreenVocabularyMode.NEW_UNSEEN to "New / Unseen",
-                            AndroidLockScreenVocabularyMode.RANDOM_LEARNED to "Random Learned",
-                            AndroidLockScreenVocabularyMode.MARKED_DIFFICULT to "Marked Difficult",
-                            AndroidLockScreenVocabularyMode.RANDOM_ALL to "Random All"
+                            AndroidLockScreenVocabularyMode.AGAIN_HARD to stringResource(R.string.reminder_mode_again_hard),
+                            AndroidLockScreenVocabularyMode.DUE to stringResource(R.string.reminder_mode_due),
+                            AndroidLockScreenVocabularyMode.NEW_UNSEEN to stringResource(R.string.reminder_mode_new_unseen),
+                            AndroidLockScreenVocabularyMode.RANDOM_LEARNED to stringResource(R.string.reminder_mode_random_learned),
+                            AndroidLockScreenVocabularyMode.MARKED_DIFFICULT to stringResource(R.string.reminder_mode_marked_difficult),
+                            AndroidLockScreenVocabularyMode.RANDOM_ALL to stringResource(R.string.reminder_mode_random_all)
                         )
 
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = "Candidate Pool",
+                                text = stringResource(R.string.lock_screen_candidate_pool_title),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -240,12 +242,12 @@ fun LockScreenSettingsScreen(
                         // Background Image Selector
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = "Lock Wallpaper Background",
+                                text = stringResource(R.string.lock_screen_bg_title),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Learning Engine creates the lock-screen wallpaper using your selected background and the current vocabulary card.",
+                                text = stringResource(R.string.lock_screen_bg_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -312,22 +314,22 @@ fun LockScreenSettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "English word size",
+                                text = stringResource(R.string.lock_screen_word_size_title),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Controls how prominently the English word appears on the lock screen.",
+                                text = stringResource(R.string.lock_screen_word_size_desc),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                                 LockWallpaperWordSize.entries.forEachIndexed { index, size ->
                                     val label = when (size) {
-                                        LockWallpaperWordSize.SMALL -> "Small"
-                                        LockWallpaperWordSize.MEDIUM -> "Med"
-                                        LockWallpaperWordSize.LARGE -> "Large"
-                                        LockWallpaperWordSize.EXTRA_LARGE -> "XL"
-                                        LockWallpaperWordSize.HUGE -> "Huge"
+                                        LockWallpaperWordSize.SMALL -> stringResource(R.string.size_small)
+                                        LockWallpaperWordSize.MEDIUM -> stringResource(R.string.size_med)
+                                        LockWallpaperWordSize.LARGE -> stringResource(R.string.size_large)
+                                        LockWallpaperWordSize.EXTRA_LARGE -> stringResource(R.string.size_xl)
+                                        LockWallpaperWordSize.HUGE -> stringResource(R.string.size_huge)
                                     }
                                     SegmentedButton(
                                         selected = lockScreenDraft.wordSize == size,
@@ -348,22 +350,22 @@ fun LockScreenSettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "Vietnamese meaning size",
+                                text = stringResource(R.string.lock_screen_vn_size_title),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Controls the size of the Vietnamese translation text on the lock screen.",
+                                text = stringResource(R.string.lock_screen_vn_size_desc),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                                 LockWallpaperVietnameseSize.entries.forEachIndexed { index, size ->
                                     val label = when (size) {
-                                        LockWallpaperVietnameseSize.SMALL -> "Small"
-                                        LockWallpaperVietnameseSize.MEDIUM -> "Med"
-                                        LockWallpaperVietnameseSize.LARGE -> "Large"
-                                        LockWallpaperVietnameseSize.EXTRA_LARGE -> "XL"
-                                        LockWallpaperVietnameseSize.HUGE -> "Huge"
+                                        LockWallpaperVietnameseSize.SMALL -> stringResource(R.string.size_small)
+                                        LockWallpaperVietnameseSize.MEDIUM -> stringResource(R.string.size_med)
+                                        LockWallpaperVietnameseSize.LARGE -> stringResource(R.string.size_large)
+                                        LockWallpaperVietnameseSize.EXTRA_LARGE -> stringResource(R.string.size_xl)
+                                        LockWallpaperVietnameseSize.HUGE -> stringResource(R.string.size_huge)
                                     }
                                     SegmentedButton(
                                         selected = lockScreenDraft.vietnameseSize == size,
@@ -384,21 +386,21 @@ fun LockScreenSettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "Vocabulary image size",
+                                text = stringResource(R.string.lock_screen_img_size_title),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Controls how much of the available lock-screen card is used by the vocabulary image.",
+                                text = stringResource(R.string.lock_screen_img_size_desc),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                                 LockWallpaperImageSize.entries.forEachIndexed { index, size ->
                                     val label = when (size) {
-                                        LockWallpaperImageSize.MEDIUM -> "Med"
-                                        LockWallpaperImageSize.LARGE -> "Large"
-                                        LockWallpaperImageSize.EXTRA_LARGE -> "XL"
-                                        LockWallpaperImageSize.MAXIMUM -> "Max"
+                                        LockWallpaperImageSize.MEDIUM -> stringResource(R.string.size_med)
+                                        LockWallpaperImageSize.LARGE -> stringResource(R.string.size_large)
+                                        LockWallpaperImageSize.EXTRA_LARGE -> stringResource(R.string.size_xl)
+                                        LockWallpaperImageSize.MAXIMUM -> stringResource(R.string.size_max)
                                     }
                                     SegmentedButton(
                                         selected = lockScreenDraft.imageSize == size,
@@ -424,19 +426,19 @@ fun LockScreenSettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Card background opacity",
+                                    text = stringResource(R.string.lock_screen_opacity_title),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 val currentPct = (lockScreenDraft.cardBackgroundOpacity * 100).roundToInt()
                                 Text(
-                                    text = "Current: $currentPct%",
+                                    text = stringResource(R.string.widget_card_opacity_current, currentPct),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
                             Text(
-                                text = "Controls how strongly the vocabulary card background covers your lock-screen wallpaper.",
+                                text = stringResource(R.string.lock_screen_opacity_desc),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -458,11 +460,11 @@ fun LockScreenSettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                                 Text(
-                                    text = "Auto-play pronunciation",
+                                    text = stringResource(R.string.lock_screen_autoplay_title),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    text = "Play the word pronunciation once when the lock screen wakes.",
+                                    text = stringResource(R.string.lock_screen_autoplay_desc),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -481,11 +483,11 @@ fun LockScreenSettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "Next word every (Quick Review)",
+                                text = stringResource(R.string.lock_screen_quick_review_title),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Rapidly advances to the next vocabulary word on lock screen after pronunciation completes.",
+                                text = stringResource(R.string.lock_screen_quick_review_desc),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -517,11 +519,11 @@ fun LockScreenSettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                                     Text(
-                                        text = "Prepare next word while screen is off",
+                                        text = stringResource(R.string.lock_screen_screen_off_prep_title),
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                     Text(
-                                        text = "Prepares the next word in the background while the screen is off. Does not wake screen or show popup.",
+                                        text = stringResource(R.string.lock_screen_screen_off_prep_desc),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -536,11 +538,11 @@ fun LockScreenSettingsScreen(
 
                             if (lockScreenDraft.screenOffPreparationEnabled) {
                                 Text(
-                                    text = "Prepare after delay",
+                                    text = stringResource(R.string.lock_screen_prep_delay_title),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                val delays = listOf(0L to "Instant", 10000L to "10s", 30000L to "30s", 60000L to "1m", 120000L to "2m")
+                                val delays = listOf(0L to stringResource(R.string.delay_instant), 10000L to "10s", 30000L to "30s", 60000L to "1m", 120000L to "2m")
                                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                                     delays.forEachIndexed { index, (delayMs, label) ->
                                         SegmentedButton(

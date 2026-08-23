@@ -517,4 +517,23 @@ class AppLanguageAndUxPolishTest {
         assertTrue(surfaces.getValue("vn/loi/learning/android/recovery/BackupRestoreScreen.kt").contains("Tạo bản sao lưu thành công"))
         assertTrue(surfaces.getValue("vn/loi/learning/android/recording/QuickVoiceRecordingsScreen.kt").contains("Bản ghi âm"))
     }
+    @Test
+    fun `Home widget and lock screen settings keep English Vietnamese key parity`() {
+        val enFile = java.io.File("src/main/res/values/strings.xml").takeIf { it.exists() }
+            ?: java.io.File("android/src/main/res/values/strings.xml")
+        val viFile = java.io.File("src/main/res/values-vi/strings.xml").takeIf { it.exists() }
+            ?: java.io.File("android/src/main/res/values-vi/strings.xml")
+        val keyRegex = Regex("""<string\s+name="([^"]+)">""")
+        val enKeys = keyRegex.findAll(enFile.readText()).map { it.groupValues[1] }.toSet()
+        val viKeys = keyRegex.findAll(viFile.readText()).map { it.groupValues[1] }.toSet()
+        assertEquals(enKeys, viKeys)
+        listOf("widget_auto_next_rotation_title", "widget_screen_on_only_explanation",
+            "lock_screen_wallpaper_title", "lock_screen_candidate_pool_title",
+            "lock_screen_quick_review_desc", "lock_screen_prep_delay_title", "delay_instant"
+        ).forEach { key -> assertTrue("Missing localized key: $key", key in enKeys) }
+        val widget = java.io.File("src/main/kotlin/vn/loi/learning/android/reminder/HomeWidgetSettingsScreen.kt").readText()
+        val lock = java.io.File("src/main/kotlin/vn/loi/learning/android/reminder/LockScreenSettingsScreen.kt").readText()
+        assertTrue(widget.contains("stringResource(R.string.widget_settings_title)"))
+        assertTrue(lock.contains("stringResource(R.string.lock_screen_settings_title)"))
+    }
 }

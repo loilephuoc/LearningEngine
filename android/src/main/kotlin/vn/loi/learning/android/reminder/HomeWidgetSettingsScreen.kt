@@ -79,10 +79,10 @@ fun HomeWidgetSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tiện ích từ vựng màn hình chính") },
+                title = { Text(stringResource(R.string.widget_settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 }
             )
@@ -111,12 +111,12 @@ fun HomeWidgetSettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                             Text(
-                                text = "Auto-Next Word Rotation",
+                                text = stringResource(R.string.widget_auto_next_rotation_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = if (homeWidgetDraft.autoNextEnabled) "Automatically cycles words while screen is on" else "Rotation paused",
+                                text = if (homeWidgetDraft.autoNextEnabled) stringResource(R.string.widget_auto_next_cycles_desc) else stringResource(R.string.widget_auto_next_paused_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -130,10 +130,11 @@ fun HomeWidgetSettingsScreen(
                     }
 
                     // Package Selector
-                    val selectedWidgetPackageName = remember(availablePackages, homeWidgetDraft.selectedPackageId) {
+                    val allPackagesAutoLabel = stringResource(R.string.widget_all_packages_auto)
+                    val selectedWidgetPackageName = remember(availablePackages, homeWidgetDraft.selectedPackageId, allPackagesAutoLabel) {
                         val id = homeWidgetDraft.selectedPackageId
                         if (id == null) {
-                            "All packages (Auto)"
+                            allPackagesAutoLabel
                         } else {
                             availablePackages.find { it.id == id }?.name ?: id
                         }
@@ -141,7 +142,7 @@ fun HomeWidgetSettingsScreen(
 
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Vocabulary package",
+                            text = stringResource(R.string.widget_package_title),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Box(modifier = Modifier.fillMaxWidth()) {
@@ -176,7 +177,7 @@ fun HomeWidgetSettingsScreen(
                     // Selection Mode
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Selection mode",
+                            text = stringResource(R.string.widget_selection_mode_title),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Box(modifier = Modifier.fillMaxWidth()) {
@@ -187,11 +188,11 @@ fun HomeWidgetSettingsScreen(
                             ) {
                                 Text(
                                     text = when (homeWidgetDraft.selectionMode) {
-                                        AndroidVocabularyReminderSelectionMode.RANDOM_ALL -> "Random All"
-                                        AndroidVocabularyReminderSelectionMode.DUE -> "Due (FSRS)"
-                                        AndroidVocabularyReminderSelectionMode.AGAIN_HARD -> "Again / Hard"
-                                        AndroidVocabularyReminderSelectionMode.RANDOM_LEARNED -> "Learned"
-                                        AndroidVocabularyReminderSelectionMode.MARKED_DIFFICULT -> "Marked Difficult"
+                                        AndroidVocabularyReminderSelectionMode.RANDOM_ALL -> stringResource(R.string.reminder_mode_random_all)
+                                        AndroidVocabularyReminderSelectionMode.DUE -> stringResource(R.string.reminder_mode_due)
+                                        AndroidVocabularyReminderSelectionMode.AGAIN_HARD -> stringResource(R.string.reminder_mode_again_hard)
+                                        AndroidVocabularyReminderSelectionMode.RANDOM_LEARNED -> stringResource(R.string.reminder_mode_random_learned)
+                                        AndroidVocabularyReminderSelectionMode.MARKED_DIFFICULT -> stringResource(R.string.reminder_mode_marked_difficult)
                                     },
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.bodyMedium
@@ -206,11 +207,11 @@ fun HomeWidgetSettingsScreen(
                                         text = {
                                             Text(
                                                 when (mode) {
-                                                    AndroidVocabularyReminderSelectionMode.RANDOM_ALL -> "Random All"
-                                                    AndroidVocabularyReminderSelectionMode.DUE -> "Due (FSRS)"
-                                                    AndroidVocabularyReminderSelectionMode.AGAIN_HARD -> "Again / Hard"
-                                                    AndroidVocabularyReminderSelectionMode.RANDOM_LEARNED -> "Learned"
-                                                    AndroidVocabularyReminderSelectionMode.MARKED_DIFFICULT -> "Marked Difficult"
+                                                    AndroidVocabularyReminderSelectionMode.RANDOM_ALL -> stringResource(R.string.reminder_mode_random_all)
+                                                    AndroidVocabularyReminderSelectionMode.DUE -> stringResource(R.string.reminder_mode_due)
+                                                    AndroidVocabularyReminderSelectionMode.AGAIN_HARD -> stringResource(R.string.reminder_mode_again_hard)
+                                                    AndroidVocabularyReminderSelectionMode.RANDOM_LEARNED -> stringResource(R.string.reminder_mode_random_learned)
+                                                    AndroidVocabularyReminderSelectionMode.MARKED_DIFFICULT -> stringResource(R.string.reminder_mode_marked_difficult)
                                                 }
                                             )
                                         },
@@ -227,7 +228,7 @@ fun HomeWidgetSettingsScreen(
                     // Interval Configuration (Custom Input + Presets)
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "Change word every",
+                            text = stringResource(R.string.widget_interval_label),
                             style = MaterialTheme.typography.bodyMedium
                         )
 
@@ -248,7 +249,7 @@ fun HomeWidgetSettingsScreen(
                                     intervalTextFieldValue = nextTfv.copy(text = filteredText, selection = newSelection)
                                     applyHomeWidgetDraft(homeWidgetDraft.copy(intervalValueText = filteredText))
                                 },
-                                label = { Text("Giá trị") },
+                                label = { Text(stringResource(R.string.widget_input_value_label)) },
                                 isError = homeWidgetDraft.intervalValidationMessage != null,
                                 supportingText = homeWidgetDraft.intervalValidationMessage?.let { msg -> { Text(msg) } },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -285,7 +286,7 @@ fun HomeWidgetSettingsScreen(
 
                         // Presets
                         Text(
-                            text = "Presets",
+                            text = stringResource(R.string.reminder_presets_label),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -321,15 +322,15 @@ fun HomeWidgetSettingsScreen(
                     // Word Size
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "English word size",
+                            text = stringResource(R.string.widget_word_size_title),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         val wordSizes = listOf(
-                            LockWallpaperWordSize.SMALL to "Small",
-                            LockWallpaperWordSize.MEDIUM to "Med",
-                            LockWallpaperWordSize.LARGE to "Large",
-                            LockWallpaperWordSize.EXTRA_LARGE to "XL",
-                            LockWallpaperWordSize.HUGE to "Huge"
+                            LockWallpaperWordSize.SMALL to stringResource(R.string.size_small),
+                            LockWallpaperWordSize.MEDIUM to stringResource(R.string.size_med),
+                            LockWallpaperWordSize.LARGE to stringResource(R.string.size_large),
+                            LockWallpaperWordSize.EXTRA_LARGE to stringResource(R.string.size_xl),
+                            LockWallpaperWordSize.HUGE to stringResource(R.string.size_huge)
                         )
                         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                             wordSizes.forEachIndexed { index, (size, label) ->
@@ -347,15 +348,15 @@ fun HomeWidgetSettingsScreen(
                     // Vietnamese Size
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Vietnamese meaning size",
+                            text = stringResource(R.string.widget_vn_size_title),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         val vnSizes = listOf(
-                            LockWallpaperVietnameseSize.SMALL to "Small",
-                            LockWallpaperVietnameseSize.MEDIUM to "Med",
-                            LockWallpaperVietnameseSize.LARGE to "Large",
-                            LockWallpaperVietnameseSize.EXTRA_LARGE to "XL",
-                            LockWallpaperVietnameseSize.HUGE to "Huge"
+                            LockWallpaperVietnameseSize.SMALL to stringResource(R.string.size_small),
+                            LockWallpaperVietnameseSize.MEDIUM to stringResource(R.string.size_med),
+                            LockWallpaperVietnameseSize.LARGE to stringResource(R.string.size_large),
+                            LockWallpaperVietnameseSize.EXTRA_LARGE to stringResource(R.string.size_xl),
+                            LockWallpaperVietnameseSize.HUGE to stringResource(R.string.size_huge)
                         )
                         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                             vnSizes.forEachIndexed { index, (size, label) ->
@@ -378,12 +379,12 @@ fun HomeWidgetSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Widget card opacity",
+                                text = stringResource(R.string.widget_card_opacity_title),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             val currentPct = (homeWidgetDraft.cardBackgroundOpacity * 100).roundToInt()
                             Text(
-                                text = "Current: $currentPct%",
+                                text = stringResource(R.string.widget_card_opacity_current, currentPct),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
@@ -407,11 +408,11 @@ fun HomeWidgetSettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                             Text(
-                                text = "Update only while screen is ON",
+                                text = stringResource(R.string.widget_screen_on_only_title),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Pauses timer when screen is off to save battery.",
+                                text = stringResource(R.string.widget_screen_on_only_explanation),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

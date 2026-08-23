@@ -1,3 +1,9 @@
+# Android widget and lock-screen localization integration
+
+- Moved the remaining Home Widget and Lock Screen settings labels to paired English/Vietnamese
+  resources, including sizing, opacity, package selection, autoplay, and preparation-delay copy.
+- Preserved full locale key parity and the wider Sync localization surface.
+
 # Android revealed Study actions integration
 
 - Replaced the revealed-card action dock with ordered Mute/Unmute, Auto Play, Quick Edit, and
