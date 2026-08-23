@@ -1,3 +1,12 @@
+# Android Supabase session infrastructure
+
+- Added an isolated Android sync connection repository with a dedicated preference namespace containing
+  only validated project URL and publishable/anon key; no existing Android preference family changed.
+- Added memory-only Android session wiring over the shared password/refresh implementation. Password
+  buffers are cleared, token pairs rotate atomically, and process recreation requires login again.
+- Added no Android UI, navigation, manifest, resource, worker, receiver, polling, Realtime, or startup
+  network behavior.
+
 # Desktop manual Supabase sync controls
 
 - Added atomic Desktop connection configuration for HTTPS project URL plus publishable/anon key, with

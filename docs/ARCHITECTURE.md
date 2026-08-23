@@ -1947,3 +1947,9 @@ before its event, pushes the durable outbox, pulls ordered pages, downloads/vali
 dispatches each delta to its existing Content/Review/Media application service, and ACKs after committed
 local cursor advancement. No scheduler, polling, Realtime, package replacement, or Study mutation is
 introduced.
+
+Android sync infrastructure is isolated under `android.sync` and is not part of Android navigation or
+startup composition. A dedicated SharedPreferences namespace may persist only the validated project URL
+and publishable/anon key. Authenticated sessions reuse the shared refresh-rotation contract but use a
+memory-only secure-store fallback because the Android client has no reviewed Keystore credential adapter;
+password and access/refresh tokens never enter preferences, files, databases, backups, or diagnostics.
