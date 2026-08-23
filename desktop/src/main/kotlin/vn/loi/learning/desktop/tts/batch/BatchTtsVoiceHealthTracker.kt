@@ -21,21 +21,23 @@ data class VoiceHealthStatus(
     val state: VoiceHealthState,
     val consecutiveHardTimeouts: Int,
     val consecutiveFastFailures: Int,
+    val circuitOpenCount: Int = 0,
     val lastFailureTimestamp: Long = 0L,
     val lastSuccessTimestamp: Long = 0L,
     val circuitOpenUntilTimestamp: Long = 0L
 )
 
 /**
- * Batch-scoped, thread-safe, language-aware health tracker and circuit breaker for TTS voice candidates.
+ * Batch-scoped, thread-safe, language-aware health tracker and dynamic circuit breaker for TTS voice candidates.
  *
  * Prevents large-batch stalls when a primary voice provider is unhealthy or unresponsive
- * by deprioritizing broken candidates and routing immediately to healthy fallbacks.
+ * by deprioritizing broken candidates and routing immediately to healthy fallbacks with 0ms delay.
  */
 class BatchTtsVoiceHealthTracker(
     private val circuitOpenCooldownMillis: Long = 30_000L,
+    private val maxCooldownMillis: Long = 300_000L,
     private val maxConsecutiveHardTimeoutsBeforeOpen: Int = 1,
-    private val maxConsecutiveFastFailuresBeforeOpen: Int = 3,
+    private val maxConsecutiveFastFailuresBeforeOpen: Int = 2,
     private val eventLogger: BatchTtsEventLogger = BatchTtsEventLogger.NoOp
 ) {
     private val statuses = ConcurrentHashMap<String, VoiceHealthStatus>()
@@ -47,7 +49,7 @@ class BatchTtsVoiceHealthTracker(
     fun getStatus(voiceId: String): VoiceHealthStatus {
         val now = System.currentTimeMillis()
         val current = statuses.computeIfAbsent(voiceId) {
-            VoiceHealthStatus(voiceId, VoiceHealthState.HEALTHY, 0, 0)
+            VoiceHealthStatus(voiceId, VoiceHealthState.HEALTHY, 0, 0, 0)
         }
         if (current.state == VoiceHealthState.CIRCUIT_OPEN && now >= current.circuitOpenUntilTimestamp) {
             val probed = current.copy(state = VoiceHealthState.HALF_OPEN_PROBE)
@@ -74,7 +76,7 @@ class BatchTtsVoiceHealthTracker(
         return when (status.state) {
             VoiceHealthState.HEALTHY, VoiceHealthState.DEGRADED -> true
             VoiceHealthState.HALF_OPEN_PROBE -> {
-                // Allow one probe attempt at a time
+                // Allow one probe attempt at a time across the batch
                 probeInFlight.putIfAbsent(voiceId, true) == null || !hasAlternativeCandidates
             }
             VoiceHealthState.CIRCUIT_OPEN -> !hasAlternativeCandidates
@@ -86,18 +88,20 @@ class BatchTtsVoiceHealthTracker(
      */
     fun recordSuccess(voiceId: String) {
         probeInFlight.remove(voiceId)
-        val prev = statuses[voiceId] ?: VoiceHealthStatus(voiceId, VoiceHealthState.HEALTHY, 0, 0)
+        val prev = statuses[voiceId] ?: VoiceHealthStatus(voiceId, VoiceHealthState.HEALTHY, 0, 0, 0)
         val now = System.currentTimeMillis()
         statuses[voiceId] = VoiceHealthStatus(
             voiceId = voiceId,
             state = VoiceHealthState.HEALTHY,
             consecutiveHardTimeouts = 0,
             consecutiveFastFailures = 0,
+            circuitOpenCount = 0,
             lastFailureTimestamp = prev.lastFailureTimestamp,
             lastSuccessTimestamp = now,
             circuitOpenUntilTimestamp = 0L
         )
         if (prev.state != VoiceHealthState.HEALTHY) {
+            eventLogger.logVoiceCircuitRecovered(voiceId)
             eventLogger.logVoiceHealthChanged(
                 voiceId = voiceId,
                 oldState = prev.state.name,
@@ -113,26 +117,33 @@ class BatchTtsVoiceHealthTracker(
      */
     fun recordHardTimeout(voiceId: String) {
         probeInFlight.remove(voiceId)
-        val prev = statuses[voiceId] ?: VoiceHealthStatus(voiceId, VoiceHealthState.HEALTHY, 0, 0)
+        val prev = statuses[voiceId] ?: VoiceHealthStatus(voiceId, VoiceHealthState.HEALTHY, 0, 0, 0)
         val now = System.currentTimeMillis()
         val newTimeouts = prev.consecutiveHardTimeouts + 1
         val shouldOpen = newTimeouts >= maxConsecutiveHardTimeoutsBeforeOpen
+        val newOpenCount = if (shouldOpen) prev.circuitOpenCount + 1 else prev.circuitOpenCount
         val newState = if (shouldOpen) VoiceHealthState.CIRCUIT_OPEN else VoiceHealthState.DEGRADED
-        val openUntil = if (shouldOpen) now + circuitOpenCooldownMillis else 0L
+        val currentCooldown = if (shouldOpen) {
+            (circuitOpenCooldownMillis * (1L shl (newOpenCount - 1).coerceIn(0, 4))).coerceAtMost(maxCooldownMillis)
+        } else {
+            0L
+        }
+        val openUntil = if (shouldOpen) now + currentCooldown else 0L
 
         statuses[voiceId] = prev.copy(
             state = newState,
             consecutiveHardTimeouts = newTimeouts,
+            circuitOpenCount = newOpenCount,
             lastFailureTimestamp = now,
             circuitOpenUntilTimestamp = openUntil
         )
         if (shouldOpen) {
-            eventLogger.logVoiceCircuitOpen(voiceId, newTimeouts, circuitOpenCooldownMillis)
+            eventLogger.logVoiceCircuitOpen(voiceId, newTimeouts, currentCooldown)
             eventLogger.logVoiceHealthChanged(
                 voiceId = voiceId,
                 oldState = prev.state.name,
                 newState = VoiceHealthState.CIRCUIT_OPEN.name,
-                reason = "Hard timeout threshold reached ($newTimeouts timeouts)"
+                reason = "Hard timeout threshold reached ($newTimeouts timeouts, cooldown ${currentCooldown}ms)"
             )
         } else {
             eventLogger.logVoiceHealthChanged(
@@ -145,30 +156,44 @@ class BatchTtsVoiceHealthTracker(
     }
 
     /**
-     * Records a fast non-timeout failure (e.g. HTTP 503, invalid voice).
+     * Records a fast non-timeout failure (e.g. HTTP 503, connection dropped).
      */
     fun recordFastFailure(voiceId: String) {
         probeInFlight.remove(voiceId)
-        val prev = statuses[voiceId] ?: VoiceHealthStatus(voiceId, VoiceHealthState.HEALTHY, 0, 0)
+        val prev = statuses[voiceId] ?: VoiceHealthStatus(voiceId, VoiceHealthState.HEALTHY, 0, 0, 0)
         val now = System.currentTimeMillis()
         val newFailures = prev.consecutiveFastFailures + 1
         val shouldOpen = newFailures >= maxConsecutiveFastFailuresBeforeOpen
+        val newOpenCount = if (shouldOpen) prev.circuitOpenCount + 1 else prev.circuitOpenCount
         val newState = if (shouldOpen) VoiceHealthState.CIRCUIT_OPEN else VoiceHealthState.DEGRADED
-        val openUntil = if (shouldOpen) now + circuitOpenCooldownMillis else 0L
+        val currentCooldown = if (shouldOpen) {
+            (circuitOpenCooldownMillis * (1L shl (newOpenCount - 1).coerceIn(0, 4))).coerceAtMost(maxCooldownMillis)
+        } else {
+            0L
+        }
+        val openUntil = if (shouldOpen) now + currentCooldown else 0L
 
         statuses[voiceId] = prev.copy(
             state = newState,
             consecutiveFastFailures = newFailures,
+            circuitOpenCount = newOpenCount,
             lastFailureTimestamp = now,
             circuitOpenUntilTimestamp = openUntil
         )
         if (shouldOpen) {
-            eventLogger.logVoiceCircuitOpen(voiceId, newFailures, circuitOpenCooldownMillis)
+            eventLogger.logVoiceCircuitOpen(voiceId, newFailures, currentCooldown)
             eventLogger.logVoiceHealthChanged(
                 voiceId = voiceId,
                 oldState = prev.state.name,
                 newState = VoiceHealthState.CIRCUIT_OPEN.name,
-                reason = "Fast failure threshold reached ($newFailures failures)"
+                reason = "Fast failure threshold reached ($newFailures failures, cooldown ${currentCooldown}ms)"
+            )
+        } else {
+            eventLogger.logVoiceHealthChanged(
+                voiceId = voiceId,
+                oldState = prev.state.name,
+                newState = VoiceHealthState.DEGRADED.name,
+                reason = "Fast failure count: $newFailures"
             )
         }
     }
@@ -181,8 +206,8 @@ class BatchTtsVoiceHealthTracker(
         return candidates.sortedBy { voice ->
             when (getStatus(voice.id).state) {
                 VoiceHealthState.HEALTHY -> 0
-                VoiceHealthState.DEGRADED -> 1
-                VoiceHealthState.HALF_OPEN_PROBE -> 2
+                VoiceHealthState.HALF_OPEN_PROBE -> 1
+                VoiceHealthState.DEGRADED -> 2
                 VoiceHealthState.CIRCUIT_OPEN -> 3
             }
         }

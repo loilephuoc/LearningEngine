@@ -2064,10 +2064,24 @@ class ContentLibraryViewModel(
     /**
      * Applies a batch of generated TTS audio references atomically to content items and captures an undo snapshot.
      */
-    fun applyBatchTtsAudio(results: List<vn.loi.learning.desktop.tts.batch.BatchTtsJobResult>) {
-        val current = packageBrowserUiState ?: return
+    fun applyBatchTtsAudio(
+        results: List<vn.loi.learning.desktop.tts.batch.BatchTtsJobResult>,
+        onProgress: ((appliedCount: Int, totalCount: Int, failedCount: Int) -> Unit)? = null,
+        onComplete: ((appliedCount: Int, failedCount: Int) -> Unit)? = null
+    ) {
+        val current = packageBrowserUiState ?: run {
+            onComplete?.invoke(0, 0)
+            return
+        }
         val validResults = results.filter { it.status == vn.loi.learning.desktop.tts.batch.BatchTtsJobStatus.SUCCESS && it.assetRelativePath != null }
-        if (validResults.isEmpty()) return
+        if (validResults.isEmpty()) {
+            onComplete?.invoke(0, 0)
+            return
+        }
+
+        val totalTargets = validResults.size
+        var appliedCount = 0
+        var failedCount = 0
 
         val undoEntries = mutableListOf<vn.loi.learning.desktop.tts.batch.BatchTtsUndoEntry>()
         val newlyCreatedPaths = validResults.mapNotNull { it.assetRelativePath }.toSet()
@@ -2079,38 +2093,49 @@ class ContentLibraryViewModel(
                 val reloadedBefore = packageBrowserFacade.loadForPackage(current.installedPackageId, current.packageName)
 
                 for ((contentId, jobs) in byContentId) {
-                    val item = reloadedBefore.allItems.firstOrNull { it.contentId.value == contentId } ?: continue
-                    var draft = item.toDraftEdits()
-
-                    for (res in jobs) {
-                        val path = res.assetRelativePath ?: continue
-                        val previousRef = when (res.job.field) {
-                            vn.loi.learning.desktop.tts.TtsField.QUESTION -> item.questionAudioRef
-                            vn.loi.learning.desktop.tts.TtsField.ANSWER -> item.answerAudioRef
-                            vn.loi.learning.desktop.tts.TtsField.EXAMPLE -> item.exampleAudioRef
-                            vn.loi.learning.desktop.tts.TtsField.TRANSLATION -> item.translationAudioRef
+                    try {
+                        val item = reloadedBefore.allItems.firstOrNull { it.contentId.value == contentId }
+                        if (item == null) {
+                            failedCount += jobs.size
+                            onProgress?.invoke(appliedCount, totalTargets, failedCount)
+                            continue
                         }
-                        undoEntries.add(
-                            vn.loi.learning.desktop.tts.batch.BatchTtsUndoEntry(
-                                contentId = contentId,
-                                field = res.job.field,
-                                previousAudioRef = previousRef,
-                                appliedAudioRef = path
+                        var draft = item.toDraftEdits()
+
+                        for (res in jobs) {
+                            val path = res.assetRelativePath ?: continue
+                            val previousRef = when (res.job.field) {
+                                vn.loi.learning.desktop.tts.TtsField.QUESTION -> item.questionAudioRef
+                                vn.loi.learning.desktop.tts.TtsField.ANSWER -> item.answerAudioRef
+                                vn.loi.learning.desktop.tts.TtsField.EXAMPLE -> item.exampleAudioRef
+                                vn.loi.learning.desktop.tts.TtsField.TRANSLATION -> item.translationAudioRef
+                            }
+                            undoEntries.add(
+                                vn.loi.learning.desktop.tts.batch.BatchTtsUndoEntry(
+                                    contentId = contentId,
+                                    field = res.job.field,
+                                    previousAudioRef = previousRef,
+                                    appliedAudioRef = path
+                                )
                             )
-                        )
-                        draft = when (res.job.field) {
-                            vn.loi.learning.desktop.tts.TtsField.QUESTION -> draft.copy(questionAudioRef = path)
-                            vn.loi.learning.desktop.tts.TtsField.ANSWER -> draft.copy(answerAudioRef = path)
-                            vn.loi.learning.desktop.tts.TtsField.EXAMPLE -> draft.copy(exampleAudioRef = path)
-                            vn.loi.learning.desktop.tts.TtsField.TRANSLATION -> draft.copy(translationAudioRef = path)
+                            draft = when (res.job.field) {
+                                vn.loi.learning.desktop.tts.TtsField.QUESTION -> draft.copy(questionAudioRef = path)
+                                vn.loi.learning.desktop.tts.TtsField.ANSWER -> draft.copy(answerAudioRef = path)
+                                vn.loi.learning.desktop.tts.TtsField.EXAMPLE -> draft.copy(exampleAudioRef = path)
+                                vn.loi.learning.desktop.tts.TtsField.TRANSLATION -> draft.copy(translationAudioRef = path)
+                            }
+                            appliedCount++
                         }
-                    }
 
-                    packageBrowserFacade.persistEdit(
-                        draft = draft,
-                        installedPackageId = current.installedPackageId,
-                        packageName = current.packageName
-                    )
+                        packageBrowserFacade.persistEdit(
+                            draft = draft,
+                            installedPackageId = current.installedPackageId,
+                            packageName = current.packageName
+                        )
+                    } catch (_: Exception) {
+                        failedCount += jobs.size
+                    }
+                    onProgress?.invoke(appliedCount, totalTargets, failedCount)
                 }
 
                 val snapshot = vn.loi.learning.desktop.tts.batch.BatchTtsUndoSnapshot(
@@ -2136,9 +2161,11 @@ class ContentLibraryViewModel(
                     lastBatchTtsUndoSnapshot = snapshot
                 )
                 uiState = uiState.copy(importMessage = "Applied ${snapshot.totalApplied} audio targets successfully.")
+                onComplete?.invoke(snapshot.totalApplied, failedCount)
             },
             onFailure = { ex ->
                 uiState = uiState.copy(importError = "Failed to apply batch TTS: ${ex.message}")
+                onComplete?.invoke(appliedCount, totalTargets - appliedCount)
             }
         )
     }

@@ -200,7 +200,7 @@ class BatchTtsRunner(
 
                                     if (!isEligible) {
                                         // Unhealthy voice; bypass without spending timeout budget
-                                        eventLogger.logVoiceCircuitOpen(voice.id, 1, 30_000L)
+                                        eventLogger.logVoiceCircuitBypassed(voice.id, i + 1)
                                         attempts.add(
                                             VoiceAttempt(
                                                 voice = voice,

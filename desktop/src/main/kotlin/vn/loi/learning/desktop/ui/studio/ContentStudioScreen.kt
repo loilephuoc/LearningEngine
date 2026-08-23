@@ -129,7 +129,11 @@ fun ContentStudioScreen(
     onCloseContentMaintenanceExport: (() -> Unit)? = null,
     ttsAudioService: DesktopTtsAudioService? = null,
     onApplyTtsAudio: ((contentId: String, field: TtsField, audioRef: String) -> Unit)? = null,
-    onApplyBatchTtsAudio: ((List<vn.loi.learning.desktop.tts.batch.BatchTtsJobResult>) -> Unit)? = null,
+    onApplyBatchTtsAudio: ((
+        results: List<vn.loi.learning.desktop.tts.batch.BatchTtsJobResult>,
+        onProgress: ((appliedCount: Int, totalCount: Int, failedCount: Int) -> Unit)?,
+        onComplete: ((appliedCount: Int, failedCount: Int) -> Unit)?
+    ) -> Unit)? = null,
     onUndoBatchTts: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -644,10 +648,12 @@ fun ContentStudioScreen(
                 targetField = batchTtsTargetField,
                 ttsService = resolvedTtsService,
                 contentMediaStorage = contentMediaStorage,
-                onApplyBatch = { results ->
-                    onApplyBatchTtsAudio?.invoke(results)
-                    showBatchTtsDialog = false
-                    batchTtsScopeItems = emptyList()
+                onApplyBatch = { results, onProgress, onComplete ->
+                    if (onApplyBatchTtsAudio != null) {
+                        onApplyBatchTtsAudio.invoke(results, onProgress, onComplete)
+                    } else {
+                        onComplete(results.count { it.status == vn.loi.learning.desktop.tts.batch.BatchTtsJobStatus.SUCCESS }, 0)
+                    }
                 },
                 onDismiss = {
                     showBatchTtsDialog = false

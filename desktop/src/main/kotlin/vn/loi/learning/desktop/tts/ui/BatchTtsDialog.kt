@@ -23,12 +23,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -78,6 +80,7 @@ import vn.loi.learning.desktop.tts.batch.BatchTtsRunner
 import vn.loi.learning.desktop.tts.batch.BatchTtsScanner
 import vn.loi.learning.desktop.tts.batch.BatchTtsScopeScan
 import vn.loi.learning.desktop.tts.batch.BatchTtsSummary
+import vn.loi.learning.desktop.tts.batch.BatchTtsTarget
 import vn.loi.learning.desktop.tts.batch.RuntimeBatchTtsEventLogger
 import vn.loi.learning.desktop.tts.preset.TtsLanguagePresetConfig
 import vn.loi.learning.desktop.tts.preset.TtsPreset
@@ -105,7 +108,9 @@ import vn.loi.learning.desktop.ui.studio.DesktopAudioPlayer
 enum class BatchTtsDialogStep {
     CONFIG,
     RUNNING,
-    COMPLETED
+    COMPLETED,
+    APPLYING,
+    APPLY_COMPLETED
 }
 
 /**
@@ -123,7 +128,11 @@ fun BatchTtsDialog(
     presetRepository: TtsPresetRepository? = null,
     audioPlayer: AudioPlayer? = null,
     initialProfiles: TtsVoiceProfiles = TtsVoiceProfiles(),
-    onApplyBatch: (results: List<BatchTtsJobResult>) -> Unit,
+    onApplyBatch: ((
+        results: List<BatchTtsJobResult>,
+        onProgress: (appliedCount: Int, totalCount: Int, failedCount: Int) -> Unit,
+        onComplete: (appliedCount: Int, failedCount: Int) -> Unit
+    ) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -331,6 +340,13 @@ fun BatchTtsDialog(
     var isCancelling by remember { mutableStateOf(false) }
     var batchStartMessage by remember { mutableStateOf<String?>(null) }
 
+    // Apply Phase States
+    var applyProgress by remember { mutableStateOf(0f) }
+    var applyCompletedCount by remember { mutableStateOf(0) }
+    var applyTotalCount by remember { mutableStateOf(0) }
+    var applyFailedCount by remember { mutableStateOf(0) }
+    var applyStartTimeMillis by remember { mutableStateOf(0L) }
+
     // Load available voices
     LaunchedEffect(Unit) {
         isLoadingVoices = true
@@ -413,7 +429,10 @@ fun BatchTtsDialog(
         activeRunner?.cancel()
     }
 
-    fun startBatch(jobsToRun: List<BatchTtsJob>) {
+    fun startBatch(
+        jobsToRun: List<BatchTtsJob>,
+        mergedBaseResults: List<BatchTtsJobResult> = emptyList()
+    ) {
         if (jobsToRun.isEmpty()) return
         val plan = BatchTtsPlanIdentity.create(packageName, jobsToRun, overwriteExisting)
         eventLogger.logPlanCreated(
@@ -445,7 +464,11 @@ fun BatchTtsDialog(
         isCancelling = false
         stopAudio()
         currentStep = BatchTtsDialogStep.RUNNING
-        summary = BatchTtsSummary.initial(jobsToRun.size)
+        summary = BatchTtsSummary.initial(jobsToRun.size + mergedBaseResults.size, skippedCount = 0).copy(
+            jobResults = mergedBaseResults,
+            successCount = mergedBaseResults.count { it.status == BatchTtsJobStatus.SUCCESS },
+            completedJobs = mergedBaseResults.size
+        )
 
         // Generate permanent MP3 assets without auto-applying to Content
         runner.runBatch(
@@ -455,7 +478,19 @@ fun BatchTtsDialog(
             overwriteExisting = overwriteExisting,
             onApply = null, // Generate != Apply separation
             onProgress = { updatedSummary ->
-                summary = updatedSummary
+                if (mergedBaseResults.isEmpty()) {
+                    summary = updatedSummary
+                } else {
+                    val combinedResults = mergedBaseResults + updatedSummary.jobResults
+                    summary = updatedSummary.copy(
+                        totalJobs = mergedBaseResults.size + updatedSummary.totalJobs,
+                        completedJobs = mergedBaseResults.size + updatedSummary.completedJobs,
+                        successCount = mergedBaseResults.count { it.status == BatchTtsJobStatus.SUCCESS } + updatedSummary.successCount,
+                        failedCount = updatedSummary.failedCount,
+                        cancelledCount = updatedSummary.cancelledCount,
+                        jobResults = combinedResults
+                    )
+                }
                 if (updatedSummary.isFinished || updatedSummary.isCancelled) {
                     isCancelling = false
                     currentStep = BatchTtsDialogStep.COMPLETED
@@ -504,16 +539,97 @@ fun BatchTtsDialog(
     }
 
     fun handleRetryFailed() {
-        val failedJobs = summary.failedResults.map { it.job }
-        if (failedJobs.isNotEmpty()) {
-            startBatch(failedJobs)
+        val previousSuccesses = summary.successfulResults
+        val failedResults = summary.failedResults
+        if (failedResults.isEmpty()) return
+
+        val failedTargets = failedResults.map { result ->
+            BatchTtsTarget(
+                contentId = result.job.contentId,
+                field = result.job.field,
+                text = result.job.text,
+                language = result.job.language,
+                isMissing = true,
+                hasAudio = false,
+                previousAudioRef = result.job.previousAudioRef
+            )
         }
+
+        val enVoice = selectedEnglishVoice
+        val viVoice = selectedVietnameseVoice
+        val enFallbacks = if (languageRequirements.requiresEnglish) englishFallbacks.voices else emptyList()
+        val viFallbacks = if (languageRequirements.requiresVietnamese) vietnameseFallbacks.voices else emptyList()
+        val enStrategy = enVoice?.takeIf { languageRequirements.requiresEnglish }?.let { primary -> VoiceStrategyConfig(
+            mode = englishStrategyMode,
+            primaryVoice = primary,
+            fallbackVoices = enFallbacks,
+            candidateVoices = listOf(primary) + enFallbacks,
+            continueSequenceAcrossItems = true
+        ) }
+        val viStrategy = viVoice?.takeIf { languageRequirements.requiresVietnamese }?.let { primary -> VoiceStrategyConfig(
+            mode = vietnameseStrategyMode,
+            primaryVoice = primary,
+            fallbackVoices = viFallbacks,
+            candidateVoices = listOf(primary) + viFallbacks,
+            continueSequenceAcrossItems = true
+        ) }
+
+        val retryJobs = BatchTtsScanner.buildJobsWithStrategy(
+            targets = failedTargets,
+            englishStrategy = enStrategy,
+            vietnameseStrategy = viStrategy,
+            englishRate = englishRate,
+            vietnameseRate = vietnameseRate,
+            englishPitch = if (englishPitchHz >= 0) "+${englishPitchHz}Hz" else "${englishPitchHz}Hz",
+            vietnamesePitch = if (vietnamesePitchHz >= 0) "+${vietnamesePitchHz}Hz" else "${vietnamesePitchHz}Hz",
+            englishVolume = if (englishVolumePercent >= 0) "+${englishVolumePercent}%" else "${englishVolumePercent}%",
+            vietnameseVolume = if (vietnameseVolumePercent >= 0) "+${vietnameseVolumePercent}%" else "${vietnameseVolumePercent}%"
+        )
+
+        if (retryJobs.isEmpty()) return
+
+        startBatch(
+            jobsToRun = retryJobs,
+            mergedBaseResults = previousSuccesses
+        )
     }
 
     fun handleApply() {
         stopAudio()
-        onApplyBatch(summary.jobResults)
-        onDismiss()
+        currentStep = BatchTtsDialogStep.APPLYING
+        applyCompletedCount = 0
+        applyTotalCount = summary.successCount
+        applyFailedCount = 0
+        applyProgress = 0f
+        applyStartTimeMillis = System.currentTimeMillis()
+
+        eventLogger.logApplyStarted(packageName, summary.successCount)
+
+        if (onApplyBatch != null) {
+            onApplyBatch.invoke(
+                summary.jobResults,
+                { applied, total, failed ->
+                    applyCompletedCount = applied
+                    applyTotalCount = total
+                    applyFailedCount = failed
+                    applyProgress = if (total > 0) (applied.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 1f
+                    eventLogger.logApplyProgress(packageName, applied, total, failed)
+                },
+                { finalApplied, finalFailed ->
+                    val duration = System.currentTimeMillis() - applyStartTimeMillis
+                    applyCompletedCount = finalApplied
+                    applyFailedCount = finalFailed
+                    applyProgress = 1f
+                    currentStep = BatchTtsDialogStep.APPLY_COMPLETED
+                    eventLogger.logApplyCompleted(packageName, finalApplied, finalFailed, duration)
+                }
+            )
+        } else {
+            applyCompletedCount = summary.successCount
+            applyFailedCount = 0
+            applyProgress = 1f
+            currentStep = BatchTtsDialogStep.APPLY_COMPLETED
+        }
     }
 
     val isEntirePackageScope = title.contains("All Missing", ignoreCase = true) || title.contains("Entire Package", ignoreCase = true)
@@ -526,6 +642,9 @@ fun BatchTtsDialog(
 
     Dialog(
         onDismissRequest = {
+            if (currentStep == BatchTtsDialogStep.APPLYING) {
+                return@Dialog
+            }
             stopAudio()
             onDismiss()
         },
@@ -541,9 +660,11 @@ fun BatchTtsDialog(
                 .border(1.dp, LEColors.borderSubtle, LERadius.md)
                 .onKeyEvent { keyEvent ->
                     if (keyEvent.key == Key.Escape) {
-                        stopAudio()
-                        onDismiss()
-                        true
+                        if (currentStep != BatchTtsDialogStep.APPLYING) {
+                            stopAudio()
+                            onDismiss()
+                            true
+                        } else false
                     } else false
                 },
             color = LEColors.surface,
@@ -701,6 +822,22 @@ fun BatchTtsDialog(
                                 onRetryFailed = { handleRetryFailed() }
                             )
                         }
+                        BatchTtsDialogStep.APPLYING -> {
+                            ApplyingStepContent(
+                                completedCount = applyCompletedCount,
+                                totalCount = applyTotalCount,
+                                failedCount = applyFailedCount,
+                                startTimeMillis = applyStartTimeMillis
+                            )
+                        }
+                        BatchTtsDialogStep.APPLY_COMPLETED -> {
+                            ApplyCompletedStepContent(
+                                appliedCount = applyCompletedCount,
+                                failedCount = applyFailedCount,
+                                totalCount = applyTotalCount,
+                                packageName = packageName
+                            )
+                        }
                     }
                 }
 
@@ -769,6 +906,24 @@ fun BatchTtsDialog(
                                 onClick = { handleApply() },
                                 enabled = summary.successCount > 0,
                                 icon = LEIcons.Save
+                            )
+                        }
+                        BatchTtsDialogStep.APPLYING -> {
+                            Text(
+                                text = "Đang lưu trữ dữ liệu an toàn...",
+                                style = LETypography.fieldValue,
+                                color = LEColors.textMuted,
+                                modifier = Modifier.padding(horizontal = LESpacing.md)
+                            )
+                        }
+                        BatchTtsDialogStep.APPLY_COMPLETED -> {
+                            LEPrimaryButton(
+                                text = "Đóng",
+                                onClick = {
+                                    stopAudio()
+                                    onDismiss()
+                                },
+                                icon = LEIcons.Success
                             )
                         }
                     }
@@ -1835,6 +1990,156 @@ private fun FailedJobRow(result: BatchTtsJobResult) {
                 style = LETypography.caption,
                 color = LEColors.textMuted
             )
+        }
+    }
+}
+
+@Composable
+private fun ApplyingStepContent(
+    completedCount: Int,
+    totalCount: Int,
+    failedCount: Int,
+    startTimeMillis: Long
+) {
+    val progress = if (totalCount > 0) (completedCount.toFloat() / totalCount.toFloat()).coerceIn(0f, 1f) else 0f
+    val elapsedMillis = (System.currentTimeMillis() - startTimeMillis).coerceAtLeast(0L)
+    val elapsedSeconds = elapsedMillis / 1000
+    val minutes = elapsedSeconds / 60
+    val seconds = elapsedSeconds % 60
+    val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(LESpacing.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        CircularProgressIndicator(
+            progress = progress,
+            modifier = Modifier.size(64.dp),
+            color = LEColors.primary,
+            strokeWidth = 6.dp
+        )
+        Spacer(modifier = Modifier.height(LESpacing.lg))
+        Text(
+            text = "Đang áp dụng audio đã tạo vào bài học...",
+            style = LETypography.paneTitle,
+            color = LEColors.textPrimary
+        )
+        Spacer(modifier = Modifier.height(LESpacing.xs))
+        Text(
+            text = "$completedCount / $totalCount mục (${(progress * 100).toInt()}%)",
+            style = LETypography.fieldValue,
+            color = LEColors.textSecondary
+        )
+        Spacer(modifier = Modifier.height(LESpacing.sm))
+        LinearProgressIndicator(
+            progress = progress,
+            modifier = Modifier.fillMaxWidth(0.6f).height(8.dp).clip(LERadius.sm),
+            color = LEColors.primary,
+            trackColor = LEColors.surfaceSubtle
+        )
+        Spacer(modifier = Modifier.height(LESpacing.md))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(LESpacing.lg),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Thời gian: $timeFormatted",
+                style = LETypography.fieldValue,
+                color = LEColors.textSecondary
+            )
+            Text(
+                text = "Đã áp dụng: $completedCount",
+                style = LETypography.fieldValue,
+                color = LEColors.success
+            )
+            if (failedCount > 0) {
+                Text(
+                    text = "Lỗi: $failedCount",
+                    style = LETypography.fieldValue,
+                    color = LEColors.danger
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(LESpacing.lg))
+        Text(
+            text = "Vui lòng giữ ứng dụng mở trong quá trình lưu dữ liệu để đảm bảo an toàn.",
+            style = LETypography.caption,
+            color = LEColors.textMuted
+        )
+    }
+}
+
+@Composable
+private fun ApplyCompletedStepContent(
+    appliedCount: Int,
+    failedCount: Int,
+    totalCount: Int,
+    packageName: String
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(LESpacing.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(if (failedCount == 0) LEColors.successContainer else LEColors.warningContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (failedCount == 0) LEIcons.Success else LEIcons.Warning,
+                contentDescription = null,
+                tint = if (failedCount == 0) LEColors.success else LEColors.warning,
+                modifier = Modifier.size(36.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(LESpacing.lg))
+        Text(
+            text = if (failedCount == 0) "Áp dụng audio thành công!" else "Áp dụng audio hoàn tất với cảnh báo",
+            style = LETypography.paneTitle,
+            color = LEColors.textPrimary
+        )
+        Spacer(modifier = Modifier.height(LESpacing.xs))
+        Text(
+            text = "Đã lưu $appliedCount / $totalCount mục audio vào gói nội dung '$packageName'.",
+            style = LETypography.fieldValue,
+            color = LEColors.textSecondary
+        )
+        if (failedCount > 0) {
+            Spacer(modifier = Modifier.height(LESpacing.xs))
+            Text(
+                text = "Không thể áp dụng $failedCount mục. Bạn có thể kiểm tra lại dữ liệu bài học.",
+                style = LETypography.caption,
+                color = LEColors.danger
+            )
+        }
+        Spacer(modifier = Modifier.height(LESpacing.md))
+        Surface(
+            color = LEColors.surfaceElevated,
+            shape = LERadius.sm,
+            modifier = Modifier.fillMaxWidth(0.7f).padding(LESpacing.sm),
+            border = BorderStroke(1.dp, LEColors.borderSubtle)
+        ) {
+            Row(
+                modifier = Modifier.padding(LESpacing.md),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = LEIcons.Help,
+                    contentDescription = null,
+                    tint = LEColors.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(LESpacing.sm))
+                Text(
+                    text = "Bạn có thể sử dụng nút 'Undo TTS' trong Content Studio bất cứ lúc nào nếu cần hoàn tác.",
+                    style = LETypography.caption,
+                    color = LEColors.textSecondary
+                )
+            }
         }
     }
 }

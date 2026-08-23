@@ -71,6 +71,12 @@ class BatchTtsHotfix2ComprehensiveTest {
         override fun logVoiceCircuitProbe(voiceId: String, targetIndex: Int) {
             voiceHealthEvents += "CIRCUIT_PROBE:$voiceId:$targetIndex"
         }
+        override fun logVoiceCircuitBypassed(voiceId: String, targetIndex: Int) {
+            voiceHealthEvents += "CIRCUIT_BYPASSED:$voiceId:$targetIndex"
+        }
+        override fun logVoiceCircuitRecovered(voiceId: String) {
+            voiceHealthEvents += "CIRCUIT_RECOVERED:$voiceId"
+        }
         override fun logTargetSuccess(planId: String, targetIndex: Int, jobId: String, voiceId: String, assetPath: String, recoveredViaFallback: Boolean) {
             events += "TARGET_SUCCESS:$targetIndex:$voiceId:fallback=$recoveredViaFallback"
         }
@@ -97,6 +103,12 @@ class BatchTtsHotfix2ComprehensiveTest {
         override fun logBatchFatal(planId: String, reason: String) {
             events += "BATCH_FATAL:$reason"
         }
+        override fun logApplyStarted(packageName: String, totalTargets: Int) {}
+        override fun logApplyProgress(packageName: String, appliedCount: Int, totalTargets: Int, failedCount: Int) {}
+        override fun logApplyTargetSuccess(contentId: String, field: String, assetPath: String) {}
+        override fun logApplyTargetFailure(contentId: String, field: String, reason: String) {}
+        override fun logApplyCompleted(packageName: String, appliedCount: Int, failedCount: Int, durationMillis: Long) {}
+        override fun logApplyCancelled(packageName: String, appliedCount: Int, totalTargets: Int) {}
     }
 
     private class TestStorage(private val root: Path) : ContentMediaStorage {

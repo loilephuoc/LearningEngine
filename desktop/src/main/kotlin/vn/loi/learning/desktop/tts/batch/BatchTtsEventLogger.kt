@@ -186,6 +186,52 @@ interface BatchTtsEventLogger {
         reason: String
     )
 
+    fun logVoiceCircuitBypassed(
+        voiceId: String,
+        targetIndex: Int
+    )
+
+    fun logVoiceCircuitRecovered(
+        voiceId: String
+    )
+
+    fun logApplyStarted(
+        packageName: String,
+        totalTargets: Int
+    )
+
+    fun logApplyProgress(
+        packageName: String,
+        appliedCount: Int,
+        totalTargets: Int,
+        failedCount: Int
+    )
+
+    fun logApplyTargetSuccess(
+        contentId: String,
+        field: String,
+        assetPath: String
+    )
+
+    fun logApplyTargetFailure(
+        contentId: String,
+        field: String,
+        reason: String
+    )
+
+    fun logApplyCompleted(
+        packageName: String,
+        appliedCount: Int,
+        failedCount: Int,
+        durationMillis: Long
+    )
+
+    fun logApplyCancelled(
+        packageName: String,
+        appliedCount: Int,
+        totalTargets: Int
+    )
+
     object NoOp : BatchTtsEventLogger {
         override fun logPlanCreated(planId: String, packageId: String, targetCount: Int, overwriteMode: Boolean, selectedFields: String, languageRequirements: String) {}
         override fun logLeaseAcquireAttempt(planId: String, ownerPid: Long, ownerToken: String, existingOwnerPid: Long?, existingOwnerAlive: Boolean?, decision: String) {}
@@ -202,6 +248,8 @@ interface BatchTtsEventLogger {
         override fun logVoiceHealthChanged(voiceId: String, oldState: String, newState: String, reason: String) {}
         override fun logVoiceCircuitOpen(voiceId: String, consecutiveFailures: Int, cooldownMillis: Long) {}
         override fun logVoiceCircuitProbe(voiceId: String, targetIndex: Int) {}
+        override fun logVoiceCircuitBypassed(voiceId: String, targetIndex: Int) {}
+        override fun logVoiceCircuitRecovered(voiceId: String) {}
         override fun logTargetSuccess(planId: String, targetIndex: Int, jobId: String, voiceId: String, assetPath: String, recoveredViaFallback: Boolean) {}
         override fun logTargetFailed(planId: String, targetIndex: Int, jobId: String, errorCategory: String, attemptsCount: Int) {}
         override fun logTargetSkipped(planId: String, targetIndex: Int, jobId: String, reason: String) {}
@@ -212,6 +260,12 @@ interface BatchTtsEventLogger {
         override fun logBatchCompleted(planId: String, totalCount: Int, successCount: Int, failedCount: Int, skippedCount: Int, cancelledCount: Int) {}
         override fun logBatchCancelled(planId: String, completedCount: Int, cancelledCount: Int) {}
         override fun logBatchFatal(planId: String, reason: String) {}
+        override fun logApplyStarted(packageName: String, totalTargets: Int) {}
+        override fun logApplyProgress(packageName: String, appliedCount: Int, totalTargets: Int, failedCount: Int) {}
+        override fun logApplyTargetSuccess(contentId: String, field: String, assetPath: String) {}
+        override fun logApplyTargetFailure(contentId: String, field: String, reason: String) {}
+        override fun logApplyCompleted(packageName: String, appliedCount: Int, failedCount: Int, durationMillis: Long) {}
+        override fun logApplyCancelled(packageName: String, appliedCount: Int, totalTargets: Int) {}
     }
 }
 
@@ -627,6 +681,114 @@ class RuntimeBatchTtsEventLogger(
             "BATCH_TTS_BATCH_FATAL",
             "planId" to planId,
             "reason" to reason
+        )
+    }
+
+    override fun logVoiceCircuitBypassed(
+        voiceId: String,
+        targetIndex: Int
+    ) {
+        log(
+            DesktopLogLevel.DEBUG,
+            "VOICE_CIRCUIT_BYPASSED",
+            "voiceId" to voiceId,
+            "targetIndex" to targetIndex
+        )
+    }
+
+    override fun logVoiceCircuitRecovered(
+        voiceId: String
+    ) {
+        log(
+            DesktopLogLevel.INFO,
+            "VOICE_CIRCUIT_RECOVERED",
+            "voiceId" to voiceId
+        )
+    }
+
+    override fun logApplyStarted(
+        packageName: String,
+        totalTargets: Int
+    ) {
+        log(
+            DesktopLogLevel.INFO,
+            "APPLY_STARTED",
+            "package" to packageName,
+            "totalTargets" to totalTargets
+        )
+    }
+
+    override fun logApplyProgress(
+        packageName: String,
+        appliedCount: Int,
+        totalTargets: Int,
+        failedCount: Int
+    ) {
+        log(
+            DesktopLogLevel.DEBUG,
+            "APPLY_PROGRESS",
+            "package" to packageName,
+            "appliedCount" to appliedCount,
+            "totalTargets" to totalTargets,
+            "failedCount" to failedCount
+        )
+    }
+
+    override fun logApplyTargetSuccess(
+        contentId: String,
+        field: String,
+        assetPath: String
+    ) {
+        log(
+            DesktopLogLevel.DEBUG,
+            "APPLY_TARGET_SUCCESS",
+            "contentId" to contentId,
+            "field" to field,
+            "assetPath" to assetPath
+        )
+    }
+
+    override fun logApplyTargetFailure(
+        contentId: String,
+        field: String,
+        reason: String
+    ) {
+        log(
+            DesktopLogLevel.WARN,
+            "APPLY_TARGET_FAILURE",
+            "contentId" to contentId,
+            "field" to field,
+            "reason" to reason
+        )
+    }
+
+    override fun logApplyCompleted(
+        packageName: String,
+        appliedCount: Int,
+        failedCount: Int,
+        durationMillis: Long
+    ) {
+        log(
+            DesktopLogLevel.INFO,
+            "APPLY_COMPLETED",
+            "package" to packageName,
+            "appliedCount" to appliedCount,
+            "failedCount" to failedCount,
+            "durationMillis" to durationMillis
+        )
+    }
+
+    override fun logApplyCancelled(
+        packageName: String,
+        appliedCount: Int,
+        totalTargets: Int
+    ) {
+        log(
+            DesktopLogLevel.INFO,
+            "APPLY_CANCELLED",
+            "package" to packageName,
+            "appliedCount" to appliedCount,
+            "totalTargets" to totalTargets
         )
     }
 
