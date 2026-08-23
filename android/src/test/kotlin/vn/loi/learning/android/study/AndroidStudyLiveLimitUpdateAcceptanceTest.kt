@@ -207,6 +207,97 @@ class AndroidStudyLiveLimitUpdateAcceptanceTest {
         assertEquals(30, hud.reviewConfiguredTarget)
     }
 
+    @Test
+    fun `LEARN_NEW mode preserves Introduction flow across multiple subsequent items after live New Limit increase`() {
+        val fixture = createFixture(itemCount = 20)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(5, 100)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { currentDailyLimits }
+        )
+
+        val started = facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        var current: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(started)
+
+        // Complete 2 new items
+        for (i in 1..2) {
+            val intro = assertIs<AndroidStudyState.Introduction>(current)
+            current = facade.rateIntroduction(intro, ReviewRating.GOOD)
+        }
+
+        // Live increase New Limit from 5 to 15
+        currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(15, 100)
+        val updated = facade.updateDailyLimits(assertIs<AndroidStudyState.Introduction>(current), newLimit = 15, reviewLimit = 100)
+        current = assertIs<AndroidStudyState.Introduction>(updated)
+
+        // Next 5 items MUST ALL BE Introduction state (never Typing or recall plan)
+        for (i in 1..5) {
+            val intro = assertIs<AndroidStudyState.Introduction>(current, "Item $i after limit increase must be Introduction")
+            assertEquals(StudyMode.LEARN_NEW, facade.loadExact(intro.sessionId).let {
+                val session = fixture.context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(intro.sessionId))!!
+                session.studyMode
+            })
+            current = facade.rateIntroduction(intro, ReviewRating.GOOD)
+        }
+    }
+
+    @Test
+    fun `LEARN_NEW mode does not inject review items when live review limit is changed`() {
+        val fixture = createFixture(itemCount = 20)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(10, 100)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { currentDailyLimits }
+        )
+
+        val started = facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        val initialIntro = assertIs<AndroidStudyState.Introduction>(started)
+        val session = fixture.context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(initialIntro.sessionId))!!
+        assertEquals(0, session.policy.reviewItemLimit)
+
+        // Change review limit live from 100 to 500
+        currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(10, 500)
+        val updated = facade.updateDailyLimits(initialIntro, newLimit = 10, reviewLimit = 500)
+        val updatedIntro = assertIs<AndroidStudyState.Introduction>(updated)
+
+        val updatedSession = fixture.context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(updatedIntro.sessionId))!!
+        assertEquals(0, updatedSession.policy.reviewItemLimit, "Active LEARN_NEW review quota must strictly remain 0")
+        assertEquals(StudyMode.LEARN_NEW, updatedSession.studyMode)
+    }
+
+    @Test
+    fun `settings limit increase recomputes canLearnNew immediately on fresh home query`() {
+        val fixture = createFixture(itemCount = 10)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(2, 100)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { currentDailyLimits }
+        )
+
+        // Start session and complete 2 new items (exhausting daily new limit of 2)
+        val started = facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        var current: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(started)
+        for (i in 1..2) {
+            val intro = assertIs<AndroidStudyState.Introduction>(current)
+            current = facade.rateIntroduction(intro, ReviewRating.GOOD)
+        }
+
+        // Daily new budget is now exhausted
+        val homeExhausted = facade.home()
+        assertFalse(homeExhausted.availability.canLearnNew)
+
+        // User increases daily new limit in settings from 2 to 10
+        currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(10, 100)
+        val homeRefreshed = facade.home()
+        assertTrue(homeRefreshed.availability.canLearnNew, "Fresh home query must reflect updated daily limits immediately")
+    }
+
     private fun createFixture(itemCount: Int): Fixture {
         val context = LearningApplicationFactory.createInMemory()
         val installedId = install(context, "opd-2nd-pkg", itemCount)

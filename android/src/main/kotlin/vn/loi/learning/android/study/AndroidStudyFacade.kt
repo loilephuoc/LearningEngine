@@ -1589,7 +1589,7 @@ class AndroidStudyFacade(
                 ),
                 generatedAt = generatedAt,
                 recentModeHistory = next.session.recallModeHistory,
-                studyMode = if (next.session.studyMode == StudyMode.LEARN_NEW) StudyMode.ADAPTIVE else next.session.studyMode
+                studyMode = next.session.studyMode
             )
         )
         return (result as? ProductionRecallPlanResult.Created)?.plan

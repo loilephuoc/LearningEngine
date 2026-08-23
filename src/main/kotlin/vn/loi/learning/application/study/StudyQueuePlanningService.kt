@@ -102,9 +102,11 @@ class StudyQueuePlanningService(
                         includedContentIds =
                             effectiveIncludedContentIds,
                         includeNewItems =
-                            true,
+                            session.policy
+                                .newItemLimit > 0,
                         includeReviewItems =
-                            true
+                            session.policy
+                                .reviewItemLimit > 0
                     ),
                 strategy =
                     strategy,

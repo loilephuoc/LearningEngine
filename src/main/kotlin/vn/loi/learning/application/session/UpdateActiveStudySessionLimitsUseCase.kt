@@ -15,21 +15,29 @@ class UpdateActiveStudySessionLimitsUseCase(
     private val transactions: TransactionRunner
 ) {
     fun execute(sessionId: SessionId, newLimit: Int, reviewLimit: Int) = transactions.runInTransaction {
-        require(newLimit >= 0 && reviewLimit >= 0 && newLimit + reviewLimit > 0) {
-            "Giới hạn phiên học phải không âm và tổng phải lớn hơn 0."
-        }
         val current = requireNotNull(sessions.findById(sessionId)) { "Phiên học không tồn tại." }
         require(current.status == SessionStatus.ACTIVE) { "Chỉ có thể thay đổi giới hạn cho phiên học đang hoạt động." }
-        require(newLimit >= current.newItemsReviewed) {
-            "Giới hạn từ mới ($newLimit) không thể nhỏ hơn số từ mới đã hoàn thành (${current.newItemsReviewed})."
+        val effectiveNewLimit = when (current.studyMode) {
+            vn.loi.learning.domain.study.recall.StudyMode.TYPING -> 0
+            else -> newLimit
         }
-        require(reviewLimit >= current.reviewItemsReviewed) {
-            "Giới hạn ôn tập ($reviewLimit) không thể nhỏ hơn số từ ôn tập đã hoàn thành (${current.reviewItemsReviewed})."
+        val effectiveReviewLimit = when (current.studyMode) {
+            vn.loi.learning.domain.study.recall.StudyMode.LEARN_NEW -> 0
+            else -> reviewLimit
+        }
+        require(effectiveNewLimit >= 0 && effectiveReviewLimit >= 0 && effectiveNewLimit + effectiveReviewLimit > 0) {
+            "Giới hạn phiên học phải không âm và tổng phải lớn hơn 0."
+        }
+        require(effectiveNewLimit >= current.newItemsReviewed) {
+            "Giới hạn từ mới ($effectiveNewLimit) không thể nhỏ hơn số từ mới đã hoàn thành (${current.newItemsReviewed})."
+        }
+        require(effectiveReviewLimit >= current.reviewItemsReviewed) {
+            "Giới hạn ôn tập ($effectiveReviewLimit) không thể nhỏ hơn số từ ôn tập đã hoàn thành (${current.reviewItemsReviewed})."
         }
 
         val updated = current.copy(policy = current.policy.copy(
-            newItemLimit = newLimit,
-            reviewItemLimit = reviewLimit
+            newItemLimit = effectiveNewLimit,
+            reviewItemLimit = effectiveReviewLimit
         ))
 
         val existingQueue = queues.get(sessionId)
@@ -128,8 +136,8 @@ class UpdateActiveStudySessionLimitsUseCase(
         val plannedReviewCount = (if (preservedCurrentItem != null && preservedCurrentOrigin == SessionItemOrigin.REVIEW) 1 else 0) +
             (remainingPlan?.effectiveReviewWorkload ?: 0)
 
-        val effectiveNewWorkload = minOf(newLimit, completedNewCount + plannedNewCount)
-        val effectiveReviewWorkload = minOf(reviewLimit, completedReviewCount + plannedReviewCount)
+        val effectiveNewWorkload = minOf(effectiveNewLimit, completedNewCount + plannedNewCount)
+        val effectiveReviewWorkload = minOf(effectiveReviewLimit, completedReviewCount + plannedReviewCount)
 
         val replannedSnapshot = StudyQueueSnapshot(
             sessionId = sessionId,
@@ -138,9 +146,9 @@ class UpdateActiveStudySessionLimitsUseCase(
             currentIndex = completedItemIds.size,
             itemOrigins = nextOrigins,
             itemContentIds = nextContentIds,
-            configuredNewTarget = newLimit,
+            configuredNewTarget = effectiveNewLimit,
             effectiveNewWorkload = effectiveNewWorkload,
-            configuredReviewTarget = reviewLimit,
+            configuredReviewTarget = effectiveReviewLimit,
             effectiveReviewWorkload = effectiveReviewWorkload,
             fixedPracticeMembership = if (existingQueue.practiceLoopPolicy != PracticeLoopPolicy.NONE) {
                 existingQueue.fixedPracticeMembership

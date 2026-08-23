@@ -62,7 +62,7 @@ class AndroidFocusedPracticeCompositionTest {
         assertFalse(learnedAvailability.contains("active"))
         val createPlan = facade.substringAfter("private fun createPlan(").substringBefore("private fun currentScope(")
         assertTrue(createPlan.contains("createProductionRecallPlan"))
-        assertTrue(createPlan.contains("studyMode = if (next.session.studyMode == StudyMode.LEARN_NEW) StudyMode.ADAPTIVE else next.session.studyMode"))
+        assertTrue(createPlan.contains("studyMode = next.session.studyMode"))
     }
 
     @Test
