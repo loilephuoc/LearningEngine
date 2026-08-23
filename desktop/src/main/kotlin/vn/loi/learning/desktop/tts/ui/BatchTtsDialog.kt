@@ -684,24 +684,24 @@ fun BatchTtsDialog(
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             text = title,
-                            style = LETypography.paneTitle,
-                            fontWeight = FontWeight.Bold,
+                            style = BatchTtsUiScale.dialogTitle,
                             color = LEColors.textPrimary
                         )
                         Text(
                             text = scopeSubtitle,
-                            style = LETypography.secondaryMetadata,
+                            style = BatchTtsUiScale.body,
                             color = LEColors.textMuted
                         )
                     }
 
-                    if (currentStep != BatchTtsDialogStep.RUNNING) {
+                    if (currentStep != BatchTtsDialogStep.RUNNING && currentStep != BatchTtsDialogStep.APPLYING) {
                         LESecondaryButton(
                             text = "✕",
                             onClick = {
                                 stopAudio()
                                 onDismiss()
-                            }
+                            },
+                            modifier = Modifier.size(36.dp)
                         )
                     }
                 }
@@ -709,7 +709,7 @@ fun BatchTtsDialog(
                 HorizontalDivider(color = LEColors.borderSubtle)
 
                 // CONTENT STEP
-                Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(LESpacing.lg)) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(BatchTtsUiScale.cardPadding)) {
                     when (currentStep) {
                         BatchTtsDialogStep.CONFIG -> {
                             ConfigStepContent(
@@ -846,7 +846,7 @@ fun BatchTtsDialog(
                 batchStartMessage?.let { message ->
                     Text(
                         message,
-                        style = LETypography.fieldValue,
+                        style = BatchTtsUiScale.body,
                         color = LEColors.warning,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = LESpacing.lg, vertical = LESpacing.xs)
                     )
@@ -867,14 +867,16 @@ fun BatchTtsDialog(
                                 onClick = {
                                     stopAudio()
                                     onDismiss()
-                                }
+                                },
+                                modifier = Modifier.height(BatchTtsUiScale.buttonHeightStandard)
                             )
                             Spacer(modifier = Modifier.width(LESpacing.sm))
                             LEPrimaryButton(
                                 text = if (scopeScan.totalValidTargets == 0) "No Missing Targets" else "Generate (${scopeScan.totalValidTargets} Targets)",
                                 onClick = { handleStartInitialBatch() },
                                 enabled = scopeScan.hasTargets && !isLoadingVoices && languageRequirements.configurationsValid(selectedEnglishVoice, selectedVietnameseVoice),
-                                icon = LEIcons.Audio
+                                icon = LEIcons.Audio,
+                                modifier = Modifier.height(BatchTtsUiScale.buttonHeightStandard)
                             )
                         }
                         BatchTtsDialogStep.RUNNING -> {
@@ -882,14 +884,16 @@ fun BatchTtsDialog(
                                 text = if (isCancelling) "Đang hủy..." else "■ Cancel Batch",
                                 onClick = { handleCancelBatch() },
                                 enabled = !isCancelling,
-                                icon = LEIcons.Stop
+                                icon = LEIcons.Stop,
+                                modifier = Modifier.height(BatchTtsUiScale.buttonHeightStandard)
                             )
                         }
                         BatchTtsDialogStep.COMPLETED -> {
                             if (summary.hasFailures) {
                                 LESecondaryButton(
                                     text = "🔁 Retry Failed (${summary.failedCount})",
-                                    onClick = { handleRetryFailed() }
+                                    onClick = { handleRetryFailed() },
+                                    modifier = Modifier.height(BatchTtsUiScale.buttonHeightStandard)
                                 )
                                 Spacer(modifier = Modifier.width(LESpacing.sm))
                             }
@@ -898,20 +902,22 @@ fun BatchTtsDialog(
                                 onClick = {
                                     stopAudio()
                                     onDismiss()
-                                }
+                                },
+                                modifier = Modifier.height(BatchTtsUiScale.buttonHeightStandard)
                             )
                             Spacer(modifier = Modifier.width(LESpacing.sm))
                             LEPrimaryButton(
                                 text = "Apply (${summary.successCount} Targets)",
                                 onClick = { handleApply() },
                                 enabled = summary.successCount > 0,
-                                icon = LEIcons.Save
+                                icon = LEIcons.Save,
+                                modifier = Modifier.height(BatchTtsUiScale.buttonHeightStandard)
                             )
                         }
                         BatchTtsDialogStep.APPLYING -> {
                             Text(
                                 text = "Đang lưu trữ dữ liệu an toàn...",
-                                style = LETypography.fieldValue,
+                                style = BatchTtsUiScale.body,
                                 color = LEColors.textMuted,
                                 modifier = Modifier.padding(horizontal = LESpacing.md)
                             )
@@ -923,7 +929,8 @@ fun BatchTtsDialog(
                                     stopAudio()
                                     onDismiss()
                                 },
-                                icon = LEIcons.Success
+                                icon = LEIcons.Success,
+                                modifier = Modifier.height(BatchTtsUiScale.buttonHeightStandard)
                             )
                         }
                     }
@@ -1063,7 +1070,7 @@ private fun ConfigStepContent(
         )
 
         // Section 1: Audio Fields to Generate
-        Text("Audio Fields to Generate", style = LETypography.fieldValueEmphasized)
+        Text("Audio Fields to Generate", style = BatchTtsUiScale.sectionHeading)
 
         Surface(
             color = LEColors.surfaceElevated,
@@ -1071,9 +1078,9 @@ private fun ConfigStepContent(
             border = BorderStroke(1.dp, LEColors.borderSubtle),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(LESpacing.md), verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
+            Column(modifier = Modifier.padding(BatchTtsUiScale.cardPadding), verticalArrangement = Arrangement.spacedBy(BatchTtsUiScale.itemSpacing)) {
                 // English Fields
-                Text("English Fields (Prompt & Example)", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
+                Text("English Fields (Prompt & Example)", style = BatchTtsUiScale.controlSecondary, color = LEColors.primary, fontWeight = FontWeight.Bold)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
@@ -1098,7 +1105,7 @@ private fun ConfigStepContent(
                 HorizontalDivider(color = LEColors.borderSubtle.copy(alpha = 0.5f))
 
                 // Vietnamese Fields
-                Text("Vietnamese Fields (Answer & Translation)", style = LETypography.caption, color = LEColors.success, fontWeight = FontWeight.Bold)
+                Text("Vietnamese Fields (Answer & Translation)", style = BatchTtsUiScale.controlSecondary, color = LEColors.success, fontWeight = FontWeight.Bold)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
@@ -1126,11 +1133,13 @@ private fun ConfigStepContent(
             Checkbox(
                 checked = overwriteExisting,
                 onCheckedChange = onOverwriteExistingChange,
-                colors = CheckboxDefaults.colors(checkedColor = LEColors.danger)
+                colors = CheckboxDefaults.colors(checkedColor = LEColors.danger),
+                modifier = Modifier.size(28.dp)
             )
+            Spacer(modifier = Modifier.width(6.dp))
             Column {
-                Text("Overwrite existing audio", style = LETypography.fieldValue, color = LEColors.textPrimary)
-                Text("Off by default. Replacement is limited to the selected fields and requires confirmation.", style = LETypography.caption, color = LEColors.textMuted)
+                Text("Overwrite existing audio", style = BatchTtsUiScale.controlPrimary, color = LEColors.textPrimary)
+                Text("Off by default. Replacement is limited to the selected fields and requires confirmation.", style = BatchTtsUiScale.controlSecondary, color = LEColors.textMuted)
             }
         }
 
@@ -1164,7 +1173,7 @@ private fun ConfigStepContent(
         }
 
         // Section 3: Voice & Rate Configurations with Strategy & Preview
-        Text("Voice Strategy & Preview", style = LETypography.fieldValueEmphasized)
+        Text("Voice Strategy & Preview", style = BatchTtsUiScale.sectionHeading)
 
         if (isLoadingVoices) {
             Row(
@@ -1172,8 +1181,8 @@ private fun ConfigStepContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
             ) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = LEColors.primary)
-                Text("Loading available Edge TTS voices...", style = LETypography.caption, color = LEColors.textMuted)
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = LEColors.primary)
+                Text("Loading available Edge TTS voices...", style = BatchTtsUiScale.body, color = LEColors.textMuted)
             }
         } else {
             val englishManaged = listOf(TtsField.QUESTION, TtsField.EXAMPLE).filter { it in selectedFields }
@@ -1243,7 +1252,7 @@ private fun FieldCheckbox(
         modifier = modifier.clickable { onCheckedChange(!checked) }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = LESpacing.sm, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = LESpacing.md, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -1257,8 +1266,8 @@ private fun FieldCheckbox(
                     ),
                     modifier = Modifier.size(24.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(label, style = LETypography.caption, fontWeight = FontWeight.Medium)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(label, style = BatchTtsUiScale.controlPrimary)
             }
             Surface(
                 color = if (missingCount > 0) LEColors.warningContainer else LEColors.surfaceElevated,
@@ -1266,10 +1275,10 @@ private fun FieldCheckbox(
             ) {
                 Text(
                     text = "$missingCount missing",
-                    style = LETypography.caption,
+                    style = BatchTtsUiScale.controlSecondary,
                     color = if (missingCount > 0) LEColors.warning else LEColors.textMuted,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }
@@ -1290,10 +1299,10 @@ private fun MetricCard(
         border = BorderStroke(1.dp, if (highlight) LEColors.primary.copy(alpha = 0.3f) else LEColors.borderSubtle),
         modifier = modifier
     ) {
-        Column(modifier = Modifier.padding(LESpacing.sm)) {
-            Text(label, style = LETypography.caption, color = if (highlight) LEColors.primary else if (isMuted) LEColors.textMuted else LEColors.textSecondary)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(value, style = LETypography.paneTitle, fontWeight = FontWeight.Bold, color = if (highlight) LEColors.primary else if (isMuted) LEColors.textMuted else LEColors.textPrimary)
+        Column(modifier = Modifier.padding(BatchTtsUiScale.cardPadding)) {
+            Text(label, style = BatchTtsUiScale.metricLabel, color = if (highlight) LEColors.primary else if (isMuted) LEColors.textMuted else LEColors.textSecondary)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(value, style = BatchTtsUiScale.metricValue, color = if (highlight) LEColors.primary else if (isMuted) LEColors.textMuted else LEColors.textPrimary)
         }
     }
 }
@@ -1324,7 +1333,14 @@ private fun VoiceStrategyCard(
     var showPrimaryVoicePicker by remember { mutableStateOf(false) }
     var selectedSampleField by remember(managedFields) { mutableStateOf(managedFields.firstOrNull()) }
     val effectiveSampleField = selectedSampleField?.takeIf { it in managedFields } ?: managedFields.firstOrNull()
-    val currentSample = effectiveSampleField?.let { scopeScan.sampleFor(it) }
+
+    // Multi-target preview samples for the currently selected field
+    val allSamples = remember(scopeScan, effectiveSampleField) {
+        effectiveSampleField?.let { scopeScan.samplesFor(it) } ?: emptyList()
+    }
+    var sampleIndex by remember(effectiveSampleField) { mutableStateOf(0) }
+    val clampedIndex = if (allSamples.isNotEmpty()) sampleIndex.coerceIn(0, allSamples.lastIndex) else 0
+    val currentSample = allSamples.getOrNull(clampedIndex)
 
     Surface(
         color = LEColors.surfaceElevated,
@@ -1332,35 +1348,35 @@ private fun VoiceStrategyCard(
         border = BorderStroke(1.dp, LEColors.borderSubtle),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(LESpacing.md), verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
+        Column(modifier = Modifier.padding(BatchTtsUiScale.cardPadding), verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(title, style = LETypography.fieldValue, fontWeight = FontWeight.Bold, color = LEColors.textPrimary)
-                Text(languageLabel, style = LETypography.caption, color = LEColors.textMuted)
+                Text(title, style = BatchTtsUiScale.subsectionHeading, color = LEColors.textPrimary)
+                Surface(
+                    color = LEColors.primarySoft,
+                    shape = LERadius.xs
+                ) {
+                    Text(
+                        text = languageLabel,
+                        style = BatchTtsUiScale.controlSecondary,
+                        fontWeight = FontWeight.Bold,
+                        color = LEColors.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
             }
 
-            FallbackVoiceEditor(
-                primaryVoice = currentVoice,
-                fallbackVoices = fallbackVoices,
-                catalog = candidateVoices,
-                onChange = onFallbackVoicesChange
-            )
-
-            // Row 1: Voice & Strategy Mode Selectors
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // Primary Voice
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Primary Voice", style = BatchTtsUiScale.controlSecondary, fontWeight = FontWeight.Bold, color = LEColors.textSecondary)
                 VoicePickerAnchor(
                     currentVoice = currentVoice,
-                    onClick = { showPrimaryVoicePicker = true },
-                    modifier = Modifier.weight(0.6f)
+                    onClick = { showPrimaryVoicePicker = true }
                 )
-
                 if (showPrimaryVoicePicker) {
                     SearchableVoicePickerDialog(
                         title = "Chọn giọng đọc chính ($languageLabel)",
@@ -1370,16 +1386,17 @@ private fun VoiceStrategyCard(
                         onDismiss = { showPrimaryVoicePicker = false }
                     )
                 }
-
-                // Strategy Mode Dropdown
-                StrategyModeDropdown(
-                    currentMode = strategyMode,
-                    onSelectMode = onStrategyChange,
-                    modifier = Modifier.weight(0.4f)
-                )
             }
 
-            // Row 2: Numeric Audio Controls (Speed %, Pitch Hz, Volume %)
+            // Fallback Voices with Execution Order
+            FallbackVoiceEditor(
+                primaryVoice = currentVoice,
+                fallbackVoices = fallbackVoices,
+                catalog = candidateVoices,
+                onChange = onFallbackVoicesChange
+            )
+
+            // Numeric Audio Controls (Speed %, Pitch Hz, Volume %)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
@@ -1418,103 +1435,134 @@ private fun VoiceStrategyCard(
                 )
             }
 
-            // Sample Text Area with Field Selector & Precise Attribution
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(LERadius.xs)
-                    .background(LEColors.surface)
-                    .border(1.dp, LEColors.borderSubtle, LERadius.xs)
-                    .padding(horizontal = LESpacing.sm, vertical = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            // Multi-Target Preview Sentence Card
+            Surface(
+                color = LEColors.surface,
+                shape = LERadius.xs,
+                border = BorderStroke(1.dp, LEColors.borderSubtle),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(BatchTtsUiScale.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (managedFields.size > 1) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            managedFields.forEach { field ->
-                                val isSelected = field == effectiveSampleField
-                                Surface(
-                                    color = if (isSelected) LEColors.primarySoft else LEColors.surfaceElevated,
-                                    shape = LERadius.xs,
-                                    border = BorderStroke(1.dp, if (isSelected) LEColors.primary else LEColors.borderSubtle),
-                                    modifier = Modifier.clickable { selectedSampleField = field }
-                                ) {
-                                    Text(
-                                        text = field.displayName,
-                                        style = LETypography.caption,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) LEColors.primary else LEColors.textSecondary,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
+                    // Preview Toolbar: Field Chips + [◀] Sample X / N [▶] + Preview Playback Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Field Chips or Label
+                        if (managedFields.size > 1) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                managedFields.forEach { field ->
+                                    val isSelected = field == effectiveSampleField
+                                    Surface(
+                                        color = if (isSelected) LEColors.primarySoft else LEColors.surfaceElevated,
+                                        shape = LERadius.xs,
+                                        border = BorderStroke(1.dp, if (isSelected) LEColors.primary else LEColors.borderSubtle),
+                                        modifier = Modifier.clickable { selectedSampleField = field }
+                                    ) {
+                                        Text(
+                                            text = field.displayName,
+                                            style = BatchTtsUiScale.controlSecondary,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) LEColors.primary else LEColors.textSecondary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
                                 }
                             }
-                        }
-                    } else if (managedFields.isNotEmpty()) {
-                        Text(
-                            text = "${managedFields.first().displayName} Sample",
-                            style = LETypography.caption,
-                            fontWeight = FontWeight.Bold,
-                            color = LEColors.textSecondary
-                        )
-                    } else {
-                        Text(
-                            text = "No field selected",
-                            style = LETypography.caption,
-                            color = LEColors.textMuted
-                        )
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
-                    ) {
-                        if (currentSample != null) {
+                        } else if (managedFields.isNotEmpty()) {
                             Text(
-                                text = "Source: ${currentSample.displaySource}",
-                                style = LETypography.caption,
+                                text = "${managedFields.first().displayName} Sample",
+                                style = BatchTtsUiScale.controlPrimary,
+                                color = LEColors.textSecondary
+                            )
+                        } else {
+                            Text(
+                                text = "No field selected",
+                                style = BatchTtsUiScale.controlSecondary,
                                 color = LEColors.textMuted
                             )
                         }
 
-                        if (isPreviewing) {
-                            LEDangerButton(
-                                text = "■ Stop",
-                                onClick = onStop,
-                                icon = LEIcons.Stop,
-                                modifier = Modifier.height(28.dp)
-                            )
-                        } else {
-                            LESecondaryButton(
-                                text = "▶ Preview",
-                                onClick = { currentSample?.text?.let(onPreview) },
-                                icon = LEIcons.Audio,
-                                enabled = currentVoice != null && currentSample != null && currentSample.text.isNotBlank(),
-                                modifier = Modifier.height(28.dp)
-                            )
+                        // Target Navigator and Preview Playback Button
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                        ) {
+                            if (allSamples.size > 1) {
+                                LESecondaryButton(
+                                    text = "◀",
+                                    onClick = { if (clampedIndex > 0) sampleIndex = clampedIndex - 1 },
+                                    enabled = clampedIndex > 0,
+                                    modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
+                                )
+                                Text(
+                                    text = "Sample ${clampedIndex + 1} / ${allSamples.size}",
+                                    style = BatchTtsUiScale.badge,
+                                    color = LEColors.primary,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                                LESecondaryButton(
+                                    text = "▶",
+                                    onClick = { if (clampedIndex < allSamples.lastIndex) sampleIndex = clampedIndex + 1 },
+                                    enabled = clampedIndex < allSamples.lastIndex,
+                                    modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
+                                )
+                                Spacer(modifier = Modifier.width(LESpacing.xs))
+                            } else if (allSamples.size == 1) {
+                                Text(
+                                    text = "Sample 1 / 1",
+                                    style = BatchTtsUiScale.badge,
+                                    color = LEColors.textMuted,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                                Spacer(modifier = Modifier.width(LESpacing.xs))
+                            }
+
+                            if (isPreviewing) {
+                                LEDangerButton(
+                                    text = "■ Stop",
+                                    onClick = onStop,
+                                    icon = LEIcons.Stop,
+                                    modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
+                                )
+                            } else {
+                                LESecondaryButton(
+                                    text = "▶ Preview",
+                                    onClick = { currentSample?.text?.let(onPreview) },
+                                    icon = LEIcons.Audio,
+                                    enabled = currentVoice != null && currentSample != null && currentSample.text.isNotBlank(),
+                                    modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
+                                )
+                            }
                         }
                     }
-                }
 
-                if (currentSample != null) {
-                    Text(
-                        text = "\"${currentSample.text}\"",
-                        style = LETypography.caption,
-                        fontWeight = FontWeight.Medium,
-                        color = LEColors.textPrimary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                } else {
-                    val fieldLabel = effectiveSampleField?.displayName ?: "selected field"
-                    Text(
-                        text = "No sample text available for $fieldLabel in current scope",
-                        style = LETypography.caption,
-                        color = LEColors.textMuted
-                    )
+                    // Sample Text with Prominent Readability
+                    if (currentSample != null) {
+                        Text(
+                            text = "\"${currentSample.text}\"",
+                            style = BatchTtsUiScale.previewText,
+                            color = LEColors.textPrimary,
+                            maxLines = 4,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "Source: ${currentSample.displaySource} · Field: ${effectiveSampleField?.displayName ?: ""}",
+                            style = BatchTtsUiScale.previewSource,
+                            color = LEColors.textMuted
+                        )
+                    } else {
+                        val fieldLabel = effectiveSampleField?.displayName ?: "selected field"
+                        Text(
+                            text = "No sample text available for $fieldLabel in current scope",
+                            style = BatchTtsUiScale.previewSource,
+                            color = LEColors.textMuted
+                        )
+                    }
                 }
             }
         }
@@ -1532,14 +1580,42 @@ private fun FallbackVoiceEditor(
     val available = catalog.filter { candidate ->
         candidate.id != primaryVoice?.id && candidate.id !in fallbackVoices.ids
     }
-    Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Fallback Voices — execution order", style = LETypography.fieldLabel, color = LEColors.textSecondary)
+    val canAdd = fallbackVoices.voices.size < OrderedFallbackVoices.MAX_FALLBACKS && available.isNotEmpty()
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Fallback Voices — execution order",
+                    style = BatchTtsUiScale.controlSecondary,
+                    fontWeight = FontWeight.Bold,
+                    color = LEColors.textSecondary
+                )
+                if (fallbackVoices.voices.size >= OrderedFallbackVoices.MAX_FALLBACKS) {
+                    Text(
+                        text = "Maximum 3 fallback voices",
+                        style = BatchTtsUiScale.previewSource,
+                        color = LEColors.textMuted
+                    )
+                } else if (available.isEmpty() && fallbackVoices.voices.isEmpty()) {
+                    Text(
+                        text = "No additional compatible voices available",
+                        style = BatchTtsUiScale.previewSource,
+                        color = LEColors.textMuted
+                    )
+                }
+            }
+
             Box {
                 LESecondaryButton(
-                    text = "+ Add fallback",
+                    text = "+ Add fallback voice",
                     onClick = { showAddFallbackPicker = true },
-                    enabled = fallbackVoices.voices.size < OrderedFallbackVoices.MAX_FALLBACKS && available.isNotEmpty()
+                    enabled = canAdd,
+                    modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
                 )
                 if (showAddFallbackPicker) {
                     SearchableVoicePickerDialog(
@@ -1555,122 +1631,75 @@ private fun FallbackVoiceEditor(
                 }
             }
         }
+
         if (fallbackVoices.voices.isEmpty()) {
-            Text("Primary voice only", style = LETypography.caption, color = LEColors.textMuted)
-        } else fallbackVoices.voices.forEachIndexed { index, voice ->
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
-                Text("${index + 1}.", style = LETypography.fieldValue, color = LEColors.primary)
-                Text(voice.displayName, style = LETypography.fieldValue, modifier = Modifier.weight(1f))
-                LESecondaryButton("↑", { onChange(fallbackVoices.move(voice.id, -1)) }, enabled = index > 0)
-                LESecondaryButton("↓", { onChange(fallbackVoices.move(voice.id, 1)) }, enabled = index < fallbackVoices.voices.lastIndex)
-                LEDangerButton("Remove", { onChange(fallbackVoices.remove(voice.id)) })
-            }
-        }
-    }
-}
-
-@Composable
-private fun StrategyModeDropdown(
-    currentMode: VoiceStrategyMode,
-    onSelectMode: (VoiceStrategyMode) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box(modifier = modifier) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(36.dp)
-                .clip(LERadius.xs)
-                .clickable { expanded = true }
-                .border(1.dp, LEColors.borderSubtle, LERadius.xs),
-            color = LEColors.surface
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize().padding(horizontal = LESpacing.sm),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                color = LEColors.surface,
+                shape = LERadius.xs,
+                border = BorderStroke(1.dp, LEColors.borderSubtle.copy(alpha = 0.6f)),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = currentMode.displayName,
-                    style = LETypography.caption,
-                    color = LEColors.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = "No fallback voices configured (Single voice strategy)",
+                    style = BatchTtsUiScale.controlSecondary,
+                    color = LEColors.textMuted,
+                    modifier = Modifier.padding(horizontal = LESpacing.md, vertical = 8.dp)
                 )
-                Text("▾", style = LETypography.caption, color = LEColors.textMuted)
             }
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            VoiceStrategyMode.entries.forEach { mode ->
-                DropdownMenuItem(
-                    text = { Text(mode.displayName, style = LETypography.caption) },
-                    onClick = {
-                        expanded = false
-                        onSelectMode(mode)
+        } else {
+            fallbackVoices.voices.forEachIndexed { index, voice ->
+                Surface(
+                    color = LEColors.surface,
+                    shape = LERadius.xs,
+                    border = BorderStroke(1.dp, LEColors.borderSubtle),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = LESpacing.md, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                    ) {
+                        Text(
+                            text = "${index + 1}.",
+                            style = BatchTtsUiScale.controlPrimary,
+                            fontWeight = FontWeight.Bold,
+                            color = LEColors.primary
+                        )
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                            Text(
+                                text = voice.displayName,
+                                style = BatchTtsUiScale.controlPrimary,
+                                color = LEColors.textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "${SearchableVoicePickerHelper.formatRegionDisplayName(voice.locale)} · ${voice.gender ?: "Neutral"}",
+                                style = BatchTtsUiScale.controlSecondary,
+                                color = LEColors.textMuted,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        LESecondaryButton(
+                            text = "↑",
+                            onClick = { onChange(fallbackVoices.move(voice.id, -1)) },
+                            enabled = index > 0,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        LESecondaryButton(
+                            text = "↓",
+                            onClick = { onChange(fallbackVoices.move(voice.id, 1)) },
+                            enabled = index < fallbackVoices.voices.lastIndex,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        LEDangerButton(
+                            text = "Remove",
+                            onClick = { onChange(fallbackVoices.remove(voice.id)) },
+                            modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
+                        )
                     }
-                )
-            }
-        }
-    }
-}
-
-
-
-@Composable
-private fun RateDropdown(
-    currentRate: Int,
-    onSelectRate: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    val rateOptions = TtsRateOption.entries.map { it.rateValue to it.label }
-
-    val label = rateOptions.firstOrNull { it.first == currentRate }?.second ?: if (currentRate == 0) "Normal" else "${if (currentRate > 0) "+$currentRate" else "$currentRate"}%"
-
-    Box(modifier = modifier) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(36.dp)
-                .clip(LERadius.xs)
-                .clickable { expanded = true }
-                .border(1.dp, LEColors.borderSubtle, LERadius.xs),
-            color = LEColors.surface
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize().padding(horizontal = LESpacing.sm),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = label,
-                    style = LETypography.caption,
-                    color = LEColors.textPrimary,
-                    maxLines = 1
-                )
-                Text("▾", style = LETypography.caption, color = LEColors.textMuted)
-            }
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            rateOptions.forEach { (rateVal, rateLabel) ->
-                DropdownMenuItem(
-                    text = { Text(rateLabel, style = LETypography.caption) },
-                    onClick = {
-                        expanded = false
-                        onSelectRate(rateVal)
-                    }
-                )
+                }
             }
         }
     }
@@ -1694,28 +1723,37 @@ private fun RunningStepContent(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(LESpacing.md),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.fillMaxSize().padding(LESpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(BatchTtsUiScale.sectionSpacing)
     ) {
-        Spacer(modifier = Modifier.height(LESpacing.sm))
-
+        // Status operation banner
         Text(
             text = if (isCancelling || summary.isCancelled) "Đang hủy và dọn dẹp phiên tạo audio..." else (summary.currentOperation ?: "Đang tạo audio..."),
-            style = LETypography.fieldValueEmphasized,
+            style = BatchTtsUiScale.sectionHeading,
             color = if (isCancelling || summary.isCancelled) LEColors.warning else LEColors.primary
         )
 
-        Text(
-            text = "${summary.completedJobs} / ${summary.totalJobs}",
-            style = LETypography.paneTitle,
-            fontWeight = FontWeight.Bold,
-            color = LEColors.textPrimary
-        )
+        // Progress Numbers & Bar
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text(
+                text = "${summary.completedJobs} / ${summary.totalJobs}",
+                style = BatchTtsUiScale.metricValueLarge,
+                color = LEColors.textPrimary
+            )
+            Text(
+                text = "${(progress * 100).toInt()}%",
+                style = BatchTtsUiScale.sectionHeading,
+                color = LEColors.textSecondary
+            )
+        }
 
         LinearProgressIndicator(
             progress = { progress },
-            modifier = Modifier.fillMaxWidth().height(8.dp).clip(LERadius.xs),
+            modifier = Modifier.fillMaxWidth().height(10.dp).clip(LERadius.xs),
             color = if (isCancelling || summary.isCancelled) LEColors.warning else LEColors.primary,
             trackColor = LEColors.borderSubtle
         )
@@ -1723,66 +1761,137 @@ private fun RunningStepContent(
         // Elapsed time, ETA & Throughput
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = buildString {
-                    append("Thời gian: ")
-                    append(elapsedStr)
-                    if (etaStr != null) {
-                        append(" · Ước tính còn: ")
-                        append(etaStr)
-                    }
-                    if (summary.targetsPerSecond > 0.0) {
-                        append(" · (%.1f mục/giây)".format(summary.targetsPerSecond))
-                    }
-                },
-                style = LETypography.caption,
-                color = LEColors.textMuted
+                text = "Thời gian: $elapsedStr",
+                style = BatchTtsUiScale.body,
+                color = LEColors.textSecondary
             )
+            if (etaStr != null) {
+                Text(
+                    text = "Ước tính còn: $etaStr",
+                    style = BatchTtsUiScale.body,
+                    color = LEColors.primary
+                )
+            }
+            if (summary.targetsPerSecond > 0.0) {
+                Text(
+                    text = "Tốc độ: %.1f mục/giây".format(summary.targetsPerSecond),
+                    style = BatchTtsUiScale.body,
+                    color = LEColors.textMuted
+                )
+            }
         }
 
         // Live Counters
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.xs),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
         ) {
-            Text("Thành công: ${summary.successCount}", style = LETypography.caption, color = LEColors.success, fontWeight = FontWeight.Bold)
+            MetricCard(
+                label = "Thành công",
+                value = "${summary.successCount}",
+                highlight = true,
+                modifier = Modifier.weight(1f)
+            )
             if (summary.fallbackRecoveredCount > 0) {
-                Text("Dự phòng: ${summary.fallbackRecoveredCount}", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
+                MetricCard(
+                    label = "Dự phòng",
+                    value = "${summary.fallbackRecoveredCount}",
+                    modifier = Modifier.weight(1f)
+                )
             }
-            Text("Bỏ qua: ${summary.skippedCount}", style = LETypography.caption, color = LEColors.textMuted)
-            Text("Thất bại: ${summary.failedCount}", style = LETypography.caption, color = if (summary.failedCount > 0) LEColors.danger else LEColors.textMuted, fontWeight = FontWeight.Bold)
+            MetricCard(
+                label = "Bỏ qua",
+                value = "${summary.skippedCount}",
+                isMuted = true,
+                modifier = Modifier.weight(1f)
+            )
+            MetricCard(
+                label = "Thất bại",
+                value = "${summary.failedCount}",
+                isMuted = summary.failedCount == 0,
+                modifier = Modifier.weight(1f)
+            )
             if (summary.cancelledCount > 0) {
-                Text("Đã hủy: ${summary.cancelledCount}", style = LETypography.caption, color = LEColors.warning)
+                MetricCard(
+                    label = "Đã hủy",
+                    value = "${summary.cancelledCount}",
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
-        // Current item
+        // Current item with Runtime Voice Transparency
         summary.currentJob?.let { job ->
             Surface(
                 color = LEColors.surfaceElevated,
                 shape = LERadius.sm,
-                modifier = Modifier.fillMaxWidth().padding(top = LESpacing.sm)
+                border = BorderStroke(1.dp, LEColors.borderSubtle),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(LESpacing.sm)) {
-                    Text("Mục đang xử lý:", style = LETypography.caption, color = LEColors.textMuted)
-                    Spacer(modifier = Modifier.height(2.dp))
+                Column(
+                    modifier = Modifier.padding(BatchTtsUiScale.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Mục đang xử lý: [${job.field.displayName}]",
+                            style = BatchTtsUiScale.controlPrimary,
+                            color = LEColors.primary
+                        )
+                        val candidateBadge = if (summary.isCurrentCandidateFallback) {
+                            "Giọng dự phòng ${summary.currentCandidateIndex - 1}/${summary.totalCandidatesForCurrentJob - 1}"
+                        } else {
+                            "Giọng chính"
+                        }
+                        Surface(
+                            color = if (summary.isCurrentCandidateFallback) LEColors.warningContainer else LEColors.primarySoft,
+                            shape = LERadius.xs
+                        ) {
+                            Text(
+                                text = candidateBadge,
+                                style = BatchTtsUiScale.controlSecondary,
+                                fontWeight = FontWeight.Bold,
+                                color = if (summary.isCurrentCandidateFallback) LEColors.warning else LEColors.primary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
                     Text(
-                        text = "[${job.field.displayName}] \"${job.text}\"",
-                        style = LETypography.caption,
-                        fontWeight = FontWeight.Bold,
+                        text = "\"${job.text}\"",
+                        style = BatchTtsUiScale.previewText,
                         color = LEColors.textPrimary,
-                        maxLines = 2,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Giọng đọc: ${summary.currentVoiceName ?: job.voice.displayName.ifBlank { job.voice.id }} (${job.voice.language})",
-                        style = LETypography.caption,
-                        color = LEColors.textMuted
-                    )
+
+                    HorizontalDivider(color = LEColors.borderSubtle.copy(alpha = 0.5f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Giọng chính cấu hình: ${job.requestedVoice.displayName}",
+                            style = BatchTtsUiScale.controlSecondary,
+                            color = LEColors.textMuted
+                        )
+                        Text(
+                            text = "Giọng đang chạy: ${summary.currentVoiceName ?: job.requestedVoice.displayName}",
+                            style = BatchTtsUiScale.controlSecondary,
+                            fontWeight = FontWeight.Bold,
+                            color = if (summary.isCurrentCandidateFallback) LEColors.warning else LEColors.textSecondary
+                        )
+                    }
                 }
             }
         }
@@ -1797,22 +1906,24 @@ private fun CompletedStepContent(
     onRetryFailed: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(LESpacing.md)
+        modifier = Modifier.fillMaxSize().padding(LESpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(BatchTtsUiScale.sectionSpacing)
     ) {
         // Status header
+        val headerTitle = when {
+            summary.isCancelled -> "⚠ Đã hủy tiến trình tạo audio"
+            summary.hasFailures -> "⚠ Hoàn tất tạo audio có mục lỗi"
+            else -> "✓ Hoàn tất tạo audio hàng loạt"
+        }
+        val headerColor = when {
+            summary.isCancelled || summary.hasFailures -> LEColors.warning
+            else -> LEColors.success
+        }
+
         Text(
-            text = when {
-                summary.isCancelled -> "⚠ Batch Cancelled"
-                summary.hasFailures -> "⚠ Generation Finished with Issues"
-                else -> "✓ Generation Completed (${summary.successCount} files created)"
-            },
-            style = LETypography.paneTitle,
-            fontWeight = FontWeight.Bold,
-            color = when {
-                summary.isCancelled || summary.hasFailures -> LEColors.warning
-                else -> LEColors.success
-            }
+            text = headerTitle,
+            style = BatchTtsUiScale.dialogTitle,
+            color = headerColor
         )
 
         // Statistics row
@@ -1820,19 +1931,41 @@ private fun CompletedStepContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
         ) {
-            StatPill(label = "Total Targets", value = "${summary.totalJobs}", color = LEColors.textPrimary)
-            StatPill(label = "Success", value = "${summary.successCount}", color = LEColors.success)
+            MetricCard(
+                label = "Tổng số mục",
+                value = "${summary.totalJobs}",
+                modifier = Modifier.weight(1f)
+            )
+            MetricCard(
+                label = "Thành công",
+                value = "${summary.successCount}",
+                highlight = summary.successCount > 0,
+                modifier = Modifier.weight(1f)
+            )
             if (summary.fallbackRecoveredCount > 0) {
-                StatPill(label = "Fallback Recovered", value = "${summary.fallbackRecoveredCount}", color = LEColors.primary)
+                MetricCard(
+                    label = "Khôi phục dự phòng",
+                    value = "${summary.fallbackRecoveredCount}",
+                    modifier = Modifier.weight(1f)
+                )
             }
-            StatPill(label = "Failed", value = "${summary.failedCount}", color = if (summary.failedCount > 0) LEColors.danger else LEColors.textMuted)
+            MetricCard(
+                label = "Thất bại",
+                value = "${summary.failedCount}",
+                isMuted = summary.failedCount == 0,
+                modifier = Modifier.weight(1f)
+            )
             if (summary.cancelledCount > 0) {
-                StatPill(label = "Cancelled", value = "${summary.cancelledCount}", color = LEColors.warning)
+                MetricCard(
+                    label = "Đã hủy",
+                    value = "${summary.cancelledCount}",
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
         if (summary.hasFailures) {
-            Text("Failed Targets (${summary.failedCount})", style = LETypography.sectionTitle, color = LEColors.danger)
+            Text("Danh sách mục lỗi (${summary.failedCount})", style = BatchTtsUiScale.sectionHeading, color = LEColors.danger)
 
             LazyColumn(
                 modifier = Modifier
@@ -1851,28 +1984,38 @@ private fun CompletedStepContent(
             Surface(
                 color = LEColors.surfaceElevated,
                 shape = LERadius.sm,
+                border = BorderStroke(1.dp, LEColors.borderSubtle),
                 modifier = Modifier.fillMaxWidth().weight(1f)
             ) {
-                Column(modifier = Modifier.padding(LESpacing.md), verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
+                Column(modifier = Modifier.padding(BatchTtsUiScale.cardPadding), verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                    val summaryMessage = when {
+                        summary.isCancelled ->
+                            "Đã tạo và lưu thành công ${summary.successCount} mục audio trước khi hủy. Còn lại ${summary.cancelledCount} mục đã bị hủy."
+                        else ->
+                            "Đã tạo thành công tất cả ${summary.successCount} mục audio vào bộ nhớ lưu trữ."
+                    }
+
                     Text(
-                        text = "All audio files were synthesized and saved to package storage.",
-                        style = LETypography.caption,
-                        fontWeight = FontWeight.Bold,
-                        color = LEColors.success
+                        text = summaryMessage,
+                        style = BatchTtsUiScale.controlPrimary,
+                        color = if (summary.isCancelled) LEColors.warning else LEColors.success
                     )
+
                     if (summary.fallbackRecoveredCount > 0) {
                         Text(
-                            text = "${summary.fallbackRecoveredCount} targets were successfully recovered via secondary fallback voices.",
-                            style = LETypography.caption,
-                            color = LEColors.primary,
-                            fontWeight = FontWeight.Medium
+                            text = "${summary.fallbackRecoveredCount} mục đã được tạo thành công nhờ chuyển sang các giọng dự phòng trong chuỗi.",
+                            style = BatchTtsUiScale.body,
+                            color = LEColors.primary
                         )
                     }
-                    Text(
-                        text = "Click 'Apply' to link these audio references to your content items atomically. You can immediately Undo this operation if needed.",
-                        style = LETypography.caption,
-                        color = LEColors.textSecondary
-                    )
+
+                    if (summary.successCount > 0) {
+                        Text(
+                            text = "Nhấn 'Apply (${summary.successCount} Targets)' để liên kết các file audio đã tạo vào bài học của bạn. Thao tác này có thể Undo bất cứ lúc nào trong Content Studio.",
+                            style = BatchTtsUiScale.body,
+                            color = LEColors.textSecondary
+                        )
+                    }
                 }
             }
         }
@@ -1891,8 +2034,8 @@ private fun StatPill(label: String, value: String, color: Color) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(label, style = LETypography.caption, color = LEColors.textMuted)
-            Text(value, style = LETypography.caption, fontWeight = FontWeight.Bold, color = color)
+            Text(label, style = BatchTtsUiScale.controlSecondary, color = LEColors.textMuted)
+            Text(value, style = BatchTtsUiScale.controlSecondary, fontWeight = FontWeight.Bold, color = color)
         }
     }
 }
@@ -1900,8 +2043,8 @@ private fun StatPill(label: String, value: String, color: Color) {
 @Composable
 private fun FailedJobRow(result: BatchTtsJobResult) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(LESpacing.sm),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        modifier = Modifier.fillMaxWidth().padding(BatchTtsUiScale.cardPadding),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1910,7 +2053,7 @@ private fun FailedJobRow(result: BatchTtsJobResult) {
         ) {
             Text(
                 text = "[${result.job.field.displayName}] ${result.job.text}",
-                style = LETypography.caption,
+                style = BatchTtsUiScale.controlPrimary,
                 fontWeight = FontWeight.Bold,
                 color = LEColors.textPrimary,
                 maxLines = 1,
@@ -1923,10 +2066,10 @@ private fun FailedJobRow(result: BatchTtsJobResult) {
             ) {
                 Text(
                     text = result.errorCategory?.displayLabel ?: "Error",
-                    style = LETypography.caption,
+                    style = BatchTtsUiScale.controlSecondary,
                     color = LEColors.danger,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }
@@ -1934,7 +2077,7 @@ private fun FailedJobRow(result: BatchTtsJobResult) {
         result.errorMessage?.let { msg ->
             Text(
                 text = msg,
-                style = LETypography.caption,
+                style = BatchTtsUiScale.controlSecondary,
                 color = LEColors.textMuted,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -1944,7 +2087,7 @@ private fun FailedJobRow(result: BatchTtsJobResult) {
         if (result.attempts.isNotEmpty()) {
             Text(
                 text = "Attempts (${result.attempts.size}): " + result.attempts.joinToString { "${it.voice.displayName} (${it.errorCategory?.displayLabel ?: "Failed"})" },
-                style = LETypography.caption,
+                style = BatchTtsUiScale.previewSource,
                 color = LEColors.textMuted
             )
         }
@@ -1971,7 +2114,7 @@ private fun ApplyingStepContent(
         verticalArrangement = Arrangement.Center
     ) {
         CircularProgressIndicator(
-            progress = progress,
+            progress = { progress },
             modifier = Modifier.size(64.dp),
             color = LEColors.primary,
             strokeWidth = 6.dp
@@ -1979,19 +2122,19 @@ private fun ApplyingStepContent(
         Spacer(modifier = Modifier.height(LESpacing.lg))
         Text(
             text = "Đang áp dụng audio đã tạo vào bài học...",
-            style = LETypography.paneTitle,
+            style = BatchTtsUiScale.dialogTitle,
             color = LEColors.textPrimary
         )
         Spacer(modifier = Modifier.height(LESpacing.xs))
         Text(
             text = "$completedCount / $totalCount mục (${(progress * 100).toInt()}%)",
-            style = LETypography.fieldValue,
+            style = BatchTtsUiScale.sectionHeading,
             color = LEColors.textSecondary
         )
         Spacer(modifier = Modifier.height(LESpacing.sm))
         LinearProgressIndicator(
-            progress = progress,
-            modifier = Modifier.fillMaxWidth(0.6f).height(8.dp).clip(LERadius.sm),
+            progress = { progress },
+            modifier = Modifier.fillMaxWidth(0.6f).height(10.dp).clip(LERadius.sm),
             color = LEColors.primary,
             trackColor = LEColors.surfaceSubtle
         )
@@ -2002,18 +2145,18 @@ private fun ApplyingStepContent(
         ) {
             Text(
                 text = "Thời gian: $timeFormatted",
-                style = LETypography.fieldValue,
+                style = BatchTtsUiScale.body,
                 color = LEColors.textSecondary
             )
             Text(
                 text = "Đã áp dụng: $completedCount",
-                style = LETypography.fieldValue,
+                style = BatchTtsUiScale.body,
                 color = LEColors.success
             )
             if (failedCount > 0) {
                 Text(
                     text = "Lỗi: $failedCount",
-                    style = LETypography.fieldValue,
+                    style = BatchTtsUiScale.body,
                     color = LEColors.danger
                 )
             }
@@ -2021,7 +2164,7 @@ private fun ApplyingStepContent(
         Spacer(modifier = Modifier.height(LESpacing.lg))
         Text(
             text = "Vui lòng giữ ứng dụng mở trong quá trình lưu dữ liệu để đảm bảo an toàn.",
-            style = LETypography.caption,
+            style = BatchTtsUiScale.controlSecondary,
             color = LEColors.textMuted
         )
     }
@@ -2056,20 +2199,20 @@ private fun ApplyCompletedStepContent(
         Spacer(modifier = Modifier.height(LESpacing.lg))
         Text(
             text = if (failedCount == 0) "Áp dụng audio thành công!" else "Áp dụng audio hoàn tất với cảnh báo",
-            style = LETypography.paneTitle,
+            style = BatchTtsUiScale.dialogTitle,
             color = LEColors.textPrimary
         )
         Spacer(modifier = Modifier.height(LESpacing.xs))
         Text(
             text = "Đã lưu $appliedCount / $totalCount mục audio vào gói nội dung '$packageName'.",
-            style = LETypography.fieldValue,
+            style = BatchTtsUiScale.sectionHeading,
             color = LEColors.textSecondary
         )
         if (failedCount > 0) {
             Spacer(modifier = Modifier.height(LESpacing.xs))
             Text(
                 text = "Không thể áp dụng $failedCount mục. Bạn có thể kiểm tra lại dữ liệu bài học.",
-                style = LETypography.caption,
+                style = BatchTtsUiScale.controlSecondary,
                 color = LEColors.danger
             )
         }
@@ -2093,7 +2236,7 @@ private fun ApplyCompletedStepContent(
                 Spacer(modifier = Modifier.width(LESpacing.sm))
                 Text(
                     text = "Bạn có thể sử dụng nút 'Undo TTS' trong Content Studio bất cứ lúc nào nếu cần hoàn tác.",
-                    style = LETypography.caption,
+                    style = BatchTtsUiScale.controlSecondary,
                     color = LEColors.textSecondary
                 )
             }
@@ -2137,7 +2280,7 @@ private fun PresetToolbar(
                 ) {
                     Text(
                         text = "Preset:",
-                        style = LETypography.caption,
+                        style = BatchTtsUiScale.controlSecondary,
                         fontWeight = FontWeight.Bold,
                         color = LEColors.textSecondary
                     )
@@ -2150,7 +2293,7 @@ private fun PresetToolbar(
                             color = LEColors.surface,
                             modifier = Modifier
                                 .widthIn(min = 160.dp, max = 260.dp)
-                                .height(32.dp)
+                                .height(34.dp)
                                 .clip(LERadius.xs)
                                 .clickable { expandedDropdown = true }
                         ) {
@@ -2166,7 +2309,7 @@ private fun PresetToolbar(
                                 ) {
                                     Text(
                                         text = selectedPreset.name,
-                                        style = LETypography.caption,
+                                        style = BatchTtsUiScale.controlPrimary,
                                         fontWeight = FontWeight.Medium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -2174,13 +2317,13 @@ private fun PresetToolbar(
                                     if (isDirty) {
                                         Text(
                                             text = "(Modified)",
-                                            style = LETypography.caption,
+                                            style = BatchTtsUiScale.controlSecondary,
                                             color = LEColors.warning,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
                                 }
-                                Text("▾", style = LETypography.caption, color = LEColors.textMuted)
+                                Text("▾", style = BatchTtsUiScale.controlSecondary, color = LEColors.textMuted)
                             }
                         }
 
@@ -2197,12 +2340,12 @@ private fun PresetToolbar(
                                         ) {
                                             Text(
                                                 preset.name,
-                                                style = LETypography.caption,
+                                                style = BatchTtsUiScale.controlPrimary,
                                                 fontWeight = if (preset.id == selectedPreset.id) FontWeight.Bold else FontWeight.Normal,
                                                 color = if (preset.id == selectedPreset.id) LEColors.primary else LEColors.textPrimary
                                             )
                                             if (preset.isBuiltIn) {
-                                                Text(" (Default)", style = LETypography.caption, color = LEColors.textMuted)
+                                                Text(" (Default)", style = BatchTtsUiScale.controlSecondary, color = LEColors.textMuted)
                                             }
                                         }
                                     },
@@ -2220,32 +2363,32 @@ private fun PresetToolbar(
                         text = "Save",
                         onClick = onSavePreset,
                         enabled = isDirty || selectedPreset.isBuiltIn,
-                        modifier = Modifier.height(30.dp)
+                        modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
                     )
 
                     LESecondaryButton(
                         text = "Save As...",
                         onClick = onSaveAsPreset,
-                        modifier = Modifier.height(30.dp)
+                        modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
                     )
 
                     LESecondaryButton(
                         text = "Duplicate",
                         onClick = onDuplicatePreset,
-                        modifier = Modifier.height(30.dp)
+                        modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
                     )
 
                     if (!selectedPreset.isBuiltIn) {
                         LESecondaryButton(
                             text = "Rename",
                             onClick = onRenamePreset,
-                            modifier = Modifier.height(30.dp)
+                            modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
                         )
 
                         LEDangerButton(
                             text = "Delete",
                             onClick = onDeletePreset,
-                            modifier = Modifier.height(30.dp)
+                            modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
                         )
                     }
                 }
@@ -2253,16 +2396,16 @@ private fun PresetToolbar(
                 LESecondaryButton(
                     text = "Reset Defaults",
                     onClick = onResetDefaults,
-                    modifier = Modifier.height(30.dp)
+                    modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
                 )
             }
 
             if (errorMessage != null) {
                 Text(
                     text = "⚠ $errorMessage",
-                    style = LETypography.caption,
+                    style = BatchTtsUiScale.previewSource,
                     color = LEColors.danger,
-                    modifier = Modifier.padding(top = 2.dp)
+                    modifier = Modifier.padding(start = 4.dp)
                 )
             }
         }

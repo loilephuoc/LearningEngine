@@ -82,12 +82,17 @@ data class BatchTtsScopeScan(
     val vietnameseTargetsCount: Int,
     val representativeEnglishText: String?,
     val representativeVietnameseText: String?,
-    val samplesByField: Map<TtsField, BatchTtsSample> = emptyMap()
+    val samplesByField: Map<TtsField, BatchTtsSample> = emptyMap(),
+    val allSamplesByField: Map<TtsField, List<BatchTtsSample>> = emptyMap()
 ) {
     val totalValidTargets: Int get() = validTargets.size
     val hasTargets: Boolean get() = validTargets.isNotEmpty()
 
-    fun sampleFor(field: TtsField): BatchTtsSample? = samplesByField[field]
+    fun sampleFor(field: TtsField): BatchTtsSample? =
+        samplesByField[field] ?: allSamplesByField[field]?.firstOrNull()
+
+    fun samplesFor(field: TtsField): List<BatchTtsSample> =
+        allSamplesByField[field] ?: (samplesByField[field]?.let { listOf(it) } ?: emptyList())
 }
 
 data class BatchTtsLanguageRequirements(
@@ -192,9 +197,15 @@ data class BatchTtsSummary(
     val isCancelled: Boolean = false,
     val currentOperation: String? = null,
     val currentVoiceName: String? = null,
+    val currentCandidateIndex: Int = 0,
+    val totalCandidatesForCurrentJob: Int = 0,
+    val currentExecutingVoice: TtsVoice? = null,
     val elapsedMillis: Long = 0L,
     val estimatedRemainingMillis: Long? = null
 ) {
+    val isCurrentCandidateFallback: Boolean
+        get() = currentCandidateIndex > 1
+
     val hasFailures: Boolean
         get() = failedCount > 0
 

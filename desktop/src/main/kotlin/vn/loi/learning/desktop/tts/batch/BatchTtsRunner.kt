@@ -251,6 +251,9 @@ class BatchTtsRunner(
                                                 isCancelled = false,
                                                 currentOperation = opLabel,
                                                 currentVoiceName = voice.displayName.ifBlank { voice.id },
+                                                currentCandidateIndex = candIndex + 1,
+                                                totalCandidatesForCurrentJob = candidateChain.size,
+                                                currentExecutingVoice = voice,
                                                 elapsedMillis = elapsedNow,
                                                 estimatedRemainingMillis = eta
                                             )

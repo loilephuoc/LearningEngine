@@ -50,7 +50,7 @@ fun TtsNumericControl(
         border = BorderStroke(1.dp, if (isError) LEColors.danger else LEColors.borderSubtle),
         modifier = modifier
     ) {
-        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -58,13 +58,14 @@ fun TtsNumericControl(
             ) {
                 Text(
                     text = label,
-                    style = LETypography.caption,
+                    style = BatchTtsUiScale.controlSecondary,
+                    fontWeight = FontWeight.Bold,
                     color = if (isError) LEColors.danger else LEColors.textMuted
                 )
                 if (value != 0) {
                     Text(
                         text = "Reset (0)",
-                        style = LETypography.caption,
+                        style = BatchTtsUiScale.controlSecondary,
                         color = LEColors.primary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
@@ -74,15 +75,15 @@ fun TtsNumericControl(
                                 isError = false
                                 onValueChange(0)
                             }
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Decrement button
                 Surface(
@@ -90,7 +91,7 @@ fun TtsNumericControl(
                     shape = LERadius.xs,
                     border = BorderStroke(1.dp, LEColors.borderSubtle),
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(28.dp)
                         .clip(LERadius.xs)
                         .clickable(enabled = value > min) {
                             val newVal = (value - step).coerceAtLeast(min)
@@ -100,7 +101,7 @@ fun TtsNumericControl(
                         }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("-", style = LETypography.caption, fontWeight = FontWeight.Bold)
+                        Text("-", style = BatchTtsUiScale.controlPrimary, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -118,16 +119,15 @@ fun TtsNumericControl(
                             isError = true
                         }
                     },
-                    textStyle = LETypography.caption.copy(
+                    textStyle = BatchTtsUiScale.controlPrimary.copy(
                         color = if (isError) LEColors.danger else LEColors.textPrimary,
-                        fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     ),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
                 )
 
-                Text(unit, style = LETypography.caption, color = LEColors.textMuted)
+                Text(unit, style = BatchTtsUiScale.controlSecondary, color = LEColors.textMuted)
 
                 // Increment button
                 Surface(
@@ -135,7 +135,7 @@ fun TtsNumericControl(
                     shape = LERadius.xs,
                     border = BorderStroke(1.dp, LEColors.borderSubtle),
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(28.dp)
                         .clip(LERadius.xs)
                         .clickable(enabled = value < max) {
                             val newVal = (value + step).coerceAtMost(max)
@@ -145,7 +145,7 @@ fun TtsNumericControl(
                         }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("+", style = LETypography.caption, fontWeight = FontWeight.Bold)
+                        Text("+", style = BatchTtsUiScale.controlPrimary, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -153,7 +153,7 @@ fun TtsNumericControl(
             if (isError) {
                 Text(
                     text = "Range: $min to +$max $unit",
-                    style = LETypography.caption,
+                    style = BatchTtsUiScale.previewSource,
                     color = LEColors.danger,
                     modifier = Modifier.padding(top = 2.dp)
                 )

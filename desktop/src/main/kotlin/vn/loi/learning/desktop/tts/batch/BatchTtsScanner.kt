@@ -35,8 +35,8 @@ object BatchTtsScanner {
         var existingSkipped = 0
         var emptyTextSkipped = 0
 
-        val missingSamplesByField = mutableMapOf<TtsField, BatchTtsSample>()
-        val allSamplesByField = mutableMapOf<TtsField, BatchTtsSample>()
+        val missingSampleListsByField = mutableMapOf<TtsField, MutableList<BatchTtsSample>>()
+        val allSampleListsByField = mutableMapOf<TtsField, MutableList<BatchTtsSample>>()
         var repEnglish: String? = null
         var repVietnamese: String? = null
 
@@ -65,11 +65,9 @@ object BatchTtsScanner {
                         itemIndex = itemIndex,
                         itemLabel = itemLabel
                     )
-                    if (!allSamplesByField.containsKey(field)) {
-                        allSamplesByField[field] = sample
-                    }
-                    if (isMissing && !missingSamplesByField.containsKey(field)) {
-                        missingSamplesByField[field] = sample
+                    allSampleListsByField.getOrPut(field) { mutableListOf() }.add(sample)
+                    if (isMissing) {
+                        missingSampleListsByField.getOrPut(field) { mutableListOf() }.add(sample)
                     }
                 }
 
@@ -106,16 +104,18 @@ object BatchTtsScanner {
             }
         }
 
-        // Composite samples: prefer missing target sample over existing audio sample
+        // Composite samples: prefer missing target samples over existing audio samples
         val samplesByField = mutableMapOf<TtsField, BatchTtsSample>()
+        val allSamplesMap = mutableMapOf<TtsField, List<BatchTtsSample>>()
         for (field in TtsField.entries) {
-            val sample = if (overwriteExisting) {
-                allSamplesByField[field]
+            val list = if (overwriteExisting) {
+                allSampleListsByField[field].orEmpty()
             } else {
-                missingSamplesByField[field] ?: allSamplesByField[field]
+                missingSampleListsByField[field] ?: allSampleListsByField[field].orEmpty()
             }
-            if (sample != null) {
-                samplesByField[field] = sample
+            if (list.isNotEmpty()) {
+                samplesByField[field] = list.first()
+                allSamplesMap[field] = list
             }
         }
 
@@ -143,7 +143,8 @@ object BatchTtsScanner {
             vietnameseTargetsCount = vietnameseCount,
             representativeEnglishText = repEnglish,
             representativeVietnameseText = repVietnamese,
-            samplesByField = samplesByField
+            samplesByField = samplesByField,
+            allSamplesByField = allSamplesMap
         )
     }
 

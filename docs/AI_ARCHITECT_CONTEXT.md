@@ -1,5 +1,14 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Desktop Batch TTS Hotfix 4.1 — Fallback Voice Configuration UX + Multi-Target Preview + Runtime Voice Transparency + Desktop-Readable Visual Scale + Regression Safety
+
+- Fallback Voice Configuration UX: Simplified fallback voice management directly within each language's configuration card. Displays clear execution order numbers (1., 2., 3.), voice display names with region and gender subtitles, immediate reordering (`[↑]`, `[↓]`) and removal (`[Remove]`). Direct `+ Add fallback voice` button opens the full `SearchableVoicePickerDialog`, with explicit disabled state explanations when reaching the 3-fallback cap or when no compatible voices remain in catalog.
+- Multi-Target Preview Navigation: `BatchTtsScopeScan` and `BatchTtsScanner` collect complete sample lists per field (`allSamplesByField`). Users can navigate across sample sentences with `[◀]` and `[▶]` buttons, sample counter badge (`Sample X / N`), and field switcher tabs. Preview sentences are prominently rendered in desktop-legible typography (15sp, 22sp line height) with explicit item index and source attribution.
+- Runtime Voice Transparency: `BatchTtsSummary` and `BatchTtsRunner` expose configured primary voice vs currently executing voice, real-time candidate index (`Fallback Candidate K/M`), and active live counters (Success, Fallback Recovered, Skipped, Failed, Cancelled).
+- Truthful Cancellation Wording & Apply Retention: Cancelled batches display truthful summaries reflecting the exact number of synthesized targets vs cancelled targets (never claiming full completion). Crucially, the successfully synthesized subset is preserved and available for immediate atomic Apply.
+- Desktop-Readable Visual Scale: Systemic typography and sizing system (`BatchTtsUiScale`) applied across all batch TTS dialogs, metric cards, voice pickers, preset toolbars, and action buttons ensuring crisp readability at 100% desktop scaling.
+- Verification: `clean test` passes 5,271 tests (root 2,322, Android 1,059, Desktop 1,890), zero failures/errors/skips. Desktop assemble, Android debug assemble, and `git diff --check` pass.
+
 ## Desktop Batch TTS Hotfix 4 — field-language resolution, searchable voice picker, and preview correctness
 
 - Canonical Field-Language Resolution: consolidated single canonical source of truth `BatchTtsLanguageResolver` mapping `Question` -> English (`en`), `Answer` -> Vietnamese (`vi`), `Example` -> English (`en`), `Translation` -> Vietnamese (`vi`). Fails closed on unknown languages and validates candidate voice locale compatibility.
