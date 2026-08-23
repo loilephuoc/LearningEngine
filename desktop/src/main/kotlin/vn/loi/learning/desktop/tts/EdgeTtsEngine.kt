@@ -13,20 +13,27 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.UUID
 import java.util.concurrent.CancellationException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 
 /**
  * JVM-native Edge Read Aloud TTS engine implementation.
- * Wraps tts-edge-java with coroutine dispatch, structured error translation,
- * deterministic voice sorting, and safe output cleanup.
+ * Wraps tts-edge-java with isolated daemon worker execution, structured error translation,
+ * hard attempt cancellation/abandonment, deterministic voice sorting, and safe output cleanup.
  */
 class EdgeTtsEngine(
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-) : TtsEngine {
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val executor: ExecutorService = defaultExecutor
+) : TtsEngine, AutoCloseable {
 
     @Volatile
     private var cachedVoices: List<TtsVoice>? = null
@@ -65,7 +72,7 @@ class EdgeTtsEngine(
     override suspend fun synthesize(
         request: TtsSynthesisRequest,
         outputFile: Path
-    ): TtsSynthesisResult = runInterruptible(ioDispatcher) {
+    ): TtsSynthesisResult {
         val trimmedText = request.text.trim()
         if (trimmedText.isBlank()) {
             throw TtsException(TtsError.InvalidText("Text content must not be blank"))
@@ -79,83 +86,114 @@ class EdgeTtsEngine(
             ?: throw TtsException(TtsError.OutputWriteFailed("Invalid output file path parent"))
         Files.createDirectories(targetParent)
 
-        // Temporary directory for the generation intermediate file
-        val tempWorkDir = Files.createTempDirectory("edge-tts-work-").toFile()
-        val tempBaseName = "tts_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}"
+        return suspendCancellableCoroutine { continuation ->
+            val isAbandoned = AtomicBoolean(false)
+            val future = executor.submit {
+                val tempWorkDir = runCatching { Files.createTempDirectory("edge-tts-work-").toFile() }.getOrNull()
+                val tempBaseName = "tts_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}"
+                try {
+                    val voice = Voice().apply {
+                        shortName = request.voice.id
+                        name = request.voice.id
+                        locale = request.voice.locale
+                    }
 
-        try {
-            val voice = Voice().apply {
-                shortName = request.voice.id
-                name = request.voice.id
-                locale = request.voice.locale
+                    val tts = TTS(voice, trimmedText)
+                        .findHeadHook()
+                        .isRateLimited(true)
+                        .storage(tempWorkDir?.absolutePath ?: "")
+                        .fileName(tempBaseName)
+                        .overwrite(true)
+                        .formatMp3()
+
+                    if (request.rate != 0) {
+                        val sign = if (request.rate > 0) "+" else ""
+                        tts.voiceRate("$sign${request.rate}%")
+                    }
+
+                    request.pitch?.takeIf { it.isNotBlank() }?.let { tts.voicePitch(it) }
+                    request.volume?.takeIf { it.isNotBlank() }?.let { tts.voiceVolume(it) }
+
+                    val generatedName = tts.trans()
+
+                    if (isAbandoned.get()) {
+                        return@submit
+                    }
+
+                    val generatedFile = File(tempWorkDir, "$tempBaseName.mp3")
+                    if (!generatedFile.exists() || generatedFile.length() <= 0L) {
+                        throw TtsException(
+                            TtsError.GenerationFailed("TTS provider produced an empty or missing audio file: $generatedName")
+                        )
+                    }
+
+                    Files.copy(
+                        generatedFile.toPath(),
+                        outputFile,
+                        StandardCopyOption.REPLACE_EXISTING
+                    )
+
+                    val finalSize = Files.size(outputFile)
+                    if (finalSize <= 0L) {
+                        Files.deleteIfExists(outputFile)
+                        throw TtsException(TtsError.GenerationFailed("Output audio file has 0 bytes"))
+                    }
+
+                    if (!isAbandoned.get() && continuation.isActive) {
+                        continuation.resume(
+                            TtsSynthesisResult(
+                                outputFile = outputFile,
+                                byteCount = finalSize
+                            )
+                        )
+                    }
+                } catch (e: Throwable) {
+                    if (!isAbandoned.get() && continuation.isActive) {
+                        Files.deleteIfExists(outputFile)
+                        continuation.resumeWithException(mapToTtsException(e, "Synthesis failed for voice: ${request.voice.id}"))
+                    }
+                } finally {
+                    tempWorkDir?.deleteRecursively()
+                }
             }
 
-            val tts = TTS(voice, trimmedText)
-                .findHeadHook()
-                .isRateLimited(true)
-                .storage(tempWorkDir.absolutePath)
-                .fileName(tempBaseName)
-                .overwrite(true)
-                .formatMp3()
-
-            if (request.rate != 0) {
-                val sign = if (request.rate > 0) "+" else ""
-                tts.voiceRate("$sign${request.rate}%")
-            }
-
-            request.pitch?.takeIf { it.isNotBlank() }?.let { tts.voicePitch(it) }
-            request.volume?.takeIf { it.isNotBlank() }?.let { tts.voiceVolume(it) }
-
-            val generatedName = tts.trans()
-            val generatedFile = File(tempWorkDir, "$tempBaseName.mp3")
-
-            if (!generatedFile.exists() || generatedFile.length() <= 0L) {
-                throw TtsException(
-                    TtsError.GenerationFailed("TTS provider produced an empty or missing audio file: $generatedName")
-                )
-            }
-
-            Files.copy(
-                generatedFile.toPath(),
-                outputFile,
-                StandardCopyOption.REPLACE_EXISTING
-            )
-
-            val finalSize = Files.size(outputFile)
-            if (finalSize <= 0L) {
+            continuation.invokeOnCancellation {
+                isAbandoned.set(true)
+                future.cancel(true)
                 Files.deleteIfExists(outputFile)
-                throw TtsException(TtsError.GenerationFailed("Output audio file has 0 bytes"))
             }
-
-            TtsSynthesisResult(
-                outputFile = outputFile,
-                byteCount = finalSize
-            )
-        } catch (e: CancellationException) {
-            Files.deleteIfExists(outputFile)
-            throw TtsException(TtsError.Cancelled, e)
-        } catch (e: TtsException) {
-            Files.deleteIfExists(outputFile)
-            throw e
-        } catch (e: Exception) {
-            Files.deleteIfExists(outputFile)
-            throw mapToTtsException(e, "Synthesis failed for voice: ${request.voice.id}")
-        } finally {
-            tempWorkDir.deleteRecursively()
         }
     }
 
-    private fun mapToTtsException(e: Throwable, fallbackMessage: String): TtsException {
-        if (e is TtsException) return e
-        return when (e) {
-            is UnknownHostException, is ConnectException ->
-                TtsException(TtsError.NoNetwork, e)
-            is SocketTimeoutException, is TimeoutException ->
-                TtsException(TtsError.Timeout, e)
-            is IOException ->
-                TtsException(TtsError.ProviderUnavailable(e.message ?: fallbackMessage), e)
-            else ->
-                TtsException(TtsError.GenerationFailed(e.message ?: fallbackMessage), e)
+    override fun close() {
+        // defaultExecutor is a daemon pool and does not hold process open
+    }
+
+    companion object {
+        private val workerCounter = AtomicInteger(0)
+        private val defaultExecutor: ExecutorService by lazy {
+            Executors.newCachedThreadPool { runnable ->
+                Thread(runnable).apply {
+                    isDaemon = true
+                    name = "edge-tts-worker-${workerCounter.incrementAndGet()}"
+                }
+            }
+        }
+
+        fun mapToTtsException(e: Throwable, fallbackMessage: String): TtsException {
+            if (e is TtsException) return e
+            return when (e) {
+                is CancellationException ->
+                    TtsException(TtsError.Cancelled, e)
+                is UnknownHostException, is ConnectException ->
+                    TtsException(TtsError.NoNetwork, e)
+                is SocketTimeoutException, is TimeoutException ->
+                    TtsException(TtsError.Timeout, e)
+                is IOException ->
+                    TtsException(TtsError.ProviderUnavailable(e.message ?: fallbackMessage), e)
+                else ->
+                    TtsException(TtsError.GenerationFailed(e.message ?: fallbackMessage), e)
+            }
         }
     }
 }

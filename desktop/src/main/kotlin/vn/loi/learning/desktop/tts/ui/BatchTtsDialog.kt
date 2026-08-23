@@ -58,22 +58,27 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem
 import vn.loi.learning.application.port.ContentMediaStorage
+import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
+import vn.loi.learning.desktop.runtime.DesktopRuntimeConfigurationLoader
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDirectoryResolver
+import vn.loi.learning.desktop.runtime.FileDesktopRuntimeLogger
 import vn.loi.learning.desktop.tts.DesktopTtsAudioService
 import vn.loi.learning.desktop.tts.TtsAudioParameters
 import vn.loi.learning.desktop.tts.TtsField
 import vn.loi.learning.desktop.tts.TtsLanguage
 import vn.loi.learning.desktop.tts.TtsVoice
-import vn.loi.learning.desktop.tts.batch.BatchTtsJob
 import vn.loi.learning.desktop.tts.batch.BatchTtsCheckpointRepository
-import vn.loi.learning.desktop.tts.batch.BatchTtsPlanIdentity
+import vn.loi.learning.desktop.tts.batch.BatchTtsEventLogger
+import vn.loi.learning.desktop.tts.batch.BatchTtsJob
 import vn.loi.learning.desktop.tts.batch.BatchTtsJobResult
 import vn.loi.learning.desktop.tts.batch.BatchTtsJobStatus
 import vn.loi.learning.desktop.tts.batch.BatchTtsLanguageRequirements
+import vn.loi.learning.desktop.tts.batch.BatchTtsPlanIdentity
 import vn.loi.learning.desktop.tts.batch.BatchTtsRunner
 import vn.loi.learning.desktop.tts.batch.BatchTtsScanner
 import vn.loi.learning.desktop.tts.batch.BatchTtsScopeScan
 import vn.loi.learning.desktop.tts.batch.BatchTtsSummary
+import vn.loi.learning.desktop.tts.batch.RuntimeBatchTtsEventLogger
 import vn.loi.learning.desktop.tts.preset.TtsLanguagePresetConfig
 import vn.loi.learning.desktop.tts.preset.TtsPreset
 import vn.loi.learning.desktop.tts.preset.TtsPresetRepository
@@ -309,8 +314,18 @@ fun BatchTtsDialog(
 
     // Batch execution state
     var summary by remember { mutableStateOf(BatchTtsSummary.initial(scopeScan.totalValidTargets)) }
+    val eventLogger = remember {
+        val directories = DesktopRuntimeDirectoryResolver.resolve()
+        val configFile = directories.config.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+        val config = runCatching { DesktopRuntimeConfigurationLoader.load(configFile) }.getOrDefault(DesktopRuntimeConfiguration())
+        val logger = runCatching { FileDesktopRuntimeLogger.open(directories.logs, config) }.getOrNull()
+        if (logger != null) RuntimeBatchTtsEventLogger(logger) else BatchTtsEventLogger.NoOp
+    }
     val checkpointRepository = remember {
-        BatchTtsCheckpointRepository(DesktopRuntimeDirectoryResolver.resolve().data.resolve("tts-checkpoints"))
+        BatchTtsCheckpointRepository(
+            DesktopRuntimeDirectoryResolver.resolve().data.resolve("tts-checkpoints"),
+            eventLogger = eventLogger
+        )
     }
     var activeRunner by remember { mutableStateOf<BatchTtsRunner?>(null) }
     var batchStartMessage by remember { mutableStateOf<String?>(null) }
@@ -395,6 +410,14 @@ fun BatchTtsDialog(
     fun startBatch(jobsToRun: List<BatchTtsJob>) {
         if (jobsToRun.isEmpty()) return
         val plan = BatchTtsPlanIdentity.create(packageName, jobsToRun, overwriteExisting)
+        eventLogger.logPlanCreated(
+            planId = plan.id,
+            packageId = packageName,
+            targetCount = jobsToRun.size,
+            overwriteMode = overwriteExisting,
+            selectedFields = jobsToRun.map { it.field.name }.distinct().sorted().joinToString(","),
+            languageRequirements = languageRequirements.toString()
+        )
         val store = checkpointRepository.storeFor(plan)
         val resumesExisting = store.load() != null
         val ownership = try {
@@ -409,7 +432,8 @@ fun BatchTtsDialog(
             coroutineScope,
             checkpointStore = store,
             assetExists = { path -> contentMediaStorage?.exists(path) == true },
-            checkpointOwnership = ownership
+            checkpointOwnership = ownership,
+            eventLogger = eventLogger
         )
         activeRunner = runner
         stopAudio()
@@ -1597,6 +1621,12 @@ private fun RunningStepContent(
                         color = LEColors.textPrimary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Voice: ${job.voice.displayName.ifBlank { job.voice.id }} (${job.language.code})",
+                        style = LETypography.caption,
+                        color = LEColors.textMuted
                     )
                 }
             }
