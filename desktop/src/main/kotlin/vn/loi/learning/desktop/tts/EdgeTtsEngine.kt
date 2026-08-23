@@ -16,6 +16,7 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 
 /**
@@ -64,7 +65,7 @@ class EdgeTtsEngine(
     override suspend fun synthesize(
         request: TtsSynthesisRequest,
         outputFile: Path
-    ): TtsSynthesisResult = withContext(ioDispatcher) {
+    ): TtsSynthesisResult = runInterruptible(ioDispatcher) {
         val trimmedText = request.text.trim()
         if (trimmedText.isBlank()) {
             throw TtsException(TtsError.InvalidText("Text content must not be blank"))
