@@ -28,7 +28,8 @@ class BatchTtsRunner(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
     private val policy: BatchTtsExecutionPolicy = BatchTtsExecutionPolicy(),
     private val checkpointStore: BatchTtsCheckpointStore? = null,
-    private val assetExists: (String) -> Boolean = { true }
+    private val assetExists: (String) -> Boolean = { true },
+    private val checkpointOwnership: AutoCloseable? = null
 ) {
     private val cancelFlag = AtomicBoolean(false)
     private var activeJob: Job? = null
@@ -74,6 +75,7 @@ class BatchTtsRunner(
         var completedCount = 0
 
         activeJob = scope.launch {
+          try {
             // Initial broadcast
             onProgress(
                 BatchTtsSummary(
@@ -313,6 +315,9 @@ class BatchTtsRunner(
                 )
             )
             if (!cancelFlag.get() && completedCount == total && failedCount == 0) checkpointStore?.clear()
+          } finally {
+            checkpointOwnership?.close()
+          }
         }
 
         return activeJob!!

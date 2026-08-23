@@ -65,7 +65,8 @@ import vn.loi.learning.desktop.tts.TtsField
 import vn.loi.learning.desktop.tts.TtsLanguage
 import vn.loi.learning.desktop.tts.TtsVoice
 import vn.loi.learning.desktop.tts.batch.BatchTtsJob
-import vn.loi.learning.desktop.tts.batch.BatchTtsCheckpointStore
+import vn.loi.learning.desktop.tts.batch.BatchTtsCheckpointRepository
+import vn.loi.learning.desktop.tts.batch.BatchTtsPlanIdentity
 import vn.loi.learning.desktop.tts.batch.BatchTtsJobResult
 import vn.loi.learning.desktop.tts.batch.BatchTtsJobStatus
 import vn.loi.learning.desktop.tts.batch.BatchTtsLanguageRequirements
@@ -308,17 +309,11 @@ fun BatchTtsDialog(
 
     // Batch execution state
     var summary by remember { mutableStateOf(BatchTtsSummary.initial(scopeScan.totalValidTargets)) }
-    val runner = remember(ttsService, contentMediaStorage, packageName) {
-        val checkpointPath = DesktopRuntimeDirectoryResolver.resolve().data
-            .resolve("tts-checkpoints")
-            .resolve(packageName.replace(Regex("[^A-Za-z0-9._-]"), "_") + ".json")
-        BatchTtsRunner(
-            ttsService,
-            coroutineScope,
-            checkpointStore = BatchTtsCheckpointStore(checkpointPath),
-            assetExists = { path -> contentMediaStorage?.exists(path) == true }
-        )
+    val checkpointRepository = remember {
+        BatchTtsCheckpointRepository(DesktopRuntimeDirectoryResolver.resolve().data.resolve("tts-checkpoints"))
     }
+    var activeRunner by remember { mutableStateOf<BatchTtsRunner?>(null) }
+    var batchStartMessage by remember { mutableStateOf<String?>(null) }
 
     // Load available voices
     LaunchedEffect(Unit) {
@@ -399,6 +394,24 @@ fun BatchTtsDialog(
 
     fun startBatch(jobsToRun: List<BatchTtsJob>) {
         if (jobsToRun.isEmpty()) return
+        val plan = BatchTtsPlanIdentity.create(packageName, jobsToRun, overwriteExisting)
+        val store = checkpointRepository.storeFor(plan)
+        val resumesExisting = store.load() != null
+        val ownership = try {
+            checkpointRepository.acquire(plan)
+        } catch (_: IllegalStateException) {
+            batchStartMessage = "Phiên tạo audio này đang chạy ở cửa sổ khác."
+            return
+        }
+        batchStartMessage = if (resumesExisting) "Đã tìm thấy phiên tạo audio chưa hoàn tất. Đang tiếp tục…" else null
+        val runner = BatchTtsRunner(
+            ttsService,
+            coroutineScope,
+            checkpointStore = store,
+            assetExists = { path -> contentMediaStorage?.exists(path) == true },
+            checkpointOwnership = ownership
+        )
+        activeRunner = runner
         stopAudio()
         currentStep = BatchTtsDialogStep.RUNNING
         summary = BatchTtsSummary.initial(jobsToRun.size)
@@ -407,7 +420,7 @@ fun BatchTtsDialog(
         runner.runBatch(
             jobs = jobsToRun,
             packageName = packageName,
-            batchId = "$packageName:${selectedFields.sortedBy { it.name }.joinToString(",")}",
+            batchId = plan.id,
             overwriteExisting = overwriteExisting,
             onApply = null, // Generate != Apply separation
             onProgress = { updatedSummary ->
@@ -644,7 +657,7 @@ fun BatchTtsDialog(
                         BatchTtsDialogStep.RUNNING -> {
                             RunningStepContent(
                                 summary = summary,
-                                onCancel = { runner.cancel() }
+                                onCancel = { activeRunner?.cancel() }
                             )
                         }
                         BatchTtsDialogStep.COMPLETED -> {
@@ -659,6 +672,15 @@ fun BatchTtsDialog(
                 }
 
                 HorizontalDivider(color = LEColors.borderSubtle)
+
+                batchStartMessage?.let { message ->
+                    Text(
+                        message,
+                        style = LETypography.fieldValue,
+                        color = LEColors.warning,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = LESpacing.lg, vertical = LESpacing.xs)
+                    )
+                }
 
                 // FOOTER
                 Row(
@@ -688,7 +710,7 @@ fun BatchTtsDialog(
                         BatchTtsDialogStep.RUNNING -> {
                             LEDangerButton(
                                 text = "■ Cancel Batch",
-                                onClick = { runner.cancel() },
+                                onClick = { activeRunner?.cancel() },
                                 icon = LEIcons.Stop
                             )
                         }
