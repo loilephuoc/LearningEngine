@@ -1975,3 +1975,11 @@ Android exposes that controller through one root-scoped ViewModel and a private 
 route. Compose only renders state and forwards explicit actions; opening, recomposing, recreating, or
 returning to the screen does not initiate authentication or sync. Leaving the route allows an active
 manual operation to finish; destruction of the owning ViewModel cancels it through the controller.
+## Desktop Supabase session ownership
+
+Desktop Supabase connection metadata remains in the Desktop config directory. Resumable auth session
+material is owned separately by `DesktopSupabaseSessionStore` and stored as a Windows current-user
+DPAPI-protected opaque file (`supabase-session.dpapi`). It is not package/project content and does not
+share lifecycle with TTS checkpoints. The existing refresh provider owns refresh rotation and logout;
+the Desktop controller owns startup projection and fails closed when protected state is corrupt or no
+longer valid. Passwords and service-role credentials are outside this persistence contract.

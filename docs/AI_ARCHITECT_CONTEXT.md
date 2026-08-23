@@ -1,5 +1,22 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Desktop Content/Auth Hotfix — full-surface image drop + persistent Supabase session
+
+- Baseline `837e1c54` on `integration/learning-engine-2.0` was clean. Baseline
+  `:desktop:compileKotlin` passed, so `ContentExplorerPane.kt` has no real compiler error; the reported
+  red code is an IntelliJ Gradle-model/index/cache symptom and no source workaround was added.
+- Content Studio's complete Image card is one drop target for attach and the already-established
+  drop-to-replace behavior. Valid PNG/JPG/JPEG/WebP files use the existing canonical media-import
+  callback exactly once; invalid files are rejected visibly and drag state clears on exit/end/drop.
+- Desktop Supabase login sessions are stored at
+  `%LOCALAPPDATA%\LearningEngine\config\supabase-session.dpapi`, encrypted for the current Windows
+  user with DPAPI. Startup restores or refreshes the session through the existing provider; invalid or
+  corrupt state fails closed, logout deletes it, and password/service-role credentials are never stored.
+- Verification: focused image/auth tests pass; `clean test` passes 850 suites / 5,280 tests (root
+  432 / 2,322; Android 109 / 1,059; Desktop 309 / 1,899), zero failures/errors/skips. Desktop assemble,
+  Android debug assemble, compiler health, DPAPI round-trip, and `git diff --check` pass. Physical UAT
+  remains for whole-card hit testing and live Supabase refresh/revocation behavior.
+
 ## Desktop Batch TTS Hotfix 4.1 — Fallback Voice Configuration UX + Multi-Target Preview + Runtime Voice Transparency + Desktop-Readable Visual Scale + Regression Safety
 
 - Fallback Voice Configuration UX: Simplified fallback voice management directly within each language's configuration card. Displays clear execution order numbers (1., 2., 3.), voice display names with region and gender subtitles, immediate reordering (`[↑]`, `[↓]`) and removal (`[Remove]`). Direct `+ Add fallback voice` button opens the full `SearchableVoicePickerDialog`, with explicit disabled state explanations when reaching the 3-fallback cap or when no compatible voices remain in catalog.

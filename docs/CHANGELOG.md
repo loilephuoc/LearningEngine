@@ -5035,3 +5035,10 @@ Searchable desktop collections now expose a polite live result status that disti
   next sign-in.
 - Full clean verification passes 830 suites / 5,153 tests (root 431 / 2,312; Android 104 / 1,007;
   Desktop 295 / 1,834), with zero failures, errors, or skips; Android debug assembly passes.
+# Desktop content/auth hotfix
+
+- Expanded Content Studio image drag-and-drop ownership to the complete Image card while retaining one
+  canonical attach/replace import path, existing file validation, and visible full-card drag feedback.
+- Replaced Desktop's memory-only Supabase session adapter with an atomic Windows DPAPI current-user
+  store, startup restore/refresh, invalid/corrupt fail-closed behavior, and logout cleanup.
+- Confirmed `ContentExplorerPane.kt` compiles at the baseline and added no IDE-only source workaround.
