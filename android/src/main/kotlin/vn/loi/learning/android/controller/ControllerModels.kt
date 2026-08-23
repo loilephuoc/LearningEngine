@@ -420,7 +420,8 @@ enum class StudyAudioReason {
     MANUAL_PLAY,
     MANUAL_LOOP,
     CONTINUE_EXIT,
-    COMPOSE_AUTOPLAY
+    COMPOSE_AUTOPLAY,
+    FOREGROUND_LOSS
 }
 
 enum class StudyAudioEventKind {

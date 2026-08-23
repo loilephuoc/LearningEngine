@@ -52,6 +52,7 @@ object StudyControllerBridge {
     private val startAutoPlayRef = AtomicReference<(() -> Boolean)?>(null)
     private val backgroundAudioControllerRef = AtomicReference<AndroidAudioController?>(null)
     private val isForegroundRef = java.util.concurrent.atomic.AtomicBoolean(true)
+    private val isStudySurfaceActiveRef = java.util.concurrent.atomic.AtomicBoolean(true)
     private val currentPlaybackRef = AtomicReference<ActiveStudyPlayback?>(null)
     private val consumedAutoplayKeys = mutableSetOf<String>()
 
@@ -64,11 +65,13 @@ object StudyControllerBridge {
     fun onActivityForegroundChanged(isForeground: Boolean) {
         val previous = isForegroundRef.getAndSet(isForeground)
         if (previous && !isForeground) {
-            val playback = currentPlaybackRef.get()
-            if (playback != null && playback.startedWhileForeground && playback.reason == StudyAudioReason.MANUAL_LOOP) {
-                stopAudio(StudyAudioReason.MANUAL_LOOP)
-            }
+            stopAudio(StudyAudioReason.FOREGROUND_LOSS)
         }
+    }
+
+    fun onStudySurfaceChanged(isActive: Boolean) {
+        val previous = isStudySurfaceActiveRef.getAndSet(isActive)
+        if (previous && !isActive) stopAudio(StudyAudioReason.FOREGROUND_LOSS)
     }
 
     fun register(target: StudyControllerTarget) {
@@ -310,6 +313,7 @@ object StudyControllerBridge {
         backgroundAudioControllerRef.set(null)
         currentPlaybackRef.set(null)
         isForegroundRef.set(true)
+        isStudySurfaceActiveRef.set(true)
         consumedAutoplayKeys.clear()
     }
 }

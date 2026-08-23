@@ -342,10 +342,12 @@ fun StudyScreen(
     var editingDraft by remember { mutableStateOf<AndroidPackageQuickEditDraft?>(null) }
     var difficultToggleCount by remember { mutableIntStateOf(0) }
     DisposableEffect(lifecycleOwner, state is AndroidStudyState.Typing, audioOwnership, feedbackAudioController) {
+        vn.loi.learning.android.controller.StudyControllerBridge.onStudySurfaceChanged(true)
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) {
                 audioOwnership.stopForForegroundLoss()
                 feedbackAudioController.stop()
+                vn.loi.learning.android.controller.StudyControllerBridge.onActivityForegroundChanged(false)
             }
             if (state is AndroidStudyState.Typing) when (event) {
                 Lifecycle.Event.ON_STOP -> onEvent(AndroidStudyEvent.PauseTyping)
@@ -354,7 +356,12 @@ fun StudyScreen(
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            audioOwnership.stopForForegroundLoss()
+            feedbackAudioController.stop()
+            vn.loi.learning.android.controller.StudyControllerBridge.onStudySurfaceChanged(false)
+        }
     }
     var fullscreenImageUri by rememberSaveable { mutableStateOf<String?>(null) }
     var outgoingFeedback by remember { mutableStateOf<OutgoingStudyFeedback?>(null) }

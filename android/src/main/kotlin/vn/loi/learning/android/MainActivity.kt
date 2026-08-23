@@ -132,6 +132,8 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         ControllerDiagnosticsHolder.setLifecycleState("PAUSED")
+        ControllerDiagnosticsHolder.setForeground(false)
+        vn.loi.learning.android.controller.StudyControllerBridge.onActivityForegroundChanged(false)
     }
 
     override fun onStop() {
