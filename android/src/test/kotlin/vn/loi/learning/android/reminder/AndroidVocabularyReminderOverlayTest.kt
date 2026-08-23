@@ -786,7 +786,57 @@ class AndroidVocabularyReminderOverlayTest {
         assertTrue(controller.contains("LearningEngineAudioPolicy.toggleMuted()"))
         assertTrue(controller.contains("createRoundedCornerBitmap(rawBitmap, 6f * density)"))
         assertTrue(layout.contains("@+id/overlay_toggle_mute"))
+        assertTrue(layout.contains("@+id/overlay_toggle_pause"))
         assertFalse(layout.contains("@+id/overlay_pause_30m"))
         assertFalse(layout.contains("@+id/overlay_pause_1h"))
+    }
+
+    @Test
+    fun `overlay bottom row layout has Snooze Pause and Mute in exact order`() {
+        val layout = java.io.File("src/main/res/layout/overlay_vocabulary_reminder.xml").readText()
+        val pause5mIndex = layout.indexOf("id=\"@+id/overlay_pause_5m\"")
+        val togglePauseIndex = layout.indexOf("id=\"@+id/overlay_toggle_pause\"")
+        val toggleMuteIndex = layout.indexOf("id=\"@+id/overlay_toggle_mute\"")
+
+        assertTrue(pause5mIndex >= 0)
+        assertTrue(togglePauseIndex > pause5mIndex, "Pause/Resume button must follow Snooze 5'")
+        assertTrue(toggleMuteIndex > togglePauseIndex, "Mute button must follow Pause/Resume button")
+    }
+
+    @Test
+    fun `overlay controller contains pause resume countdown state and red muted visual`() {
+        val controller = java.io.File("src/main/kotlin/vn/loi/learning/android/reminder/AndroidVocabularyReminderOverlayController.kt").readText()
+        assertTrue(controller.contains("isCountdownPaused = true"))
+        assertTrue(controller.contains("isCountdownPaused = false"))
+        assertTrue(controller.contains("ic_overlay_resume"))
+        assertTrue(controller.contains("ic_overlay_pause"))
+        assertTrue(controller.contains("setColorFilter(android.graphics.Color.parseColor(\"#EF4444\"), PorterDuff.Mode.SRC_IN)"))
+        assertTrue(controller.contains("clearColorFilter()"))
+    }
+
+    @Test
+    fun `persistent mute policy suppresses audio playback and persists across restarts`() {
+        var persistedMuted = false
+        val testStore = object : vn.loi.learning.android.media.AudioMutePreferenceStore {
+            override fun loadMuted(): Boolean = persistedMuted
+            override fun saveMuted(muted: Boolean) { persistedMuted = muted }
+        }
+        vn.loi.learning.android.media.LearningEngineAudioPolicy.init(testStore)
+        assertFalse(vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value)
+
+        // Toggle mute -> true
+        vn.loi.learning.android.media.LearningEngineAudioPolicy.toggleMuted()
+        assertTrue(vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value)
+        assertTrue(persistedMuted)
+
+        // Simulate app restart / recreation
+        vn.loi.learning.android.media.LearningEngineAudioPolicy.resetForTesting(initialMuted = false)
+        vn.loi.learning.android.media.LearningEngineAudioPolicy.init(testStore)
+        assertTrue(vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value, "Muted state must persist across restarts")
+
+        // Unmute -> false
+        vn.loi.learning.android.media.LearningEngineAudioPolicy.setMuted(false)
+        assertFalse(vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value)
+        assertFalse(persistedMuted)
     }
 }

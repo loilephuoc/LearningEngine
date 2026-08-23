@@ -177,10 +177,16 @@ class AndroidVocabularyReminderOverlayController(
         val closeButton = view.findViewById<ImageView>(R.id.overlay_close_button)
         val quickPauseRow = view.findViewById<LinearLayout>(R.id.overlay_quick_pause_row)
         val pause5mBtn = view.findViewById<View>(R.id.overlay_pause_5m)
+        val togglePauseBtn = view.findViewById<View>(R.id.overlay_toggle_pause)
+        val pauseIcon = view.findViewById<ImageView>(R.id.overlay_pause_icon)
         val toggleMuteBtn = view.findViewById<View>(R.id.overlay_toggle_mute)
         val muteIcon = view.findViewById<ImageView>(R.id.overlay_mute_icon)
         val countdownTrack = view.findViewById<FrameLayout>(R.id.overlay_countdown_track)
         val countdownProgress = view.findViewById<View>(R.id.overlay_countdown_progress)
+
+        var isCountdownPaused = false
+        var countdownRemainingMillis = displayDurationMillis
+        var countdownStartedMillis = 0L
 
         val density = context.resources.displayMetrics.density
         val screenWidth = context.resources.displayMetrics.widthPixels
@@ -352,10 +358,68 @@ class AndroidVocabularyReminderOverlayController(
             true
         }
 
+        fun updatePauseButton() {
+            if (isCountdownPaused) {
+                pauseIcon?.setImageResource(R.drawable.ic_overlay_resume)
+                pauseIcon?.contentDescription = "Tiếp tục"
+            } else {
+                pauseIcon?.setImageResource(R.drawable.ic_overlay_pause)
+                pauseIcon?.contentDescription = "Tạm dừng"
+            }
+        }
+        updatePauseButton()
+
+        togglePauseBtn?.setOnClickListener {
+            if (state != OverlayState.VISIBLE || currentView != view || currentInstanceId != instanceId) return@setOnClickListener
+            if (!isCountdownPaused) {
+                isCountdownPaused = true
+                val elapsed = System.currentTimeMillis() - countdownStartedMillis
+                countdownRemainingMillis = maxOf(0L, countdownRemainingMillis - elapsed)
+                autoDismissRunnable?.let { mainHandler.removeCallbacks(it) }
+                autoDismissRunnable = null
+                currentCountdownAnimator?.cancel()
+                currentCountdownAnimator = null
+                val progressFraction = if (displayDurationMillis > 0) {
+                    (countdownRemainingMillis.toFloat() / displayDurationMillis.toFloat()).coerceIn(0f, 1f)
+                } else 0f
+                countdownProgress?.scaleX = progressFraction
+                updatePauseButton()
+                Log.i(TAG, "[OverlayPause] instanceId=$instanceId action=PAUSE remainingMs=$countdownRemainingMillis progressFraction=$progressFraction")
+            } else {
+                isCountdownPaused = false
+                updatePauseButton()
+                if (countdownRemainingMillis > 0L) {
+                    countdownStartedMillis = System.currentTimeMillis()
+                    val animator = countdownProgress?.animate()
+                        ?.scaleX(0f)
+                        ?.setDuration(countdownRemainingMillis)
+                        ?.setInterpolator(LinearInterpolator())
+                    currentCountdownAnimator = animator
+                    animator?.start()
+
+                    val dismissRunnable = Runnable {
+                        if (state == OverlayState.VISIBLE && currentView == view && currentInstanceId == instanceId && !isCountdownPaused) {
+                            requestDismiss(instanceId, "AUTO_DISMISS")
+                        }
+                    }
+                    autoDismissRunnable = dismissRunnable
+                    mainHandler.postDelayed(dismissRunnable, countdownRemainingMillis)
+                    Log.i(TAG, "[OverlayPause] instanceId=$instanceId action=RESUME remainingMs=$countdownRemainingMillis")
+                } else {
+                    requestDismiss(instanceId, "AUTO_DISMISS")
+                }
+            }
+        }
+
         fun updateMuteIcon() {
             val isMuted = vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value
             muteIcon?.setImageResource(if (isMuted) R.drawable.ic_autoplay_mute else R.drawable.ic_autoplay_unmute)
-            muteIcon?.contentDescription = if (isMuted) "Unmute" else "Mute"
+            muteIcon?.contentDescription = if (isMuted) "Bật âm thanh" else "Tắt âm thanh"
+            if (isMuted) {
+                muteIcon?.setColorFilter(android.graphics.Color.parseColor("#EF4444"), PorterDuff.Mode.SRC_IN)
+            } else {
+                muteIcon?.clearColorFilter()
+            }
         }
         updateMuteIcon()
         toggleMuteBtn?.setOnClickListener {
@@ -443,6 +507,7 @@ class AndroidVocabularyReminderOverlayController(
                                 countdownTrack?.visibility = View.VISIBLE
                                 countdownProgress?.pivotX = 0f
                                 countdownProgress?.scaleX = 1f
+                                countdownStartedMillis = System.currentTimeMillis()
 
                                 val animator = countdownProgress?.animate()
                                     ?.scaleX(0f)
@@ -456,7 +521,7 @@ class AndroidVocabularyReminderOverlayController(
                                 Log.i(TAG, "[OverlayTimer] instanceId=$instanceId action=ARM dismissAt=$dismissAt")
                                 val dismissRunnable = Runnable {
                                     Log.i(TAG, "[OverlayTimer] instanceId=$instanceId action=FIRE")
-                                    if (state == OverlayState.VISIBLE && currentView == view && currentInstanceId == instanceId) {
+                                    if (state == OverlayState.VISIBLE && currentView == view && currentInstanceId == instanceId && !isCountdownPaused) {
                                         requestDismiss(instanceId, "AUTO_DISMISS")
                                     }
                                 }

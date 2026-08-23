@@ -584,7 +584,7 @@ class AndroidLockScreenVocabularyCoordinator(
         val candidateId = candidate.contentId.value
         val fileExists = audioPath != null && File(audioPath).exists()
 
-        if (settings.autoPlayPronunciation && fileExists && audioPath != null) {
+        if (settings.autoPlayPronunciation && fileExists && audioPath != null && !vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value) {
             if (presentation.isAudioPlayed.compareAndSet(false, true)) {
                 startAudioPlayback(presentation.sessionToken, candidateId, candidate.primaryText, audioPath)
             } else {
@@ -601,6 +601,13 @@ class AndroidLockScreenVocabularyCoordinator(
         val file = File(audioPath)
         if (!file.exists() || !file.canRead()) {
             Log.w(TAG_AUDIO, "[Audio] fileNotFound candidateId=$candidateId path=$audioPath")
+            val settings = preferencesController.currentLockScreen()
+            onAudioCompletedOrSkipped(candidateId, settings)
+            return
+        }
+
+        if (vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value) {
+            Log.i(TAG_AUDIO, "[Audio] candidateId=$candidateId SKIPPED because app is MUTED")
             val settings = preferencesController.currentLockScreen()
             onAudioCompletedOrSkipped(candidateId, settings)
             return
@@ -623,11 +630,15 @@ class AndroidLockScreenVocabularyCoordinator(
 
                 mediaPlayer.setOnPreparedListener { mp ->
                     synchronized(audioLock) {
-                        if (activeMediaPlayer == mp && activeAudioCandidateId == candidateId) {
+                        if (activeMediaPlayer == mp && activeAudioCandidateId == candidateId && !vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value) {
                             mp.start()
                             Log.i(TAG_AUDIO, "[Audio] candidateId=$candidateId START (headword='$headword')")
                         } else {
                             mp.release()
+                            if (activeMediaPlayer == mp) {
+                                activeMediaPlayer = null
+                                activeAudioCandidateId = null
+                            }
                         }
                     }
                 }
@@ -717,7 +728,7 @@ class AndroidLockScreenVocabularyCoordinator(
             Log.i(TAG_UNLOCKED_TIMER, "[UnlockedOverlayDispatch] source=$source dispatchId=$dispatchId candidateId=$candidateId action=SELECT headword='${candidate.primaryText}'")
 
             val audioPath = candidate.primaryAudioReference?.let(resolveMedia)
-            val hasAudio = settings.autoPlayPronunciation && audioPath != null && File(audioPath).exists()
+            val hasAudio = settings.autoPlayPronunciation && audioPath != null && File(audioPath).exists() && !vn.loi.learning.android.media.LearningEngineAudioPolicy.isMuted.value
 
             Log.i(TAG_UNLOCKED_TIMER, "[UnlockedOverlayDispatch] source=$source dispatchId=$dispatchId candidateId=$candidateId action=SHOW")
 
