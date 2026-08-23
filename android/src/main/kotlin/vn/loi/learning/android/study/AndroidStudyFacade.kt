@@ -19,7 +19,9 @@ import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
 import vn.loi.learning.application.packageprogress.StudySessionProgressSource
 import vn.loi.learning.application.packageprogress.StudyStatisticsScope
 import vn.loi.learning.application.partofspeech.PartOfSpeechExtractor
+import vn.loi.learning.application.contentpackaging.InstalledPackageItem
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.library.model.LibraryId
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.*
@@ -540,17 +542,54 @@ class AndroidStudyFacade(
         return packageContentIds(scope.installedPackageId).toList()
     }
 
+    private fun resolvePackageName(packageId: vn.loi.learning.domain.library.model.InstalledPackageId): String? {
+        return context.installedPackageRepository?.findById(packageId)?.name?.value
+            ?: context.installedPackages.findById(packageId.value)?.name
+            ?: context.installedPackages.query().firstOrNull { it.id == packageId.value }?.name
+    }
+
+    private fun resolveActivePackageName(): String? =
+        currentScope()?.installedPackageId?.let(::resolvePackageName)
+
+    private fun resolveActivePackageContentCount(): Int? =
+        currentScope()?.installedPackageId?.let { pkgId ->
+            context.packageContentQuery?.getContentsForPackage(pkgId)?.size?.takeIf { it > 0 }
+                ?: resolveInstalledPackage(pkgId)?.contentCount
+        }
+
+    private fun resolveInstalledPackage(packageId: vn.loi.learning.domain.library.model.InstalledPackageId): vn.loi.learning.domain.library.model.InstalledPackage? {
+        val libraryId = context.defaultLibraryId ?: LibraryId("default-library")
+        return context.installedPackageRepository?.findById(packageId)
+            ?.takeIf { it.libraryId == libraryId && it.state == PackageState.ACTIVE }
+    }
+
+    private fun resolveAvailableInstalledPackages(): List<InstalledPackageItem> {
+        val libraryId = context.defaultLibraryId ?: LibraryId("default-library")
+        val active = context.installedPackageRepository?.findAll().orEmpty()
+            .filter { it.libraryId == libraryId && it.state == PackageState.ACTIVE }
+        return if (active.isNotEmpty()) {
+            active.map { pkg ->
+                InstalledPackageItem(
+                    id = pkg.id.value,
+                    name = pkg.name.value,
+                    version = pkg.version.value,
+                    format = "OPD3",
+                    libraryCount = 1
+                )
+            }
+        } else {
+            context.installedPackages.query()
+        }
+    }
+
     fun home(): AndroidStudyState.Home {
         sessionContentSnapshot = null
         onHomeQuery()
-        // Home only needs the persisted session summary to render Continue. The consumer boundary
-        // (loadExact/start) still performs full package/queue/content compatibility reconciliation
-        // before any Study state can be entered or replaced.
         var active = AndroidStartupTrace.measured("study_home_active_session") {
             context.engine.getActiveSession(learnerId)
         }
         val scope = AndroidStartupTrace.measured("study_home_scope") { currentScope() }
-        if (active?.installedPackageId != null && scope?.installedPackageId != active.installedPackageId) {
+        if (active?.installedPackageId != null && scope?.installedPackageId != null && scope.installedPackageId != active.installedPackageId) {
             context.engine.finishSession(
                 requireNotNull(active).id,
                 Moment(now()),
@@ -559,13 +598,15 @@ class AndroidStudyFacade(
             active = null
         }
         val daily = AndroidStartupTrace.measured("study_home_daily_budget") { scope?.let(::dailyBudget) }
+
         val packages = AndroidStartupTrace.measured("study_home_packages") { context.installedPackages.query() }
+
         val availability = AndroidStartupTrace.measured("study_home_availability") { scope?.let {
             context.engine.getLearnEntryReviewAvailability(it, Moment(now()))
         } }
         val nowMillis = now()
-        val startOfDay = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault())
-            .toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val startOfDay = maxOf(0L, Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault())
+            .toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
         val dashboard = AndroidStartupTrace.measured("study_home_dashboard") { context.dashboard.query(
             LearningDashboardQuery(
                 learnerId = learnerId,
@@ -582,7 +623,10 @@ class AndroidStudyFacade(
         val primaryAction = selectHomePrimaryAction(
             active?.id?.value, dueCount, scope != null, daily?.hasEligibleWork ?: false
         )
-        val activePackageId = (active?.installedPackageId ?: scope?.installedPackageId)?.value
+        val canonicalPackageName = resolveActivePackageName()
+        val canonicalContentCount = resolveActivePackageContentCount()
+        val activeSessionPackageName = active?.installedPackageId?.let(::resolvePackageName)
+
         val persistedPackageId = getInsightsScopePackageId()
         val selectedPackage = persistedPackageId?.let { pid -> packages.firstOrNull { it.id == pid } }
         if (persistedPackageId != null && selectedPackage == null) {
@@ -597,11 +641,12 @@ class AndroidStudyFacade(
             label = "All packages",
             isActivePackage = false
         )
+        val activeEffectiveId = (scope?.installedPackageId ?: active?.installedPackageId)?.value
         val packageOptions = packages.map { pkg ->
             vn.loi.learning.android.dashboard.AndroidInsightsScopeOption(
                 scope = vn.loi.learning.android.dashboard.AndroidInsightsScope.SpecificPackage(pkg.id, pkg.name),
                 label = pkg.name,
-                isActivePackage = pkg.id == activePackageId
+                isActivePackage = pkg.id == activeEffectiveId
             )
         }
         val availableScopes = listOf(allPackagesOption) + packageOptions
@@ -616,9 +661,6 @@ class AndroidStudyFacade(
                 canStartLatestSessionPractice = availability?.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available,
                 canStartDifficultPractice = availability?.difficultItems is DifficultItemsReviewAvailability.Available,
                 canStartLearnedReview = availability?.learnedItems is LearnedItemsReviewAvailability.Available,
-                // Explicit Study modes remain selectable while another compatible session is active.
-                // The hero still offers exact Continue; choosing another mode intentionally replaces
-                // only the navigation session after the requested mode has been proven eligible.
                 canLearnNew = daily != null && daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0,
                 canStartAdaptive = daily != null && if (continuousSkimEnabled()) {
                     daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0 ||
@@ -633,8 +675,7 @@ class AndroidStudyFacade(
             ),
             model = AndroidHomeUiModel(
                 primaryAction = primaryAction,
-                contextTitle = (active?.installedPackageId ?: scope?.installedPackageId)
-                    ?.let { packageId -> packages.firstOrNull { it.id == packageId.value }?.name },
+                contextTitle = if (active != null) activeSessionPackageName else canonicalPackageName,
                 installedPackageCount = packages.size,
                 dueCount = dueCount,
                 overdueCount = due.overdueCount,
@@ -642,12 +683,8 @@ class AndroidStudyFacade(
                 accuracyPercent = progress.accuracy?.let { (it * 100).toInt() },
                 activeMemoryCount = memories.activeMemories,
                 totalMemoryCount = memories.totalMemories,
-                activePackageName = activePackageId?.let { id -> packages.firstOrNull { it.id == id }?.name },
-                activePackageContentCount = activePackageId?.let { id ->
-                    context.packageContentQuery?.getContentsForPackage(
-                        vn.loi.learning.domain.library.model.InstalledPackageId(id)
-                    ).orEmpty().size
-                },
+                activePackageName = canonicalPackageName,
+                activePackageContentCount = canonicalContentCount,
                 dailyBudget = daily,
                 forecastInsights = forecastInsights
             )
@@ -1084,9 +1121,8 @@ class AndroidStudyFacade(
         val packagePosition = AndroidStartupTrace.measured("study_introduction_package_position") {
             resolvePackagePosition(packageContentIds, content.id)
         }
-        val title = AndroidStartupTrace.measured("study_introduction_context_title") { next.session.installedPackageId?.value?.let { pkgId ->
-            runCatching { context.installedPackages.query().firstOrNull { it.id == pkgId }?.name }.getOrNull()
-        } ?: runCatching { context.installedPackages.query().firstOrNull()?.name }.getOrNull()
+        val title = AndroidStartupTrace.measured("study_introduction_context_title") {
+            next.session.installedPackageId?.let(::resolvePackageName)
         }
 
         return AndroidStudyState.Introduction(
@@ -1395,9 +1431,7 @@ class AndroidStudyFacade(
         val mediaImage = content?.media?.image?.let(resolveMedia)
         val currentPos = item?.progress?.currentPosition
         val totalCount = item?.progress?.totalItemCount
-        val title = item?.session?.installedPackageId?.value?.let { pkgId ->
-            runCatching { context.installedPackages.query().firstOrNull { it.id == pkgId }?.name }.getOrNull()
-        } ?: runCatching { context.installedPackages.query().firstOrNull()?.name }.getOrNull()
+        val title = item?.session?.installedPackageId?.let(::resolvePackageName)
 
         fun typingPresentation(sourceText: String): AndroidStudyState.Typing {
             val canonicalRatingTransitionEligible = item?.session?.policy?.evaluationPolicy ==

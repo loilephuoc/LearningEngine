@@ -411,7 +411,10 @@ class MainActivity : ComponentActivity() {
                     AndroidLibraryViewModel(AndroidLibraryFacade(
                         graph.engine,
                         app.studyPreferencesController::current,
-                        onActivePackageChanged = app.quickReviewWidgetCoordinator::update
+                        onActivePackageChanged = {
+                            app.quickReviewWidgetCoordinator.update()
+                            studyViewModel.onEvent(AndroidStudyEvent.RefreshHomeIfIdle)
+                        }
                     ), createSavedStateHandle())
                 }
                 val libraryState = libraryViewModel.state.collectAsStateWithLifecycle().value
@@ -577,7 +580,10 @@ class MainActivity : ComponentActivity() {
                                 context = graph.engine,
                                 dailyLimits = app.studyPreferencesController::current,
                                 difficultMarkers = app.reminderDifficultStore,
-                                onActivePackageChanged = app.quickReviewWidgetCoordinator::update
+                                onActivePackageChanged = {
+                                    app.quickReviewWidgetCoordinator.update()
+                                    studyViewModel.onEvent(AndroidStudyEvent.RefreshHomeIfIdle)
+                                }
                             ), createSavedStateHandle())
                         }
                         LaunchedEffect(packageId) { packageViewModel.open(packageId) }
