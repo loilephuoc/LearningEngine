@@ -6,7 +6,9 @@
   controller. Configuration, memory-only login/logout, manual sync/cancel, summaries and safe diagnostics
   are explicit; screen entry, recomposition and recreation remain network-silent. No manifest, background
   component, Study, Widget, Reminder, or Lock Screen behavior changed. Live Supabase and physical visual/
-  accessibility UAT remain pending.
+  accessibility UAT remain pending. Full clean verification passes 829 suites / 5,127 tests (root
+  431 / 2,311; Android 104 / 1,003; Desktop 294 / 1,813), zero failures/errors/skips, and Android debug
+  assembly passes; adb reports no connected device.
 
 - Capability 8A provides isolated Android sync infrastructure with validated non-secret connection
   preferences, memory-only sessions, production event/blob composition, and an explicit cancellable
