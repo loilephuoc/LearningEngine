@@ -1,3 +1,11 @@
+# Controlled Android/Desktop/TTS integration
+
+- Integrated the coherent three-commit Desktop TTS follow-up in order: selection scope and field
+  preview, custom speed/pitch/volume plus four voice strategies, then reusable configuration-only
+  presets. Desktop manual Sync settings, authentication, navigation, and network-silent startup remain.
+- Final integrated automated verification passes 830 suites / 5,151 tests (root 2,311; Android
+  1,006; Desktop 1,834), failures/errors/skipped 0 / 0 / 0; Android debug APK and Desktop assemble pass.
+
 # Android reminder popup controls integration
 
 - Kept single-tap five-minute pause and moved 30-minute, one-hour, four-hour, and indefinite pause

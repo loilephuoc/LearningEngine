@@ -2381,3 +2381,15 @@ or skipped tests.
 - Blocker: device is locked by pattern/fingerprint. No credential attempt and no restore occurred.
 - Next: after user unlock, inspect Android Backup & Restore preview. Require the exact package/counts
   above before restore. Phase 4 remains incomplete until Android inspection/round-trip acceptance.
+# Controlled final integration — 2026-08-23
+
+- Branch `integration/learning-engine-2.0` is based exactly on Sync commit `dafa028f`.
+- Integrated Android revealed actions (`b2382379`), widget/lock-screen localization (`5d0c9454`),
+  reminder popup controls (`7413525e`), TTS scope/preview (`79c1382e`), numeric controls and voice
+  strategies (`4c89d142`), and presets (`1b4ab4e3`).
+- Kept the Sync live-limit implementation and existing Missing Any Audio capability; intentionally
+  excluded obsolete profiling-log cleanup. No source worktree, source branch, deployment, or remote
+  was modified.
+- Final automated gate: root 431 suites / 2,311 tests; Android 104 / 1,006; Desktop 295 / 1,834;
+  total 830 suites / 5,151 tests, failures/errors/skipped 0 / 0 / 0. Android `assembleDebug` and
+  Desktop `assemble` pass. Manual/live/physical UAT remains pending.
