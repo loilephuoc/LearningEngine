@@ -1,5 +1,18 @@
 # Test Matrix
 
+## Desktop resumable safe batch TTS
+
+- Verify hard timeout, bounded transient retry, eventual success, bounded same-language fallback,
+  no cross-language fallback, failure continuation, terminal progress, cancellation, and cleared
+  running/final state with fake providers only.
+- Verify atomic checkpoint round trip/cleanup, corrupt checkpoint fail-closed behavior, matching
+  batch/package/overwrite semantics, text fingerprint and current-asset validation.
+- Verify overwrite defaults off, existing audio skip, explicit field-scoped opt-in, old-reference
+  preservation on generation/storage failure, and no automatic old/shared-media deletion.
+- Run deterministic hundreds-target coverage with distributed failures and exact terminal counts;
+  retain Content Explorer compile, selection, problem navigation, and Generate Audio wiring tests.
+
+
 ## Phase 4 safety backup inventory and retention
 
 - Phase 5 changes retention assertions to user ownership: three-plus valid archives remain, restore

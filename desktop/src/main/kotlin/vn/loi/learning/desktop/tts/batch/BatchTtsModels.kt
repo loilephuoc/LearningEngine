@@ -96,9 +96,26 @@ data class BatchTtsJob(
     val volume: String? = null,
     val previousAudioRef: String? = null,
     val candidateVoices: List<TtsVoice> = listOf(voice),
+    val overwriteExisting: Boolean = false,
     val id: String = "${contentId}_${field.name.lowercase()}"
 ) {
     val requestedVoice: TtsVoice get() = voice
+}
+
+data class BatchTtsExecutionPolicy(
+    val attemptTimeoutMillis: Long = 45_000,
+    val maxAttemptsPerVoice: Int = 2,
+    val initialRetryDelayMillis: Long = 500,
+    val maxRetryDelayMillis: Long = 2_000,
+    val maxCandidateVoices: Int = 4
+) {
+    init {
+        require(attemptTimeoutMillis > 0)
+        require(maxAttemptsPerVoice > 0)
+        require(initialRetryDelayMillis >= 0)
+        require(maxRetryDelayMillis >= initialRetryDelayMillis)
+        require(maxCandidateVoices > 0)
+    }
 }
 
 /**

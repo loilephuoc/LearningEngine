@@ -116,11 +116,11 @@ class BatchTtsRunnerFallbackTest {
             assertTrue(res.recoveredViaFallback)
             assertEquals(ava.id, res.requestedVoice.id)
             assertEquals(jenny.id, res.actualVoiceUsed?.id)
-            assertEquals(2, res.attempts.size)
+            assertEquals(3, res.attempts.size)
             assertFalse(res.attempts[0].isSuccess)
             assertEquals(ava.id, res.attempts[0].voice.id)
-            assertTrue(res.attempts[1].isSuccess)
-            assertEquals(jenny.id, res.attempts[1].voice.id)
+            assertTrue(res.attempts[2].isSuccess)
+            assertEquals(jenny.id, res.attempts[2].voice.id)
         } finally {
             tempDir.toFile().deleteRecursively()
         }
@@ -168,7 +168,7 @@ class BatchTtsRunnerFallbackTest {
             val res = summary.jobResults.first()
             assertEquals(BatchTtsJobStatus.FAILED, res.status)
             assertNull(res.actualVoiceUsed)
-            assertEquals(2, res.attempts.size)
+            assertEquals(4, res.attempts.size)
             assertFalse(res.recoveredViaFallback)
             assertEquals(TtsErrorCategory.TIMEOUT, res.errorCategory)
         } finally {

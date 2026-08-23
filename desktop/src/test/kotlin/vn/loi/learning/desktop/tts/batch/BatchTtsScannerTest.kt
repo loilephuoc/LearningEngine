@@ -11,6 +11,23 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BatchTtsScannerTest {
+    @Test
+    fun `overwrite is off by default and opt in remains field scoped`() {
+        val item = createBrowserItem(
+            id = "overwrite",
+            q = "Question",
+            qAudio = "pkg/old-question.mp3",
+            a = "Answer",
+            aAudio = "pkg/old-answer.mp3"
+        )
+        val safe = BatchTtsScanner.scanBatchScope(listOf(item), setOf(TtsField.QUESTION))
+        assertEquals(0, safe.totalValidTargets)
+        assertEquals(1, safe.existingAudioSkippedCount)
+
+        val overwrite = BatchTtsScanner.scanBatchScope(listOf(item), setOf(TtsField.QUESTION), overwriteExisting = true)
+        assertEquals(listOf(TtsField.QUESTION), overwrite.validTargets.map { it.field })
+        assertEquals("pkg/old-question.mp3", overwrite.validTargets.single().previousAudioRef)
+    }
 
     private val enVoice = TtsVoice(
         id = "en-US-AvaMultilingualNeural",

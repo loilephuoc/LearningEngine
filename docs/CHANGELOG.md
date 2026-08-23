@@ -1,3 +1,17 @@
+# Desktop batch TTS large-workspace reliability
+
+- Added a finite sequential execution policy with a 45-second hard timeout per provider attempt,
+  two attempts per voice, bounded exponential backoff, and at most four deterministic same-language
+  candidates. A terminal target failure advances progress and does not abort later targets.
+- Added atomic per-target JSON checkpoints under the Desktop runtime data directory. Resume accepts
+  only the same package/batch/overwrite semantics, matching text fingerprints, and assets that still
+  exist; corrupt or stale records fail closed.
+- Existing audio remains skipped by default. Selected-field overwrite is explicit and confirmed;
+  generation/storage completes before references are applied, failed replacements preserve old
+  references, and old/shared media is never deleted by generation or apply.
+- Desktop compiler authority reports `ContentExplorerPane.kt` clean; no source workaround was made
+  for IDE-only red-code/indexing symptoms.
+
 # Controlled Android/Desktop/TTS integration
 
 - Integrated the coherent three-commit Desktop TTS follow-up in order: selection scope and field

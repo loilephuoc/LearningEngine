@@ -1,5 +1,17 @@
 # Capability Map
 
+## Desktop resumable safe batch TTS
+
+- Planning: `BatchTtsScanner` deterministically projects `(contentId, field)` targets, canonical
+  English/Vietnamese field languages, selected-field overwrite semantics, and existing/empty skips.
+- Execution: `BatchTtsRunner` owns sequential finite timeout/retry/backoff, same-language bounded
+  fallback, cancellation, terminal progress, and incremental checkpoint publication.
+- Persistence/UI: `BatchTtsCheckpointStore` atomically replaces compact JSON state; `BatchTtsDialog`
+  owns language-filtered voice configuration, overwrite opt-in/confirmation, progress, retry, and
+  the existing Generate-then-Apply boundary. `ContentLibraryViewModel` remains content persistence
+  authority and does not delete replaced/shared media.
+
+
 ## ANDROID-STUDY-3.0V Android Study final product polish
 
 - Runtime: `StudyScreen` has one explicit presentation delegate for each of six runtime modes and no

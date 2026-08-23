@@ -28,7 +28,8 @@ object BatchTtsScanner {
      */
     fun scanBatchScope(
         items: List<PackageContentBrowserItem>,
-        selectedFields: Set<TtsField> = TtsField.entries.toSet()
+        selectedFields: Set<TtsField> = TtsField.entries.toSet(),
+        overwriteExisting: Boolean = false
     ): BatchTtsScopeScan {
         val validTargets = mutableListOf<BatchTtsTarget>()
         val missingCountByField = mutableMapOf<TtsField, Int>()
@@ -82,7 +83,7 @@ object BatchTtsScanner {
 
                 // If user selected this field for generation:
                 if (field in selectedFields) {
-                    if (hasAudio) {
+                    if (hasAudio && !overwriteExisting) {
                         existingSkipped++
                     } else if (trimmedText.isBlank()) {
                         emptyTextSkipped++
@@ -93,8 +94,8 @@ object BatchTtsScanner {
                                 field = field,
                                 text = trimmedText,
                                 language = language,
-                                isMissing = true,
-                                hasAudio = false,
+                                isMissing = !hasAudio || overwriteExisting,
+                                hasAudio = hasAudio,
                                 previousAudioRef = audioRef
                             )
                         )
@@ -228,6 +229,9 @@ object BatchTtsScanner {
                     volume = settings.third,
                     previousAudioRef = target.previousAudioRef,
                     candidateVoices = candidateChain
+                        .filter { voice -> voice.language.equals(target.language.code, ignoreCase = true) || voice.locale.startsWith(target.language.code, ignoreCase = true) }
+                        .distinctBy { it.id },
+                    overwriteExisting = target.hasAudio
                 )
             }
     }

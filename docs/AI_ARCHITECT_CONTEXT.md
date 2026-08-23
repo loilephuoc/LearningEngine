@@ -1,5 +1,20 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Desktop batch TTS reliability follow-up
+
+- PRE-TASK HEAD `1a27e941811ea4631827d679393e7708267debcb` on
+  `integration/learning-engine-2.0`; Android follow-up commits were present and the worktree was clean.
+- `:desktop:compileKotlin` passed before editing, including `ContentExplorerPane.kt`; IntelliJ red-code
+  reports are therefore treated as sync/indexing symptoms and no cosmetic source migration was made.
+- The Desktop-only increment adds finite per-attempt timeout/retry/backoff, bounded same-language
+  fallback, forward progress, atomic resumable checkpoints, explicit confirmed field-scoped overwrite,
+  and a deterministic 300-target regression. Existing Generate Audio entry points and Generate-then-
+  Apply persistence remain authoritative; no Android source or behavior is changed.
+- Verification is green: `:desktop:compileKotlin`, focused Desktop batch TTS tests,
+  `clean test`, `:desktop:assemble`, `:android:assembleDebug`, and `git diff --check`. Android assemble
+  requires normal host SDK read access because the managed sandbox cannot read AppData SDK metadata.
+
+
 ## Current incremental cross-platform sync continuation
 
 - Android live login UAT isolated the client failure to the absent `android.permission.INTERNET` manifest

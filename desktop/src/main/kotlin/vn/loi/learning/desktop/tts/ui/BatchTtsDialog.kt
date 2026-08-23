@@ -64,6 +64,7 @@ import vn.loi.learning.desktop.tts.TtsField
 import vn.loi.learning.desktop.tts.TtsLanguage
 import vn.loi.learning.desktop.tts.TtsVoice
 import vn.loi.learning.desktop.tts.batch.BatchTtsJob
+import vn.loi.learning.desktop.tts.batch.BatchTtsCheckpointStore
 import vn.loi.learning.desktop.tts.batch.BatchTtsJobResult
 import vn.loi.learning.desktop.tts.batch.BatchTtsJobStatus
 import vn.loi.learning.desktop.tts.batch.BatchTtsRunner
@@ -135,6 +136,8 @@ fun BatchTtsDialog(
     var dialogInputName by remember { mutableStateOf("") }
 
     var currentStep by remember { mutableStateOf(BatchTtsDialogStep.CONFIG) }
+    var overwriteExisting by remember { mutableStateOf(false) }
+    var showOverwriteConfirmation by remember { mutableStateOf(false) }
     var availableVoices by remember { mutableStateOf<List<TtsVoice>>(emptyList()) }
     var isLoadingVoices by remember { mutableStateOf(true) }
 
@@ -144,8 +147,8 @@ fun BatchTtsDialog(
     }
 
     // Scanned Scope analysis
-    val scopeScan = remember(itemsToScan, selectedFields) {
-        BatchTtsScanner.scanBatchScope(itemsToScan, selectedFields)
+    val scopeScan = remember(itemsToScan, selectedFields, overwriteExisting) {
+        BatchTtsScanner.scanBatchScope(itemsToScan, selectedFields, overwriteExisting)
     }
 
     // Selected Voices and Numeric Parameters
@@ -298,7 +301,17 @@ fun BatchTtsDialog(
 
     // Batch execution state
     var summary by remember { mutableStateOf(BatchTtsSummary.initial(scopeScan.totalValidTargets)) }
-    val runner = remember(ttsService) { BatchTtsRunner(ttsService, coroutineScope) }
+    val runner = remember(ttsService, contentMediaStorage, packageName) {
+        val checkpointPath = DesktopRuntimeDirectoryResolver.resolve().data
+            .resolve("tts-checkpoints")
+            .resolve(packageName.replace(Regex("[^A-Za-z0-9._-]"), "_") + ".json")
+        BatchTtsRunner(
+            ttsService,
+            coroutineScope,
+            checkpointStore = BatchTtsCheckpointStore(checkpointPath),
+            assetExists = { path -> contentMediaStorage?.exists(path) == true }
+        )
+    }
 
     // Load available voices
     LaunchedEffect(Unit) {
@@ -385,6 +398,8 @@ fun BatchTtsDialog(
         runner.runBatch(
             jobs = jobsToRun,
             packageName = packageName,
+            batchId = "$packageName:${selectedFields.sortedBy { it.name }.joinToString(",")}",
+            overwriteExisting = overwriteExisting,
             onApply = null, // Generate != Apply separation
             onProgress = { updatedSummary ->
                 summary = updatedSummary
@@ -431,7 +446,7 @@ fun BatchTtsDialog(
             englishVolume = if (englishVolumePercent >= 0) "+${englishVolumePercent}%" else "${englishVolumePercent}%",
             vietnameseVolume = if (vietnameseVolumePercent >= 0) "+${vietnameseVolumePercent}%" else "${vietnameseVolumePercent}%"
         )
-        startBatch(jobs)
+        if (overwriteExisting) showOverwriteConfirmation = true else startBatch(jobs)
     }
 
     fun handleRetryFailed() {
@@ -550,6 +565,8 @@ fun BatchTtsDialog(
                                     }
                                     isDirty = true
                                 },
+                                overwriteExisting = overwriteExisting,
+                                onOverwriteExistingChange = { overwriteExisting = it },
                                 isLoadingVoices = isLoadingVoices,
                                 availableVoices = availableVoices,
                                 selectedEnglishVoice = selectedEnglishVoice,
@@ -714,6 +731,30 @@ fun BatchTtsDialog(
                     onDismiss = { showDeleteConfirmDialog = false }
                 )
             }
+            if (showOverwriteConfirmation) {
+                ConfirmOverwriteDialog(
+                    selectedFields = selectedFields,
+                    onConfirm = {
+                        showOverwriteConfirmation = false
+                        val enVoice = selectedEnglishVoice
+                        val viVoice = selectedVietnameseVoice
+                        if (enVoice != null && viVoice != null) {
+                            val jobs = BatchTtsScanner.buildJobsWithStrategy(
+                                scopeScan.validTargets,
+                                VoiceStrategyConfig(englishStrategyMode, enVoice, availableVoices.filter { it.isEnglish && it.id != enVoice.id }.take(3)),
+                                VoiceStrategyConfig(vietnameseStrategyMode, viVoice, availableVoices.filter { it.isVietnamese && it.id != viVoice.id }.take(2)),
+                                englishRate, vietnameseRate,
+                                if (englishPitchHz >= 0) "+${englishPitchHz}Hz" else "${englishPitchHz}Hz",
+                                if (vietnamesePitchHz >= 0) "+${vietnamesePitchHz}Hz" else "${vietnamesePitchHz}Hz",
+                                if (englishVolumePercent >= 0) "+${englishVolumePercent}%" else "${englishVolumePercent}%",
+                                if (vietnameseVolumePercent >= 0) "+${vietnameseVolumePercent}%" else "${vietnameseVolumePercent}%"
+                            )
+                            startBatch(jobs)
+                        }
+                    },
+                    onDismiss = { showOverwriteConfirmation = false }
+                )
+            }
         }
     }
 }
@@ -734,6 +775,8 @@ private fun ConfigStepContent(
     scopeScan: BatchTtsScopeScan,
     selectedFields: Set<TtsField>,
     onToggleField: (TtsField) -> Unit,
+    overwriteExisting: Boolean,
+    onOverwriteExistingChange: (Boolean) -> Unit,
     isLoadingVoices: Boolean,
     availableVoices: List<TtsVoice>,
     selectedEnglishVoice: TtsVoice?,
@@ -838,6 +881,18 @@ private fun ConfigStepContent(
                     )
                     Spacer(modifier = Modifier.weight(2f))
                 }
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = overwriteExisting,
+                onCheckedChange = onOverwriteExistingChange,
+                colors = CheckboxDefaults.colors(checkedColor = LEColors.danger)
+            )
+            Column {
+                Text("Overwrite existing audio", style = LETypography.fieldValue, color = LEColors.textPrimary)
+                Text("Off by default. Replacement is limited to the selected fields and requires confirmation.", style = LETypography.caption, color = LEColors.textMuted)
             }
         }
 
@@ -1906,6 +1961,32 @@ private fun PresetDeleteConfirmDialog(
                         text = "Delete Preset",
                         onClick = onConfirm
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConfirmOverwriteDialog(
+    selectedFields: Set<TtsField>,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(color = LEColors.surface, shape = LERadius.md, shadowElevation = 8.dp) {
+            Column(modifier = Modifier.width(440.dp).padding(LESpacing.lg), verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                Text("Confirm audio replacement", style = LETypography.sectionTitle, color = LEColors.danger)
+                Text(
+                    "Existing audio may be replaced only for: ${selectedFields.sortedBy { it.name }.joinToString { it.displayName }}. " +
+                        "Old references remain unchanged if generation or storage fails.",
+                    style = LETypography.fieldValue,
+                    color = LEColors.textPrimary
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    LESecondaryButton("Cancel", onDismiss)
+                    Spacer(Modifier.width(LESpacing.sm))
+                    LEDangerButton("Replace selected fields", onConfirm)
                 }
             }
         }
