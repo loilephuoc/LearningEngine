@@ -82,6 +82,21 @@ data class BatchTtsScopeScan(
     fun sampleFor(field: TtsField): BatchTtsSample? = samplesByField[field]
 }
 
+data class BatchTtsLanguageRequirements(
+    val requiresEnglish: Boolean,
+    val requiresVietnamese: Boolean
+) {
+    fun configurationsValid(englishVoice: TtsVoice?, vietnameseVoice: TtsVoice?): Boolean =
+        (!requiresEnglish || englishVoice != null) && (!requiresVietnamese || vietnameseVoice != null)
+
+    companion object {
+        fun from(scan: BatchTtsScopeScan) = BatchTtsLanguageRequirements(
+            requiresEnglish = scan.englishTargetsCount > 0,
+            requiresVietnamese = scan.vietnameseTargetsCount > 0
+        )
+    }
+}
+
 /**
  * Executable batch job representation with candidate voice chain for fallback / rotation.
  */

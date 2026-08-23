@@ -190,8 +190,8 @@ object BatchTtsScanner {
      */
     fun buildJobsWithStrategy(
         targets: List<BatchTtsTarget>,
-        englishStrategy: VoiceStrategyConfig,
-        vietnameseStrategy: VoiceStrategyConfig,
+        englishStrategy: VoiceStrategyConfig?,
+        vietnameseStrategy: VoiceStrategyConfig?,
         englishRate: Int = 0,
         vietnameseRate: Int = 0,
         englishPitch: String? = null,
@@ -207,12 +207,14 @@ object BatchTtsScanner {
             .map { target ->
                 val (candidateChain, settings) = when (target.language) {
                     TtsLanguage.ENGLISH -> {
-                        val chain = englishStrategy.candidateChainForTarget(englishIndex)
+                        val chain = requireNotNull(englishStrategy) { "English voice configuration is required for English targets" }
+                            .candidateChainForTarget(englishIndex)
                         englishIndex++
                         chain to Triple(englishRate, englishPitch, englishVolume)
                     }
                     TtsLanguage.VIETNAMESE -> {
-                        val chain = vietnameseStrategy.candidateChainForTarget(vietnameseIndex)
+                        val chain = requireNotNull(vietnameseStrategy) { "Vietnamese voice configuration is required for Vietnamese targets" }
+                            .candidateChainForTarget(vietnameseIndex)
                         vietnameseIndex++
                         chain to Triple(vietnameseRate, vietnamesePitch, vietnameseVolume)
                     }

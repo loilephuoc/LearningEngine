@@ -68,6 +68,7 @@ import vn.loi.learning.desktop.tts.batch.BatchTtsJob
 import vn.loi.learning.desktop.tts.batch.BatchTtsCheckpointStore
 import vn.loi.learning.desktop.tts.batch.BatchTtsJobResult
 import vn.loi.learning.desktop.tts.batch.BatchTtsJobStatus
+import vn.loi.learning.desktop.tts.batch.BatchTtsLanguageRequirements
 import vn.loi.learning.desktop.tts.batch.BatchTtsRunner
 import vn.loi.learning.desktop.tts.batch.BatchTtsScanner
 import vn.loi.learning.desktop.tts.batch.BatchTtsScopeScan
@@ -151,6 +152,7 @@ fun BatchTtsDialog(
     val scopeScan = remember(itemsToScan, selectedFields, overwriteExisting) {
         BatchTtsScanner.scanBatchScope(itemsToScan, selectedFields, overwriteExisting)
     }
+    val languageRequirements = remember(scopeScan) { BatchTtsLanguageRequirements.from(scopeScan) }
 
     // Selected Voices and Numeric Parameters
     var selectedEnglishVoice by remember { mutableStateOf<TtsVoice?>(null) }
@@ -411,32 +413,27 @@ fun BatchTtsDialog(
         )
     }
 
-    fun handleStartInitialBatch() {
-        val enVoice = selectedEnglishVoice ?: return
-        val viVoice = selectedVietnameseVoice ?: return
-
-        val enFallbacks = availableVoices.filter { it.language == "en" && it.id != enVoice.id }.take(3)
-        val viFallbacks = availableVoices.filter { it.language == "vi" && it.id != viVoice.id }.take(2)
-
-        val enRotation = listOf(enVoice) + enFallbacks
-        val viRotation = listOf(viVoice) + viFallbacks
-
-        val enStrategy = VoiceStrategyConfig(
+    fun buildConfiguredJobs(): List<BatchTtsJob> {
+        if (!languageRequirements.configurationsValid(selectedEnglishVoice, selectedVietnameseVoice)) return emptyList()
+        val enVoice = selectedEnglishVoice
+        val viVoice = selectedVietnameseVoice
+        val enFallbacks = if (languageRequirements.requiresEnglish && enVoice != null) availableVoices.filter { it.language == "en" && it.id != enVoice.id }.take(3) else emptyList()
+        val viFallbacks = if (languageRequirements.requiresVietnamese && viVoice != null) availableVoices.filter { it.language == "vi" && it.id != viVoice.id }.take(2) else emptyList()
+        val enStrategy = enVoice?.takeIf { languageRequirements.requiresEnglish }?.let { primary -> VoiceStrategyConfig(
             mode = englishStrategyMode,
-            primaryVoice = enVoice,
+            primaryVoice = primary,
             fallbackVoices = enFallbacks,
-            candidateVoices = enRotation,
+            candidateVoices = listOf(primary) + enFallbacks,
             continueSequenceAcrossItems = true
-        )
-        val viStrategy = VoiceStrategyConfig(
+        ) }
+        val viStrategy = viVoice?.takeIf { languageRequirements.requiresVietnamese }?.let { primary -> VoiceStrategyConfig(
             mode = vietnameseStrategyMode,
-            primaryVoice = viVoice,
+            primaryVoice = primary,
             fallbackVoices = viFallbacks,
-            candidateVoices = viRotation,
+            candidateVoices = listOf(primary) + viFallbacks,
             continueSequenceAcrossItems = true
-        )
-
-        val jobs = BatchTtsScanner.buildJobsWithStrategy(
+        ) }
+        return BatchTtsScanner.buildJobsWithStrategy(
             targets = scopeScan.validTargets,
             englishStrategy = enStrategy,
             vietnameseStrategy = viStrategy,
@@ -447,6 +444,11 @@ fun BatchTtsDialog(
             englishVolume = if (englishVolumePercent >= 0) "+${englishVolumePercent}%" else "${englishVolumePercent}%",
             vietnameseVolume = if (vietnameseVolumePercent >= 0) "+${vietnameseVolumePercent}%" else "${vietnameseVolumePercent}%"
         )
+    }
+
+    fun handleStartInitialBatch() {
+        val jobs = buildConfiguredJobs()
+        if (jobs.isEmpty()) return
         if (overwriteExisting) showOverwriteConfirmation = true else startBatch(jobs)
     }
 
@@ -557,6 +559,7 @@ fun BatchTtsDialog(
                                 onResetDefaults = { handleResetToDefaults() },
                                 presetErrorMessage = presetErrorMessage,
                                 scopeScan = scopeScan,
+                                languageRequirements = languageRequirements,
                                 selectedFields = selectedFields,
                                 onToggleField = { field ->
                                     selectedFields = if (field in selectedFields) {
@@ -666,7 +669,7 @@ fun BatchTtsDialog(
                             LEPrimaryButton(
                                 text = if (scopeScan.totalValidTargets == 0) "No Missing Targets" else "Generate (${scopeScan.totalValidTargets} Targets)",
                                 onClick = { handleStartInitialBatch() },
-                                enabled = scopeScan.hasTargets && !isLoadingVoices && selectedEnglishVoice != null && selectedVietnameseVoice != null,
+                                enabled = scopeScan.hasTargets && !isLoadingVoices && languageRequirements.configurationsValid(selectedEnglishVoice, selectedVietnameseVoice),
                                 icon = LEIcons.Audio
                             )
                         }
@@ -737,21 +740,7 @@ fun BatchTtsDialog(
                     selectedFields = selectedFields,
                     onConfirm = {
                         showOverwriteConfirmation = false
-                        val enVoice = selectedEnglishVoice
-                        val viVoice = selectedVietnameseVoice
-                        if (enVoice != null && viVoice != null) {
-                            val jobs = BatchTtsScanner.buildJobsWithStrategy(
-                                scopeScan.validTargets,
-                                VoiceStrategyConfig(englishStrategyMode, enVoice, availableVoices.filter { it.isEnglish && it.id != enVoice.id }.take(3)),
-                                VoiceStrategyConfig(vietnameseStrategyMode, viVoice, availableVoices.filter { it.isVietnamese && it.id != viVoice.id }.take(2)),
-                                englishRate, vietnameseRate,
-                                if (englishPitchHz >= 0) "+${englishPitchHz}Hz" else "${englishPitchHz}Hz",
-                                if (vietnamesePitchHz >= 0) "+${vietnamesePitchHz}Hz" else "${vietnamesePitchHz}Hz",
-                                if (englishVolumePercent >= 0) "+${englishVolumePercent}%" else "${englishVolumePercent}%",
-                                if (vietnameseVolumePercent >= 0) "+${vietnameseVolumePercent}%" else "${vietnameseVolumePercent}%"
-                            )
-                            startBatch(jobs)
-                        }
+                        buildConfiguredJobs().takeIf { it.isNotEmpty() }?.let(::startBatch)
                     },
                     onDismiss = { showOverwriteConfirmation = false }
                 )
@@ -793,6 +782,7 @@ private fun ConfigStepContent(
     onResetDefaults: () -> Unit,
     presetErrorMessage: String?,
     scopeScan: BatchTtsScopeScan,
+    languageRequirements: BatchTtsLanguageRequirements,
     selectedFields: Set<TtsField>,
     onToggleField: (TtsField) -> Unit,
     overwriteExisting: Boolean,
@@ -958,8 +948,7 @@ private fun ConfigStepContent(
                 Text("Loading available Edge TTS voices...", style = LETypography.caption, color = LEColors.textMuted)
             }
         } else {
-            // English Voice & Strategy Card
-            VoiceStrategyCard(
+            if (languageRequirements.requiresEnglish) VoiceStrategyCard(
                 title = "English Voice Configuration",
                 languageLabel = "English (en-US)",
                 managedFields = listOf(TtsField.QUESTION, TtsField.ANSWER, TtsField.EXAMPLE),
@@ -980,8 +969,7 @@ private fun ConfigStepContent(
                 onStop = onStopPreview
             )
 
-            // Vietnamese Voice & Strategy Card
-            VoiceStrategyCard(
+            if (languageRequirements.requiresVietnamese) VoiceStrategyCard(
                 title = "Vietnamese Voice Configuration",
                 languageLabel = "Vietnamese (vi-VN)",
                 managedFields = listOf(TtsField.TRANSLATION),
