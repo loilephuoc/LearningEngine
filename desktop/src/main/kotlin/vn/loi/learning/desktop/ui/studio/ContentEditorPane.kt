@@ -108,27 +108,31 @@ private fun Modifier.editorImageDropTarget(
     onDragOverChanged: (Boolean) -> Unit,
     onError: (String) -> Unit
 ): Modifier {
+    val currentOnFileDropped by rememberUpdatedState(onFileDropped)
+    val currentOnDragOverChanged by rememberUpdatedState(onDragOverChanged)
+    val currentOnError by rememberUpdatedState(onError)
     val target = remember {
         object : DragAndDropTarget {
-            override fun onStarted(event: DragAndDropEvent) { onDragOverChanged(true) }
-            override fun onEntered(event: DragAndDropEvent) { onDragOverChanged(true) }
-            override fun onExited(event: DragAndDropEvent) { onDragOverChanged(false) }
-            override fun onEnded(event: DragAndDropEvent) { onDragOverChanged(false) }
+            override fun onStarted(event: DragAndDropEvent) { currentOnDragOverChanged(true) }
+            override fun onEntered(event: DragAndDropEvent) { currentOnDragOverChanged(true) }
+            override fun onExited(event: DragAndDropEvent) { currentOnDragOverChanged(false) }
+            override fun onEnded(event: DragAndDropEvent) { currentOnDragOverChanged(false) }
             override fun onDrop(event: DragAndDropEvent): Boolean {
-                onDragOverChanged(false)
+                currentOnDragOverChanged(false)
                 return try {
                     val transferable = event.awtTransferable
                     val files = DragDropUtils.extractFiles(transferable)
                     val file = files.firstOrNull()
-                    if (file != null && file.exists() && file.isFile) {
-                        if (DragDropUtils.isSupportedImage(file)) {
-                            onFileDropped(file)
+                    when (val decision = ContentImageDropPolicy.evaluate(file)) {
+                        is ContentImageDropDecision.Import -> {
+                            currentOnFileDropped(decision.file)
                             true
-                        } else {
-                            onError("Audio file dropped on image slot. Use an audio slot instead.")
+                        }
+                        is ContentImageDropDecision.Reject -> {
+                            currentOnError(decision.message)
                             false
                         }
-                    } else false
+                    }
                 } catch (_: Exception) { false }
             }
         }
@@ -137,6 +141,21 @@ private fun Modifier.editorImageDropTarget(
         shouldStartDragAndDrop = { true },
         target = target
     )
+}
+
+internal sealed interface ContentImageDropDecision {
+    data class Import(val file: File) : ContentImageDropDecision
+    data class Reject(val message: String) : ContentImageDropDecision
+}
+
+internal object ContentImageDropPolicy {
+    fun evaluate(file: File?): ContentImageDropDecision = when {
+        file == null || !file.exists() || !file.isFile ->
+            ContentImageDropDecision.Reject("No readable image file was dropped.")
+        !DragDropUtils.isSupportedImage(file) ->
+            ContentImageDropDecision.Reject("Unsupported image file. Use PNG, JPG, JPEG, or WebP.")
+        else -> ContentImageDropDecision.Import(file)
+    }
 }
 
 /**
@@ -780,6 +799,7 @@ fun ContentEditorPane(
                 )
 
                 var isHeroDragOver by remember { mutableStateOf(false) }
+                var imageDropError by remember { mutableStateOf<String?>(null) }
                 var copiedHeroImageFile by remember(activeImageRef) { mutableStateOf(false) }
                 var copiedHeroImageName by remember(activeImageRef) { mutableStateOf(false) }
 
@@ -798,15 +818,17 @@ fun ContentEditorPane(
                 }
 
                 LECard(
+                    backgroundColor = if (isHeroDragOver) LEColors.primary.copy(alpha = 0.06f) else LEColors.surface,
                     modifier = Modifier
                         .fillMaxWidth()
                         .editorImageDropTarget(
                             onFileDropped = { file ->
+                                imageDropError = null
                                 if (onImportMediaFile != null) onImportMediaFile(file, "image")
                                 else onUpdateDraftImageRef?.invoke(file.name)
                             },
                             onDragOverChanged = { isHeroDragOver = it },
-                            onError = {}
+                            onError = { imageDropError = it }
                         )
                 ) {
                     val imageRef = activeImageRef
@@ -986,6 +1008,14 @@ fun ContentEditorPane(
                                 )
                             }
                         }
+                    }
+                    imageDropError?.let {
+                        Text(
+                            text = it,
+                            style = LETypography.caption,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = LESpacing.xs)
+                        )
                     }
                 }
             }
