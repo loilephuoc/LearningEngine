@@ -63,6 +63,7 @@ fun AndroidSyncSettingsScreen(viewModel: AndroidSyncViewModel, onBack: () -> Uni
                     Button(viewModel::syncNow, enabled = state.canSync, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.sync_now)) }
                 }
                 state.summary?.let { Summary(it) }
+                state.lastSuccessfulSync?.let { Text(stringResource(R.string.sync_last_success, it.toString())) }
                 state.diagnosticCode?.let { Text(diagnosticText(it), color = MaterialTheme.colorScheme.error) }
             }
         }

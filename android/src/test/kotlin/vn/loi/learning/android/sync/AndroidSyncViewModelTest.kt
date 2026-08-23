@@ -59,6 +59,7 @@ class AndroidSyncViewModelTest {
         model.updateEmail("learner@example.com"); model.updatePassword("secret"); model.signIn(); advanceUntilIdle()
         assertTrue(model.syncNow()); advanceUntilIdle()
         assertEquals(1, model.state.value.summary?.pushed)
+        assertNotNull(model.state.value.lastSuccessfulSync)
         model.signOut(); advanceUntilIdle()
         assertEquals(AndroidSyncPhase.SIGNED_OUT, model.state.value.phase)
         assertEquals(URL, model.state.value.projectUrl)

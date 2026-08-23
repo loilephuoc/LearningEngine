@@ -418,6 +418,7 @@
     <string name="sync_summary_events">Sự kiện đã đẩy: %1$d · Đã áp dụng: %2$d</string>
     <string name="sync_summary_media">Tệp đã tải lên: %1$d · Tải xuống: %2$d</string>
     <string name="sync_summary_attention">Xung đột/cách ly: %1$d · Tệp đang chờ: %2$d</string>
+    <string name="sync_last_success">Lần đồng bộ thành công gần nhất: %1$s</string>
     <string name="settings_sync">Đồng bộ</string>
     <string name="settings_sync_desc">Cấu hình và đồng bộ thủ công giữa các thiết bị</string>
 </resources>
