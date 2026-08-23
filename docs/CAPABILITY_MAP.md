@@ -7,9 +7,13 @@
 - Execution: `BatchTtsRunner` owns sequential finite timeout/retry/backoff, same-language bounded
   fallback, cancellation, terminal progress, and incremental checkpoint publication.
 - Persistence/UI: `BatchTtsCheckpointStore` atomically replaces compact JSON state; `BatchTtsDialog`
-  owns language-filtered voice configuration, overwrite opt-in/confirmation, progress, retry, and
+  owns viewport-relative workspace sizing, target-language-conditional configuration, explicit
+  ordered fallback editing, overwrite opt-in/confirmation, progress, retry, and
   the existing Generate-then-Apply boundary. `ContentLibraryViewModel` remains content persistence
   authority and does not delete replaced/shared media.
+- Ownership: `BatchTtsPlanIdentity` fingerprints output-affecting plan semantics;
+  `BatchTtsCheckpointRepository` isolates plan files per package and owns exact-plan leases,
+  discard, stale recovery, and coexistence of incompatible incomplete batches.
 
 
 ## ANDROID-STUDY-3.0V Android Study final product polish

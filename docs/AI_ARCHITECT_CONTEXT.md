@@ -2,6 +2,21 @@
 
 ## Desktop batch TTS reliability follow-up
 
+- Completion follow-up starts from clean HEAD `2789418509de782e6268bbcdaaa149e939a14833` and delivers
+  four Desktop-only commits: responsive near-fullscreen workspace, language-aware visibility/validation,
+  explicit ordered fallback configuration, and collision-safe generation-plan checkpoint ownership.
+- The former 920x800 cap is removed. English-only, Vietnamese-only, and mixed scans share one dynamic
+  builder for normal/overwrite-confirmed starts. Presets restore/save exact valid fallback order with
+  no implicit catalog candidates.
+- Plan identity includes output-affecting scope, ordered targets/text hashes, overwrite, voice chain,
+  rate, pitch, and volume. Exact checkpoint files and leases coexist per package; exact resumes remain
+  target/asset validated and unrelated plans are not overwritten or cleared.
+- Commits: `3e07a0d0` responsive workspace, `e9f350d0` language-aware configuration,
+  `2dd04709` ordered fallback voices, and `d6a92d35` generation-plan checkpoints. Final verification
+  passes root 2,322, Android 1,048, and Desktop 1,864 tests with zero failures/errors/skips;
+  `:desktop:compileKotlin`, Desktop assemble, Android debug assemble, and `git diff --check` pass.
+  Physical resize, fallback-provider, and cancel/resume UAT remain for Product Owner validation.
+
 - PRE-TASK HEAD `1a27e941811ea4631827d679393e7708267debcb` on
   `integration/learning-engine-2.0`; Android follow-up commits were present and the worktree was clean.
 - `:desktop:compileKotlin` passed before editing, including `ContentExplorerPane.kt`; IntelliJ red-code

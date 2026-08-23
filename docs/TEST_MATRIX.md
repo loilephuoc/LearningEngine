@@ -11,6 +11,15 @@
   preservation on generation/storage failure, and no automatic old/shared-media deletion.
 - Run deterministic hundreds-target coverage with distributed failures and exact terminal counts;
   retain Content Explorer compile, selection, problem navigation, and Generate Audio wiring tests.
+- Verify 95% large-window, balanced standard-window, and 98% compact Batch TTS sizing without the
+  former 920x800 cap, while the content scroll region leaves footer actions reachable.
+- Verify Vietnamese-only, English-only, mixed, and dynamic field-selection transitions drive both
+  card visibility and voice validation through one shared start builder, including overwrite confirm.
+- Verify ordered fallback add/remove/reorder, finite/unique/same-language validation, missing preset
+  voice filtering, exact persistence order, and exact runtime attempt order without catalog append.
+- Verify generation-plan identity changes with scope, overwrite, voice order, and synthesis settings;
+  exact resume/missing-asset behavior, plan coexistence/discard/corrupt isolation, same-plan locking,
+  stale recovery, and exact-only successful cleanup.
 
 
 ## Phase 4 safety backup inventory and retention

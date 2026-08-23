@@ -1,3 +1,16 @@
+# Desktop batch TTS workspace and checkpoint completion
+
+- Replaced the fixed 920x800 Batch TTS cap with viewport-relative 94–98% sizing, retained scroll-safe
+  configuration content and fixed footer actions, and raised local section/voice readability without
+  changing the global design system.
+- Voice configuration now renders and validates only languages present in the current target scan;
+  normal and overwrite-confirmed starts share one canonical job builder.
+- Added compact ordered fallback editors with add/remove/reorder, exact preset hydration/persistence,
+  same-language/unique/non-primary validation, and no hidden catalog fallback append.
+- Isolated checkpoints by SHA-256 generation-plan identity under per-package directories. Exact plans
+  auto-resume with asset validation; incompatible plans coexist; exact-plan leases prevent concurrent
+  writers; discard, corruption, stale recovery, and completion affect only the owned plan.
+
 # Desktop batch TTS large-workspace reliability
 
 - Added a finite sequential execution policy with a 45-second hard timeout per provider attempt,

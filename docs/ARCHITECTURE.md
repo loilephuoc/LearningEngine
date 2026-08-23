@@ -1,3 +1,16 @@
+## Desktop batch TTS generation-plan ownership
+
+Desktop Batch TTS checkpoints are owned by an immutable generation plan, not by package alone. The
+SHA-256 plan identity covers package, overwrite semantics, ordered targets and text fingerprints,
+field/language, ordered effective voice candidates, and rate/pitch/volume. Checkpoints therefore live
+under `tts-checkpoints/<package>/<plan-id>.json`; exact plans auto-resume only validated successful
+records whose assets still exist, while incompatible plans coexist without replacement.
+
+One process-local file lease per exact plan prevents concurrent writers. Different plans may proceed
+independently. A lease older than the conservative recovery threshold can be reclaimed after process
+death. Atomic checkpoint replacement, exact-plan clearing, isolated discard, and corrupt-record
+fail-closed behavior preserve unrelated plans. Generated media remains separate from checkpoint state.
+
 ## Backup / Restore maintenance boundary
 
 Backup/restore maintenance is coordinated at the Application transaction boundary. Persisted
