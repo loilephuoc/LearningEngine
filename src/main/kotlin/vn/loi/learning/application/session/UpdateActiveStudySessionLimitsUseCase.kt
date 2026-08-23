@@ -55,8 +55,8 @@ class UpdateActiveStudySessionLimitsUseCase(
         val completedNewCount = current.newItemsReviewed
         val completedReviewCount = current.reviewItemsReviewed
 
-        val remainingNewQuota = maxOf(0, newLimit - completedNewCount)
-        val remainingReviewQuota = maxOf(0, reviewLimit - completedReviewCount)
+        val remainingNewQuota = maxOf(0, effectiveNewLimit - completedNewCount)
+        val remainingReviewQuota = maxOf(0, effectiveReviewLimit - completedReviewCount)
 
         val currentUncompletedItem = if (!existingQueue.isCompleted) existingQueue.currentLearningItemId else null
         val currentOrigin = currentUncompletedItem?.let { existingQueue.originOf(it) ?: SessionItemOrigin.NEW }

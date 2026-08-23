@@ -738,6 +738,11 @@ class AndroidStudyFacade(
                     active.policy.focusedPracticeKind == FocusedPracticeKind.NONE &&
                     active.policy.practiceLoopPolicy != PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW
                 ) {
+                    if (mode == StudyMode.LEARN_NEW && daily.limits.newPerDay > active.policy.newItemLimit) {
+                        try {
+                            context.engine.updateActiveSessionLimits(active.id, daily.limits.newPerDay, active.policy.reviewItemLimit)
+                        } catch (_: Exception) {}
+                    }
                     return loadExact(active.id.value)
                 }
                 context.engine.finishSession(
@@ -844,10 +849,15 @@ class AndroidStudyFacade(
             }
         sessionContentSnapshot = SessionContentSnapshot(session.id, session.installedPackageId, contentIds)
         currentItem = next
-        if (next.session.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT ||
+        val isIntroduction = next.session.studyMode == StudyMode.LEARN_NEW ||
+            next.session.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT ||
             next.session.policy.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW ||
-            next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds
-        ) {
+            next.origin == SessionItemOrigin.NEW
+        AndroidStartupTrace.write(
+            false,
+            "phase=study_next_item_selected session=${next.session.id.value} pkg=${next.session.installedPackageId?.value} mode=${next.session.studyMode} itemId=${next.item.learningItem.id.value} origin=${next.origin} isIntroduction=$isIntroduction remainingNew=${next.session.policy.newItemLimit - next.session.newItemsReviewed} remainingReview=${next.session.policy.reviewItemLimit - next.session.reviewItemsReviewed}"
+        )
+        if (isIntroduction) {
             val state = AndroidStartupTrace.measured("study_load_introduction_projection") {
                 buildIntroduction(next, revealed = next.session.answerRevealed, packageContentIds = contentIds)
             }
@@ -855,8 +865,16 @@ class AndroidStudyFacade(
                 attachHud(state, next.session, contentIds, knownDaily)
             }
         }
-        val plan = AndroidStartupTrace.measured("study_load_recall_plan") { createPlan(next) }
-            ?: return AndroidStudyState.Failed("Không thể tạo kế hoạch ghi nhớ cho phiên học này.", session.id.value)
+        val plan = try {
+            AndroidStartupTrace.measured("study_load_recall_plan") { createPlan(next) }
+        } catch (t: Throwable) {
+            AndroidStartupTrace.write(true, "phase=study_load_recall_plan_exception session=${session.id.value} error=${t.message} type=${t.javaClass.simpleName}")
+            null
+        }
+        if (plan == null) {
+            AndroidStartupTrace.write(true, "phase=study_load_recall_plan_failed session=${session.id.value} mode=${next.session.studyMode} itemId=${next.item.learningItem.id.value} origin=${next.origin}")
+            return AndroidStudyState.Failed("Không thể tạo kế hoạch ghi nhớ cho phiên học này.", session.id.value)
+        }
         val state = AndroidStartupTrace.measured("study_load_presentation") { present(plan) }
         return if (deferHud) state else AndroidStartupTrace.measured("study_load_hud") {
             attachHud(state, next.session, contentIds, knownDaily)
@@ -895,10 +913,22 @@ class AndroidStudyFacade(
     fun updateDailyLimits(state: AndroidStudyState.Runtime, newLimit: Int, reviewLimit: Int): AndroidStudyState {
         val item = currentItem ?: return state
         return runCatching {
-            context.engine.updateActiveSessionLimits(item.session.id, newLimit, reviewLimit)
+            AndroidStartupTrace.write(
+                false,
+                "phase=study_update_limits_start session=${item.session.id.value} pkg=${item.session.installedPackageId?.value} mode=${item.session.studyMode} oldNewLimit=${item.session.policy.newItemLimit} oldReviewLimit=${item.session.policy.reviewItemLimit} reqNewLimit=$newLimit reqReviewLimit=$reviewLimit"
+            )
+            val updatedSession = context.engine.updateActiveSessionLimits(item.session.id, newLimit, reviewLimit)
+            val queueProgress = context.engine.getStudyQueueProgress(item.session.id)
+            val queueSnapshot = context.studyQueue.get(item.session.id)
+            val newInQueue = queueSnapshot?.itemOrigins?.values?.count { it == SessionItemOrigin.NEW } ?: 0
+            val reviewInQueue = queueSnapshot?.itemOrigins?.values?.count { it == SessionItemOrigin.REVIEW } ?: 0
+            AndroidStartupTrace.write(
+                false,
+                "phase=study_update_limits_success session=${item.session.id.value} mode=${updatedSession.studyMode} effNewLimit=${updatedSession.policy.newItemLimit} effReviewLimit=${updatedSession.policy.reviewItemLimit} queueSize=${queueProgress?.totalItemCount} newCountInQueue=$newInQueue reviewCountInQueue=$reviewInQueue"
+            )
             loadExact(item.session.id.value)
         }.getOrElse { error ->
-            AndroidStartupTrace.write(false, "phase=study_update_limits_failed error=${error.message}")
+            AndroidStartupTrace.write(true, "phase=study_update_limits_failed error=${error.message} type=${error.javaClass.simpleName}")
             AndroidStudyState.Failed(error.message ?: "Không thể cập nhật giới hạn phiên học.", item.session.id.value)
         }
     }
@@ -911,14 +941,27 @@ class AndroidStudyFacade(
         val next = context.engine.getNextSessionItem(session.id, Moment(now()))
             ?: return completeExhaustedSession(session)
         currentItem = next
-        if (next.session.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT ||
+        val isIntroduction = next.session.studyMode == StudyMode.LEARN_NEW ||
+            next.session.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT ||
             next.session.policy.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW ||
-            next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds
-        ) {
+            next.origin == SessionItemOrigin.NEW
+        AndroidStartupTrace.write(
+            false,
+            "phase=study_load_exact_item session=${next.session.id.value} pkg=${next.session.installedPackageId?.value} mode=${next.session.studyMode} itemId=${next.item.learningItem.id.value} origin=${next.origin} isIntroduction=$isIntroduction"
+        )
+        if (isIntroduction) {
             return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
         }
-        val plan = createPlan(next)
-            ?: return AndroidStudyState.Failed("Không thể tạo kế hoạch ghi nhớ cho phiên học này.", sessionId)
+        val plan = try {
+            createPlan(next)
+        } catch (t: Throwable) {
+            AndroidStartupTrace.write(true, "phase=study_load_exact_plan_exception session=${sessionId} error=${t.message} type=${t.javaClass.simpleName}")
+            null
+        }
+        if (plan == null) {
+            AndroidStartupTrace.write(true, "phase=study_load_exact_plan_failed session=${sessionId} mode=${next.session.studyMode} itemId=${next.item.learningItem.id.value} origin=${next.origin}")
+            return AndroidStudyState.Failed("Không thể tạo kế hoạch ghi nhớ cho phiên học này.", sessionId)
+        }
         return attachHud(present(plan), next.session)
     }
 
@@ -1283,7 +1326,10 @@ class AndroidStudyFacade(
         AndroidTypingSuccessTrace.nextEvent("queueAdvanceEnd", tracePlanId)
         currentItem = next
         AndroidTypingSuccessTrace.nextEvent("packageReadStart", tracePlanId)
-        val isNewIntroduction = next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds
+        val isNewIntroduction = next.session.studyMode == StudyMode.LEARN_NEW ||
+            next.session.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT ||
+            next.session.policy.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW ||
+            next.origin == SessionItemOrigin.NEW
         AndroidTypingSuccessTrace.nextEvent("packageReadEnd", tracePlanId)
         if (isNewIntroduction) {
             AndroidTypingSuccessTrace.nextEvent("stateProjectionStart", tracePlanId)

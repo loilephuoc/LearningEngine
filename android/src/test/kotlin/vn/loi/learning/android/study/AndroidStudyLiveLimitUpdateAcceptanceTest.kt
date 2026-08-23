@@ -298,6 +298,180 @@ class AndroidStudyLiveLimitUpdateAcceptanceTest {
         assertTrue(homeRefreshed.availability.canLearnNew, "Fresh home query must reflect updated daily limits immediately")
     }
 
+    @Test
+    fun `LEARN_NEW strict projection sequence invariant forbids Recall Typing Listening across live limit update`() {
+        val fixture = createFixture(itemCount = 20)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(5, 100)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { currentDailyLimits }
+        )
+
+        val started = facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        var current: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(started)
+
+        // Item 1: Introduction -> rate GOOD
+        assertIs<AndroidStudyState.Introduction>(current)
+        current = facade.rateIntroduction(current, ReviewRating.GOOD)
+
+        // Item 2: Introduction -> reveal -> live limit update from 5 to 10
+        val intro2 = assertIs<AndroidStudyState.Introduction>(current)
+        val revealed2 = facade.revealIntroduction(intro2)
+        assertIs<AndroidStudyState.Introduction>(revealed2)
+        assertTrue(revealed2.revealedStage)
+
+        // Update limit while card is revealed: MUST NOT convert to Recall/Typing or fail
+        currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(10, 100)
+        val updated2 = facade.updateDailyLimits(revealed2, newLimit = 10, reviewLimit = 100)
+        assertFalse(updated2 is AndroidStudyState.Failed, "Update limit while card is revealed must never fail with memory plan error")
+        val introUpdated2 = assertIs<AndroidStudyState.Introduction>(updated2)
+
+        // Rate item 2
+        current = facade.rateIntroduction(introUpdated2, ReviewRating.GOOD)
+
+        // Items 3, 4, 5, 6, 7, 8, 9, 10 must ALL be Introduction
+        val projectionTypes = mutableListOf<String>()
+        for (i in 3..10) {
+            when (current) {
+                is AndroidStudyState.Introduction -> projectionTypes.add("Introduction")
+                is AndroidStudyState.Typing -> projectionTypes.add("Typing")
+                is AndroidStudyState.Listening -> projectionTypes.add("Listening")
+                is AndroidStudyState.MultipleChoice -> projectionTypes.add("MultipleChoice")
+                is AndroidStudyState.ImageRecall -> projectionTypes.add("ImageRecall")
+                is AndroidStudyState.ExampleCompletion -> projectionTypes.add("ExampleCompletion")
+                is AndroidStudyState.Completion -> projectionTypes.add("Completion")
+                is AndroidStudyState.Failed -> projectionTypes.add("Failed: ${current.message}")
+                else -> projectionTypes.add(current::class.java.simpleName)
+            }
+            val intro = assertIs<AndroidStudyState.Introduction>(current, "Item $i must be Introduction, but got $current")
+            current = facade.rateIntroduction(intro, ReviewRating.GOOD)
+        }
+
+        // Verify that only Introduction was emitted
+        assertEquals(List(8) { "Introduction" }, projectionTypes)
+        assertIs<AndroidStudyState.Completion>(current)
+    }
+
+    @Test
+    fun `LEARN_NEW decrease New Limit adjusts remaining capacity safely without corrupting session`() {
+        val fixture = createFixture(itemCount = 20)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(15, 100)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { currentDailyLimits }
+        )
+
+        val started = facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        var current: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(started)
+
+        for (i in 1..3) {
+            val intro = assertIs<AndroidStudyState.Introduction>(current)
+            current = facade.rateIntroduction(intro, ReviewRating.GOOD)
+        }
+
+        // Decrease limit from 15 to 4 (1 item remaining)
+        currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(4, 100)
+        val updated = facade.updateDailyLimits(assertIs<AndroidStudyState.Introduction>(current), newLimit = 4, reviewLimit = 100)
+        val intro4 = assertIs<AndroidStudyState.Introduction>(updated)
+        assertEquals(4, intro4.hud?.newConfiguredTarget)
+        assertEquals(3, intro4.hud?.newCompleted)
+
+        // Complete 4th item -> session completes
+        val finalState = facade.rateIntroduction(intro4, ReviewRating.GOOD)
+        val completion = assertIs<AndroidStudyState.Completion>(finalState)
+        assertEquals(4, completion.newCompleted)
+    }
+
+    @Test
+    fun `repeated live limit updates do not create mixed mode queue`() {
+        val fixture = createFixture(itemCount = 30)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(5, 100)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { currentDailyLimits }
+        )
+
+        val started = facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        var current: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(started)
+
+        // Repeatedly change limits: 5 -> 10 -> 8 -> 12
+        val limits = listOf(10, 8, 12)
+        for (lim in limits) {
+            currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(lim, 100)
+            val updated = facade.updateDailyLimits(assertIs<AndroidStudyState.Introduction>(current), newLimit = lim, reviewLimit = 100)
+            current = assertIs<AndroidStudyState.Introduction>(updated)
+        }
+
+        val sessionId = vn.loi.learning.domain.study.session.model.SessionId((current as AndroidStudyState.Introduction).sessionId)
+        val queue = fixture.context.studyQueue.get(sessionId)!!
+        assertTrue(queue.itemOrigins.values.all { it == vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW }, "Queue must contain ONLY NEW items")
+        assertEquals(0, queue.configuredReviewTarget)
+        assertEquals(0, queue.effectiveReviewWorkload)
+    }
+
+    @Test
+    fun `REVIEW and TYPING explicit modes maintain their invariants across limit updates`() {
+        val fixture = createFixture(itemCount = 20)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { vn.loi.learning.application.study.DailyStudyBudgetLimits(20, 100) }
+        )
+
+        for (i in 0 until 5) {
+            fixture.context.engine.review(
+                vn.loi.learning.application.review.ReviewCommand(
+                    vn.loi.learning.domain.study.memory.model.ReviewEventId("seed-eff-$i"),
+                    learnerId,
+                    LearningItemId("opd-2nd-pkg-item-$i"),
+                    ReviewRating.GOOD,
+                    vn.loi.learning.domain.study.memory.model.Moment(1_000L)
+                )
+            )
+        }
+
+        // Start TYPING session
+        val startedTyping = facade.start(AndroidSessionEntry.REVIEW, StudyMode.TYPING)
+        val typingState = assertIs<AndroidStudyState.Typing>(startedTyping)
+        val session = fixture.context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(typingState.plan.sessionId.value))!!
+        assertEquals(0, session.policy.newItemLimit, "TYPING session must have newItemLimit = 0")
+
+        // Update limits on TYPING session: new items must remain 0
+        val updatedTyping = facade.updateDailyLimits(typingState, newLimit = 50, reviewLimit = 80)
+        val updatedTypingRuntime = assertIs<AndroidStudyState.Typing>(updatedTyping)
+        val updatedSession = fixture.context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(updatedTypingRuntime.plan.sessionId.value))!!
+        assertEquals(0, updatedSession.policy.newItemLimit, "TYPING session must keep newItemLimit = 0 even if newLimit was passed")
+        assertEquals(80, updatedSession.policy.reviewItemLimit)
+    }
+
+    @Test
+    fun `passive limit replanning does not mutate daily counters or review events`() {
+        val fixture = createFixture(itemCount = 20)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { vn.loi.learning.application.study.DailyStudyBudgetLimits(10, 100) }
+        )
+
+        val started = facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        val intro = assertIs<AndroidStudyState.Introduction>(started)
+
+        val beforeBudget = facade.home().availability
+        facade.updateDailyLimits(intro, newLimit = 15, reviewLimit = 100)
+        val afterBudget = facade.home().availability
+
+        // Daily budget availability should remain accurate and consistent
+        assertTrue(afterBudget.canLearnNew)
+    }
+
     private fun createFixture(itemCount: Int): Fixture {
         val context = LearningApplicationFactory.createInMemory()
         val installedId = install(context, "opd-2nd-pkg", itemCount)

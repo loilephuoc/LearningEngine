@@ -696,8 +696,16 @@ class MainActivity : ComponentActivity() {
                         }
                         SettingsScreen(
                             themeMode, app.themeController::setMode, studyLimits,
-                            app.studyPreferencesController::updateNew,
-                            app.studyPreferencesController::updateReview,
+                            { newLimit ->
+                                val res = app.studyPreferencesController.updateNew(newLimit)
+                                studyViewModel.onEvent(AndroidStudyEvent.Home)
+                                res
+                            },
+                            { reviewLimit ->
+                                val res = app.studyPreferencesController.updateReview(reviewLimit)
+                                studyViewModel.onEvent(AndroidStudyEvent.Home)
+                                res
+                            },
                             continuousSkim,
                             app.studyPreferencesController::updateContinuousSkim,
                             onControllerSettings = { navController.navigate("controller_settings") { launchSingleTop = true } },
