@@ -1,5 +1,19 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Desktop Batch TTS Hotfix — stall recovery, dead lease reclaim, and structured diagnostics
+
+- Fixed Batch TTS stall under abrupt Edge WebSocket closure / socket hangs: `EdgeTtsEngine` isolates
+  blocking calls on a daemon worker pool via `suspendCancellableCoroutine`, cancels worker tasks on timeout,
+  and marks attempts abandoned to prevent late file collisions.
+- `BatchTtsRunner` adds per-target watchdog budget isolation guaranteeing terminal forward progress on
+  uncooperative provider threads or network hangs.
+- `BatchTtsCheckpointRepository` verifies live PID status via `ProcessHandle.of(ownerPid)` and detects PID
+  recycling through recorded start timestamps, reclaiming dead owner leases immediately without waiting 24h.
+- Crash resume verifies existing asset presence on disk and resumes from the first pending target.
+- Added structured runtime event logging with zero learner text content / vocabulary / secrets in payload.
+- Commit: `5b91d40e`. Verification: `clean test` passes 5,252 tests (root 2,322, Android 1,059, Desktop 1,871),
+  zero failures/errors/skips. Desktop assemble, Android debug assemble, and `git diff --check` pass.
+
 ## Android Hotfix 5 — safe NEW re-entry and audio ownership after live replanning
 
 - Android now derives an explicit persisted pipeline phase from the active `StudySession`: NEW and DUE

@@ -1,3 +1,19 @@
+# Desktop Batch TTS Hotfix — batch stall recovery, dead lease reclaim, and structured diagnostics
+
+- Fixed Batch TTS stall under abrupt Edge WebSocket closure / native listener hangs by moving provider
+  synthesis to an isolated daemon worker thread pool via `suspendCancellableCoroutine` and adding per-target
+  watchdog budget isolation with guaranteed forward progress. Cancelled / timed-out attempts are marked
+  abandoned so late completions discard temp files without touching the output target.
+- Replaced 24-hour static lock age in `BatchTtsCheckpointRepository` with active PID liveness verification
+  via `ProcessHandle.of(ownerPid)` and PID-recycling start-timestamp verification. Dead owner leases are
+  reclaimed immediately without waiting, while live owners are strictly rejected.
+- Crash resume verifies existing asset presence and resumes from the first pending target without
+  regenerating completed targets.
+- Added structured runtime event logging (`RuntimeBatchTtsEventLogger`) with standard event codes and zero
+  learner content / vocabulary / translation / secrets in log payloads.
+- Commit: `5b91d40e`. Verification: `clean test` passes 5,252 tests (root 2,322, Android 1,059, Desktop 1,871),
+  zero failures/errors/skips. `:desktop:assemble`, `:android:assembleDebug`, and `git diff --check` pass.
+
 # Android Hotfix 5 — safe NEW re-entry after live limit increase
 
 - Added an explicit phase interpretation for the persisted Android Study session and delayed DUE/SKIM
