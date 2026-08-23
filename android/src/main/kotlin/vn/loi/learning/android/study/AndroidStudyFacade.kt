@@ -112,6 +112,15 @@ data class AndroidStudyRuntimeIdentity(
     }
 }
 
+internal enum class AndroidLearnNewPipelinePhase { NEW, DUE, SKIM }
+
+internal fun StudySession.learnNewPipelinePhase(): AndroidLearnNewPipelinePhase? = when {
+    studyMode != StudyMode.LEARN_NEW -> null
+    policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY -> AndroidLearnNewPipelinePhase.SKIM
+    policy.newItemLimit > 0 -> AndroidLearnNewPipelinePhase.NEW
+    else -> AndroidLearnNewPipelinePhase.DUE
+}
+
 data class AndroidStudySessionHud(
     val newCompleted: Int,
     val newTarget: Int,
@@ -942,9 +951,9 @@ class AndroidStudyFacade(
             val requestedLimits = DailyStudyBudgetLimits(newLimit, reviewLimit)
             val scope = currentScope() ?: error("Active learning package is unavailable.")
             val daily = dailyBudget(scope, limits = requestedLimits)
-            val currentOrigin = context.studyQueue.get(session.id)
-                ?.currentLearningItemId
-                ?.let { context.studyQueue.get(session.id)?.originOf(it) }
+            val currentQueue = context.studyQueue.get(session.id)
+            val currentOrigin = currentQueue?.currentLearningItemId?.let(currentQueue::originOf)
+            val pipelinePhase = session.learnNewPipelinePhase()
             val effectiveSessionNewTarget = session.newItemsReviewed + maxOf(
                 daily.newRemainingToday,
                 if (currentOrigin == SessionItemOrigin.NEW) 1 else 0
@@ -957,6 +966,13 @@ class AndroidStudyFacade(
                 false,
                 "phase=study_update_limits_start session=${session.id.value} pkg=${session.installedPackageId?.value} mode=${session.studyMode} dailyNewLimit=$newLimit newCompletedToday=${daily.newCompletedToday} remainingNewToday=${daily.newRemainingToday} dailyReviewLimit=$reviewLimit reviewCompletedToday=${daily.reviewCompletedToday} remainingReviewToday=${daily.reviewRemainingToday} activeSessionNewCompleted=${session.newItemsReviewed} activeSessionReviewCompleted=${session.reviewItemsReviewed} oldSessionNewTarget=${session.policy.newItemLimit} newEffectiveSessionNewTarget=$effectiveSessionNewTarget oldSessionReviewTarget=${session.policy.reviewItemLimit} newEffectiveSessionReviewTarget=$effectiveSessionReviewTarget currentLearningItemId=${session.currentLearningItemId?.value}"
             )
+            if (pipelinePhase == AndroidLearnNewPipelinePhase.DUE || pipelinePhase == AndroidLearnNewPipelinePhase.SKIM) {
+                AndroidStartupTrace.write(
+                    false,
+                    "phase=study_update_limits_phase_boundary session=${session.id.value} oldPhase=$pipelinePhase newPhase=$pipelinePhase currentItemId=${session.currentLearningItemId?.value} currentOrigin=$currentOrigin queueSize=${currentQueue?.learningItemIds?.size} queuePosition=${currentQueue?.currentIndex} replanAction=${if (daily.newRemainingToday > 0) "REENTER_NEW_AFTER_CURRENT" else "UNCHANGED"} snapshotValidationResult=NOT_REBUILT"
+                )
+                return@runCatching attachHud(state, session, knownDaily = daily)
+            }
             val updatedSession = context.engine.updateActiveSessionLimits(
                 session.id,
                 effectiveSessionNewTarget,
@@ -1150,6 +1166,7 @@ class AndroidStudyFacade(
                     ReviewRating.GOOD, ReviewRating.EASY -> PracticeRecallResult.CORRECT
                 }
                 context.studyQueue.advancePractice(sessionId, practiceResult)
+                reopenLearnNewPhaseAfterCurrent(session)?.let { return it }
                 val contentIds = sessionContentSnapshot?.takeIf { it.sessionId == sessionId }?.contentIds
                 return loadWithSnapshot(
                     restoredSessionId = state.sessionId,
@@ -1185,6 +1202,7 @@ class AndroidStudyFacade(
                 )
             }
             currentItem = currentItem?.copy(session = reviewResult.session)
+            reopenLearnNewPhaseAfterCurrent(session)?.let { return it }
             val contentIds = sessionContentSnapshot?.takeIf { it.sessionId == sessionId }?.contentIds
             AndroidStartupTrace.measured("introduction_rating_next_state") {
                 loadWithSnapshot(
@@ -1199,6 +1217,45 @@ class AndroidStudyFacade(
             submittedItems -= submissionKey
             throw failure
         }
+    }
+
+    private fun reopenLearnNewPhaseAfterCurrent(completedCurrentSession: StudySession): AndroidStudyState? {
+        val oldPhase = completedCurrentSession.learnNewPipelinePhase()
+        if (oldPhase != AndroidLearnNewPipelinePhase.DUE && oldPhase != AndroidLearnNewPipelinePhase.SKIM) return null
+        val scope = currentScope() ?: return null
+        if (completedCurrentSession.installedPackageId != scope.installedPackageId) return null
+        val daily = dailyBudget(scope)
+        if (daily.newRemainingToday <= 0 || daily.eligibleNewContentCount <= 0) return null
+
+        val at = Moment(now())
+        context.engine.finishSession(
+            completedCurrentSession.id,
+            at,
+            completionProvenance = SessionCompletionProvenance.REPLACED_OR_LEFT
+        )
+        val reopened = context.engine.startSession(
+            StartStudySessionCommand(
+                sessionId = SessionId(UUID.randomUUID().toString()),
+                learnerId = learnerId,
+                startedAt = at,
+                policy = SessionPolicy(newItemLimit = daily.newRemainingToday, reviewItemLimit = 0),
+                installedPackageId = scope.installedPackageId,
+                topicId = scope.topicId,
+                studyMode = StudyMode.LEARN_NEW,
+                includedContentIds = packageContentIds(scope.installedPackageId)
+            )
+        )
+        AndroidStartupTrace.write(
+            false,
+            "phase=study_pipeline_reentry oldSession=${completedCurrentSession.id.value} newSession=${reopened.id.value} oldPhase=$oldPhase newPhase=${AndroidLearnNewPipelinePhase.NEW} dailyNewLimit=${daily.limits.newPerDay} newCompletedToday=${daily.newCompletedToday} remainingNewToday=${daily.newRemainingToday} replanAction=REENTER_NEW_AFTER_CURRENT snapshotValidationResult=VALID"
+        )
+        return loadWithSnapshot(
+            restoredSessionId = reopened.id.value,
+            knownContentIds = packageContentIds(scope.installedPackageId),
+            knownDaily = daily,
+            knownSession = reopened,
+            deferHud = false
+        )
     }
 
     private fun buildIntroduction(

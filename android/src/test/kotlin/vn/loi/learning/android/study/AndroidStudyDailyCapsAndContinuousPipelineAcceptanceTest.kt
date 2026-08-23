@@ -486,11 +486,178 @@ class AndroidStudyDailyCapsAndContinuousPipelineAcceptanceTest {
         assertIs<AndroidStudyState.Completion>(currentOff, "Continuous Skim OFF must complete session when quota is exhausted")
     }
 
+    @Test
+    fun `live increase while SKIM is active preserves current card then reopens NEW`() {
+        val fixture = createFixture(itemCount = 15)
+        var limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(5, 20)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 10_000L },
+            dailyLimits = { limits },
+            continuousSkimEnabled = { true }
+        )
+
+        var current: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        )
+        repeat(5) {
+            current = facade.rateIntroduction(assertIs<AndroidStudyState.Introduction>(current), ReviewRating.GOOD)
+        }
+        val skim = assertIs<AndroidStudyState.Introduction>(current)
+        assertEquals(vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY, skim.runtimeIdentity?.evaluationPolicy)
+
+        limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(10, 20)
+        val updated = facade.updateDailyLimits(skim, 10, 20)
+        val preserved = assertIs<AndroidStudyState.Introduction>(updated)
+        assertEquals(skim.learningItemId, preserved.learningItemId)
+
+        val reopened = assertIs<AndroidStudyState.Introduction>(
+            facade.rateIntroduction(preserved, ReviewRating.GOOD)
+        )
+        assertEquals(SessionItemOrigin.NEW, reopened.origin)
+        assertEquals(vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.EVALUATIVE, reopened.runtimeIdentity?.evaluationPolicy)
+    }
+
+    @Test
+    fun `live increase while DUE is active preserves current DUE then reopens NEW without losing remaining DUE`() {
+        val fixture = createFixture(itemCount = 15)
+        seedDueItems(fixture.context, count = 5)
+        var limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(10, 20)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 100_000L },
+            dailyLimits = { limits },
+            continuousSkimEnabled = { true }
+        )
+
+        var current: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        )
+        repeat(5) {
+            current = facade.rateIntroduction(assertIs<AndroidStudyState.Introduction>(current), ReviewRating.GOOD)
+        }
+        val due = assertIs<AndroidStudyState.Introduction>(current)
+        assertEquals(SessionItemOrigin.REVIEW, due.origin)
+
+        limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(15, 20)
+        val preserved = assertIs<AndroidStudyState.Introduction>(facade.updateDailyLimits(due, 15, 20))
+        assertEquals(due.learningItemId, preserved.learningItemId)
+
+        current = facade.rateIntroduction(preserved, ReviewRating.GOOD)
+        repeat(5) {
+            val fresh = assertIs<AndroidStudyState.Introduction>(current)
+            assertEquals(SessionItemOrigin.NEW, fresh.origin)
+            current = facade.rateIntroduction(fresh, ReviewRating.GOOD)
+        }
+        val returnedDue = assertIs<AndroidStudyState.Introduction>(current)
+        assertEquals(SessionItemOrigin.REVIEW, returnedDue.origin)
+        assertEquals(15, returnedDue.hud?.newCompleted)
+    }
+
+    @Test
+    fun `repeated increase after DUE reentry admits only the new daily remainder without duplicates`() {
+        val fixture = createFixture(itemCount = 30)
+        seedDueItems(fixture.context, count = 5)
+        var limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(10, 20)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 100_000L },
+            dailyLimits = { limits },
+            continuousSkimEnabled = { true }
+        )
+        var current: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        )
+        repeat(5) { current = facade.rateIntroduction(assertIs<AndroidStudyState.Introduction>(current), ReviewRating.GOOD) }
+        val due = assertIs<AndroidStudyState.Introduction>(current)
+        limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(15, 20)
+        current = facade.rateIntroduction(
+            assertIs<AndroidStudyState.Introduction>(facade.updateDailyLimits(due, 15, 20)),
+            ReviewRating.GOOD
+        )
+        repeat(2) { current = facade.rateIntroduction(assertIs<AndroidStudyState.Introduction>(current), ReviewRating.GOOD) }
+
+        limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(20, 20)
+        current = facade.updateDailyLimits(assertIs<AndroidStudyState.Introduction>(current), 20, 20)
+        val seen = linkedSetOf<String>()
+        repeat(8) {
+            val fresh = assertIs<AndroidStudyState.Introduction>(current)
+            assertEquals(SessionItemOrigin.NEW, fresh.origin)
+            assertTrue(seen.add(fresh.learningItemId), "Repeated increases must not duplicate NEW membership")
+            current = facade.rateIntroduction(fresh, ReviewRating.GOOD)
+        }
+        val daily = facade.home().model.dailyBudget
+        assertEquals(20, daily?.newCompletedToday)
+        assertEquals(0, daily?.newRemainingToday)
+    }
+
+    @Test
+    fun `live decrease in DUE preserves phase and does not reopen NEW`() {
+        val fixture = createFixture(itemCount = 15)
+        seedDueItems(fixture.context, count = 5)
+        var limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(10, 20)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 100_000L },
+            dailyLimits = { limits },
+            continuousSkimEnabled = { true }
+        )
+        var current: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        )
+        repeat(5) { current = facade.rateIntroduction(assertIs<AndroidStudyState.Introduction>(current), ReviewRating.GOOD) }
+        val due = assertIs<AndroidStudyState.Introduction>(current)
+        limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(8, 20)
+        val preserved = assertIs<AndroidStudyState.Introduction>(facade.updateDailyLimits(due, 8, 20))
+        assertEquals(due.learningItemId, preserved.learningItemId)
+
+        val next = assertIs<AndroidStudyState.Introduction>(facade.rateIntroduction(preserved, ReviewRating.GOOD))
+        assertEquals(SessionItemOrigin.REVIEW, next.origin)
+        assertEquals(due.sessionId, next.sessionId)
+    }
+
     private fun createFixture(itemCount: Int): Fixture {
         val context = LearningApplicationFactory.createInMemory()
         val installedId = install(context, "opd-pkg", itemCount)
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, installedId)
         return Fixture(context, installedId)
+    }
+
+    private fun seedDueItems(context: LearningApplicationContext, count: Int) {
+        context.learningItemRepository!!.findAllEnabled().take(count).forEachIndexed { index, item ->
+            val before = MemoryState(
+                learnerId = learnerId,
+                learningItemId = item.id,
+                stage = LearningStage.NEW,
+                difficulty = 5.0,
+                stabilityDays = 2.5,
+                dueAt = Moment(1_000L),
+                lastReviewedAt = null,
+                reviewCount = 0,
+                lapseCount = 0
+            )
+            val after = before.copy(
+                stage = LearningStage.REVIEW,
+                dueAt = Moment(2_000L),
+                lastReviewedAt = Moment(1_000L),
+                reviewCount = 1
+            )
+            context.reviewEventRepository!!.append(
+                ReviewEvent(
+                    id = ReviewEventId("reentry-due-$index"),
+                    rating = ReviewRating.GOOD,
+                    reviewedAt = Moment(1_000L),
+                    responseTime = null,
+                    stateBefore = before,
+                    stateAfter = after
+                )
+            )
+            context.memoryStateRepository!!.save(after)
+        }
     }
 
     private fun install(
