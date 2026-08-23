@@ -19,8 +19,22 @@ class LearningEngineAndroidApplication : Application() {
         vn.loi.learning.android.media.LearningEngineAudioPolicy.init(this)
         vn.loi.learning.android.controller.ControllerDiagnosticsHolder.registerInputDeviceListener(this)
         reminderNotificationHelper.createNotificationChannel()
+        dailyNotificationHelper.createNotificationChannels()
+        dailyNotificationScheduler.reconcile()
         AndroidLockScreenVocabularyService.reconcile(this, "APPLICATION_ON_CREATE")
         homeVocabularyWidgetCoordinator.start()
+    }
+
+    val dailyNotificationPreferencesController: vn.loi.learning.android.notification.DailyLearningNotificationPreferencesController by lazy {
+        vn.loi.learning.android.notification.DailyLearningNotificationPreferencesController(
+            vn.loi.learning.android.notification.SharedPreferencesDailyLearningNotificationStore(this)
+        )
+    }
+    val dailyNotificationHelper: vn.loi.learning.android.notification.DailyLearningNotificationHelper by lazy {
+        vn.loi.learning.android.notification.DailyLearningNotificationHelper(this)
+    }
+    val dailyNotificationScheduler: vn.loi.learning.android.notification.DailyLearningNotificationScheduler by lazy {
+        vn.loi.learning.android.notification.DailyLearningNotificationScheduler(this, dailyNotificationPreferencesController)
     }
 
     val themeController: AndroidThemeController by lazy {

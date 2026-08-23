@@ -327,6 +327,7 @@ class MainActivity : ComponentActivity() {
             val currentLanguage by vn.loi.learning.android.platform.AppLanguageManager.currentLanguage.collectAsStateWithLifecycle()
             val studyLimits by app.studyPreferencesController.limits.collectAsStateWithLifecycle()
             val continuousSkim by app.studyPreferencesController.continuousSkim.collectAsStateWithLifecycle()
+            val dailyNotificationSettings by app.dailyNotificationPreferencesController.settings.collectAsStateWithLifecycle()
 
             val locale = java.util.Locale(currentLanguage.code)
             val currentConfig = LocalConfiguration.current
@@ -688,6 +689,11 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("settings", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
+                        val activePackageName = remember(graph) {
+                            val libId = graph.engine.defaultLibraryId
+                            val actPkgId = libId?.let { graph.engine.domainLibraryRepository?.findById(it)?.activePackageId }
+                            actPkgId?.let { graph.engine.installedPackageRepository?.findById(it)?.name?.value }
+                        }
                         SettingsScreen(
                             themeMode, app.themeController::setMode, studyLimits,
                             app.studyPreferencesController::updateNew,
@@ -703,7 +709,17 @@ class MainActivity : ComponentActivity() {
                             onBackupRestore = { navController.navigate("backup_restore") { launchSingleTop = true } },
                             onSyncSettings = { navController.navigate("sync_settings") { launchSingleTop = true } },
                             currentLanguage = currentLanguage,
-                            onLanguage = { vn.loi.learning.android.platform.AppLanguageManager.setLanguage(this@MainActivity, it) }
+                            onLanguage = { vn.loi.learning.android.platform.AppLanguageManager.setLanguage(this@MainActivity, it) },
+                            dailyNotificationSettings = dailyNotificationSettings,
+                            activePackageName = activePackageName,
+                            onUpdateDueReview = { enabled, hour, minute ->
+                                app.dailyNotificationPreferencesController.updateDueReview(enabled, hour, minute)
+                                app.dailyNotificationScheduler.reconcile()
+                            },
+                            onUpdateInactivity = { enabled, threshold, hour, minute ->
+                                app.dailyNotificationPreferencesController.updateInactivity(enabled, threshold, hour, minute)
+                                app.dailyNotificationScheduler.reconcile()
+                            }
                         ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
                     }
                     composable("sync_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
