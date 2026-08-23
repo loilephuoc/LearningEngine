@@ -157,6 +157,8 @@ fun BatchTtsDialog(
     // Selected Voices and Numeric Parameters
     var selectedEnglishVoice by remember { mutableStateOf<TtsVoice?>(null) }
     var selectedVietnameseVoice by remember { mutableStateOf<TtsVoice?>(null) }
+    var englishFallbacks by remember { mutableStateOf(OrderedFallbackVoices.EMPTY) }
+    var vietnameseFallbacks by remember { mutableStateOf(OrderedFallbackVoices.EMPTY) }
 
     var englishRate by remember { mutableStateOf(selectedPreset.english.audioParameters.ratePercent) }
     var englishPitchHz by remember { mutableStateOf(selectedPreset.english.audioParameters.pitchHz) }
@@ -191,6 +193,8 @@ fun BatchTtsDialog(
                 ?: availableVoices.firstOrNull { it.isEnglish }
             selectedVietnameseVoice = availableVoices.firstOrNull { it.id == preset.vietnamese.primaryVoiceId }
                 ?: availableVoices.firstOrNull { it.isVietnamese }
+            englishFallbacks = OrderedFallbackVoices.hydrate(preset.english.fallbackVoiceIds, availableVoices, TtsLanguage.ENGLISH, selectedEnglishVoice)
+            vietnameseFallbacks = OrderedFallbackVoices.hydrate(preset.vietnamese.fallbackVoiceIds, availableVoices, TtsLanguage.VIETNAMESE, selectedVietnameseVoice)
         }
         isDirty = false
     }
@@ -202,8 +206,8 @@ fun BatchTtsDialog(
         english = TtsLanguagePresetConfig(
             strategyMode = englishStrategyMode,
             primaryVoiceId = selectedEnglishVoice?.id.orEmpty(),
-            fallbackVoiceIds = availableVoices.filter { it.isEnglish && it.id != selectedEnglishVoice?.id }.map { it.id }.take(3),
-            candidateVoiceIds = listOfNotNull(selectedEnglishVoice?.id) + availableVoices.filter { it.isEnglish && it.id != selectedEnglishVoice?.id }.map { it.id }.take(3),
+            fallbackVoiceIds = englishFallbacks.ids,
+            candidateVoiceIds = listOfNotNull(selectedEnglishVoice?.id) + englishFallbacks.ids,
             audioParameters = TtsAudioParameters(
                 ratePercent = englishRate,
                 pitchHz = englishPitchHz,
@@ -213,8 +217,8 @@ fun BatchTtsDialog(
         vietnamese = TtsLanguagePresetConfig(
             strategyMode = vietnameseStrategyMode,
             primaryVoiceId = selectedVietnameseVoice?.id.orEmpty(),
-            fallbackVoiceIds = availableVoices.filter { it.isVietnamese && it.id != selectedVietnameseVoice?.id }.map { it.id }.take(2),
-            candidateVoiceIds = listOfNotNull(selectedVietnameseVoice?.id) + availableVoices.filter { it.isVietnamese && it.id != selectedVietnameseVoice?.id }.map { it.id }.take(2),
+            fallbackVoiceIds = vietnameseFallbacks.ids,
+            candidateVoiceIds = listOfNotNull(selectedVietnameseVoice?.id) + vietnameseFallbacks.ids,
             audioParameters = TtsAudioParameters(
                 ratePercent = vietnameseRate,
                 pitchHz = vietnamesePitchHz,
@@ -328,6 +332,8 @@ fun BatchTtsDialog(
             selectedVietnameseVoice = voices.firstOrNull { it.id == selectedPreset.vietnamese.primaryVoiceId }
                 ?: initialProfiles.resolveVoice(TtsLanguage.VIETNAMESE, voices)
                 ?: ttsService.defaultVoiceFor("vi", voices)
+            englishFallbacks = OrderedFallbackVoices.hydrate(selectedPreset.english.fallbackVoiceIds, voices, TtsLanguage.ENGLISH, selectedEnglishVoice)
+            vietnameseFallbacks = OrderedFallbackVoices.hydrate(selectedPreset.vietnamese.fallbackVoiceIds, voices, TtsLanguage.VIETNAMESE, selectedVietnameseVoice)
         } catch (_: Exception) {
             // Safe fallback
         } finally {
@@ -417,8 +423,8 @@ fun BatchTtsDialog(
         if (!languageRequirements.configurationsValid(selectedEnglishVoice, selectedVietnameseVoice)) return emptyList()
         val enVoice = selectedEnglishVoice
         val viVoice = selectedVietnameseVoice
-        val enFallbacks = if (languageRequirements.requiresEnglish && enVoice != null) availableVoices.filter { it.language == "en" && it.id != enVoice.id }.take(3) else emptyList()
-        val viFallbacks = if (languageRequirements.requiresVietnamese && viVoice != null) availableVoices.filter { it.language == "vi" && it.id != viVoice.id }.take(2) else emptyList()
+        val enFallbacks = if (languageRequirements.requiresEnglish) englishFallbacks.voices else emptyList()
+        val viFallbacks = if (languageRequirements.requiresVietnamese) vietnameseFallbacks.voices else emptyList()
         val enStrategy = enVoice?.takeIf { languageRequirements.requiresEnglish }?.let { primary -> VoiceStrategyConfig(
             mode = englishStrategyMode,
             primaryVoice = primary,
@@ -585,12 +591,18 @@ fun BatchTtsDialog(
                                 vietnameseStrategyMode = vietnameseStrategyMode,
                                 onEnglishVoiceChange = {
                                     selectedEnglishVoice = it
+                                    englishFallbacks = OrderedFallbackVoices.hydrate(englishFallbacks.ids, availableVoices, TtsLanguage.ENGLISH, it)
                                     isDirty = true
                                 },
                                 onVietnameseVoiceChange = {
                                     selectedVietnameseVoice = it
+                                    vietnameseFallbacks = OrderedFallbackVoices.hydrate(vietnameseFallbacks.ids, availableVoices, TtsLanguage.VIETNAMESE, it)
                                     isDirty = true
                                 },
+                                englishFallbacks = englishFallbacks,
+                                vietnameseFallbacks = vietnameseFallbacks,
+                                onEnglishFallbacksChange = { englishFallbacks = it; isDirty = true },
+                                onVietnameseFallbacksChange = { vietnameseFallbacks = it; isDirty = true },
                                 onEnglishRateChange = {
                                     englishRate = it
                                     isDirty = true
@@ -801,6 +813,10 @@ private fun ConfigStepContent(
     vietnameseStrategyMode: VoiceStrategyMode,
     onEnglishVoiceChange: (TtsVoice) -> Unit,
     onVietnameseVoiceChange: (TtsVoice) -> Unit,
+    englishFallbacks: OrderedFallbackVoices,
+    vietnameseFallbacks: OrderedFallbackVoices,
+    onEnglishFallbacksChange: (OrderedFallbackVoices) -> Unit,
+    onVietnameseFallbacksChange: (OrderedFallbackVoices) -> Unit,
     onEnglishRateChange: (Int) -> Unit,
     onEnglishPitchChange: (Int) -> Unit,
     onEnglishVolumeChange: (Int) -> Unit,
@@ -956,6 +972,8 @@ private fun ConfigStepContent(
                 currentVoice = selectedEnglishVoice,
                 candidateVoices = availableVoices.filter { it.language == "en" },
                 onVoiceSelect = onEnglishVoiceChange,
+                fallbackVoices = englishFallbacks,
+                onFallbackVoicesChange = onEnglishFallbacksChange,
                 currentRate = englishRate,
                 currentPitchHz = englishPitchHz,
                 currentVolumePercent = englishVolumePercent,
@@ -977,6 +995,8 @@ private fun ConfigStepContent(
                 currentVoice = selectedVietnameseVoice,
                 candidateVoices = availableVoices.filter { it.language == "vi" },
                 onVoiceSelect = onVietnameseVoiceChange,
+                fallbackVoices = vietnameseFallbacks,
+                onFallbackVoicesChange = onVietnameseFallbacksChange,
                 currentRate = vietnameseRate,
                 currentPitchHz = vietnamesePitchHz,
                 currentVolumePercent = vietnameseVolumePercent,
@@ -1072,6 +1092,8 @@ private fun VoiceStrategyCard(
     currentVoice: TtsVoice?,
     candidateVoices: List<TtsVoice>,
     onVoiceSelect: (TtsVoice) -> Unit,
+    fallbackVoices: OrderedFallbackVoices,
+    onFallbackVoicesChange: (OrderedFallbackVoices) -> Unit,
     currentRate: Int,
     currentPitchHz: Int,
     currentVolumePercent: Int,
@@ -1102,6 +1124,13 @@ private fun VoiceStrategyCard(
                 Text(title, style = LETypography.fieldValue, fontWeight = FontWeight.Bold, color = LEColors.textPrimary)
                 Text(languageLabel, style = LETypography.caption, color = LEColors.textMuted)
             }
+
+            FallbackVoiceEditor(
+                primaryVoice = currentVoice,
+                fallbackVoices = fallbackVoices,
+                catalog = candidateVoices,
+                onChange = onFallbackVoicesChange
+            )
 
             // Row 1: Voice & Strategy Mode Selectors
             Row(
@@ -1255,6 +1284,50 @@ private fun VoiceStrategyCard(
                         color = LEColors.textMuted
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FallbackVoiceEditor(
+    primaryVoice: TtsVoice?,
+    fallbackVoices: OrderedFallbackVoices,
+    catalog: List<TtsVoice>,
+    onChange: (OrderedFallbackVoices) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val available = catalog.filter { candidate ->
+        candidate.id != primaryVoice?.id && candidate.id !in fallbackVoices.ids
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Fallback Voices — execution order", style = LETypography.fieldLabel, color = LEColors.textSecondary)
+            Box {
+                LESecondaryButton(
+                    text = "+ Add fallback",
+                    onClick = { expanded = true },
+                    enabled = fallbackVoices.voices.size < OrderedFallbackVoices.MAX_FALLBACKS && available.isNotEmpty()
+                )
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    available.forEach { voice ->
+                        DropdownMenuItem(
+                            text = { Text(voice.displayName, style = LETypography.fieldValue) },
+                            onClick = { onChange(fallbackVoices.add(voice, primaryVoice)); expanded = false }
+                        )
+                    }
+                }
+            }
+        }
+        if (fallbackVoices.voices.isEmpty()) {
+            Text("Primary voice only", style = LETypography.caption, color = LEColors.textMuted)
+        } else fallbackVoices.voices.forEachIndexed { index, voice ->
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                Text("${index + 1}.", style = LETypography.fieldValue, color = LEColors.primary)
+                Text(voice.displayName, style = LETypography.fieldValue, modifier = Modifier.weight(1f))
+                LESecondaryButton("↑", { onChange(fallbackVoices.move(voice.id, -1)) }, enabled = index > 0)
+                LESecondaryButton("↓", { onChange(fallbackVoices.move(voice.id, 1)) }, enabled = index < fallbackVoices.voices.lastIndex)
+                LEDangerButton("Remove", { onChange(fallbackVoices.remove(voice.id)) })
             }
         }
     }
