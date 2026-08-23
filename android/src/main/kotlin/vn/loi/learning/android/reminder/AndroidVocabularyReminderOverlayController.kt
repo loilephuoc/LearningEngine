@@ -416,7 +416,7 @@ class AndroidVocabularyReminderOverlayController(
             muteIcon?.setImageResource(if (isMuted) R.drawable.ic_autoplay_mute else R.drawable.ic_autoplay_unmute)
             muteIcon?.contentDescription = if (isMuted) "Bật âm thanh" else "Tắt âm thanh"
             if (isMuted) {
-                muteIcon?.setColorFilter(android.graphics.Color.parseColor("#EF4444"), PorterDuff.Mode.SRC_IN)
+                muteIcon?.setColorFilter(0xFFEF4444.toInt(), PorterDuff.Mode.SRC_IN)
             } else {
                 muteIcon?.clearColorFilter()
             }

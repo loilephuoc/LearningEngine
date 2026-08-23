@@ -810,7 +810,7 @@ class AndroidVocabularyReminderOverlayTest {
         assertTrue(controller.contains("isCountdownPaused = false"))
         assertTrue(controller.contains("ic_overlay_resume"))
         assertTrue(controller.contains("ic_overlay_pause"))
-        assertTrue(controller.contains("setColorFilter(android.graphics.Color.parseColor(\"#EF4444\"), PorterDuff.Mode.SRC_IN)"))
+        assertTrue(controller.contains("setColorFilter(0xFFEF4444.toInt(), PorterDuff.Mode.SRC_IN)"))
         assertTrue(controller.contains("clearColorFilter()"))
     }
 

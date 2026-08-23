@@ -483,7 +483,7 @@ class MainActivity : ComponentActivity() {
                     if (currentRoute != null) {
                         AndroidStartupTrace.write(false, "phase=destination_changed destination=$currentRoute thread=${Thread.currentThread().name}")
                         when (currentRoute) {
-                            "home", "study" -> studyViewModel.onEvent(AndroidStudyEvent.EnsureHome)
+                            "home" -> studyViewModel.onEvent(AndroidStudyEvent.EnsureHome)
                             "review" -> studyViewModel.onEvent(AndroidStudyEvent.ProjectHome)
                         }
                     }

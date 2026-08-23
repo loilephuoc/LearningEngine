@@ -411,7 +411,7 @@ class AndroidStudyViewModel(
                 AndroidStudyEvent.Undo -> facade.undo(current)
                 AndroidStudyEvent.Home -> facade.home()
                 AndroidStudyEvent.EnsureHome ->
-                    if (current is AndroidStudyState.Home) facade.home() else current
+                    if (current is AndroidStudyState.Home) current else facade.home()
                 AndroidStudyEvent.ProjectHome -> facade.home()
                 AndroidStudyEvent.RefreshHomeIfIdle ->
                     if (current is AndroidStudyState.Home) facade.home() else current
