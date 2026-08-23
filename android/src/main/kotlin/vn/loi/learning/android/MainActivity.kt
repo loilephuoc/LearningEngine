@@ -58,6 +58,8 @@ import vn.loi.learning.android.reminder.AndroidVocabularyReminderNotificationHel
 import vn.loi.learning.android.reminder.AndroidVocabularyReminderSelectionMode
 import vn.loi.learning.android.recovery.BackupRestoreScreen
 import vn.loi.learning.android.recovery.BackupRestoreViewModel
+import vn.loi.learning.android.sync.AndroidSyncSettingsScreen
+import vn.loi.learning.android.sync.AndroidSyncViewModel
 import vn.loi.learning.android.reminder.HomeWidgetSettingsScreen
 import vn.loi.learning.android.reminder.LockScreenSettingsScreen
 import vn.loi.learning.android.reminder.ReminderReviewScreen
@@ -401,6 +403,9 @@ class MainActivity : ComponentActivity() {
                     AndroidContentViewModel(AndroidContentOperations(graph), createSavedStateHandle())
                 }
                 val contentState = contentViewModel.state.collectAsStateWithLifecycle().value
+                val syncViewModel = viewModel<AndroidSyncViewModel> {
+                    AndroidSyncViewModel.production(this@MainActivity, graph.engine, graph.media)
+                }
                 val libraryViewModel = viewModel<AndroidLibraryViewModel>(key = "library-graph-$graphRetry") {
                     AndroidLibraryViewModel(AndroidLibraryFacade(
                         graph.engine,
@@ -498,6 +503,7 @@ class MainActivity : ComponentActivity() {
                     currentRoute == "unlocked_reminder_settings" -> false
                     currentRoute == "home_widget_settings" -> false
                     currentRoute == "reminder_settings" -> false
+                    currentRoute == "sync_settings" -> false
                     currentRoute?.startsWith("reminder_review") == true -> false
                     currentRoute?.startsWith("package/") == true -> false
                     currentRoute == "library" -> libraryState is AndroidLibraryState.Root
@@ -685,9 +691,13 @@ class MainActivity : ComponentActivity() {
                             onReminderSettings = { navController.navigate("vocabulary_reminders") { launchSingleTop = true } },
                             onHomeWidgetSettings = { navController.navigate("home_widget_settings") { launchSingleTop = true } },
                             onBackupRestore = { navController.navigate("backup_restore") { launchSingleTop = true } },
+                            onSyncSettings = { navController.navigate("sync_settings") { launchSingleTop = true } },
                             currentLanguage = currentLanguage,
                             onLanguage = { vn.loi.learning.android.platform.AppLanguageManager.setLanguage(this@MainActivity, it) }
                         ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
+                    }
+                    composable("sync_settings", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        AndroidSyncSettingsScreen(syncViewModel) { navController.popBackStack() }
                     }
                     composable("backup_restore", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         val backupRestoreViewModel = viewModel<BackupRestoreViewModel> {

@@ -2,7 +2,12 @@ package vn.loi.learning.android.sync
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
 import java.time.Instant
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +31,10 @@ data class AndroidSyncUiState(
         AndroidSyncPhase.OFFLINE, AndroidSyncPhase.RETRYABLE_ERROR, AndroidSyncPhase.CONFLICTS, AndroidSyncPhase.PENDING_MEDIA)
 }
 
-class AndroidSyncViewModel(private val controller: AndroidSyncRuntimeController) : ViewModel() {
+class AndroidSyncViewModel(
+    private val controller: AndroidSyncRuntimeController,
+    private val ownedScope: CoroutineScope? = null
+) : ViewModel() {
     private val mutableState = MutableStateFlow(fromController(controller.state.value))
     val state: StateFlow<AndroidSyncUiState> = mutableState.asStateFlow()
 
@@ -59,6 +67,12 @@ class AndroidSyncViewModel(private val controller: AndroidSyncRuntimeController)
     fun syncNow(): Boolean = controller.syncNow() != null
     fun cancelSync(): Boolean = controller.cancelSync()
 
+    override fun onCleared() {
+        controller.cancelSync()
+        ownedScope?.cancel()
+        super.onCleared()
+    }
+
     private fun update(block: AndroidSyncUiState.() -> AndroidSyncUiState) { mutableState.value = mutableState.value.block() }
 
     private fun StateFlow<AndroidSyncState>.collectInto(viewModelScope: AndroidSyncViewModel) {
@@ -84,4 +98,15 @@ class AndroidSyncViewModel(private val controller: AndroidSyncRuntimeController)
         diagnosticCode = value.diagnosticCode,
         lastSuccessfulSync = previous?.lastSuccessfulSync
     )
+
+    companion object {
+        fun production(
+            context: Context,
+            engine: vn.loi.learning.infrastructure.LearningApplicationContext,
+            media: vn.loi.learning.application.port.ContentMediaStorage
+        ): AndroidSyncViewModel {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            return AndroidSyncViewModel(AndroidSyncCompositionFactory.create(context, scope, engine, media), scope)
+        }
+    }
 }

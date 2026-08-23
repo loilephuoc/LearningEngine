@@ -1958,3 +1958,7 @@ recreation. Its production factory composes the existing local application servi
 Supabase event/blob transports; user action alone starts media upload followed by Push, Pull, canonical
 transactional Apply, and ACK. Cancellation and retry retain the durable local outbox, while conflict,
 quarantine, and pending-media outcomes remain explicit rather than being reported as success.
+Android exposes that controller through one root-scoped ViewModel and a private Settings navigation
+route. Compose only renders state and forwards explicit actions; opening, recomposing, recreating, or
+returning to the screen does not initiate authentication or sync. Leaving the route allows an active
+manual operation to finish; destruction of the owning ViewModel cancels it through the controller.

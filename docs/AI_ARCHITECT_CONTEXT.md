@@ -2,6 +2,12 @@
 
 ## Current incremental cross-platform sync continuation
 
+- Capability 8B adds the Vietnamese Android Settings sync screen and minimal private route over the 8A
+  controller. Configuration, memory-only login/logout, manual sync/cancel, summaries and safe diagnostics
+  are explicit; screen entry, recomposition and recreation remain network-silent. No manifest, background
+  component, Study, Widget, Reminder, or Lock Screen behavior changed. Live Supabase and physical visual/
+  accessibility UAT remain pending.
+
 - Capability 8A provides isolated Android sync infrastructure with validated non-secret connection
   preferences, memory-only sessions, production event/blob composition, and an explicit cancellable
   manual Push/Pull/Apply/ACK controller. It performs no startup/recreation sync and changes no Android

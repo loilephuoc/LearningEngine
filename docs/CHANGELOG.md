@@ -1,3 +1,12 @@
+# Android manual sync UI and navigation
+
+- Added a Vietnamese, scrollable and accessible Settings screen for validated Supabase configuration,
+  memory-only sign-in/out, explicit sync/cancel, safe diagnostics, and event/media/conflict summaries.
+- Added one minimal Settings entry and private single-Activity route. Root ViewModel composition keeps
+  the controller stable across recomposition and configuration recreation without starting network work.
+- Password drafts clear on submission and are never saved; configured keys remain masked. No manifest,
+  background work, Study, Widget, Reminder, Lock Screen, or automatic sync behavior changed.
+
 # Android manual sync runtime controller
 
 - Added an isolated, Compose-independent Android state machine for explicit configuration, sign-in,

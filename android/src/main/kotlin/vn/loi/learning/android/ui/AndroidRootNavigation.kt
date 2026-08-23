@@ -505,6 +505,7 @@ fun SettingsScreen(
     onReminderSettings: () -> Unit = {},
     onHomeWidgetSettings: () -> Unit = {},
     onBackupRestore: () -> Unit = {},
+    onSyncSettings: () -> Unit = {},
     currentLanguage: AppLanguage = AppLanguage.ENGLISH,
     onLanguage: (AppLanguage) -> Unit = {},
     onAction: (AndroidOperationKind) -> Unit
@@ -599,6 +600,8 @@ fun SettingsScreen(
         }
         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
             Text(stringResource(R.string.settings_data_title), style = LearningTextRole.sectionTitle)
+            LearningEngineSettingsRow(Icons.Default.Sync, stringResource(R.string.settings_sync), stringResource(R.string.settings_sync_desc),
+                onSyncSettings)
             LearningEngineSettingsRow(Icons.Default.Backup, stringResource(R.string.settings_backup_restore), stringResource(R.string.settings_backup_restore_desc),
                 onBackupRestore)
             LearningEngineSettingsRow(Icons.Default.Download, stringResource(R.string.settings_import_package), stringResource(R.string.settings_import_package_desc),
