@@ -2,6 +2,14 @@
 
 ## Current incremental cross-platform sync continuation
 
+- Capability 8A provides isolated Android sync infrastructure with validated non-secret connection
+  preferences, memory-only sessions, production event/blob composition, and an explicit cancellable
+  manual Push/Pull/Apply/ACK controller. It performs no startup/recreation sync and changes no Android
+  UI, navigation, resources, manifest, Study, package selection, Widget, Reminder, or Lock Screen
+  behavior. Full clean verification passes 827 suites / 5,119 tests (root 431 / 2,311; Android
+  102 / 995; Desktop 294 / 1,813), zero failures/errors/skips, and Android debug assembly passes.
+  Capability 8B may wire this seam into UI separately; live Supabase/device UAT remains.
+
 - Capability 7 integrates Desktop Settings with validated Supabase connection persistence, memory-only
   password sessions, serialized refresh rotation, and explicit manual Push/Pull/Apply/ACK including
   media transfer. Startup/recomposition/sign-out perform no sync; no token/password is persisted; local

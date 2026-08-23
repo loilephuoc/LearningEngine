@@ -1081,5 +1081,8 @@ Engine core.
 7. **Desktop Integration — complete, live UAT pending:** Settings provides validated non-secret
    connection persistence, memory-only email/password sessions, explicit manual Push → Pull → Apply →
    ACK, media transfer, safe status/diagnostics, and no startup/background network activity.
-8. **Android Integration.**
+8. **Android Integration — infrastructure complete, UI/UAT pending:** isolated validated connection
+   persistence, memory-only password sessions, refresh-capable Supabase transport composition, and a
+   lifecycle-cancellable explicit manual Push → Pull → Apply → ACK controller are complete. Android
+   navigation/UI wiring and live-device/network UAT remain deferred.
 9. **End-to-End Conflict/Retry/UAT Gate.**

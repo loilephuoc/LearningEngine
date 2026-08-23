@@ -1,3 +1,13 @@
+# Android manual sync runtime controller
+
+- Added an isolated, Compose-independent Android state machine for explicit configuration, sign-in,
+  sign-out, manual sync and cancellation, with visible no-change, offline, retry, relogin, conflict,
+  pending-media and fatal outcomes.
+- Added a production composition seam for media upload, event Push → Pull → canonical local Apply →
+  post-commit ACK, and media download/validation while preserving durable outbox retry semantics.
+- Construction and process recreation remain network-silent; no UI, navigation, resource, manifest,
+  service, receiver, worker, polling, Realtime, local-data reset, or automatic sync was added.
+
 # Android Supabase session infrastructure
 
 - Added an isolated Android sync connection repository with a dedicated preference namespace containing

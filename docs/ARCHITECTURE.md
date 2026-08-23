@@ -1953,3 +1953,8 @@ startup composition. A dedicated SharedPreferences namespace may persist only th
 and publishable/anon key. Authenticated sessions reuse the shared refresh-rotation contract but use a
 memory-only secure-store fallback because the Android client has no reviewed Keystore credential adapter;
 password and access/refresh tokens never enter preferences, files, databases, backups, or diagnostics.
+The Android manual-sync controller is UI-independent and never starts work during construction or
+recreation. Its production factory composes the existing local application services with shared
+Supabase event/blob transports; user action alone starts media upload followed by Push, Pull, canonical
+transactional Apply, and ACK. Cancellation and retry retain the durable local outbox, while conflict,
+quarantine, and pending-media outcomes remain explicit rather than being reported as success.
