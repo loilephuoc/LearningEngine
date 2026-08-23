@@ -328,6 +328,7 @@ fun BatchTtsDialog(
         )
     }
     var activeRunner by remember { mutableStateOf<BatchTtsRunner?>(null) }
+    var isCancelling by remember { mutableStateOf(false) }
     var batchStartMessage by remember { mutableStateOf<String?>(null) }
 
     // Load available voices
@@ -407,6 +408,11 @@ fun BatchTtsDialog(
         }
     }
 
+    fun handleCancelBatch() {
+        isCancelling = true
+        activeRunner?.cancel()
+    }
+
     fun startBatch(jobsToRun: List<BatchTtsJob>) {
         if (jobsToRun.isEmpty()) return
         val plan = BatchTtsPlanIdentity.create(packageName, jobsToRun, overwriteExisting)
@@ -436,6 +442,7 @@ fun BatchTtsDialog(
             eventLogger = eventLogger
         )
         activeRunner = runner
+        isCancelling = false
         stopAudio()
         currentStep = BatchTtsDialogStep.RUNNING
         summary = BatchTtsSummary.initial(jobsToRun.size)
@@ -449,7 +456,8 @@ fun BatchTtsDialog(
             onApply = null, // Generate != Apply separation
             onProgress = { updatedSummary ->
                 summary = updatedSummary
-                if (updatedSummary.isFinished) {
+                if (updatedSummary.isFinished || updatedSummary.isCancelled) {
+                    isCancelling = false
                     currentStep = BatchTtsDialogStep.COMPLETED
                 }
             }
@@ -681,7 +689,8 @@ fun BatchTtsDialog(
                         BatchTtsDialogStep.RUNNING -> {
                             RunningStepContent(
                                 summary = summary,
-                                onCancel = { activeRunner?.cancel() }
+                                isCancelling = isCancelling,
+                                onCancel = { handleCancelBatch() }
                             )
                         }
                         BatchTtsDialogStep.COMPLETED -> {
@@ -733,8 +742,9 @@ fun BatchTtsDialog(
                         }
                         BatchTtsDialogStep.RUNNING -> {
                             LEDangerButton(
-                                text = "■ Cancel Batch",
-                                onClick = { activeRunner?.cancel() },
+                                text = if (isCancelling) "Đang hủy..." else "■ Cancel Batch",
+                                onClick = { handleCancelBatch() },
+                                enabled = !isCancelling,
                                 icon = LEIcons.Stop
                             )
                         }
@@ -1557,9 +1567,19 @@ private fun RateDropdown(
 @Composable
 private fun RunningStepContent(
     summary: BatchTtsSummary,
+    isCancelling: Boolean,
     onCancel: () -> Unit
 ) {
-    val progress = if (summary.totalJobs > 0) summary.completedJobs.toFloat() / summary.totalJobs.toFloat() else 0f
+    val progress = summary.progressPercent
+    val elapsedSeconds = summary.elapsedMillis / 1000
+    val minutes = elapsedSeconds / 60
+    val seconds = elapsedSeconds % 60
+    val elapsedStr = "%02d:%02d".format(minutes, seconds)
+
+    val etaStr = summary.estimatedRemainingMillis?.let { etaMs ->
+        val etaSec = etaMs / 1000
+        if (etaSec < 60) "~${etaSec}s" else "~${etaSec / 60}m ${etaSec % 60}s"
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -1569,9 +1589,9 @@ private fun RunningStepContent(
         Spacer(modifier = Modifier.height(LESpacing.sm))
 
         Text(
-            text = "Synthesizing Audio Assets...",
+            text = if (isCancelling || summary.isCancelled) "Đang hủy và dọn dẹp phiên tạo audio..." else (summary.currentOperation ?: "Đang tạo audio..."),
             style = LETypography.fieldValueEmphasized,
-            color = LEColors.primary
+            color = if (isCancelling || summary.isCancelled) LEColors.warning else LEColors.primary
         )
 
         Text(
@@ -1584,23 +1604,46 @@ private fun RunningStepContent(
         LinearProgressIndicator(
             progress = { progress },
             modifier = Modifier.fillMaxWidth().height(8.dp).clip(LERadius.xs),
-            color = LEColors.primary,
+            color = if (isCancelling || summary.isCancelled) LEColors.warning else LEColors.primary,
             trackColor = LEColors.borderSubtle
         )
+
+        // Elapsed time, ETA & Throughput
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = buildString {
+                    append("Thời gian: ")
+                    append(elapsedStr)
+                    if (etaStr != null) {
+                        append(" · Ước tính còn: ")
+                        append(etaStr)
+                    }
+                    if (summary.targetsPerSecond > 0.0) {
+                        append(" · (%.1f mục/giây)".format(summary.targetsPerSecond))
+                    }
+                },
+                style = LETypography.caption,
+                color = LEColors.textMuted
+            )
+        }
 
         // Live Counters
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.xs),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Text("Success: ${summary.successCount}", style = LETypography.caption, color = LEColors.success, fontWeight = FontWeight.Bold)
+            Text("Thành công: ${summary.successCount}", style = LETypography.caption, color = LEColors.success, fontWeight = FontWeight.Bold)
             if (summary.fallbackRecoveredCount > 0) {
-                Text("Fallback: ${summary.fallbackRecoveredCount}", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
+                Text("Dự phòng: ${summary.fallbackRecoveredCount}", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
             }
-            Text("Skipped: ${summary.skippedCount}", style = LETypography.caption, color = LEColors.textMuted)
-            Text("Failed: ${summary.failedCount}", style = LETypography.caption, color = if (summary.failedCount > 0) LEColors.danger else LEColors.textMuted, fontWeight = FontWeight.Bold)
+            Text("Bỏ qua: ${summary.skippedCount}", style = LETypography.caption, color = LEColors.textMuted)
+            Text("Thất bại: ${summary.failedCount}", style = LETypography.caption, color = if (summary.failedCount > 0) LEColors.danger else LEColors.textMuted, fontWeight = FontWeight.Bold)
             if (summary.cancelledCount > 0) {
-                Text("Cancelled: ${summary.cancelledCount}", style = LETypography.caption, color = LEColors.warning)
+                Text("Đã hủy: ${summary.cancelledCount}", style = LETypography.caption, color = LEColors.warning)
             }
         }
 
@@ -1612,7 +1655,7 @@ private fun RunningStepContent(
                 modifier = Modifier.fillMaxWidth().padding(top = LESpacing.sm)
             ) {
                 Column(modifier = Modifier.padding(LESpacing.sm)) {
-                    Text("Synthesizing Target:", style = LETypography.caption, color = LEColors.textMuted)
+                    Text("Mục đang xử lý:", style = LETypography.caption, color = LEColors.textMuted)
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "[${job.field.displayName}] \"${job.text}\"",
@@ -1624,7 +1667,7 @@ private fun RunningStepContent(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Voice: ${job.voice.displayName.ifBlank { job.voice.id }} (${job.language.code})",
+                        text = "Giọng đọc: ${summary.currentVoiceName ?: job.voice.displayName.ifBlank { job.voice.id }} (${job.voice.language})",
                         style = LETypography.caption,
                         color = LEColors.textMuted
                     )

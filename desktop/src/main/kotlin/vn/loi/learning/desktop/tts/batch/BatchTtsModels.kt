@@ -32,6 +32,14 @@ enum class TtsErrorCategory(val displayLabel: String) {
 }
 
 /**
+ * Filter mode for target discovery and batch execution.
+ */
+enum class BatchTtsScope {
+    MISSING_ONLY,
+    ALL
+}
+
+/**
  * A target field identified during scanning of content items.
  */
 data class BatchTtsTarget(
@@ -115,10 +123,15 @@ data class BatchTtsJob(
     val id: String = "${contentId}_${field.name.lowercase()}"
 ) {
     val requestedVoice: TtsVoice get() = voice
+
+    fun textFingerprint(): String =
+        java.security.MessageDigest.getInstance("SHA-256")
+            .digest("${field.name}\u0000${language.code}\u0000$text".toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
 }
 
 data class BatchTtsExecutionPolicy(
-    val attemptTimeoutMillis: Long = 45_000,
+    val attemptTimeoutMillis: Long = 12_000,
     val maxAttemptsPerVoice: Int = 2,
     val initialRetryDelayMillis: Long = 500,
     val maxRetryDelayMillis: Long = 2_000,
@@ -163,7 +176,11 @@ data class BatchTtsSummary(
     val currentJob: BatchTtsJob? = null,
     val jobResults: List<BatchTtsJobResult> = emptyList(),
     val isFinished: Boolean = false,
-    val isCancelled: Boolean = false
+    val isCancelled: Boolean = false,
+    val currentOperation: String? = null,
+    val currentVoiceName: String? = null,
+    val elapsedMillis: Long = 0L,
+    val estimatedRemainingMillis: Long? = null
 ) {
     val hasFailures: Boolean
         get() = failedCount > 0
@@ -176,6 +193,12 @@ data class BatchTtsSummary(
 
     val fallbackRecoveredCount: Int
         get() = jobResults.count { it.status == BatchTtsJobStatus.SUCCESS && it.recoveredViaFallback }
+
+    val progressPercent: Float
+        get() = if (totalJobs > 0) (completedJobs.toFloat() / totalJobs.toFloat()).coerceIn(0f, 1f) else 0f
+
+    val targetsPerSecond: Double
+        get() = if (elapsedMillis > 500 && completedJobs > 0) (completedJobs.toDouble() * 1000.0) / elapsedMillis.toDouble() else 0.0
 
     companion object {
         fun initial(total: Int, skippedCount: Int = 0): BatchTtsSummary =

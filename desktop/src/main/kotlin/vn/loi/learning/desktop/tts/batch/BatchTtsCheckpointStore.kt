@@ -244,8 +244,3 @@ class BatchTtsCheckpointRepository(
     private fun planDirectory(plan: BatchTtsGenerationPlan): Path =
         root.resolve(plan.packageName.replace(Regex("[^A-Za-z0-9._-]"), "_"))
 }
-
-internal fun BatchTtsJob.textFingerprint(): String =
-    java.security.MessageDigest.getInstance("SHA-256")
-        .digest("${field.name}\u0000${language.code}\u0000$text".toByteArray(Charsets.UTF_8))
-        .joinToString("") { "%02x".format(it) }

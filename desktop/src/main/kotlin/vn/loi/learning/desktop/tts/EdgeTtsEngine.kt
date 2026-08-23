@@ -24,6 +24,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import vn.loi.learning.desktop.tts.batch.BatchTtsEventLogger
 
 /**
  * JVM-native Edge Read Aloud TTS engine implementation.
@@ -32,11 +33,15 @@ import kotlinx.coroutines.withContext
  */
 class EdgeTtsEngine(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val executor: ExecutorService = defaultExecutor
+    private val executor: ExecutorService = defaultExecutor,
+    private val eventLogger: BatchTtsEventLogger = BatchTtsEventLogger.NoOp
 ) : TtsEngine, AutoCloseable {
 
     @Volatile
     private var cachedVoices: List<TtsVoice>? = null
+
+    val abandonedWorkerCount = AtomicInteger(0)
+    val activeWorkerCount = AtomicInteger(0)
 
     override suspend fun listVoices(): List<TtsVoice> = withContext(ioDispatcher) {
         cachedVoices?.let { return@withContext it }
@@ -88,6 +93,8 @@ class EdgeTtsEngine(
 
         return suspendCancellableCoroutine { continuation ->
             val isAbandoned = AtomicBoolean(false)
+            activeWorkerCount.incrementAndGet()
+
             val future = executor.submit {
                 val tempWorkDir = runCatching { Files.createTempDirectory("edge-tts-work-").toFile() }.getOrNull()
                 val tempBaseName = "tts_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}"
@@ -153,14 +160,23 @@ class EdgeTtsEngine(
                         continuation.resumeWithException(mapToTtsException(e, "Synthesis failed for voice: ${request.voice.id}"))
                     }
                 } finally {
+                    activeWorkerCount.decrementAndGet()
                     tempWorkDir?.deleteRecursively()
                 }
             }
 
             continuation.invokeOnCancellation {
-                isAbandoned.set(true)
-                future.cancel(true)
-                Files.deleteIfExists(outputFile)
+                if (isAbandoned.compareAndSet(false, true)) {
+                    val count = abandonedWorkerCount.incrementAndGet()
+                    eventLogger.logAttemptAbandoned(
+                        targetIndex = 0,
+                        voiceId = request.voice.id,
+                        attemptNumber = 0,
+                        reason = "Coroutine cancelled or timed out; worker marked abandoned (total abandoned: $count)"
+                    )
+                    future.cancel(true)
+                    Files.deleteIfExists(outputFile)
+                }
             }
         }
     }
@@ -180,20 +196,38 @@ class EdgeTtsEngine(
             }
         }
 
-        fun mapToTtsException(e: Throwable, fallbackMessage: String): TtsException {
-            if (e is TtsException) return e
-            return when (e) {
-                is CancellationException ->
-                    TtsException(TtsError.Cancelled, e)
-                is UnknownHostException, is ConnectException ->
+        private fun mapToTtsException(e: Throwable, fallbackMessage: String): TtsException = when (e) {
+            is TtsException -> e
+            is SocketTimeoutException, is TimeoutException -> TtsException(
+                TtsError.Timeout,
+                e
+            )
+            is UnknownHostException -> TtsException(
+                TtsError.NoNetwork,
+                e
+            )
+            is ConnectException -> TtsException(
+                TtsError.ProviderUnavailable("Unable to connect to Edge TTS service: ${e.message}"),
+                e
+            )
+            is CancellationException -> TtsException(
+                TtsError.Cancelled,
+                e
+            )
+            is IOException -> {
+                val msg = e.message ?: ""
+                if (msg.contains("network", ignoreCase = true) || msg.contains("connection", ignoreCase = true) || msg.contains("socket", ignoreCase = true)) {
                     TtsException(TtsError.NoNetwork, e)
-                is SocketTimeoutException, is TimeoutException ->
-                    TtsException(TtsError.Timeout, e)
-                is IOException ->
-                    TtsException(TtsError.ProviderUnavailable(e.message ?: fallbackMessage), e)
-                else ->
-                    TtsException(TtsError.GenerationFailed(e.message ?: fallbackMessage), e)
+                } else if (msg.contains("permission", ignoreCase = true) || msg.contains("access", ignoreCase = true) || msg.contains("disk", ignoreCase = true)) {
+                    TtsException(TtsError.OutputWriteFailed("Disk write error: $msg"), e)
+                } else {
+                    TtsException(TtsError.GenerationFailed(msg.ifBlank { fallbackMessage }), e)
+                }
             }
+            else -> TtsException(
+                TtsError.GenerationFailed(e.message?.ifBlank { fallbackMessage } ?: fallbackMessage),
+                e
+            )
         }
     }
 }

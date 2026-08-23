@@ -83,11 +83,41 @@ interface BatchTtsEventLogger {
         details: String
     )
 
+    fun logAttemptAbandoned(
+        targetIndex: Int,
+        voiceId: String,
+        attemptNumber: Int,
+        reason: String
+    )
+
+    fun logWorkerPoolRotated(
+        abandonedWorkerCount: Int,
+        newPoolId: String
+    )
+
     fun logFallback(
         targetIndex: Int,
         fromVoiceId: String,
         toVoiceId: String,
         candidateIndex: Int
+    )
+
+    fun logVoiceHealthChanged(
+        voiceId: String,
+        oldState: String,
+        newState: String,
+        reason: String
+    )
+
+    fun logVoiceCircuitOpen(
+        voiceId: String,
+        consecutiveFailures: Int,
+        cooldownMillis: Long
+    )
+
+    fun logVoiceCircuitProbe(
+        voiceId: String,
+        targetIndex: Int
     )
 
     fun logTargetSuccess(
@@ -118,6 +148,16 @@ interface BatchTtsEventLogger {
         planId: String,
         targetIndex: Int,
         jobId: String
+    )
+
+    fun logCancelRequested(
+        planId: String,
+        currentTargetIndex: Int
+    )
+
+    fun logCancelAcknowledged(
+        planId: String,
+        currentTargetIndex: Int
     )
 
     fun logCheckpointWritten(
@@ -156,11 +196,18 @@ interface BatchTtsEventLogger {
         override fun logAttemptTimeout(targetIndex: Int, voiceId: String, attemptNumber: Int, candidateIndex: Int, timeoutMillis: Long) {}
         override fun logAttemptFailure(targetIndex: Int, voiceId: String, attemptNumber: Int, candidateIndex: Int, errorCategory: String, reason: String) {}
         override fun logAttemptClosed(targetIndex: Int, voiceId: String, attemptNumber: Int, candidateIndex: Int, details: String) {}
+        override fun logAttemptAbandoned(targetIndex: Int, voiceId: String, attemptNumber: Int, reason: String) {}
+        override fun logWorkerPoolRotated(abandonedWorkerCount: Int, newPoolId: String) {}
         override fun logFallback(targetIndex: Int, fromVoiceId: String, toVoiceId: String, candidateIndex: Int) {}
+        override fun logVoiceHealthChanged(voiceId: String, oldState: String, newState: String, reason: String) {}
+        override fun logVoiceCircuitOpen(voiceId: String, consecutiveFailures: Int, cooldownMillis: Long) {}
+        override fun logVoiceCircuitProbe(voiceId: String, targetIndex: Int) {}
         override fun logTargetSuccess(planId: String, targetIndex: Int, jobId: String, voiceId: String, assetPath: String, recoveredViaFallback: Boolean) {}
         override fun logTargetFailed(planId: String, targetIndex: Int, jobId: String, errorCategory: String, attemptsCount: Int) {}
         override fun logTargetSkipped(planId: String, targetIndex: Int, jobId: String, reason: String) {}
         override fun logTargetCancelled(planId: String, targetIndex: Int, jobId: String) {}
+        override fun logCancelRequested(planId: String, currentTargetIndex: Int) {}
+        override fun logCancelAcknowledged(planId: String, currentTargetIndex: Int) {}
         override fun logCheckpointWritten(planId: String, targetIndex: Int, recordsCount: Int) {}
         override fun logBatchCompleted(planId: String, totalCount: Int, successCount: Int, failedCount: Int, skippedCount: Int, cancelledCount: Int) {}
         override fun logBatchCancelled(planId: String, completedCount: Int, cancelledCount: Int) {}
@@ -262,7 +309,7 @@ class RuntimeBatchTtsEventLogger(
         language: String
     ) {
         log(
-            DesktopLogLevel.INFO,
+            DesktopLogLevel.DEBUG,
             "BATCH_TTS_TARGET_START",
             "planId" to planId,
             "targetIndex" to targetIndex,
@@ -335,13 +382,41 @@ class RuntimeBatchTtsEventLogger(
         details: String
     ) {
         log(
-            DesktopLogLevel.INFO,
+            DesktopLogLevel.DEBUG,
             "BATCH_TTS_ATTEMPT_CLOSED",
             "targetIndex" to targetIndex,
             "voiceId" to voiceId,
             "attemptNumber" to attemptNumber,
             "candidateIndex" to candidateIndex,
             "details" to details
+        )
+    }
+
+    override fun logAttemptAbandoned(
+        targetIndex: Int,
+        voiceId: String,
+        attemptNumber: Int,
+        reason: String
+    ) {
+        log(
+            DesktopLogLevel.WARN,
+            "BATCH_TTS_ATTEMPT_ABANDONED",
+            "targetIndex" to targetIndex,
+            "voiceId" to voiceId,
+            "attemptNumber" to attemptNumber,
+            "reason" to reason
+        )
+    }
+
+    override fun logWorkerPoolRotated(
+        abandonedWorkerCount: Int,
+        newPoolId: String
+    ) {
+        log(
+            DesktopLogLevel.WARN,
+            "BATCH_TTS_WORKER_POOL_ROTATED",
+            "abandonedWorkerCount" to abandonedWorkerCount,
+            "newPoolId" to newPoolId
         )
     }
 
@@ -358,6 +433,48 @@ class RuntimeBatchTtsEventLogger(
             "fromVoiceId" to fromVoiceId,
             "toVoiceId" to toVoiceId,
             "candidateIndex" to candidateIndex
+        )
+    }
+
+    override fun logVoiceHealthChanged(
+        voiceId: String,
+        oldState: String,
+        newState: String,
+        reason: String
+    ) {
+        log(
+            DesktopLogLevel.INFO,
+            "BATCH_TTS_VOICE_HEALTH_CHANGED",
+            "voiceId" to voiceId,
+            "oldState" to oldState,
+            "newState" to newState,
+            "reason" to reason
+        )
+    }
+
+    override fun logVoiceCircuitOpen(
+        voiceId: String,
+        consecutiveFailures: Int,
+        cooldownMillis: Long
+    ) {
+        log(
+            DesktopLogLevel.WARN,
+            "BATCH_TTS_VOICE_CIRCUIT_OPEN",
+            "voiceId" to voiceId,
+            "consecutiveFailures" to consecutiveFailures,
+            "cooldownMillis" to cooldownMillis
+        )
+    }
+
+    override fun logVoiceCircuitProbe(
+        voiceId: String,
+        targetIndex: Int
+    ) {
+        log(
+            DesktopLogLevel.INFO,
+            "BATCH_TTS_VOICE_CIRCUIT_PROBE",
+            "voiceId" to voiceId,
+            "targetIndex" to targetIndex
         )
     }
 
@@ -389,7 +506,7 @@ class RuntimeBatchTtsEventLogger(
         attemptsCount: Int
     ) {
         log(
-            DesktopLogLevel.ERROR,
+            DesktopLogLevel.WARN,
             "BATCH_TTS_TARGET_FAILED",
             "planId" to planId,
             "targetIndex" to targetIndex,
@@ -421,11 +538,35 @@ class RuntimeBatchTtsEventLogger(
         jobId: String
     ) {
         log(
-            DesktopLogLevel.WARN,
+            DesktopLogLevel.INFO,
             "BATCH_TTS_TARGET_CANCELLED",
             "planId" to planId,
             "targetIndex" to targetIndex,
             "jobId" to jobId
+        )
+    }
+
+    override fun logCancelRequested(
+        planId: String,
+        currentTargetIndex: Int
+    ) {
+        log(
+            DesktopLogLevel.INFO,
+            "BATCH_TTS_CANCEL_REQUESTED",
+            "planId" to planId,
+            "currentTargetIndex" to currentTargetIndex
+        )
+    }
+
+    override fun logCancelAcknowledged(
+        planId: String,
+        currentTargetIndex: Int
+    ) {
+        log(
+            DesktopLogLevel.INFO,
+            "BATCH_TTS_CANCEL_ACKNOWLEDGED",
+            "planId" to planId,
+            "currentTargetIndex" to currentTargetIndex
         )
     }
 
@@ -469,7 +610,7 @@ class RuntimeBatchTtsEventLogger(
         cancelledCount: Int
     ) {
         log(
-            DesktopLogLevel.WARN,
+            DesktopLogLevel.INFO,
             "BATCH_TTS_BATCH_CANCELLED",
             "planId" to planId,
             "completedCount" to completedCount,
@@ -490,8 +631,5 @@ class RuntimeBatchTtsEventLogger(
     }
 
     private fun sanitize(value: String): String =
-        value.replace("\r", " ")
-            .replace("\n", " ")
-            .replace("\t", " ")
-            .trim()
+        value.replace(Regex("[\\r\\n\\t]"), " ").take(200)
 }
