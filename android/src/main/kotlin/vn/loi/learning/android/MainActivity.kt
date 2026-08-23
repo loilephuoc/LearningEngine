@@ -378,7 +378,8 @@ class MainActivity : ComponentActivity() {
                             dailyLimits = app.studyPreferencesController::current,
                             continuousSkimEnabled = app.studyPreferencesController::continuousSkimEnabled,
                             getInsightsScopePackageId = app.studyPreferencesController::insightsScopePackageId,
-                            onInsightsScopeChanged = app.studyPreferencesController::updateInsightsScopePackageId
+                            onInsightsScopeChanged = app.studyPreferencesController::updateInsightsScopePackageId,
+                            difficultMarkers = app.reminderDifficultStore
                         ),
                         createSavedStateHandle(),
                         typingViMutedInitially = app.studyPreferencesController.typingViMuted(),
@@ -652,7 +653,10 @@ class MainActivity : ComponentActivity() {
                                     autoPlayViewModel.startAutoPlayForContentIds(contentIds)
                                     navController.navigate("autoplay") { launchSingleTop = true }
                                 }
-                            }
+                            },
+                            isDifficult = studyViewModel::isDifficult,
+                            onToggleDifficult = studyViewModel::toggleDifficult,
+                            onSaveQuickEdit = studyViewModel::saveQuickEdit
                         ) }
                     }
                     composable("review", enterTransition={fadeIn()},exitTransition={fadeOut()}) {

@@ -175,10 +175,10 @@ class AndroidFocusedPracticeCompositionTest {
         assertTrue(screen.contains("interactionEnabled = !quickReviewTransitionPending"))
         assertTrue(screen.contains("enabled = !quickReviewTransitionPending"))
         assertTrue(answer.contains("enabled = interactionEnabled"))
-        assertTrue(controls.contains("IconButton(onClick = onWordAudio, enabled = enabled"))
-        assertTrue(controls.contains("IconButton(onClick = onReplay, enabled = enabled"))
-        assertTrue(controls.contains("IconButton(onClick = onExampleAudio, enabled = enabled"))
-        assertTrue(controls.contains("IconButton(onClick = onFullscreenImage, enabled = enabled"))
+        assertTrue(controls.contains("onClick = onToggleMute,"))
+        assertTrue(controls.contains("onClick = { onAutoPlay?.invoke() },"))
+        assertTrue(controls.contains("onClick = { onEditItem?.invoke() },"))
+        assertTrue(controls.contains("onClick = { onToggleDifficult?.invoke() },"))
         assertTrue(screen.contains("else if (interactionEnabled) onOpenFullscreenImage(image)"))
     }
 

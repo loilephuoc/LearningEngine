@@ -63,11 +63,14 @@ import vn.loi.learning.domain.study.recall.StudyMode
 import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
 import vn.loi.learning.android.media.AndroidAudioPlaybackEvent
+import vn.loi.learning.android.media.LearningEngineAudioPolicy
+import vn.loi.learning.android.packageexperience.AndroidPackageQuickEditDraft
 import vn.loi.learning.android.R
 import androidx.compose.ui.res.stringResource
 import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.study.components.StudyActionDock
+import vn.loi.learning.android.study.components.StudyQuickEditDialog
 import vn.loi.learning.android.study.components.StudyRatingBar
 import vn.loi.learning.android.study.components.ReviewImageNavigationOverlay
 import vn.loi.learning.android.study.components.reviewNavigationGestures
@@ -326,12 +329,18 @@ fun StudyScreen(
     state: AndroidStudyState,
     onEvent: (AndroidStudyEvent) -> Unit,
     modifier: Modifier = Modifier,
-    onAutoPlay: (() -> Unit)? = null
+    onAutoPlay: (() -> Unit)? = null,
+    isDifficult: (String) -> Boolean = { false },
+    onToggleDifficult: ((String) -> Boolean)? = null,
+    onSaveQuickEdit: ((AndroidPackageQuickEditDraft, (Result<Unit>) -> Unit) -> Unit)? = null
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     val feedbackAudioController = remember(context) { AndroidAudioController(context) }
     val audioOwnership = remember { StudyAudioOwnership() }
+    val isMuted by LearningEngineAudioPolicy.isMuted.collectAsState()
+    var editingDraft by remember { mutableStateOf<AndroidPackageQuickEditDraft?>(null) }
+    var difficultToggleCount by remember { mutableIntStateOf(0) }
     DisposableEffect(lifecycleOwner, state is AndroidStudyState.Typing, audioOwnership, feedbackAudioController) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) {
@@ -391,6 +400,7 @@ fun StudyScreen(
     BackHandler(enabled = fullscreenImageUri != null) {
         fullscreenImageUri = null
     }
+    BackHandler(enabled = editingDraft != null) { editingDraft = null }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val policy = androidLayoutPolicy(maxWidth.value.toInt(), maxHeight.value.toInt())
@@ -428,6 +438,9 @@ fun StudyScreen(
                         is AndroidStudyState.Completion -> Completion(target, onEvent)
                         is AndroidStudyState.Failed -> StudyFailureState(target, onEvent)
                         is AndroidStudyState.Runtime -> {
+                            val currentContentId = (target as? AndroidStudyState.Introduction)?.contentId
+                                ?: target.plan?.contentId?.value
+                            val difficult = currentContentId?.let { difficultToggleCount; isDifficult(it) } ?: false
                             StudyRuntimeScreen(
                                 state = target,
                                 onEvent = onEvent,
@@ -452,9 +465,35 @@ fun StudyScreen(
                                     onEvent(AndroidStudyEvent.RateIntroduction(rating))
                                 },
                                 onOpenFullscreenImage = { fullscreenImageUri = it },
-                                onAutoPlay = onAutoPlay
+                                onAutoPlay = onAutoPlay,
+                                isMuted = isMuted,
+                                onToggleMute = LearningEngineAudioPolicy::toggleMuted,
+                                isDifficult = difficult,
+                                onToggleDifficult = if (currentContentId != null && onToggleDifficult != null) ({
+                                    onToggleDifficult(currentContentId)
+                                    difficultToggleCount++
+                                }) else null,
+                                onEditItem = if (currentContentId != null && onSaveQuickEdit != null) ({
+                                    editingDraft = AndroidPackageQuickEditDraft(
+                                        currentContentId,
+                                        target.meaning.orEmpty(),
+                                        (target as? AndroidStudyState.Introduction)?.answerText
+                                            ?: target.plan?.answerContract?.canonicalAnswer.orEmpty(),
+                                        target.pronunciation.orEmpty(), target.partOfSpeech.orEmpty(),
+                                        target.example.orEmpty(), target.translation.orEmpty()
+                                    )
+                                }) else null
                             )
                         }
+                    }
+                }
+
+                editingDraft?.let { draft ->
+                    StudyQuickEditDialog(draft, onDismiss = { editingDraft = null }) { updated, callback ->
+                        onSaveQuickEdit?.invoke(updated) { result ->
+                            callback(result)
+                            if (result.isSuccess) editingDraft = null
+                        } ?: callback(Result.failure(IllegalStateException("Editor unavailable")))
                     }
                 }
 
@@ -624,7 +663,12 @@ private fun StudyRuntimeScreen(
         IntroductionRatingFeedbackOrigin
     ) -> Unit,
     onOpenFullscreenImage: (String) -> Unit,
-    onAutoPlay: (() -> Unit)? = null
+    onAutoPlay: (() -> Unit)? = null,
+    isMuted: Boolean = false,
+    onToggleMute: () -> Unit = {},
+    isDifficult: Boolean = false,
+    onToggleDifficult: (() -> Unit)? = null,
+    onEditItem: (() -> Unit)? = null
 ) {
     var limitEditor by rememberSaveable { mutableStateOf<String?>(null) }
     val quickReview = state is AndroidStudyState.Introduction && state.focusedPracticeKind ==
@@ -1218,7 +1262,13 @@ private fun StudyRuntimeScreen(
             },
             onTypingStageTap = toggleTypingRevealedAudioLoop,
             onEvent = stopAudioAndDispatch,
-            onOpenFullscreenImage = onOpenFullscreenImage
+            onOpenFullscreenImage = onOpenFullscreenImage,
+            isMuted = isMuted,
+            onToggleMute = onToggleMute,
+            onAutoPlay = onAutoPlay,
+            isDifficult = isDifficult,
+            onToggleDifficult = onToggleDifficult,
+            onEditItem = onEditItem
         )
     }
 
@@ -1467,7 +1517,13 @@ private fun LearningEngineLearningStage(
     onIntroductionRating: (ReviewRating) -> Unit,
     onTypingStageTap: () -> Unit = {},
     onEvent: (AndroidStudyEvent) -> Unit,
-    onOpenFullscreenImage: (String) -> Unit
+    onOpenFullscreenImage: (String) -> Unit,
+    isMuted: Boolean = false,
+    onToggleMute: () -> Unit = {},
+    onAutoPlay: (() -> Unit)? = null,
+    isDifficult: Boolean = false,
+    onToggleDifficult: (() -> Unit)? = null,
+    onEditItem: (() -> Unit)? = null
 ) {
     if (state is AndroidStudyState.Introduction) {
         IntroductionLearningStage(
@@ -1489,7 +1545,13 @@ private fun LearningEngineLearningStage(
             onNext = onIntroductionNext,
             onRating = onIntroductionRating,
             onEvent = onEvent,
-            onOpenFullscreenImage = onOpenFullscreenImage
+            onOpenFullscreenImage = onOpenFullscreenImage,
+            isMuted = isMuted,
+            onToggleMute = onToggleMute,
+            onAutoPlay = onAutoPlay,
+            isDifficult = isDifficult,
+            onToggleDifficult = onToggleDifficult,
+            onEditItem = onEditItem
         )
         return
     }
@@ -1612,7 +1674,13 @@ private fun IntroductionLearningStage(
     onNext: () -> Unit,
     onRating: (ReviewRating) -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit,
-    onOpenFullscreenImage: (String) -> Unit
+    onOpenFullscreenImage: (String) -> Unit,
+    isMuted: Boolean = false,
+    onToggleMute: () -> Unit = {},
+    onAutoPlay: (() -> Unit)? = null,
+    isDifficult: Boolean = false,
+    onToggleDifficult: (() -> Unit)? = null,
+    onEditItem: (() -> Unit)? = null
 ) {
     val difficultSkim = state.focusedPracticeKind ==
         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
@@ -1868,30 +1936,12 @@ private fun IntroductionLearningStage(
                 }
                 if (state.revealed && !state.compactRatingExit) {
                     StudyActionDock(
-                        hasWordAudio = !state.resolvedExpectedAnswerAudio.isNullOrBlank() ||
-                                !state.resolvedPromptAudio.isNullOrBlank(),
-                        hasExampleAudio = !state.resolvedExampleEnglishAudio.isNullOrBlank(),
-                        hasImage = !state.resolvedImage.isNullOrBlank(),
-                        isWordPlaying = isPlayingExpected,
-                        isExamplePlaying = isPlayingExampleEng,
-                        onWordAudio = {
-                            playAudio(
-                                AudioRole.EXPECTED_ANSWER,
-                                state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                true
-                            )
-                        },
-                        onReplay = {
-                            restartAudio(
-                                AudioRole.EXPECTED_ANSWER,
-                                state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                true
-                            )
-                        },
-                        onExampleAudio = {
-                            playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
-                        },
-                        onFullscreenImage = { state.resolvedImage?.let(onOpenFullscreenImage) },
+                        isMuted = isMuted,
+                        onToggleMute = onToggleMute,
+                        onAutoPlay = onAutoPlay,
+                        onEditItem = onEditItem,
+                        isDifficult = isDifficult,
+                        onToggleDifficult = onToggleDifficult,
                         modifier = Modifier.fillMaxWidth().padding(
                             start = LearningSpacing.medium,
                             end = LearningSpacing.medium,

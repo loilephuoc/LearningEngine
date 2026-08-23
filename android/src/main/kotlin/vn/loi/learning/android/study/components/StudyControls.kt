@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -90,49 +92,38 @@ private fun RatingButton(
 
 @Composable
 internal fun StudyActionDock(
-    hasWordAudio: Boolean,
-    hasExampleAudio: Boolean,
-    hasImage: Boolean,
-    isWordPlaying: Boolean,
-    isExamplePlaying: Boolean,
-    onWordAudio: () -> Unit,
-    onReplay: () -> Unit,
-    onExampleAudio: () -> Unit,
-    onFullscreenImage: () -> Unit,
+    isMuted: Boolean,
+    onToggleMute: () -> Unit,
+    onAutoPlay: (() -> Unit)?,
+    onEditItem: (() -> Unit)?,
+    isDifficult: Boolean,
+    onToggleDifficult: (() -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    if (!hasWordAudio && !hasExampleAudio && !hasImage) return
     Row(
-        modifier = modifier.semantics { contentDescription = "Thao tác học" },
+        modifier = modifier.semantics { contentDescription = "Hàng công cụ thẻ học" },
         horizontalArrangement = Arrangement.spacedBy(LearningSpacing.large, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (hasWordAudio) {
-            IconButton(onClick = onWordAudio, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                Icon(
-                    Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = if (isWordPlaying) "Stop word audio" else "Play word audio",
-                    tint = if (isWordPlaying) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                )
-            }
-            IconButton(onClick = onReplay, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                Icon(Icons.Default.Replay, contentDescription = "Phát lại âm thanh từ")
-            }
+        IconButton(onClick = onToggleMute, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+            Icon(if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                contentDescription = if (isMuted) "Bật tiếng" else "Tắt tiếng",
+                tint = if (isMuted) MaterialTheme.colorScheme.error else LocalContentColor.current)
         }
-        if (hasExampleAudio) {
-            IconButton(onClick = onExampleAudio, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                Icon(
-                    Icons.Default.PlayArrow,
-                    contentDescription = if (isExamplePlaying) "Stop example audio" else "Play example audio",
-                    tint = if (isExamplePlaying) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                )
-            }
+        IconButton(onClick = { onAutoPlay?.invoke() }, enabled = enabled && onAutoPlay != null,
+            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+            Icon(Icons.Filled.PlayCircleOutline, contentDescription = "Tự động phát")
         }
-        if (hasImage) {
-            IconButton(onClick = onFullscreenImage, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                Icon(Icons.Default.Fullscreen, contentDescription = "Mở ảnh toàn màn hình")
-            }
+        IconButton(onClick = { onEditItem?.invoke() }, enabled = enabled && onEditItem != null,
+            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+            Icon(Icons.Filled.Edit, contentDescription = "Sửa từ")
+        }
+        IconButton(onClick = { onToggleDifficult?.invoke() }, enabled = enabled && onToggleDifficult != null,
+            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+            Icon(if (isDifficult) Icons.Filled.Star else Icons.Filled.StarOutline,
+                contentDescription = if (isDifficult) "Bỏ đánh dấu khó" else "Đánh dấu khó",
+                tint = if (isDifficult) MaterialTheme.colorScheme.primary else LocalContentColor.current)
         }
     }
 }

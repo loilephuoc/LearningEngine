@@ -401,7 +401,8 @@ class AndroidStudyFacade(
     private val zoneId: () -> ZoneId = ZoneId::systemDefault,
     private val onHomeQuery: () -> Unit = {},
     private val getInsightsScopePackageId: () -> String? = { null },
-    private val onInsightsScopeChanged: (String?) -> Unit = {}
+    private val onInsightsScopeChanged: (String?) -> Unit = {},
+    private val difficultMarkers: vn.loi.learning.android.reminder.AndroidVocabularyReminderDifficultMarkers? = null
 ) {
     private data class PendingTypingCompletion(
         val result: RecallResult,
@@ -830,6 +831,28 @@ class AndroidStudyFacade(
         val stateSessionId = state.plan?.sessionId?.value ?: (state as? AndroidStudyState.Introduction)?.sessionId
         if (stateSessionId != item.session.id.value) return state
         return attachHud(state, item.session)
+    }
+
+    fun isDifficult(contentId: String): Boolean =
+        difficultMarkers?.isMarked(ContentId(contentId)) ?: false
+
+    fun toggleDifficult(contentId: String): Boolean =
+        difficultMarkers?.toggle(ContentId(contentId)) ?: false
+
+    fun saveQuickEdit(
+        draft: vn.loi.learning.android.packageexperience.AndroidPackageQuickEditDraft
+    ): Result<Unit> = runCatching {
+        require(draft.question.isNotBlank()) { "Question is required." }
+        require(draft.answer.isNotBlank()) { "Answer is required." }
+        requireNotNull(context.contentBrowserEdit) { "Content editor is unavailable." }.updateTextFields(
+            ContentId(draft.contentId),
+            draft.question.trim(),
+            draft.answer.trim(),
+            draft.pronunciation.trim(),
+            draft.partOfSpeech.trim(),
+            draft.example.trim(),
+            draft.translation.trim()
+        )
     }
 
     fun updateDailyLimits(state: AndroidStudyState.Runtime, newLimit: Int, reviewLimit: Int): AndroidStudyState {

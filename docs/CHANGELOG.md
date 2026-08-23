@@ -1,3 +1,10 @@
+# Android revealed Study actions integration
+
+- Replaced the revealed-card action dock with ordered Mute/Unmute, Auto Play, Quick Edit, and
+  persistent Mark Difficult actions while retaining the current Sync Study/session composition.
+- Quick Edit updates the current canonical Content through the existing editor and preserves the
+  active session/package; difficult markers remain separate from Hard rating semantics.
+
 # Android manual sync UI and navigation
 
 - Added a Vietnamese, scrollable and accessible Settings screen for validated Supabase configuration,

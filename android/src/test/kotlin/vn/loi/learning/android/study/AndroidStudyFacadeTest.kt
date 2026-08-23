@@ -543,4 +543,32 @@ class AndroidStudyFacadeTest {
             return delegate.findByIds(contentIds)
         }
     }
+
+    @Test
+    fun `study facade keeps difficult marker separate from rating and quick edits canonical content`() {
+        val context = LearningApplicationFactory.createInMemory()
+        context.contentRepository!!.save(Content(ContentId("c-1"), ContentType.WORD, ContentText("hello", "xin chào")))
+        val markedIds = mutableSetOf<ContentId>()
+        val markers = object : vn.loi.learning.android.reminder.AndroidVocabularyReminderDifficultMarkers {
+            override fun isMarked(contentId: ContentId) = contentId in markedIds
+            override fun toggle(contentId: ContentId) = if (markedIds.remove(contentId)) false else { markedIds.add(contentId); true }
+            override fun setMarked(contentId: ContentId, marked: Boolean) =
+                if (marked) markedIds.add(contentId) else markedIds.remove(contentId)
+            override fun markedContentIds(): Set<ContentId> = markedIds.toSet()
+        }
+        val facade = AndroidStudyFacade(context = context, difficultMarkers = markers)
+
+        assertFalse(facade.isDifficult("c-1"))
+        assertTrue(facade.toggleDifficult("c-1"))
+        assertTrue(facade.isDifficult("c-1"))
+        assertTrue(facade.saveQuickEdit(vn.loi.learning.android.packageexperience.AndroidPackageQuickEditDraft(
+            "c-1", "xin chào mới", "hello edited", "/həˈloʊ/", "interjection", "Hello world", "Xin chào thế giới"
+        )).isSuccess)
+
+        val updated = assertNotNull(context.contentRepository!!.findById(ContentId("c-1")))
+        assertEquals("xin chào mới", updated.text.primaryText)
+        assertEquals("hello edited", updated.text.translatedText)
+        assertEquals("/həˈloʊ/", updated.text.pronunciation)
+        assertEquals("interjection", updated.customFields[ContentFieldId("partOfSpeech")]?.value)
+    }
 }

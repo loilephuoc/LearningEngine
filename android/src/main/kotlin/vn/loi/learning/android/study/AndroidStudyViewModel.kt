@@ -684,6 +684,21 @@ class AndroidStudyViewModel(
         }
     }
 
+    fun isDifficult(contentId: String): Boolean = facade.isDifficult(contentId)
+
+    fun toggleDifficult(contentId: String): Boolean = facade.toggleDifficult(contentId)
+
+    fun saveQuickEdit(
+        draft: vn.loi.learning.android.packageexperience.AndroidPackageQuickEditDraft,
+        onResult: (Result<Unit>) -> Unit
+    ) {
+        viewModelScope.launch {
+            val result = withContext(workerDispatcher) { facade.saveQuickEdit(draft) }
+            onResult(result)
+            if (result.isSuccess) onEvent(AndroidStudyEvent.RefreshHud)
+        }
+    }
+
     private companion object {
         const val SESSION_ID = "study.sessionId"
     }
