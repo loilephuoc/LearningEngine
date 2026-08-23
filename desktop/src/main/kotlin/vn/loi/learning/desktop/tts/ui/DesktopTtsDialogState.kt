@@ -185,10 +185,8 @@ data class DesktopTtsUiState(
         generationState is TtsGenerationState.Success && !isCurrentFieldAlreadyPopulated
 
     companion object {
-        fun defaultLanguageForField(field: TtsField): TtsLanguage = when (field) {
-            TtsField.QUESTION, TtsField.ANSWER, TtsField.EXAMPLE -> TtsLanguage.ENGLISH
-            TtsField.TRANSLATION -> TtsLanguage.VIETNAMESE
-        }
+        fun defaultLanguageForField(field: TtsField): TtsLanguage =
+            vn.loi.learning.desktop.tts.batch.BatchTtsLanguageResolver.resolveRequiredLanguage(null, null, field)
 
         fun defaultRegionForLanguage(language: TtsLanguage): String = when (language) {
             TtsLanguage.ENGLISH -> "en-US"

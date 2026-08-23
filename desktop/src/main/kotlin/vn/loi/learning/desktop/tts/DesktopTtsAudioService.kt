@@ -44,12 +44,8 @@ class DesktopTtsAudioService(
     /**
      * Returns the default target language code for a logical [TtsField].
      */
-    fun defaultLanguageFor(field: TtsField): String = when (field) {
-        TtsField.QUESTION -> "en"
-        TtsField.ANSWER -> "en"
-        TtsField.EXAMPLE -> "en"
-        TtsField.TRANSLATION -> "vi"
-    }
+    fun defaultLanguageFor(field: TtsField): String =
+        vn.loi.learning.desktop.tts.batch.BatchTtsLanguageResolver.resolveRequiredLanguage(null, null, field).code
 
     /**
      * Recommends a default voice for the given language code from the provided voice list.

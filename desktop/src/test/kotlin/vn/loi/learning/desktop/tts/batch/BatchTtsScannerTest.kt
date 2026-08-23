@@ -87,7 +87,7 @@ class BatchTtsScannerTest {
     @Test
     fun `defaultLanguageFor maps fields to expected languages`() {
         assertEquals(TtsLanguage.ENGLISH, BatchTtsScanner.defaultLanguageFor(TtsField.QUESTION))
-        assertEquals(TtsLanguage.ENGLISH, BatchTtsScanner.defaultLanguageFor(TtsField.ANSWER))
+        assertEquals(TtsLanguage.VIETNAMESE, BatchTtsScanner.defaultLanguageFor(TtsField.ANSWER))
         assertEquals(TtsLanguage.ENGLISH, BatchTtsScanner.defaultLanguageFor(TtsField.EXAMPLE))
         assertEquals(TtsLanguage.VIETNAMESE, BatchTtsScanner.defaultLanguageFor(TtsField.TRANSLATION))
     }
@@ -106,8 +106,8 @@ class BatchTtsScannerTest {
 
         assertEquals(1, scan.totalSelectedItems)
         assertEquals(4, scan.totalValidTargets)
-        assertEquals(3, scan.englishTargetsCount)
-        assertEquals(1, scan.vietnameseTargetsCount)
+        assertEquals(2, scan.englishTargetsCount)
+        assertEquals(2, scan.vietnameseTargetsCount)
         assertEquals(0, scan.existingAudioSkippedCount)
         assertEquals(0, scan.emptyTextSkippedCount)
         assertEquals(1, scan.missingCountByField[TtsField.QUESTION])
@@ -115,7 +115,7 @@ class BatchTtsScannerTest {
         assertEquals(1, scan.missingCountByField[TtsField.EXAMPLE])
         assertEquals(1, scan.missingCountByField[TtsField.TRANSLATION])
         assertEquals("apple", scan.representativeEnglishText)
-        assertEquals("Quả táo", scan.representativeVietnameseText)
+        assertEquals("fruit", scan.representativeVietnameseText)
     }
 
     @Test
@@ -165,14 +165,14 @@ class BatchTtsScannerTest {
         val scan = BatchTtsScanner.scanBatchScope(listOf(item1, item2), TtsField.entries.toSet())
 
         assertEquals(2, scan.totalSelectedItems)
-        // Item1: ANSWER (missing), TRANSLATION (missing). QUESTION (existing -> skip), EXAMPLE (existing -> skip)
-        // Item2: QUESTION (missing), ANSWER (missing). EXAMPLE (empty -> skip), TRANSLATION (empty -> skip)
+        // Item1: ANSWER (missing, vi), TRANSLATION (missing, vi). QUESTION (existing -> skip), EXAMPLE (existing -> skip)
+        // Item2: QUESTION (missing, en), ANSWER (missing, vi). EXAMPLE (empty -> skip), TRANSLATION (empty -> skip)
         // Total valid targets = 2 + 2 = 4
         assertEquals(4, scan.totalValidTargets)
         assertEquals(2, scan.existingAudioSkippedCount)
         assertEquals(2, scan.emptyTextSkippedCount)
-        assertEquals(3, scan.englishTargetsCount) // item1 ANSWER, item2 QUESTION, item2 ANSWER
-        assertEquals(1, scan.vietnameseTargetsCount) // item1 TRANSLATION
+        assertEquals(1, scan.englishTargetsCount) // item2 QUESTION (en)
+        assertEquals(3, scan.vietnameseTargetsCount) // item1 ANSWER, item2 ANSWER, item1 TRANSLATION (vi)
     }
 
     @Test

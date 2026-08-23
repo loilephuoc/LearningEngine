@@ -83,7 +83,7 @@ class DesktopTtsAudioServiceTest {
     @Test
     fun `defaultLanguageFor maps logical fields correctly`() {
         assertEquals("en", service.defaultLanguageFor(TtsField.QUESTION))
-        assertEquals("en", service.defaultLanguageFor(TtsField.ANSWER))
+        assertEquals("vi", service.defaultLanguageFor(TtsField.ANSWER))
         assertEquals("en", service.defaultLanguageFor(TtsField.EXAMPLE))
         assertEquals("vi", service.defaultLanguageFor(TtsField.TRANSLATION))
     }

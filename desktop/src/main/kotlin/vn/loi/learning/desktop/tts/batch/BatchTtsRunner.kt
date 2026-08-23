@@ -180,7 +180,7 @@ class BatchTtsRunner(
                         currentJob.candidateVoices
                     } else {
                         listOf(currentJob.voice)
-                    }).filter { it.language.equals(currentJob.language.code, true) || it.locale.startsWith(currentJob.language.code, true) }
+                    }).filter { BatchTtsLanguageResolver.isVoiceCompatibleWithLanguage(it.language, it.locale, currentJob.language) }
                         .distinctBy { it.id }
                         .take(policy.maxCandidateVoices)
                     val candidateChain = healthTracker.prioritizeCandidates(rawCandidateChain)

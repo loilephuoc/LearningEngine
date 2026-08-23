@@ -16,12 +16,7 @@ object BatchTtsScanner {
      * Default language mapping for each target field.
      */
     fun defaultLanguageFor(field: TtsField): TtsLanguage =
-        when (field) {
-            TtsField.QUESTION -> TtsLanguage.ENGLISH
-            TtsField.ANSWER -> TtsLanguage.ENGLISH
-            TtsField.EXAMPLE -> TtsLanguage.ENGLISH
-            TtsField.TRANSLATION -> TtsLanguage.VIETNAMESE
-        }
+        BatchTtsLanguageResolver.resolveRequiredLanguage(null, null, field)
 
     /**
      * Performs comprehensive scan on items for given selected fields.
@@ -40,7 +35,8 @@ object BatchTtsScanner {
         var existingSkipped = 0
         var emptyTextSkipped = 0
 
-        val samplesByField = mutableMapOf<TtsField, BatchTtsSample>()
+        val missingSamplesByField = mutableMapOf<TtsField, BatchTtsSample>()
+        val allSamplesByField = mutableMapOf<TtsField, BatchTtsSample>()
         var repEnglish: String? = null
         var repVietnamese: String? = null
 
@@ -59,16 +55,22 @@ object BatchTtsScanner {
                 val hasAudio = !audioRef.isNullOrBlank()
                 val isMissing = !hasAudio
                 val trimmedText = text.orEmpty().trim()
-                val language = defaultLanguageFor(field)
+                val language = BatchTtsLanguageResolver.resolveRequiredLanguage(item.packageName, item, field)
 
-                if (trimmedText.isNotBlank() && !samplesByField.containsKey(field)) {
-                    samplesByField[field] = BatchTtsSample(
+                if (trimmedText.isNotBlank()) {
+                    val sample = BatchTtsSample(
                         field = field,
                         text = trimmedText,
                         contentId = item.contentId.value,
                         itemIndex = itemIndex,
                         itemLabel = itemLabel
                     )
+                    if (!allSamplesByField.containsKey(field)) {
+                        allSamplesByField[field] = sample
+                    }
+                    if (isMissing && !missingSamplesByField.containsKey(field)) {
+                        missingSamplesByField[field] = sample
+                    }
                 }
 
                 if (isMissing && trimmedText.isNotBlank()) {
@@ -104,14 +106,27 @@ object BatchTtsScanner {
             }
         }
 
+        // Composite samples: prefer missing target sample over existing audio sample
+        val samplesByField = mutableMapOf<TtsField, BatchTtsSample>()
+        for (field in TtsField.entries) {
+            val sample = if (overwriteExisting) {
+                allSamplesByField[field]
+            } else {
+                missingSamplesByField[field] ?: allSamplesByField[field]
+            }
+            if (sample != null) {
+                samplesByField[field] = sample
+            }
+        }
+
         // If no missing text found for representative, fallback to first available sample in scope
         if (repEnglish == null) {
             repEnglish = samplesByField[TtsField.QUESTION]?.text
-                ?: samplesByField[TtsField.ANSWER]?.text
                 ?: samplesByField[TtsField.EXAMPLE]?.text
         }
         if (repVietnamese == null) {
-            repVietnamese = samplesByField[TtsField.TRANSLATION]?.text
+            repVietnamese = samplesByField[TtsField.ANSWER]?.text
+                ?: samplesByField[TtsField.TRANSLATION]?.text
         }
 
         val englishCount = validTargets.count { it.language == TtsLanguage.ENGLISH }
@@ -158,7 +173,7 @@ object BatchTtsScanner {
                             contentId = item.contentId.value,
                             field = field,
                             text = text.orEmpty(),
-                            language = defaultLanguageFor(field),
+                            language = BatchTtsLanguageResolver.resolveRequiredLanguage(item.packageName, item, field),
                             isMissing = audioRef.isNullOrBlank(),
                             hasAudio = !audioRef.isNullOrBlank(),
                             previousAudioRef = audioRef
@@ -219,7 +234,15 @@ object BatchTtsScanner {
                         chain to Triple(vietnameseRate, vietnamesePitch, vietnameseVolume)
                     }
                 }
-                val primaryVoice = candidateChain.first()
+                val filteredCandidates = candidateChain
+                    .filter { voice -> BatchTtsLanguageResolver.isVoiceCompatibleWithLanguage(voice.language, voice.locale, target.language) }
+                    .distinctBy { it.id }
+
+                require(filteredCandidates.isNotEmpty()) {
+                    "No compatible voice candidates available for target '${target.contentId}' (${target.field.displayName}, language: ${target.language.displayName})"
+                }
+
+                val primaryVoice = filteredCandidates.first()
                 BatchTtsJob(
                     contentId = target.contentId,
                     field = target.field,
@@ -230,9 +253,7 @@ object BatchTtsScanner {
                     pitch = settings.second,
                     volume = settings.third,
                     previousAudioRef = target.previousAudioRef,
-                    candidateVoices = candidateChain
-                        .filter { voice -> voice.language.equals(target.language.code, ignoreCase = true) || voice.locale.startsWith(target.language.code, ignoreCase = true) }
-                        .distinctBy { it.id },
+                    candidateVoices = filteredCandidates,
                     overwriteExisting = target.hasAudio
                 )
             }

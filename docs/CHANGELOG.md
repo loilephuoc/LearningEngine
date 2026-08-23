@@ -1,3 +1,11 @@
+# Desktop Batch TTS Hotfix 4 — field-language resolution, searchable voice picker, and preview correctness
+
+- Canonical Field-Language Resolution: consolidated single canonical source of truth `BatchTtsLanguageResolver` mapping `Question` -> English (`en`), `Answer` -> Vietnamese (`vi`), `Example` -> English (`en`), `Translation` -> Vietnamese (`vi`). Fails closed on unknown languages and validates candidate voice locale compatibility.
+- Searchable & Region-Filtered Voice Picker: introduced `SearchableVoicePickerDialog` and `VoicePickerAnchor` supporting dynamic region/accent filtering derived from catalog locales (`en-US`, `en-GB`, `en-AU`, `en-SG`, `vi-VN`), gender filtering (`Female`, `Male`), query search (display name, id, locale, region, and common synonyms), readable typography with two-line layout, and full preservation of ordered fallback pools.
+- Preview Correctness & Atomic Synchronization: preview state tracks the actively selected generation field atomically; unselecting `Question` and selecting `Example` immediately updates preview to `Example` sample text. Samples are drawn preferentially from eligible missing targets in the active scope.
+- Defense-in-Depth Validation: planner and runtime reject incompatible candidate voice assignments before and during batch synthesis.
+- Verification: `clean test` passes 5,264 tests (root 2,322, Android 1,059, Desktop 1,883), zero failures/errors/skips. Desktop assemble, Android debug assemble, and `git diff --check` pass.
+
 # Desktop Batch TTS Hotfix 3 — multi-voice resilient pool, dynamic circuit breaker, failed-only retry, and visible apply phase
 
 - Ordered Multi-Voice Resilient Candidate Pool: user configures 1 primary voice and up to 3 ordered fallback voices (4 total candidates per language). Candidate lists strictly enforce language consistency, deduplication, and exclusion of primary voice from fallback positions. Presets persist and restore fallback candidates accurately.

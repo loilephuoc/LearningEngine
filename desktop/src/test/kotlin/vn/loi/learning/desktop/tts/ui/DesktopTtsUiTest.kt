@@ -112,7 +112,7 @@ class DesktopTtsUiTest {
     @Test
     fun `default field mapping maps logically to expected languages and regions`() {
         assertEquals(TtsLanguage.ENGLISH, DesktopTtsUiState.defaultLanguageForField(TtsField.QUESTION))
-        assertEquals(TtsLanguage.ENGLISH, DesktopTtsUiState.defaultLanguageForField(TtsField.ANSWER))
+        assertEquals(TtsLanguage.VIETNAMESE, DesktopTtsUiState.defaultLanguageForField(TtsField.ANSWER))
         assertEquals(TtsLanguage.ENGLISH, DesktopTtsUiState.defaultLanguageForField(TtsField.EXAMPLE))
         assertEquals(TtsLanguage.VIETNAMESE, DesktopTtsUiState.defaultLanguageForField(TtsField.TRANSLATION))
 

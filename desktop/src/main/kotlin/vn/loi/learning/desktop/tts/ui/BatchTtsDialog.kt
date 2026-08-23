@@ -1073,7 +1073,7 @@ private fun ConfigStepContent(
         ) {
             Column(modifier = Modifier.padding(LESpacing.md), verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
                 // English Fields
-                Text("English Fields", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
+                Text("English Fields (Prompt & Example)", style = LETypography.caption, color = LEColors.primary, fontWeight = FontWeight.Bold)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
@@ -1086,6 +1086,24 @@ private fun ConfigStepContent(
                         modifier = Modifier.weight(1f)
                     )
                     FieldCheckbox(
+                        label = "Example",
+                        missingCount = scopeScan.missingCountByField[TtsField.EXAMPLE] ?: 0,
+                        checked = TtsField.EXAMPLE in selectedFields,
+                        onCheckedChange = { onToggleField(TtsField.EXAMPLE) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                HorizontalDivider(color = LEColors.borderSubtle.copy(alpha = 0.5f))
+
+                // Vietnamese Fields
+                Text("Vietnamese Fields (Answer & Translation)", style = LETypography.caption, color = LEColors.success, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
+                ) {
+                    FieldCheckbox(
                         label = "Answer",
                         missingCount = scopeScan.missingCountByField[TtsField.ANSWER] ?: 0,
                         checked = TtsField.ANSWER in selectedFields,
@@ -1093,30 +1111,13 @@ private fun ConfigStepContent(
                         modifier = Modifier.weight(1f)
                     )
                     FieldCheckbox(
-                        label = "Example",
-                        missingCount = scopeScan.missingCountByField[TtsField.EXAMPLE] ?: 0,
-                        checked = TtsField.EXAMPLE in selectedFields,
-                        onCheckedChange = { onToggleField(TtsField.EXAMPLE) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                HorizontalDivider(color = LEColors.borderSubtle.copy(alpha = 0.5f))
-
-                // Vietnamese Fields
-                Text("Vietnamese Fields", style = LETypography.caption, color = LEColors.success, fontWeight = FontWeight.Bold)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
-                ) {
-                    FieldCheckbox(
                         label = "Translation",
                         missingCount = scopeScan.missingCountByField[TtsField.TRANSLATION] ?: 0,
                         checked = TtsField.TRANSLATION in selectedFields,
                         onCheckedChange = { onToggleField(TtsField.TRANSLATION) },
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.weight(2f))
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -1145,12 +1146,12 @@ private fun ConfigStepContent(
                 modifier = Modifier.weight(1f)
             )
             MetricCard(
-                label = "English (Q/A/Ex)",
+                label = "English (Q/Ex)",
                 value = "${scopeScan.englishTargetsCount}",
                 modifier = Modifier.weight(1f)
             )
             MetricCard(
-                label = "Vietnamese (Tr)",
+                label = "Vietnamese (A/Tr)",
                 value = "${scopeScan.vietnameseTargetsCount}",
                 modifier = Modifier.weight(1f)
             )
@@ -1175,13 +1176,16 @@ private fun ConfigStepContent(
                 Text("Loading available Edge TTS voices...", style = LETypography.caption, color = LEColors.textMuted)
             }
         } else {
+            val englishManaged = listOf(TtsField.QUESTION, TtsField.EXAMPLE).filter { it in selectedFields }
+            val vietnameseManaged = listOf(TtsField.ANSWER, TtsField.TRANSLATION).filter { it in selectedFields }
+
             if (languageRequirements.requiresEnglish) VoiceStrategyCard(
                 title = "English Voice Configuration",
-                languageLabel = "English (en-US)",
-                managedFields = listOf(TtsField.QUESTION, TtsField.ANSWER, TtsField.EXAMPLE),
+                languageLabel = "English",
+                managedFields = englishManaged,
                 scopeScan = scopeScan,
                 currentVoice = selectedEnglishVoice,
-                candidateVoices = availableVoices.filter { it.language == "en" },
+                candidateVoices = availableVoices.filter { it.isEnglish },
                 onVoiceSelect = onEnglishVoiceChange,
                 fallbackVoices = englishFallbacks,
                 onFallbackVoicesChange = onEnglishFallbacksChange,
@@ -1200,11 +1204,11 @@ private fun ConfigStepContent(
 
             if (languageRequirements.requiresVietnamese) VoiceStrategyCard(
                 title = "Vietnamese Voice Configuration",
-                languageLabel = "Vietnamese (vi-VN)",
-                managedFields = listOf(TtsField.TRANSLATION),
+                languageLabel = "Vietnamese",
+                managedFields = vietnameseManaged,
                 scopeScan = scopeScan,
                 currentVoice = selectedVietnameseVoice,
-                candidateVoices = availableVoices.filter { it.language == "vi" },
+                candidateVoices = availableVoices.filter { it.isVietnamese },
                 onVoiceSelect = onVietnameseVoiceChange,
                 fallbackVoices = vietnameseFallbacks,
                 onFallbackVoicesChange = onVietnameseFallbacksChange,
@@ -1317,8 +1321,10 @@ private fun VoiceStrategyCard(
     onPreview: (text: String) -> Unit,
     onStop: () -> Unit
 ) {
-    var selectedSampleField by remember(managedFields) { mutableStateOf(managedFields.first()) }
-    val currentSample = scopeScan.sampleFor(selectedSampleField)
+    var showPrimaryVoicePicker by remember { mutableStateOf(false) }
+    var selectedSampleField by remember(managedFields) { mutableStateOf(managedFields.firstOrNull()) }
+    val effectiveSampleField = selectedSampleField?.takeIf { it in managedFields } ?: managedFields.firstOrNull()
+    val currentSample = effectiveSampleField?.let { scopeScan.sampleFor(it) }
 
     Surface(
         color = LEColors.surfaceElevated,
@@ -1349,13 +1355,21 @@ private fun VoiceStrategyCard(
                 horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Wide Voice Dropdown
-                WideVoiceDropdown(
+                VoicePickerAnchor(
                     currentVoice = currentVoice,
-                    candidateVoices = candidateVoices,
-                    onSelect = onVoiceSelect,
+                    onClick = { showPrimaryVoicePicker = true },
                     modifier = Modifier.weight(0.6f)
                 )
+
+                if (showPrimaryVoicePicker) {
+                    SearchableVoicePickerDialog(
+                        title = "Chọn giọng đọc chính ($languageLabel)",
+                        currentVoice = currentVoice,
+                        candidateVoices = candidateVoices,
+                        onSelectVoice = onVoiceSelect,
+                        onDismiss = { showPrimaryVoicePicker = false }
+                    )
+                }
 
                 // Strategy Mode Dropdown
                 StrategyModeDropdown(
@@ -1422,7 +1436,7 @@ private fun VoiceStrategyCard(
                     if (managedFields.size > 1) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             managedFields.forEach { field ->
-                                val isSelected = field == selectedSampleField
+                                val isSelected = field == effectiveSampleField
                                 Surface(
                                     color = if (isSelected) LEColors.primarySoft else LEColors.surfaceElevated,
                                     shape = LERadius.xs,
@@ -1439,12 +1453,18 @@ private fun VoiceStrategyCard(
                                 }
                             }
                         }
-                    } else {
+                    } else if (managedFields.isNotEmpty()) {
                         Text(
                             text = "${managedFields.first().displayName} Sample",
                             style = LETypography.caption,
                             fontWeight = FontWeight.Bold,
                             color = LEColors.textSecondary
+                        )
+                    } else {
+                        Text(
+                            text = "No field selected",
+                            style = LETypography.caption,
+                            color = LEColors.textMuted
                         )
                     }
 
@@ -1489,8 +1509,9 @@ private fun VoiceStrategyCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 } else {
+                    val fieldLabel = effectiveSampleField?.displayName ?: "selected field"
                     Text(
-                        text = "No sample text available for ${selectedSampleField.displayName} in current scope",
+                        text = "No sample text available for $fieldLabel in current scope",
                         style = LETypography.caption,
                         color = LEColors.textMuted
                     )
@@ -1507,7 +1528,7 @@ private fun FallbackVoiceEditor(
     catalog: List<TtsVoice>,
     onChange: (OrderedFallbackVoices) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var showAddFallbackPicker by remember { mutableStateOf(false) }
     val available = catalog.filter { candidate ->
         candidate.id != primaryVoice?.id && candidate.id !in fallbackVoices.ids
     }
@@ -1517,16 +1538,20 @@ private fun FallbackVoiceEditor(
             Box {
                 LESecondaryButton(
                     text = "+ Add fallback",
-                    onClick = { expanded = true },
+                    onClick = { showAddFallbackPicker = true },
                     enabled = fallbackVoices.voices.size < OrderedFallbackVoices.MAX_FALLBACKS && available.isNotEmpty()
                 )
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    available.forEach { voice ->
-                        DropdownMenuItem(
-                            text = { Text(voice.displayName, style = LETypography.fieldValue) },
-                            onClick = { onChange(fallbackVoices.add(voice, primaryVoice)); expanded = false }
-                        )
-                    }
+                if (showAddFallbackPicker) {
+                    SearchableVoicePickerDialog(
+                        title = "Thêm giọng đọc dự phòng (Fallback)",
+                        currentVoice = null,
+                        candidateVoices = available,
+                        onSelectVoice = { voice ->
+                            onChange(fallbackVoices.add(voice, primaryVoice))
+                            showAddFallbackPicker = false
+                        },
+                        onDismiss = { showAddFallbackPicker = false }
+                    )
                 }
             }
         }
@@ -1595,75 +1620,7 @@ private fun StrategyModeDropdown(
     }
 }
 
-@Composable
-private fun WideVoiceDropdown(
-    currentVoice: TtsVoice?,
-    candidateVoices: List<TtsVoice>,
-    onSelect: (TtsVoice) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(36.dp)
-                .clip(LERadius.xs)
-                .clickable { expanded = true }
-                .border(1.dp, LEColors.borderSubtle, LERadius.xs),
-            color = LEColors.surface
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize().padding(horizontal = LESpacing.sm),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = currentVoice?.let { "${it.displayName} (${it.locale}, ${it.gender ?: "Neutral"})" } ?: "Select Voice...",
-                    style = LETypography.caption,
-                    fontWeight = FontWeight.Medium,
-                    color = if (currentVoice != null) LEColors.textPrimary else LEColors.textMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text("▾", style = LETypography.caption, color = LEColors.textMuted)
-            }
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier
-                .widthIn(min = 400.dp, max = 560.dp)
-                .heightIn(max = 300.dp)
-        ) {
-            candidateVoices.forEach { voice ->
-                DropdownMenuItem(
-                    text = {
-                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                            Text(
-                                text = "${voice.displayName} (${voice.gender ?: "Neutral"})",
-                                style = LETypography.caption,
-                                fontWeight = if (voice.id == currentVoice?.id) FontWeight.Bold else FontWeight.Normal,
-                                color = if (voice.id == currentVoice?.id) LEColors.primary else LEColors.textPrimary
-                            )
-                            Text(
-                                text = "${voice.locale} · ${voice.id}",
-                                style = LETypography.caption,
-                                color = LEColors.textMuted
-                            )
-                        }
-                    },
-                    onClick = {
-                        expanded = false
-                        onSelect(voice)
-                    }
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun RateDropdown(
