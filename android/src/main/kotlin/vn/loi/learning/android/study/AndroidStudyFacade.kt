@@ -939,11 +939,29 @@ class AndroidStudyFacade(
         val item = currentItem ?: return state
         val session = item.session
         return runCatching {
+            val requestedLimits = DailyStudyBudgetLimits(newLimit, reviewLimit)
+            val scope = currentScope() ?: error("Active learning package is unavailable.")
+            val daily = dailyBudget(scope, limits = requestedLimits)
+            val currentOrigin = context.studyQueue.get(session.id)
+                ?.currentLearningItemId
+                ?.let { context.studyQueue.get(session.id)?.originOf(it) }
+            val effectiveSessionNewTarget = session.newItemsReviewed + maxOf(
+                daily.newRemainingToday,
+                if (currentOrigin == SessionItemOrigin.NEW) 1 else 0
+            )
+            val effectiveSessionReviewTarget = session.reviewItemsReviewed + maxOf(
+                daily.reviewRemainingToday,
+                if (currentOrigin == SessionItemOrigin.REVIEW) 1 else 0
+            )
             AndroidStartupTrace.write(
                 false,
-                "phase=study_update_limits_start session=${session.id.value} pkg=${session.installedPackageId?.value} mode=${session.studyMode} oldNewLimit=${session.policy.newItemLimit} oldReviewLimit=${session.policy.reviewItemLimit} reqNewLimit=$newLimit reqReviewLimit=$reviewLimit"
+                "phase=study_update_limits_start session=${session.id.value} pkg=${session.installedPackageId?.value} mode=${session.studyMode} dailyNewLimit=$newLimit newCompletedToday=${daily.newCompletedToday} remainingNewToday=${daily.newRemainingToday} dailyReviewLimit=$reviewLimit reviewCompletedToday=${daily.reviewCompletedToday} remainingReviewToday=${daily.reviewRemainingToday} activeSessionNewCompleted=${session.newItemsReviewed} activeSessionReviewCompleted=${session.reviewItemsReviewed} oldSessionNewTarget=${session.policy.newItemLimit} newEffectiveSessionNewTarget=$effectiveSessionNewTarget oldSessionReviewTarget=${session.policy.reviewItemLimit} newEffectiveSessionReviewTarget=$effectiveSessionReviewTarget currentLearningItemId=${session.currentLearningItemId?.value}"
             )
-            val updatedSession = context.engine.updateActiveSessionLimits(session.id, newLimit, reviewLimit)
+            val updatedSession = context.engine.updateActiveSessionLimits(
+                session.id,
+                effectiveSessionNewTarget,
+                effectiveSessionReviewTarget
+            )
             val queueProgress = context.engine.getStudyQueueProgress(session.id)
             val queueSnapshot = context.studyQueue.get(session.id)
             val newInQueue = queueSnapshot?.itemOrigins?.values?.count { it == SessionItemOrigin.NEW } ?: 0
@@ -1718,14 +1736,15 @@ class AndroidStudyFacade(
     private fun dailyBudget(
         scope: LearnEntryScope,
         at: Moment = Moment(now()),
-        contentIds: Set<ContentId>? = null
+        contentIds: Set<ContentId>? = null,
+        limits: DailyStudyBudgetLimits = dailyLimits()
     ): DailyStudyBudgetSnapshot {
         val resolvedContentIds = contentIds ?: AndroidStartupTrace.measured("daily_budget_content_ids") {
             packageContentIds(scope.installedPackageId)
         }
         return AndroidStartupTrace.measured("daily_budget_calculation") {
             requireNotNull(context.dailyStudyBudget) { "Daily Study budget is unavailable." }
-                .execute(learnerId, dailyLimits(), at, zoneId(), resolvedContentIds)
+                .execute(learnerId, limits, at, zoneId(), resolvedContentIds)
         }
     }
 

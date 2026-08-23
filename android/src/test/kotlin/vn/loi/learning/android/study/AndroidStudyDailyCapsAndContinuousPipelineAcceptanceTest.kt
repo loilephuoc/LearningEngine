@@ -29,6 +29,7 @@ import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.StudyMode
 import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
@@ -192,6 +193,106 @@ class AndroidStudyDailyCapsAndContinuousPipelineAcceptanceTest {
         // Rate card 8 -> session must complete immediately without card 9
         val afterRate = facade.rateIntroduction(introAfterUpdate, ReviewRating.GOOD)
         assertIs<AndroidStudyState.Completion>(afterRate)
+    }
+
+    @Test
+    fun `multi-session live increase from 39 completed to daily limit 45 admits exactly six NEW`() {
+        val fixture = createFixture(itemCount = 60)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(50, 100)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 10_000L },
+            dailyLimits = { currentDailyLimits },
+            continuousSkimEnabled = { false }
+        )
+
+        var previousSession: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        )
+        repeat(39) {
+            previousSession = facade.rateIntroduction(
+                assertIs<AndroidStudyState.Introduction>(previousSession),
+                ReviewRating.GOOD
+            )
+        }
+        fixture.context.engine.leaveActiveStudySession(learnerId, Moment(10_000L))
+
+        var current: AndroidStudyState = assertIs<AndroidStudyState.Introduction>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        )
+        currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(45, 100)
+        current = facade.updateDailyLimits(
+            assertIs<AndroidStudyState.Introduction>(current),
+            newLimit = 45,
+            reviewLimit = 100
+        )
+
+        var additionalNew = 0
+        while (current is AndroidStudyState.Introduction) {
+            assertEquals(SessionItemOrigin.NEW, current.origin)
+            additionalNew++
+            current = facade.rateIntroduction(current, ReviewRating.GOOD)
+        }
+
+        assertEquals(6, additionalNew)
+        assertIs<AndroidStudyState.Completion>(current)
+        val daily = facade.home().model.dailyBudget
+        assertEquals(45, daily?.newCompletedToday)
+        assertEquals(0, daily?.newRemainingToday)
+    }
+
+    @Test
+    fun `multi-session review completions leave only remaining daily Review capacity`() {
+        val fixture = createFixture(itemCount = 10)
+        val items = fixture.context.learningItemRepository!!.findAllEnabled()
+        repeat(39) { index ->
+            val item = items[index % items.size]
+            val before = MemoryState(
+                learnerId = learnerId,
+                learningItemId = item.id,
+                stage = LearningStage.REVIEW,
+                difficulty = 5.0,
+                stabilityDays = 2.5,
+                dueAt = Moment(1_000L),
+                lastReviewedAt = Moment(500L),
+                reviewCount = 1,
+                lapseCount = 0
+            )
+            val after = before.copy(lastReviewedAt = Moment(1_000L), dueAt = Moment(2_000L), reviewCount = 2)
+            fixture.context.reviewEventRepository!!.append(
+                ReviewEvent(
+                    id = ReviewEventId("previous-review-$index"),
+                    rating = ReviewRating.GOOD,
+                    reviewedAt = Moment(1_000L),
+                    responseTime = null,
+                    stateBefore = before,
+                    stateAfter = after
+                )
+            )
+            fixture.context.memoryStateRepository!!.save(after)
+        }
+        var limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(1, 50)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 100_000L },
+            dailyLimits = { limits },
+            continuousSkimEnabled = { false }
+        )
+
+        val started = assertIs<AndroidStudyState.Runtime>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.ADAPTIVE)
+        )
+        limits = vn.loi.learning.application.study.DailyStudyBudgetLimits(1, 45)
+        val updated = assertIs<AndroidStudyState.Runtime>(facade.updateDailyLimits(started, 1, 45))
+        val sessionId = requireNotNull(updated.plan?.sessionId)
+        val session = requireNotNull(fixture.context.engine.getSession(sessionId))
+        val queue = requireNotNull(fixture.context.studyQueue.get(sessionId))
+
+        assertEquals(39, facade.home().model.dailyBudget?.reviewCompletedToday)
+        assertEquals(6, session.policy.reviewItemLimit)
+        assertEquals(6, queue.itemOrigins.values.count { it == SessionItemOrigin.REVIEW })
     }
 
     // ==========================================

@@ -155,13 +155,14 @@ class AndroidStudyLiveLimitUpdateAcceptanceTest {
     }
 
     @Test
-    fun `invalid limit update fails validation atomically and keeps session and queue intact`() {
+    fun `live decrease below completed history preserves current card then admits no additional NEW`() {
         val fixture = createFixture(itemCount = 20)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(100, 100)
         val facade = AndroidStudyFacade(
             context = fixture.context,
             learnerId = learnerId,
             now = { 2_000L },
-            dailyLimits = { vn.loi.learning.application.study.DailyStudyBudgetLimits(100, 100) }
+            dailyLimits = { currentDailyLimits }
         )
 
         val started = facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
@@ -173,16 +174,17 @@ class AndroidStudyLiveLimitUpdateAcceptanceTest {
 
         val introAt17 = assertIs<AndroidStudyState.Introduction>(current)
 
-        // Attempting to set limit to 5 (less than 17 already completed) must fail
-        val failedState = facade.updateDailyLimits(introAt17, newLimit = 5, reviewLimit = 100)
-        assertIs<AndroidStudyState.Failed>(failedState)
+        // Historical work is retained. The already-presented card remains rateable, but no tail is admitted.
+        currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(5, 100)
+        val updated = facade.updateDailyLimits(introAt17, newLimit = 5, reviewLimit = 100)
+        val preserved = assertIs<AndroidStudyState.Introduction>(updated)
+        assertEquals(introAt17.learningItemId, preserved.learningItemId)
 
-        // The session and queue are not corrupted, continuing with old limits
-        val reloaded = facade.loadExact(introAt17.sessionId)
-        val runtime = assertIs<AndroidStudyState.Introduction>(reloaded)
-        val hud = assertNotNull(runtime.hud)
-        assertEquals(17, hud.newCompleted)
-        assertEquals(100, hud.newConfiguredTarget)
+        val afterCurrent = facade.rateIntroduction(preserved, ReviewRating.GOOD)
+        assertIs<AndroidStudyState.Completion>(afterCurrent)
+        val daily = facade.home().model.dailyBudget
+        assertEquals(18, daily?.newCompletedToday)
+        assertEquals(0, daily?.newRemainingToday)
     }
 
     @Test
