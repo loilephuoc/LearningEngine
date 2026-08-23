@@ -1,3 +1,12 @@
+# Supabase password session client
+
+- Added password sign-in, refresh-token rotation, logout, validated authenticated UUID/session parsing,
+  redacted errors, and serialized refresh through the existing injectable HTTP boundary.
+- Added an explicit secure-session-store contract with a memory-only V1 implementation: password and
+  access/refresh tokens are never persisted, and restart requires sign-in again.
+- Refresh replacement is atomic, concurrent access performs one refresh, and refresh failure clears
+  only session authority without touching local learning, sync, package, or media data.
+
 # Supabase media blob transport
 
 - Added a private `sync-media` bucket migration with authenticated user-prefix SELECT/INSERT policies

@@ -3,11 +3,25 @@ package vn.loi.learning.infrastructure.sync.supabase
 import java.net.URI
 import vn.loi.learning.domain.sync.protocol.SyncAccountId
 
-data class SupabaseSession(val accountId: SyncAccountId, val accessToken: String) {
-    init { require(accessToken.isNotBlank()) { "Supabase access token must not be blank." } }
+data class SupabaseSession(
+    val accountId: SyncAccountId,
+    val accessToken: String,
+    val refreshToken: String? = null,
+    val expiresAtEpochSeconds: Long = Long.MAX_VALUE,
+    val userEmail: String? = null
+) {
+    init {
+        require(accessToken.isNotBlank()) { "Supabase access token must not be blank." }
+        require(refreshToken == null || refreshToken.isNotBlank())
+        require(expiresAtEpochSeconds > 0)
+    }
 }
 
 fun interface SupabaseSessionProvider { fun currentSession(): SupabaseSession? }
+
+interface RefreshableSupabaseSessionProvider : SupabaseSessionProvider {
+    fun refreshAfterUnauthorized(rejectedAccessToken: String): SupabaseSession?
+}
 
 data class SupabaseRetryPolicy(
     val maxAttempts: Int = 3,

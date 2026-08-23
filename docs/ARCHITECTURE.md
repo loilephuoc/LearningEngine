@@ -1931,3 +1931,10 @@ idempotent, and downloaded bytes must match the requested SHA-256 before the exi
 `MediaDeltaSyncService.provideBlob` size, MIME/signature, and slot validator may stage them. Missing
 objects remain pending. Storage policies permit authenticated SELECT/INSERT only within the caller's
 prefix; UPDATE/DELETE and remote GC are deliberately absent.
+
+Desktop Supabase authentication uses the same small HTTP boundary as sync transport. Password sign-in
+creates a memory-only session containing authenticated user UUID, short-lived access token, rotating
+refresh token, expiry, and safe email projection. `RefreshingSupabaseSessionProvider` serializes refresh
+and replaces the complete token pair only after a valid response; failure clears session authority and
+requires sign-in again. Password arrays are cleared after submission. No password or token is persisted,
+logged, or included in diagnostics, so process restart intentionally returns to signed-out state.
