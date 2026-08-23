@@ -1,6 +1,7 @@
 package vn.loi.learning.android.study
 
 import org.junit.Test
+import kotlinx.coroutines.runBlocking
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertFalse
@@ -470,6 +471,179 @@ class AndroidStudyLiveLimitUpdateAcceptanceTest {
 
         // Daily budget availability should remain accurate and consistent
         assertTrue(afterBudget.canLearnNew)
+    }
+
+    @Test
+    fun `exact reproduction sequence start LEARN_NEW, reveal A, update New Limit, assert state consistency, rate A, next B Introduction`() {
+        val fixture = createFixture(itemCount = 20)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(5, 100)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { currentDailyLimits }
+        )
+
+        val savedState = androidx.lifecycle.SavedStateHandle()
+        val viewModel = AndroidStudyViewModel(
+            facade = facade,
+            savedState = savedState,
+            onDailyLimitsChanged = { newLim, revLim ->
+                currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(newLim, revLim)
+                true
+            }
+        )
+
+        // 1. Start LEARN_NEW -> load Introduction item A
+        val started = runBlocking {
+            viewModel.executeEventSync(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
+        }
+        val introA = assertIs<AndroidStudyState.Introduction>(started)
+        val itemA = introA.learningItemId
+        val sessionId = vn.loi.learning.domain.study.session.model.SessionId(introA.sessionId)
+        assertFalse(introA.revealedStage)
+
+        // 2. Reveal item A
+        val revealedState = runBlocking {
+            viewModel.executeEventSync(AndroidStudyEvent.RevealIntroduction)
+        }
+        val revealedA = assertIs<AndroidStudyState.Introduction>(revealedState)
+        assertEquals(itemA, revealedA.learningItemId)
+        assertTrue(revealedA.revealedStage)
+
+        // 3. Update New Limit while A remains displayed
+        val updatedState = runBlocking {
+            viewModel.executeEventSync(AndroidStudyEvent.UpdateDailyLimits(10, 100))
+        }
+        assertFalse(updatedState is AndroidStudyState.Failed, "Update limit must not fail")
+        val updatedA = assertIs<AndroidStudyState.Introduction>(updatedState)
+
+        // 4. Assert UI / currentItem / session / queue all still point to item A with revealed state preserved
+        assertEquals(itemA, updatedA.learningItemId, "UI state must still point to item A")
+        assertTrue(updatedA.revealedStage, "UI state must preserve revealedStage = true")
+        assertEquals(10, updatedA.hud?.newConfiguredTarget)
+
+        val persistedSession = fixture.context.engine.getSession(sessionId)!!
+        assertEquals(itemA, persistedSession.currentLearningItemId?.value, "Session currentLearningItemId must be item A")
+        assertTrue(persistedSession.answerRevealed, "Session answerRevealed must be true")
+        assertEquals(10, persistedSession.policy.newItemLimit)
+
+        val persistedQueue = fixture.context.studyQueue.get(sessionId)!!
+        assertEquals(itemA, persistedQueue.currentLearningItemId?.value, "Queue currentLearningItemId must be item A")
+        assertEquals(0, persistedQueue.currentIndex, "Queue currentIndex must be 0 (uncompleted item A)")
+
+        // 5. Rate item A -> assert commit succeeds
+        val nextState = runBlocking {
+            viewModel.executeEventSync(AndroidStudyEvent.RateIntroduction(ReviewRating.GOOD))
+        }
+        assertFalse(nextState is AndroidStudyState.Failed, "RateIntroduction after limit update must not fail with: ${(nextState as? AndroidStudyState.Failed)?.message}")
+
+        // 6. Next item B -> assert B is Introduction (not Recall/Typing/Failed)
+        val introB = assertIs<AndroidStudyState.Introduction>(nextState)
+        val itemB = introB.learningItemId
+        assertFalse(itemA == itemB, "Next item must be different from item A")
+        assertFalse(introB.revealedStage, "Item B must start unrevealed")
+    }
+
+    @Test
+    fun `update New Limit BEFORE reveal preserves unrevealed item A and permits smooth reveal and rate`() {
+        val fixture = createFixture(itemCount = 20)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(5, 100)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { currentDailyLimits }
+        )
+        val viewModel = AndroidStudyViewModel(
+            facade = facade,
+            savedState = androidx.lifecycle.SavedStateHandle(),
+            onDailyLimitsChanged = { newLim, revLim ->
+                currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(newLim, revLim)
+                true
+            }
+        )
+
+        // Start LEARN_NEW -> Item A unrevealed
+        val started = runBlocking {
+            viewModel.executeEventSync(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
+        }
+        val introA = assertIs<AndroidStudyState.Introduction>(started)
+        val itemA = introA.learningItemId
+        assertFalse(introA.revealedStage)
+
+        // Update limit BEFORE reveal
+        val updatedState = runBlocking {
+            viewModel.executeEventSync(AndroidStudyEvent.UpdateDailyLimits(15, 100))
+        }
+        val updatedA = assertIs<AndroidStudyState.Introduction>(updatedState)
+        assertEquals(itemA, updatedA.learningItemId)
+        assertFalse(updatedA.revealedStage, "Item A must remain unrevealed after limit update")
+
+        // Now reveal item A
+        val revealedState = runBlocking {
+            viewModel.executeEventSync(AndroidStudyEvent.RevealIntroduction)
+        }
+        val revealedA = assertIs<AndroidStudyState.Introduction>(revealedState)
+        assertEquals(itemA, revealedA.learningItemId)
+        assertTrue(revealedA.revealedStage)
+
+        // Rate item A -> succeeds smoothly to item B
+        val nextState = runBlocking {
+            viewModel.executeEventSync(AndroidStudyEvent.RateIntroduction(ReviewRating.GOOD))
+        }
+        val introB = assertIs<AndroidStudyState.Introduction>(nextState)
+        assertFalse(itemA == introB.learningItemId)
+    }
+
+    @Test
+    fun `repeated live edits on the same current item keep item stable across all edits`() {
+        val fixture = createFixture(itemCount = 20)
+        var currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(5, 100)
+        val facade = AndroidStudyFacade(
+            context = fixture.context,
+            learnerId = learnerId,
+            now = { 2_000L },
+            dailyLimits = { currentDailyLimits }
+        )
+        val viewModel = AndroidStudyViewModel(
+            facade = facade,
+            savedState = androidx.lifecycle.SavedStateHandle(),
+            onDailyLimitsChanged = { newLim, revLim ->
+                currentDailyLimits = vn.loi.learning.application.study.DailyStudyBudgetLimits(newLim, revLim)
+                true
+            }
+        )
+
+        val started = runBlocking {
+            viewModel.executeEventSync(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
+        }
+        val introA = assertIs<AndroidStudyState.Introduction>(started)
+        val itemA = introA.learningItemId
+        val sessionId = vn.loi.learning.domain.study.session.model.SessionId(introA.sessionId)
+
+        // Reveal item A
+        runBlocking { viewModel.executeEventSync(AndroidStudyEvent.RevealIntroduction) }
+
+        // Multiple rapid edits on same item A: 5 -> 12 -> 8 -> 20
+        val targetLimits = listOf(12, 8, 20)
+        for (target in targetLimits) {
+            val edited = runBlocking {
+                viewModel.executeEventSync(AndroidStudyEvent.UpdateDailyLimits(target, 100))
+            }
+            val intro = assertIs<AndroidStudyState.Introduction>(edited)
+            assertEquals(itemA, intro.learningItemId, "Item must remain item A across edits")
+            assertTrue(intro.revealedStage, "Item A must remain revealed")
+            assertEquals(target, intro.hud?.newConfiguredTarget)
+        }
+
+        // Final rate on item A
+        val finalRate = runBlocking {
+            viewModel.executeEventSync(AndroidStudyEvent.RateIntroduction(ReviewRating.GOOD))
+        }
+        assertFalse(finalRate is AndroidStudyState.Failed)
+        val introB = assertIs<AndroidStudyState.Introduction>(finalRate)
+        assertFalse(itemA == introB.learningItemId)
     }
 
     private fun createFixture(itemCount: Int): Fixture {

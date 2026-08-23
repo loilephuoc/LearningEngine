@@ -35,13 +35,12 @@ class UpdateActiveStudySessionLimitsUseCase(
             "Giới hạn ôn tập ($effectiveReviewLimit) không thể nhỏ hơn số từ ôn tập đã hoàn thành (${current.reviewItemsReviewed})."
         }
 
-        val updated = current.copy(policy = current.policy.copy(
-            newItemLimit = effectiveNewLimit,
-            reviewItemLimit = effectiveReviewLimit
-        ))
-
         val existingQueue = queues.get(sessionId)
         if (existingQueue == null) {
+            val updated = current.copy(policy = current.policy.copy(
+                newItemLimit = effectiveNewLimit,
+                reviewItemLimit = effectiveReviewLimit
+            ))
             val plan = planning.plan(updated)
             sessions.save(updated)
             queues.replace(plan)
@@ -72,6 +71,14 @@ class UpdateActiveStudySessionLimitsUseCase(
         val preservedCurrentItem = if (canKeepCurrent) currentUncompletedItem else null
         val preservedCurrentOrigin = if (canKeepCurrent) currentOrigin else null
         val preservedCurrentContentId = if (canKeepCurrent) currentContentId else null
+
+        val updated = current.copy(
+            currentLearningItemId = preservedCurrentItem ?: current.currentLearningItemId,
+            policy = current.policy.copy(
+                newItemLimit = effectiveNewLimit,
+                reviewItemLimit = effectiveReviewLimit
+            )
+        )
 
         val additionalNewQuota = if (canKeepCurrent && currentOrigin == SessionItemOrigin.NEW) {
             maxOf(0, remainingNewQuota - 1)

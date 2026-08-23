@@ -910,6 +910,16 @@ class AndroidStudyFacade(
         )
     }
 
+    fun diagnoseCurrentState(sessionId: String?): String {
+        return runCatching {
+            val sid = sessionId?.let(::SessionId) ?: currentItem?.session?.id
+            val session = sid?.let { context.engine.getSession(it) }
+            val queue = sid?.let { context.studyQueue.get(it) }
+            val progress = sid?.let { context.engine.getStudyQueueProgress(it) }
+            "sessionId=${sid?.value} studyMode=${session?.studyMode} sessionItemId=${session?.currentLearningItemId?.value} answerRevealed=${session?.answerRevealed} facadeItemId=${currentItem?.item?.learningItem?.id?.value} queueItemId=${queue?.currentLearningItemId?.value} queuePos=${progress?.currentIndex}/${progress?.totalItemCount} queueCompleted=${queue?.isCompleted}"
+        }.getOrElse { "diag_failed=${it.message}" }
+    }
+
     fun updateDailyLimits(state: AndroidStudyState.Runtime, newLimit: Int, reviewLimit: Int): AndroidStudyState {
         val item = currentItem ?: return state
         return runCatching {
@@ -924,11 +934,12 @@ class AndroidStudyFacade(
             val reviewInQueue = queueSnapshot?.itemOrigins?.values?.count { it == SessionItemOrigin.REVIEW } ?: 0
             AndroidStartupTrace.write(
                 false,
-                "phase=study_update_limits_success session=${item.session.id.value} mode=${updatedSession.studyMode} effNewLimit=${updatedSession.policy.newItemLimit} effReviewLimit=${updatedSession.policy.reviewItemLimit} queueSize=${queueProgress?.totalItemCount} newCountInQueue=$newInQueue reviewCountInQueue=$reviewInQueue"
+                "phase=study_update_limits_success session=${item.session.id.value} mode=${updatedSession.studyMode} effNewLimit=${updatedSession.policy.newItemLimit} effReviewLimit=${updatedSession.policy.reviewItemLimit} queueSize=${queueProgress?.totalItemCount} queueCurrent=${queueSnapshot?.currentLearningItemId?.value} newCountInQueue=$newInQueue reviewCountInQueue=$reviewInQueue"
             )
             loadExact(item.session.id.value)
         }.getOrElse { error ->
-            AndroidStartupTrace.write(true, "phase=study_update_limits_failed error=${error.message} type=${error.javaClass.simpleName}")
+            val diag = diagnoseCurrentState(item.session.id.value)
+            AndroidStartupTrace.write(true, "phase=study_update_limits_failed error=${error.javaClass.name} msg=${error.message} $diag\n${error.stackTraceToString()}")
             AndroidStudyState.Failed(error.message ?: "Không thể cập nhật giới hạn phiên học.", item.session.id.value)
         }
     }

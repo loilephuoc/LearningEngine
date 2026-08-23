@@ -420,9 +420,8 @@ class AndroidStudyViewModel(
                 is AndroidStudyEvent.UpdateDailyLimits -> {
                     val runtime = current as? AndroidStudyState.Runtime ?: current
                     if (runtime !is AndroidStudyState.Runtime) runtime else {
-                        val updated = facade.updateDailyLimits(runtime, event.newLimit, event.reviewLimit)
-                        if (updated !is AndroidStudyState.Failed) onDailyLimitsChanged(event.newLimit, event.reviewLimit)
-                        updated
+                        onDailyLimitsChanged(event.newLimit, event.reviewLimit)
+                        facade.updateDailyLimits(runtime, event.newLimit, event.reviewLimit)
                     }
                 }
                 is AndroidStudyEvent.ChangeInsightsScope -> {
@@ -431,8 +430,18 @@ class AndroidStudyViewModel(
                 }
             } } }.getOrElse { error ->
                     if (error is CancellationException) throw error
-                    AndroidStartupTrace.write(false, "phase=study_event_failed event=${event.javaClass.simpleName} error=${error.javaClass.simpleName}")
-                    AndroidStudyState.Failed("Study action failed.")
+                    val sessionId = when (current) {
+                        is AndroidStudyState.Runtime -> current.plan?.sessionId?.value ?: (current as? AndroidStudyState.Introduction)?.sessionId
+                        is AndroidStudyState.Failed -> current.retrySessionId
+                        else -> null
+                    }
+                    val diag = facade.diagnoseCurrentState(sessionId)
+                    val stack = error.stackTraceToString()
+                    AndroidStartupTrace.write(
+                        true,
+                        "phase=study_event_failed event=${event.javaClass.simpleName} error=${error.javaClass.name} msg=${error.message} $diag\n$stack"
+                    )
+                    AndroidStudyState.Failed("Study action failed.", sessionId)
                 }
             }
             recordQuickReviewCompletion(event, current, updated)
