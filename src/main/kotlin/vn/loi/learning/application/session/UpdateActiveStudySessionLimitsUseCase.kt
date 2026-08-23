@@ -25,6 +25,7 @@ class UpdateActiveStudySessionLimitsUseCase(
             vn.loi.learning.domain.study.recall.StudyMode.LEARN_NEW -> 0
             else -> reviewLimit
         }
+
         require(effectiveNewLimit >= 0 && effectiveReviewLimit >= 0 && effectiveNewLimit + effectiveReviewLimit > 0) {
             "Giới hạn phiên học phải không âm và tổng phải lớn hơn 0."
         }
@@ -61,12 +62,7 @@ class UpdateActiveStudySessionLimitsUseCase(
         val currentOrigin = currentUncompletedItem?.let { existingQueue.originOf(it) ?: SessionItemOrigin.NEW }
         val currentContentId = currentUncompletedItem?.let { existingQueue.contentIdOf(it) }
 
-        val canKeepCurrent = when {
-            currentUncompletedItem == null -> false
-            currentOrigin == SessionItemOrigin.NEW && remainingNewQuota > 0 -> true
-            currentOrigin == SessionItemOrigin.REVIEW && remainingReviewQuota > 0 -> true
-            else -> false
-        }
+        val canKeepCurrent = currentUncompletedItem != null
 
         val preservedCurrentItem = if (canKeepCurrent) currentUncompletedItem else null
         val preservedCurrentOrigin = if (canKeepCurrent) currentOrigin else null

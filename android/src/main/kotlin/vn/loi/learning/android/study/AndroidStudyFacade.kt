@@ -23,6 +23,7 @@ import vn.loi.learning.application.contentpackaging.InstalledPackageItem
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.LibraryId
 import vn.loi.learning.domain.library.model.PackageState
+import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.*
 import vn.loi.learning.domain.study.recall.*
@@ -661,7 +662,11 @@ class AndroidStudyFacade(
                 canStartLatestSessionPractice = availability?.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available,
                 canStartDifficultPractice = availability?.difficultItems is DifficultItemsReviewAvailability.Available,
                 canStartLearnedReview = availability?.learnedItems is LearnedItemsReviewAvailability.Available,
-                canLearnNew = daily != null && daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0,
+                canLearnNew = daily != null && (
+                    (daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0) ||
+                    (daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0) ||
+                    (continuousSkimEnabled() && availability?.learnedItems is LearnedItemsReviewAvailability.Available)
+                ),
                 canStartAdaptive = daily != null && if (continuousSkimEnabled()) {
                     daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0 ||
                         daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0 ||
@@ -692,34 +697,30 @@ class AndroidStudyFacade(
     }
 
     fun start(entry: AndroidSessionEntry, mode: StudyMode = StudyMode.ADAPTIVE): AndroidStudyState {
-        val scope = AndroidStartupTrace.measured("study_start_scope") { currentScope() }
-            ?: return AndroidStudyState.Failed("No active content package.")
         val requestedAt = Moment(now())
-        val actionContentIds = AndroidStartupTrace.measured("study_start_content_ids") {
-            packageContentIds(scope.installedPackageId)
-        }
-        val daily = AndroidStartupTrace.measured("study_start_daily_budget") {
-            dailyBudget(scope, requestedAt, actionContentIds)
-        }
-        val reviewAvailability = AndroidStartupTrace.measured("study_start_availability") {
-            context.engine.getLearnEntryReviewAvailability(scope, requestedAt)
-        }
-        val hasScheduledAdaptiveWork = daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0 ||
-            daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
+        val learnerId = learnerId
+        val scope = currentScope() ?: return AndroidStudyState.Failed("Active learning package is unavailable.")
+        val daily = dailyBudget(scope)
+        val reviewAvailability = context.engine.getLearnEntryReviewAvailability(scope, requestedAt)
+        val hasScheduledAdaptiveWork =
+            (daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0) ||
+                (daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0)
         val canStartRequestedMode = when (entry) {
             AndroidSessionEntry.LATEST_SESSION -> reviewAvailability.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available
             AndroidSessionEntry.DIFFICULT -> reviewAvailability.difficultItems is DifficultItemsReviewAvailability.Available
             AndroidSessionEntry.LEARNED -> reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
             AndroidSessionEntry.QUICK_REVIEW -> reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
             AndroidSessionEntry.REVIEW -> when (mode) {
-            StudyMode.LEARN_NEW -> daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
-            StudyMode.ADAPTIVE -> if (continuousSkimEnabled()) {
-                hasScheduledAdaptiveWork || reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
-            } else {
-                daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0
-            }
-            StudyMode.TYPING -> daily.reviewRemainingToday > 0 &&
-                reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
+                StudyMode.LEARN_NEW -> (daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0) ||
+                    (daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0) ||
+                    (continuousSkimEnabled() && reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available)
+                StudyMode.ADAPTIVE -> if (continuousSkimEnabled()) {
+                    hasScheduledAdaptiveWork || reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
+                } else {
+                    daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0
+                }
+                StudyMode.TYPING -> daily.reviewRemainingToday > 0 &&
+                    reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
             }
         }
         if (!canStartRequestedMode) {
@@ -740,7 +741,9 @@ class AndroidStudyFacade(
                 ) {
                     if (mode == StudyMode.LEARN_NEW && daily.limits.newPerDay > active.policy.newItemLimit) {
                         try {
-                            context.engine.updateActiveSessionLimits(active.id, daily.limits.newPerDay, active.policy.reviewItemLimit)
+                            val effNew = active.newItemsReviewed + daily.newRemainingToday
+                            val effRev = active.reviewItemsReviewed + daily.reviewRemainingToday
+                            context.engine.updateActiveSessionLimits(active.id, effNew, effRev)
                         } catch (_: Exception) {}
                     }
                     return loadExact(active.id.value)
@@ -753,6 +756,7 @@ class AndroidStudyFacade(
             }
         }
 
+        val actionContentIds = packageContentIds(scope.installedPackageId)
         val session = AndroidStartupTrace.measured("study_start_session_creation") { when (entry) {
             AndroidSessionEntry.REVIEW -> if (
                 mode == StudyMode.ADAPTIVE && continuousSkimEnabled() && !hasScheduledAdaptiveWork
@@ -769,7 +773,16 @@ class AndroidStudyFacade(
                 }
             } else {
                 val dailyPolicy = when (mode) {
-                    StudyMode.LEARN_NEW -> SessionPolicy(newItemLimit = daily.newRemainingToday, reviewItemLimit = 0)
+                    StudyMode.LEARN_NEW -> when {
+                        daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0 ->
+                            SessionPolicy(newItemLimit = daily.newRemainingToday, reviewItemLimit = 0)
+                        daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0 ->
+                            SessionPolicy(newItemLimit = 0, reviewItemLimit = minOf(daily.reviewRemainingToday, daily.dueReviewCount))
+                        continuousSkimEnabled() -> {
+                            return startLearnNewSkim(scope, null)
+                        }
+                        else -> SessionPolicy(newItemLimit = 0, reviewItemLimit = 0)
+                    }
                     StudyMode.ADAPTIVE -> if (continuousSkimEnabled()) {
                         SessionPolicy(
                             newItemLimit = daily.newRemainingToday,
@@ -799,16 +812,20 @@ class AndroidStudyFacade(
                 StartDifficultItemsReviewRequest(scope, requestedAt)
             )) {
                 is StartDifficultItemsReviewResult.Accepted -> result.session
-                else -> return AndroidStudyState.Failed("Again/Hard Practice is unavailable.")
+                else -> return AndroidStudyState.Failed("Difficult-items Practice is unavailable.")
             }
             AndroidSessionEntry.LEARNED -> when (val result = context.engine.startLearnedItemsReview(
                 StartLearnedItemsReviewRequest(scope, requestedAt)
             )) {
                 is StartLearnedItemsReviewResult.Accepted -> result.session
-                else -> return AndroidStudyState.Failed("Learned-item Review is unavailable.")
+                else -> return AndroidStudyState.Failed("Learned-items Review is unavailable.")
             }
             AndroidSessionEntry.QUICK_REVIEW -> when (val result = context.engine.startLearnedItemsReview(
-                StartLearnedItemsReviewRequest(scope, requestedAt, PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW)
+                StartLearnedItemsReviewRequest(
+                    scope,
+                    requestedAt,
+                    PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW
+                )
             )) {
                 is StartLearnedItemsReviewResult.Accepted -> result.session
                 else -> return AndroidStudyState.Failed("Quick Review is unavailable.")
@@ -910,37 +927,36 @@ class AndroidStudyFacade(
         )
     }
 
-    fun diagnoseCurrentState(sessionId: String?): String {
-        return runCatching {
-            val sid = sessionId?.let(::SessionId) ?: currentItem?.session?.id
-            val session = sid?.let { context.engine.getSession(it) }
-            val queue = sid?.let { context.studyQueue.get(it) }
-            val progress = sid?.let { context.engine.getStudyQueueProgress(it) }
-            "sessionId=${sid?.value} studyMode=${session?.studyMode} sessionItemId=${session?.currentLearningItemId?.value} answerRevealed=${session?.answerRevealed} facadeItemId=${currentItem?.item?.learningItem?.id?.value} queueItemId=${queue?.currentLearningItemId?.value} queuePos=${progress?.currentIndex}/${progress?.totalItemCount} queueCompleted=${queue?.isCompleted}"
-        }.getOrElse { "diag_failed=${it.message}" }
-    }
+    fun diagnoseCurrentState(sessionId: String? = null): String = runCatching {
+        val sid = sessionId?.let(::SessionId) ?: currentItem?.session?.id
+        val session = sid?.let { context.engine.getSession(it) }
+        val queue = sid?.let { context.studyQueue.get(it) }
+        val progress = sid?.let { context.engine.getStudyQueueProgress(it) }
+        "sessionId=${sid?.value} studyMode=${session?.studyMode} sessionItemId=${session?.currentLearningItemId?.value} answerRevealed=${session?.answerRevealed} facadeItemId=${currentItem?.item?.learningItem?.id?.value} queueItemId=${queue?.currentLearningItemId?.value} queuePos=${progress?.currentIndex}/${progress?.totalItemCount} queueCompleted=${queue?.isCompleted}"
+    }.getOrElse { "diag_failed=${it.message}" }
 
     fun updateDailyLimits(state: AndroidStudyState.Runtime, newLimit: Int, reviewLimit: Int): AndroidStudyState {
         val item = currentItem ?: return state
+        val session = item.session
         return runCatching {
             AndroidStartupTrace.write(
                 false,
-                "phase=study_update_limits_start session=${item.session.id.value} pkg=${item.session.installedPackageId?.value} mode=${item.session.studyMode} oldNewLimit=${item.session.policy.newItemLimit} oldReviewLimit=${item.session.policy.reviewItemLimit} reqNewLimit=$newLimit reqReviewLimit=$reviewLimit"
+                "phase=study_update_limits_start session=${session.id.value} pkg=${session.installedPackageId?.value} mode=${session.studyMode} oldNewLimit=${session.policy.newItemLimit} oldReviewLimit=${session.policy.reviewItemLimit} reqNewLimit=$newLimit reqReviewLimit=$reviewLimit"
             )
-            val updatedSession = context.engine.updateActiveSessionLimits(item.session.id, newLimit, reviewLimit)
-            val queueProgress = context.engine.getStudyQueueProgress(item.session.id)
-            val queueSnapshot = context.studyQueue.get(item.session.id)
+            val updatedSession = context.engine.updateActiveSessionLimits(session.id, newLimit, reviewLimit)
+            val queueProgress = context.engine.getStudyQueueProgress(session.id)
+            val queueSnapshot = context.studyQueue.get(session.id)
             val newInQueue = queueSnapshot?.itemOrigins?.values?.count { it == SessionItemOrigin.NEW } ?: 0
             val reviewInQueue = queueSnapshot?.itemOrigins?.values?.count { it == SessionItemOrigin.REVIEW } ?: 0
             AndroidStartupTrace.write(
                 false,
-                "phase=study_update_limits_success session=${item.session.id.value} mode=${updatedSession.studyMode} effNewLimit=${updatedSession.policy.newItemLimit} effReviewLimit=${updatedSession.policy.reviewItemLimit} queueSize=${queueProgress?.totalItemCount} queueCurrent=${queueSnapshot?.currentLearningItemId?.value} newCountInQueue=$newInQueue reviewCountInQueue=$reviewInQueue"
+                "phase=study_update_limits_success session=${session.id.value} mode=${updatedSession.studyMode} effNewLimit=${updatedSession.policy.newItemLimit} effReviewLimit=${updatedSession.policy.reviewItemLimit} queueSize=${queueProgress?.totalItemCount} queueCurrent=${queueSnapshot?.currentLearningItemId?.value} newCountInQueue=$newInQueue reviewCountInQueue=$reviewInQueue"
             )
-            loadExact(item.session.id.value)
+            loadExact(session.id.value)
         }.getOrElse { error ->
-            val diag = diagnoseCurrentState(item.session.id.value)
+            val diag = diagnoseCurrentState(session.id.value)
             AndroidStartupTrace.write(true, "phase=study_update_limits_failed error=${error.javaClass.name} msg=${error.message} $diag\n${error.stackTraceToString()}")
-            AndroidStudyState.Failed(error.message ?: "Không thể cập nhật giới hạn phiên học.", item.session.id.value)
+            AndroidStudyState.Failed(error.message ?: "Không thể cập nhật giới hạn phiên học.", session.id.value)
         }
     }
 
@@ -1025,7 +1041,15 @@ class AndroidStudyFacade(
                 "Ôn từ vừa học · Vòng ${queueSnapshot.practiceRound}"
             vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT ->
                 "Again / Hard · còn ${queueSnapshot.fixedPracticeMembership.size} từ"
-            else -> if (session.studyMode == StudyMode.ADAPTIVE &&
+            else -> if (session.studyMode == StudyMode.LEARN_NEW) {
+                when {
+                    session.policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY ->
+                        "Ôn lướt · Vòng ${queueSnapshot.practiceRound + 1}"
+                    session.policy.newItemLimit > 0 && session.newItemsReviewed < session.policy.newItemLimit ->
+                        "Học từ mới"
+                    else -> "Ôn tập đến hạn"
+                }
+            } else if (session.studyMode == StudyMode.ADAPTIVE &&
                 queueSnapshot.practiceLoopPolicy == PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED
             ) {
                 "Adaptive · Continuous practice · Round ${queueSnapshot.practiceRound + 1}"
@@ -1068,16 +1092,20 @@ class AndroidStudyFacade(
     }
 
     fun revealIntroduction(state: AndroidStudyState.Introduction): AndroidStudyState {
-        if (state.focusedPracticeKind == FocusedPracticeKind.DIFFICULT) {
+        val sessionId = SessionId(state.sessionId)
+        val session = context.engine.getSession(sessionId)
+        if (state.focusedPracticeKind == FocusedPracticeKind.DIFFICULT ||
+            state.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW ||
+            session?.policy?.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY
+        ) {
             return state.copy(revealedStage = true)
         }
-        if (state.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW) return state.copy(revealedStage = true)
-        val session = context.engine.completeContentIntroduction(
-            sessionId = SessionId(state.sessionId),
+        val updatedSession = context.engine.completeContentIntroduction(
+            sessionId = sessionId,
             contentId = ContentId(state.contentId),
             learningItemId = LearningItemId(state.learningItemId)
         )
-        currentItem = currentItem?.copy(session = session)
+        currentItem = currentItem?.copy(session = updatedSession)
         return state.copy(revealedStage = true)
     }
 
@@ -1095,6 +1123,25 @@ class AndroidStudyFacade(
         return try {
             val sessionId = SessionId(state.sessionId)
             val learningItemId = LearningItemId(state.learningItemId)
+            val session = requireNotNull(context.engine.getSession(sessionId)) { "Study session is unavailable." }
+
+            if (session.policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) {
+                val practiceResult = when (rating) {
+                    ReviewRating.AGAIN -> PracticeRecallResult.INCORRECT
+                    ReviewRating.HARD -> PracticeRecallResult.ALMOST_CORRECT
+                    ReviewRating.GOOD, ReviewRating.EASY -> PracticeRecallResult.CORRECT
+                }
+                context.studyQueue.advancePractice(sessionId, practiceResult)
+                val contentIds = sessionContentSnapshot?.takeIf { it.sessionId == sessionId }?.contentIds
+                return loadWithSnapshot(
+                    restoredSessionId = state.sessionId,
+                    knownContentIds = contentIds,
+                    knownDaily = null,
+                    knownSession = session,
+                    deferHud = deferHud
+                )
+            }
+
             val updatedSession = AndroidStartupTrace.measured("introduction_rating_prepare") {
                 if (state.revealed) {
                     requireNotNull(context.engine.getSession(sessionId)) { "Study session is unavailable." }
@@ -1410,7 +1457,14 @@ class AndroidStudyFacade(
                 )
             )
             load(state.sessionId)
-        } else if (state is AndroidStudyState.Introduction) load(state.sessionId)
+        } else if (state is AndroidStudyState.Introduction) {
+            val sessionId = SessionId(state.sessionId)
+            val session = context.engine.getSession(sessionId)
+            if (session?.policy?.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) {
+                context.studyQueue.advancePractice(sessionId, PracticeRecallResult.REVEALED)
+            }
+            load(state.sessionId)
+        }
         else if (state.completed && plan != null) load(plan.sessionId.value) else state
     }
 
@@ -1692,6 +1746,45 @@ class AndroidStudyFacade(
         val completed = if (session.status == SessionStatus.ACTIVE) {
             context.engine.finishSession(session.id, Moment(now()))
         } else session
+
+        if (completed.studyMode == StudyMode.LEARN_NEW) {
+            val scope = currentScope()
+            if (scope != null) {
+                val daily = dailyBudget(scope)
+                val remainingReview = daily.reviewRemainingToday
+                val dueCount = daily.dueReviewCount
+
+                // If Phase 1 (NEW) completed and DUE review work is available:
+                if (completed.policy.newItemLimit > 0 &&
+                    completed.policy.evaluationPolicy == SessionEvaluationPolicy.EVALUATIVE &&
+                    remainingReview > 0 && dueCount > 0
+                ) {
+                    val duePolicy = SessionPolicy(
+                        newItemLimit = 0,
+                        reviewItemLimit = minOf(remainingReview, dueCount)
+                    )
+                    val dueSession = context.engine.startSession(
+                        StartStudySessionCommand(
+                            SessionId(UUID.randomUUID().toString()),
+                            learnerId,
+                            Moment(now()),
+                            policy = duePolicy,
+                            installedPackageId = scope.installedPackageId,
+                            topicId = scope.topicId,
+                            studyMode = StudyMode.LEARN_NEW,
+                            includedContentIds = packageContentIds(scope.installedPackageId)
+                        )
+                    )
+                    return loadExact(dueSession.id.value)
+                }
+
+                // If Phase 1 (NEW) or Phase 2 (DUE) finished and Continuous Skim is enabled:
+                if (continuousSkimEnabled()) {
+                    return startLearnNewSkim(scope, completed)
+                }
+            }
+        }
+
         if (continuousSkimEnabled() &&
             completed.policy.evaluationPolicy == SessionEvaluationPolicy.EVALUATIVE &&
             completed.studyMode == StudyMode.ADAPTIVE
@@ -1713,6 +1806,101 @@ class AndroidStudyFacade(
             newCompleted = completed.newItemsReviewed,
             reviewCompleted = completed.reviewItemsReviewed
         )
+    }
+
+    private fun startLearnNewSkim(scope: LearnEntryScope, completed: StudySession?): AndroidStudyState {
+        val nowMoment = Moment(now())
+        val packageContentIds: Set<ContentId> = packageContentIds(scope.installedPackageId) ?: scope.includedContentIds
+        val allItems: List<LearningItem> = context.learningItemRepository?.findAllEnabled().orEmpty()
+        val scopedItems: List<LearningItem> = allItems.filter { it.contentId in packageContentIds }
+
+        val stateSnapshot = context.memoryStateRepository?.findAll().orEmpty()
+        val learnedStates = stateSnapshot
+            .filter { it.reviewCount > 0 && it.lastReviewedAt != null && it.stage != LearningStage.SUSPENDED }
+            .associateBy { it.learningItemId }
+
+        val eventSnapshot = context.reviewEventRepository?.findAll(learnerId).orEmpty()
+        val latestEventAt = linkedMapOf<LearningItemId, Moment>()
+        eventSnapshot.forEach { latestEventAt[it.learningItemId] = it.reviewedAt }
+
+        val allLearned: List<LearningItem> = scopedItems.asSequence()
+            .filter { it.isEnabled }
+            .filter { it.id in learnedStates || it.id in latestEventAt }
+            .distinctBy { it.contentId }
+            .toList()
+
+        if (allLearned.isEmpty()) {
+            val daily = dailyBudget(scope)
+            return AndroidStudyState.Completion(
+                sessionId = completed?.id?.value.orEmpty(),
+                canUndo = completed?.undoableReview != null,
+                dailyBudget = daily,
+                modeFamily = completed?.let(::androidCompletionModeFamily) ?: "Learn New",
+                totalCompleted = completed?.totalReviews ?: 0,
+                newCompleted = completed?.newItemsReviewed ?: 0,
+                reviewCompleted = completed?.reviewItemsReviewed ?: 0
+            )
+        }
+
+        val date = java.time.Instant.ofEpochMilli(nowMoment.epochMillis).atZone(zoneId()).toLocalDate()
+        val dayStart = date.atStartOfDay(zoneId()).toInstant().toEpochMilli()
+        val dayEnd = date.plusDays(1).atStartOfDay(zoneId()).toInstant().toEpochMilli()
+        val todayEvents = eventSnapshot.filter { it.reviewedAt.epochMillis in dayStart until dayEnd }
+
+        val todayNewItemIds = todayEvents.asSequence()
+            .filter { it.stateBefore.reviewCount == 0 }
+            .map { it.learningItemId }
+            .distinct()
+            .toList()
+        val todayDueItemIds = todayEvents.asSequence()
+            .filter { it.stateBefore.reviewCount > 0 }
+            .map { it.learningItemId }
+            .distinct()
+            .toList()
+
+        val learnedMap: Map<LearningItemId, LearningItem> = allLearned.associateBy { it.id }
+        val prioritizedLearned = LinkedHashSet<LearningItem>()
+
+        // Priority 1: NEW items learned today (or in this session)
+        todayNewItemIds.forEach { id -> learnedMap[id]?.let { prioritizedLearned += it } }
+        // Priority 2: DUE items reviewed today (or in this session)
+        todayDueItemIds.forEach { id -> learnedMap[id]?.let { prioritizedLearned += it } }
+        // Priority 3: Other learned items in active package
+        allLearned.forEach { prioritizedLearned += it }
+
+        val selected: List<LearningItem> = prioritizedLearned.toList()
+        val uuid = UUID.randomUUID()
+        val sessionId = SessionId(uuid.toString())
+
+        val session = StudySession.start(
+            id = sessionId,
+            learnerId = learnerId,
+            startedAt = nowMoment,
+            policy = SessionPolicy(
+                newItemLimit = 0,
+                reviewItemLimit = selected.size,
+                allowRepeatInSameSession = true,
+                evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
+                practiceLoopPolicy = PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED
+            ),
+            includedContentIds = packageContentIds,
+            topicId = scope.topicId,
+            installedPackageId = scope.installedPackageId,
+            studyMode = StudyMode.LEARN_NEW
+        )
+        context.studySessionRepository?.save(session)
+        val queue = context.studyQueue.create(
+            sessionId = sessionId,
+            createdAt = nowMoment,
+            learningItemIds = selected.map { it.id },
+            itemOrigins = selected.associate { it.id to SessionItemOrigin.REVIEW },
+            itemContentIds = selected.associate { it.id to it.contentId },
+            configuredReviewTarget = selected.size,
+            effectiveReviewWorkload = selected.map { it.contentId }.distinct().size,
+            practiceSeed = uuid.mostSignificantBits xor uuid.leastSignificantBits,
+            practiceLoopPolicy = PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED
+        )
+        return loadExact(session.id.value)
     }
 
     private fun reconcileActiveSession(): StudySession? {
