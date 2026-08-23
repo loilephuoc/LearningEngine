@@ -9,6 +9,28 @@ import vn.loi.learning.domain.sync.protocol.*
 import vn.loi.learning.infrastructure.sync.supabase.*
 
 class DesktopSyncControllerTest {
+    @Test fun `restart restores an existing valid session without login`() {
+        val root = Files.createTempDirectory("desktop-sync-controller-")
+        try {
+            val connectionStore = DesktopSupabaseConnectionStore(root.resolve("sync.properties"))
+            connectionStore.save(DesktopSupabaseConnection("https://project.supabase.co", "publishable"))
+            val controller = DesktopSyncController(connectionStore, { DesktopSyncController.Runtime(FakeSessions(session(USER)), DesktopManualSyncOperation { _, _ -> DesktopManualSyncSummary(0, 0, 0, 0, 0, 0, 0) }) })
+            assertEquals(DesktopSyncPhase.READY, controller.state.value.phase)
+            assertEquals("learner@example.com", controller.state.value.signedInEmail)
+        } finally { root.toFile().deleteRecursively() }
+    }
+
+    @Test fun `restart without persisted session remains signed out`() {
+        val root = Files.createTempDirectory("desktop-sync-controller-")
+        try {
+            val connectionStore = DesktopSupabaseConnectionStore(root.resolve("sync.properties"))
+            connectionStore.save(DesktopSupabaseConnection("https://project.supabase.co", "publishable"))
+            val controller = DesktopSyncController(connectionStore, { runtime() })
+            assertEquals(DesktopSyncPhase.SIGNED_OUT, controller.state.value.phase)
+            assertNull(controller.state.value.signedInEmail)
+        } finally { root.toFile().deleteRecursively() }
+    }
+
     @Test fun `startup and recomposition-equivalent state reads perform no network or sync`() {
         val root = Files.createTempDirectory("desktop-sync-controller-")
         try {

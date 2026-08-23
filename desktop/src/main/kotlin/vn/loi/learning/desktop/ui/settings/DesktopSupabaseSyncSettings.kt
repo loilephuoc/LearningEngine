@@ -45,7 +45,7 @@ fun DesktopSupabaseSyncSettings(controller: DesktopSyncController) {
                     val submitted = password.toCharArray(); password = ""
                     scope.launch(Dispatchers.IO) { controller.signIn(email, submitted) }
                 }) { Text("Đăng nhập") }
-                Text("Phiên đăng nhập chỉ được giữ trong bộ nhớ; khởi động lại ứng dụng cần đăng nhập lại.", style = MaterialTheme.typography.bodySmall)
+                Text("Phiên đăng nhập sẽ được ghi nhớ an toàn trên thiết bị này và có thể yêu cầu đăng nhập lại khi hết hiệu lực.", style = MaterialTheme.typography.bodySmall)
             } else {
                 Text("Đã đăng nhập: ${state.signedInEmail}")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

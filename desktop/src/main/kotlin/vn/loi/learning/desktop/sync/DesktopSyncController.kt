@@ -35,6 +35,26 @@ class DesktopSyncController(
     val state: StateFlow<DesktopSyncUiState> = mutableState.asStateFlow()
     @Volatile private var runtime: Runtime? = null
 
+    init {
+        if (initialConnection != null) {
+            runtime = runtimeFactory(initialConnection.validated())
+            try {
+                runtime?.sessions?.currentSession()?.let { session ->
+                    mutableState.value = mutableState.value.copy(
+                        phase = DesktopSyncPhase.READY,
+                        signedInEmail = session.userEmail,
+                        message = "Đã khôi phục phiên đăng nhập trên thiết bị này."
+                    )
+                }
+            } catch (failure: SupabaseAuthException) {
+                mutableState.value = mutableState.value.copy(
+                    phase = if (failure.code == "SYNC_AUTH_NETWORK_ERROR") DesktopSyncPhase.OFFLINE else DesktopSyncPhase.SIGNED_OUT,
+                    message = if (failure.code == "SYNC_AUTH_NETWORK_ERROR") "Chưa thể xác minh phiên do mất kết nối." else "Phiên đã hết hiệu lực. Vui lòng đăng nhập lại."
+                )
+            }
+        }
+    }
+
     fun currentSession(): SupabaseSession? = runtime?.sessions?.currentSession()
     fun currentAccountId(): SyncAccountId? = currentSession()?.accountId
     fun currentDeviceId(): SyncDeviceId = SyncDeviceId(DEVICE_ID)
@@ -57,7 +77,7 @@ class DesktopSyncController(
         }
         try {
             val session = runtime!!.sessions.signIn(email, password)
-            mutableState.value = mutableState.value.copy(phase = DesktopSyncPhase.READY, signedInEmail = session.userEmail, message = "Đã đăng nhập. Phiên chỉ được giữ trong bộ nhớ.")
+            mutableState.value = mutableState.value.copy(phase = DesktopSyncPhase.READY, signedInEmail = session.userEmail, message = "Đã đăng nhập. Phiên sẽ được ghi nhớ trên thiết bị này.")
         } catch (failure: Exception) {
             password.fill('\u0000')
             mutableState.value = mutableState.value.copy(phase = DesktopSyncPhase.SIGNED_OUT, message = authMessage(failure))
