@@ -866,7 +866,8 @@ object LearningApplicationFactory {
                 contentPackageRepository = contentPackageRepository,
                 transactionRunner = transactionRunner,
                 studySessionRepository = studySessionRepository,
-                mediaStorage = mediaDirectory?.let { vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(it) }
+                mediaStorage = mediaDirectory?.let { vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(it) },
+                localSyncStateRepository = localSyncStateRepository
             )
         val lessonBrowser = vn.loi.learning.application.contentpackaging.browser.LessonBrowserQueryService(packageBrowserQuery)
         val scopedStudy = vn.loi.learning.application.session.ScopedStudySessionService(

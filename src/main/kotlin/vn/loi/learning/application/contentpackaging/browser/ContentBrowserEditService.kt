@@ -10,8 +10,10 @@ import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.port.StudySessionRepository
+import vn.loi.learning.application.sync.LocalSyncStateRepository
 import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
+import vn.loi.learning.domain.content.library.model.LibraryDescriptor
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentCustomField
 import vn.loi.learning.domain.content.model.ContentCustomFields
@@ -26,6 +28,7 @@ import vn.loi.learning.domain.library.repository.InstalledPackageRepository
 import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.learning.model.LearningMode
+import vn.loi.learning.domain.sync.protocol.*
 
 data class PackageMediaReferenceRepairResult(
     val totalInspected: Int,
@@ -45,7 +48,10 @@ class ContentBrowserEditService(
     private val contentPackageRepository: ContentPackageRepository? = null,
     private val transactionRunner: TransactionRunner? = null,
     private val studySessionRepository: StudySessionRepository? = null,
-    private val mediaStorage: ContentMediaStorage? = null
+    private val mediaStorage: ContentMediaStorage? = null,
+    private val localSyncStateRepository: LocalSyncStateRepository? = null,
+    private val syncAccountProvider: (() -> SyncAccountId?)? = null,
+    private val syncDeviceIdProvider: (() -> SyncDeviceId)? = null
 ) {
 
     /**
@@ -252,12 +258,18 @@ class ContentBrowserEditService(
         val existing = contentRepository.findById(contentId)
             ?: throw IllegalArgumentException("Content not found: ${contentId.value}")
 
+        val normalizedQuestion = questionText.trim()
+        val normalizedAnswer = answerText.trim().takeIf { it.isNotBlank() }
+        val normalizedPronunciation = pronunciation.trim().takeIf { it.isNotBlank() }
+        val normalizedExample = exampleText.trim().takeIf { it.isNotBlank() }
+        val normalizedTranslation = exampleTranslation.trim().takeIf { it.isNotBlank() }
+
         val updatedText = existing.text.copy(
-            primaryText = questionText.trim(),
-            translatedText = answerText.trim().takeIf { it.isNotBlank() },
-            pronunciation = pronunciation.trim().takeIf { it.isNotBlank() },
-            exampleText = exampleText.trim().takeIf { it.isNotBlank() },
-            exampleTranslation = exampleTranslation.trim().takeIf { it.isNotBlank() }
+            primaryText = normalizedQuestion,
+            translatedText = normalizedAnswer,
+            pronunciation = normalizedPronunciation,
+            exampleText = normalizedExample,
+            exampleTranslation = normalizedTranslation
         )
 
         val updatedMedia = existing.media.copy(
@@ -276,7 +288,75 @@ class ContentBrowserEditService(
             customFields = updatedCustomFields
         )
 
-        contentRepository.save(updated)
+        if (updated == existing) {
+            return
+        }
+
+        val deltas = mutableListOf<ContentFieldDelta>()
+        if (existing.text.primaryText != updatedText.primaryText) {
+            deltas += ContentFieldDelta(
+                field = ContentField.QUESTION,
+                operation = DeltaOperation.SET,
+                value = updatedText.primaryText
+            )
+        }
+        if (existing.text.translatedText != updatedText.translatedText) {
+            val value = updatedText.translatedText
+            deltas += ContentFieldDelta(
+                field = ContentField.ANSWER,
+                operation = if (value != null) DeltaOperation.SET else DeltaOperation.REMOVE,
+                value = value
+            )
+        }
+        if (existing.text.exampleText != updatedText.exampleText) {
+            val value = updatedText.exampleText
+            deltas += ContentFieldDelta(
+                field = ContentField.EXAMPLE,
+                operation = if (value != null) DeltaOperation.SET else DeltaOperation.REMOVE,
+                value = value
+            )
+        }
+        if (existing.text.exampleTranslation != updatedText.exampleTranslation) {
+            val value = updatedText.exampleTranslation
+            deltas += ContentFieldDelta(
+                field = ContentField.TRANSLATION,
+                operation = if (value != null) DeltaOperation.SET else DeltaOperation.REMOVE,
+                value = value
+            )
+        }
+
+        val accountId = syncAccountProvider?.invoke()
+        val outboundChanges = if (localSyncStateRepository != null && accountId != null && deltas.isNotEmpty()) {
+            val deviceId = syncDeviceIdProvider?.invoke() ?: SyncDeviceId("desktop")
+            deltas.map { delta ->
+                val eventId = SyncEventId("sync_event_" + UUID.randomUUID().toString().replace("-", "").take(16))
+                val idempotencyKey = IdempotencyKey("key_" + UUID.randomUUID().toString().replace("-", "").take(16))
+                OutboundSyncChange(
+                    accountId = accountId,
+                    eventId = eventId,
+                    idempotencyKey = idempotencyKey,
+                    sourceDeviceId = deviceId,
+                    entityId = SyncEntityId(contentId.value),
+                    payloadVersion = 1,
+                    delta = delta
+                )
+            }
+        } else {
+            emptyList()
+        }
+
+        val writeBlock = {
+            contentRepository.save(updated)
+            outboundChanges.forEach { change ->
+                localSyncStateRepository?.enqueue(change)
+            }
+        }
+
+        if (transactionRunner != null) {
+            transactionRunner.runInTransaction { writeBlock() }
+        } else {
+            writeBlock()
+        }
     }
 
     fun updateTextFields(

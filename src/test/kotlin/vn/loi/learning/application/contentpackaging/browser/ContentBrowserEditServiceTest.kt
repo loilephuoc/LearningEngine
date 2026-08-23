@@ -31,8 +31,12 @@ import vn.loi.learning.domain.library.model.PackageVersion
 import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.learning.model.LearningMode
+import vn.loi.learning.domain.sync.protocol.*
+import vn.loi.learning.application.sync.*
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
+import vn.loi.learning.infrastructure.sync.InMemorySyncTransport
+import java.nio.file.Files
 
 /**
  * CP2 Tests — Persist Content Edit.
@@ -662,5 +666,242 @@ class ContentBrowserEditServiceTest {
 
         val learningItemsAfter = learningItemRepo.findAll()
         assertEquals(learningItemsBefore, learningItemsAfter)
+    }
+
+    // ---------------------------------------------------------------------------
+    // Sync Outbox Regression Tests
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun `Desktop canonical Question edit generates persistent outbox event`() {
+        val root = Files.createTempDirectory("edit-sync-outbox-question-")
+        try {
+            val context = LearningApplicationFactory.createPersisted(root, false)
+            val contentId = ContentId("content-live-1")
+            val original = Content(
+                id = contentId,
+                type = ContentType.WORD,
+                text = ContentText(
+                    primaryText = "10 percent",
+                    translatedText = "10 phan tram",
+                    exampleText = "He gave a 10 percent discount.",
+                    exampleTranslation = "Anh ay giam gia 10 phan tram."
+                ),
+                customFields = ContentCustomFields(setOf(
+                    ContentCustomField(ContentFieldId("custom"), "preserve me")
+                ))
+            )
+            context.contentRepository!!.save(original)
+
+            val account = SyncAccountId("user-uat-account")
+            val service = ContentBrowserEditService(
+                contentRepository = context.contentRepository,
+                transactionRunner = requireNotNull(context.transactionRunner),
+                localSyncStateRepository = context.localSyncStateRepository,
+                syncAccountProvider = { account },
+                syncDeviceIdProvider = { SyncDeviceId("desktop-test") }
+            )
+
+            service.updateTextFields(
+                contentId = contentId,
+                questionText = "10 percent CHANGE TO TEST SYNS",
+                answerText = "10 phan tram",
+                pronunciation = "",
+                partOfSpeech = "WORD",
+                exampleText = "He gave a 10 percent discount.",
+                exampleTranslation = "Anh ay giam gia 10 phan tram."
+            )
+
+            val persisted = context.contentRepository.findById(contentId)!!
+            assertEquals("10 percent CHANGE TO TEST SYNS", persisted.text.primaryText)
+            assertEquals("preserve me", persisted.customFields[ContentFieldId("custom")]?.value)
+
+            val pending = context.localSyncStateRepository!!.pendingOutbox(account)
+            assertEquals(1, pending.size)
+            val event = pending.single()
+            assertEquals(account, event.accountId)
+            assertEquals(SyncDeviceId("desktop-test"), event.sourceDeviceId)
+            assertEquals(SyncEntityId("content-live-1"), event.entityId)
+            val delta = event.delta as ContentFieldDelta
+            assertEquals(ContentField.QUESTION, delta.field)
+            assertEquals(DeltaOperation.SET, delta.operation)
+            assertEquals("10 percent CHANGE TO TEST SYNS", delta.value)
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `Answer Example Translation field edits generate expected deltas and REMOVE when cleared`() {
+        val root = Files.createTempDirectory("edit-sync-outbox-fields-")
+        try {
+            val context = LearningApplicationFactory.createPersisted(root, false)
+            val contentId = ContentId("content-multi-fields")
+            val original = Content(
+                id = contentId,
+                type = ContentType.WORD,
+                text = ContentText(
+                    primaryText = "Word",
+                    translatedText = "Tu",
+                    exampleText = "This is a word.",
+                    exampleTranslation = "Day la mot tu."
+                )
+            )
+            context.contentRepository!!.save(original)
+
+            val account = SyncAccountId("user-multi")
+            val service = ContentBrowserEditService(
+                contentRepository = context.contentRepository,
+                transactionRunner = requireNotNull(context.transactionRunner),
+                localSyncStateRepository = context.localSyncStateRepository,
+                syncAccountProvider = { account },
+                syncDeviceIdProvider = { SyncDeviceId("desktop-test") }
+            )
+
+            // Edit Answer and Translation, clear Example
+            service.updateTextFields(
+                contentId = contentId,
+                questionText = "Word",
+                answerText = "Tu ngu",
+                pronunciation = "",
+                partOfSpeech = "WORD",
+                exampleText = "",
+                exampleTranslation = "Day la mot tu ngu."
+            )
+
+            val pending = context.localSyncStateRepository!!.pendingOutbox(account)
+            assertEquals(3, pending.size)
+            assertEquals(listOf(ContentField.ANSWER, ContentField.EXAMPLE, ContentField.TRANSLATION), pending.map { (it.delta as ContentFieldDelta).field })
+
+            val answerDelta = pending[0].delta as ContentFieldDelta
+            assertEquals(DeltaOperation.SET, answerDelta.operation)
+            assertEquals("Tu ngu", answerDelta.value)
+
+            val exampleDelta = pending[1].delta as ContentFieldDelta
+            assertEquals(DeltaOperation.REMOVE, exampleDelta.operation)
+            assertNull(exampleDelta.value)
+
+            val translationDelta = pending[2].delta as ContentFieldDelta
+            assertEquals(DeltaOperation.SET, translationDelta.operation)
+            assertEquals("Day la mot tu ngu.", translationDelta.value)
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `unchanged save produces no outbox event and retry is idempotent`() {
+        val root = Files.createTempDirectory("edit-sync-outbox-noop-")
+        try {
+            val context = LearningApplicationFactory.createPersisted(root, false)
+            val contentId = ContentId("content-noop")
+            val original = Content(
+                id = contentId,
+                type = ContentType.WORD,
+                text = ContentText(primaryText = "Noop", translatedText = "Khong doi")
+            )
+            context.contentRepository!!.save(original)
+
+            val account = SyncAccountId("user-noop")
+            val service = ContentBrowserEditService(
+                contentRepository = context.contentRepository,
+                transactionRunner = requireNotNull(context.transactionRunner),
+                localSyncStateRepository = context.localSyncStateRepository,
+                syncAccountProvider = { account }
+            )
+
+            // Unchanged save
+            service.updateTextFields(
+                contentId = contentId,
+                questionText = "Noop",
+                answerText = "Khong doi",
+                pronunciation = "",
+                partOfSpeech = "WORD",
+                exampleText = "",
+                exampleTranslation = ""
+            )
+
+            assertTrue(context.localSyncStateRepository!!.pendingOutbox(account).isEmpty())
+
+            // Mutation 1
+            service.updateTextFields(
+                contentId = contentId,
+                questionText = "Noop Changed",
+                answerText = "Khong doi",
+                pronunciation = "",
+                partOfSpeech = "WORD",
+                exampleText = "",
+                exampleTranslation = ""
+            )
+            assertEquals(1, context.localSyncStateRepository!!.pendingOutbox(account).size)
+
+            // Retry with exact same mutated data -> no duplicate event
+            service.updateTextFields(
+                contentId = contentId,
+                questionText = "Noop Changed",
+                answerText = "Khong doi",
+                pronunciation = "",
+                partOfSpeech = "WORD",
+                exampleText = "",
+                exampleTranslation = ""
+            )
+            assertEquals(1, context.localSyncStateRepository!!.pendingOutbox(account).size)
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `local content mutation and outbox event survive restart and are pushed and acknowledged by sync`() {
+        val root = Files.createTempDirectory("edit-sync-lifecycle-")
+        try {
+            val context1 = LearningApplicationFactory.createPersisted(root, false)
+            val contentId = ContentId("content-lifecycle")
+            val original = Content(
+                id = contentId,
+                type = ContentType.WORD,
+                text = ContentText(primaryText = "Initial Question", translatedText = "Dap an")
+            )
+            context1.contentRepository!!.save(original)
+
+            val account = SyncAccountId("user-synced")
+            val service1 = ContentBrowserEditService(
+                contentRepository = context1.contentRepository,
+                transactionRunner = requireNotNull(context1.transactionRunner),
+                localSyncStateRepository = context1.localSyncStateRepository,
+                syncAccountProvider = { account },
+                syncDeviceIdProvider = { SyncDeviceId("desktop-life") }
+            )
+
+            service1.updateTextFields(
+                contentId = contentId,
+                questionText = "Modified Question",
+                answerText = "Dap an",
+                pronunciation = "",
+                partOfSpeech = "WORD",
+                exampleText = "",
+                exampleTranslation = ""
+            )
+
+            // Restart application
+            val context2 = LearningApplicationFactory.createPersisted(root, false)
+            val persistedContent = context2.contentRepository!!.findById(contentId)!!
+            assertEquals("Modified Question", persistedContent.text.primaryText)
+
+            val pending = context2.localSyncStateRepository!!.pendingOutbox(account)
+            assertEquals(1, pending.size)
+
+            // Manual sync push
+            val transport = InMemorySyncTransport()
+            val coordinator = SyncSessionCoordinator(context2.localSyncStateRepository!!, transport)
+            val syncResult = coordinator.synchronize(account, SyncDeviceId("desktop-life"), 100) { remote ->
+                context2.contentFieldSyncService!!.applyRemote(remote)
+            }
+
+            assertEquals(1, syncResult.pushed)
+            assertTrue(context2.localSyncStateRepository!!.pendingOutbox(account).isEmpty())
+        } finally {
+            root.toFile().deleteRecursively()
+        }
     }
 }

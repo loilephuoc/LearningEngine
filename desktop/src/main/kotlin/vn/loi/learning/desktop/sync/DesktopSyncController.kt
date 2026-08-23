@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import vn.loi.learning.infrastructure.sync.supabase.*
+import vn.loi.learning.domain.sync.protocol.SyncAccountId
 import vn.loi.learning.domain.sync.protocol.SyncDeviceId
 
 enum class DesktopSyncPhase { UNCONFIGURED, SIGNED_OUT, SIGNING_IN, READY, SYNCING, SUCCESS, NO_CHANGES, OFFLINE, RELOGIN_REQUIRED, CONFLICT, PENDING_BLOB, ERROR }
@@ -33,6 +34,10 @@ class DesktopSyncController(
     private val mutableState = MutableStateFlow(DesktopSyncUiState(if (initialConnection == null) DesktopSyncPhase.UNCONFIGURED else DesktopSyncPhase.SIGNED_OUT, initialConnection))
     val state: StateFlow<DesktopSyncUiState> = mutableState.asStateFlow()
     @Volatile private var runtime: Runtime? = null
+
+    fun currentSession(): SupabaseSession? = runtime?.sessions?.currentSession()
+    fun currentAccountId(): SyncAccountId? = currentSession()?.accountId
+    fun currentDeviceId(): SyncDeviceId = SyncDeviceId(DEVICE_ID)
 
     @Synchronized fun saveConnection(url: String, key: String) {
         check(!mutableState.value.busy)

@@ -181,7 +181,7 @@ fun LearningShell(
     var onContentDataChangedRef: (() -> Unit)? = remember { null }
 
     val contentLibraryViewModel =
-        remember(applicationContext) {
+        remember(applicationContext, syncController) {
             ContentLibraryViewModel(
                 facade =
                     ContentLibraryFacade(
@@ -201,7 +201,11 @@ fun LearningShell(
                                 installedPackageRepository = applicationContext.installedPackageRepository,
                                 contentPackageRepository = applicationContext.contentPackageRepository,
                                 transactionRunner = requireNotNull(applicationContext.transactionRunner),
-                                studySessionRepository = applicationContext.studySessionRepository
+                                studySessionRepository = applicationContext.studySessionRepository,
+                                mediaStorage = contentMediaStorage,
+                                localSyncStateRepository = applicationContext.localSyncStateRepository,
+                                syncAccountProvider = { syncController?.currentAccountId() },
+                                syncDeviceIdProvider = { syncController?.currentDeviceId() ?: vn.loi.learning.domain.sync.protocol.SyncDeviceId(vn.loi.learning.desktop.sync.DesktopSyncController.DEVICE_ID) }
                             )
                         },
                         learningItemRepository = applicationContext.learningItemRepository

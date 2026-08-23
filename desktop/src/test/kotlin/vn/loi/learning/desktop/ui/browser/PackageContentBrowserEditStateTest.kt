@@ -30,8 +30,10 @@ import vn.loi.learning.domain.library.model.PackageVersion
 import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.learning.model.LearningMode
+import vn.loi.learning.domain.sync.protocol.*
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
+import java.nio.file.Files
 
 /**
  * CP1 Tests — Editable Draft State.
@@ -1392,5 +1394,54 @@ class PackageContentBrowserEditStateTest {
         assertEquals("Answer 1", state.selectedItemAnywhere?.answerText)
         assertNull(state.selectedItemAnywhere?.answerAudioRef)
         assertNull(state.selectedItemAnywhere?.exampleAudioRef)
+    }
+
+    @Test
+    fun `Desktop ContentStudio save with active sync session emits field delta outbox event`() {
+        val root = Files.createTempDirectory("desktop-studio-save-outbox-")
+        try {
+            val appContext = LearningApplicationFactory.createPersisted(root, false)
+            val account = SyncAccountId("user-desktop-editor")
+            val editService = vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
+                contentRepository = appContext.contentRepository!!,
+                contentLibraryRepository = appContext.contentLibraryRepository,
+                installedPackageRepository = appContext.installedPackageRepository,
+                contentPackageRepository = appContext.contentPackageRepository,
+                transactionRunner = appContext.transactionRunner,
+                studySessionRepository = appContext.studySessionRepository,
+                localSyncStateRepository = appContext.localSyncStateRepository,
+                syncAccountProvider = { account },
+                syncDeviceIdProvider = { SyncDeviceId("desktop-ui") }
+            )
+
+            val vm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext),
+                packageBrowserFacade = PackageContentBrowserFacade(
+                    queryService = appContext.packageBrowserQuery,
+                    editService = editService,
+                    learningItemRepository = appContext.learningItemRepository
+                )
+            )
+
+            val (_, instId) = createViewModelWithPackageInContext(appContext, contentCount = 2)
+            vm.browsePackageLessons(instId, "Persist Package")
+            vm.attemptSelectRowAutoEdit("cnt-1")
+
+            vm.updateDraftQuestion("10 percent CHANGE TO TEST SYNS")
+            vm.saveEdit()
+
+            val pending = appContext.localSyncStateRepository!!.pendingOutbox(account)
+            assertEquals(1, pending.size)
+            val event = pending.single()
+            assertEquals(account, event.accountId)
+            assertEquals(SyncDeviceId("desktop-ui"), event.sourceDeviceId)
+            assertEquals(SyncEntityId("cnt-1"), event.entityId)
+            val delta = event.delta as ContentFieldDelta
+            assertEquals(ContentField.QUESTION, delta.field)
+            assertEquals("10 percent CHANGE TO TEST SYNS", delta.value)
+        } finally {
+            root.toFile().deleteRecursively()
+        }
     }
 }
