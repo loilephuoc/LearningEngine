@@ -1,5 +1,22 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Desktop Batch TTS Hotfix 2 — fast cancellation, provider health routing, and truthful liveness UX
+
+- Fixed repeated synthesis stalls on degraded TTS voices: introduced `BatchTtsVoiceHealthTracker` circuit
+  breaker (HEALTHY, DEGRADED, CIRCUIT_OPEN, HALF_OPEN_PROBE). Hard timeouts immediately trip a voice to
+  `CIRCUIT_OPEN`, allowing subsequent targets to bypass the broken voice in 0ms and route directly to
+  healthy fallback candidates without repeatedly burning the timeout budget.
+- Fixed cancellation hanging and fatal exception handling: `BatchTtsRunner` treats coroutine cancellation
+  as a first-class normal lifecycle transition, marking all remaining targets as `CANCELLED`, saving
+  checkpoint, releasing ownership lease, logging `BATCH_TTS_BATCH_CANCELLED` (never `BATCH_FATAL`), and
+  broadcasting `isFinished = true, isCancelled = true`.
+- Truthful liveness UX: `BatchTtsSummary` and `BatchTtsDialog` expose live operation status (`currentOperation`),
+  active voice name (`currentVoiceName`), elapsed time, smoothed ETA, and items/sec throughput. "Cancel Batch"
+  provides immediate feedback with disabled button and "Đang hủy..." state until cleanly terminated.
+- Bounded attempt timeout tuned to 12s default per attempt with 15s-30s target watchdog budget.
+- Commit: `32f3e2d0`. Verification: `clean test` passes 5,252 tests (root 2,322, Android 1,059, Desktop 1,871),
+  zero failures/errors/skips. Desktop assemble, Android debug assemble, and `git diff --check` pass.
+
 ## Desktop Batch TTS Hotfix — stall recovery, dead lease reclaim, and structured diagnostics
 
 - Fixed Batch TTS stall under abrupt Edge WebSocket closure / socket hangs: `EdgeTtsEngine` isolates

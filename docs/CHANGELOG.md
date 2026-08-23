@@ -1,3 +1,18 @@
+# Desktop Batch TTS Hotfix 2 — fast cancellation, provider health routing, and truthful liveness UX
+
+- Introduced `BatchTtsVoiceHealthTracker` dynamic circuit breaker with thread-safe state machine (HEALTHY,
+  DEGRADED, CIRCUIT_OPEN, HALF_OPEN_PROBE). Hard timeouts immediately trip a voice to CIRCUIT_OPEN, allowing
+  subsequent targets to bypass the broken voice in 0ms and route directly to healthy fallback candidates.
+- Made coroutine cancellation a first-class normal lifecycle transition in `BatchTtsRunner`: remaining targets
+  are marked CANCELLED, checkpoints and leases are cleanly persisted/released, and `BATCH_TTS_BATCH_CANCELLED`
+  is emitted (never `BATCH_FATAL`).
+- Replaced ambiguous UI state with truthful liveness metrics: `BatchTtsSummary` and `BatchTtsDialog` expose
+  live operation status, active voice name, elapsed timer, smoothed ETA, throughput (targets/sec), and
+  immediate UI feedback when cancelling.
+- Bounded synthesis attempt timeout tuned to 12s per attempt with 15s-30s target watchdog budget.
+- Commit: `32f3e2d0`. Verification: `clean test` passes 5,252 tests (root 2,322, Android 1,059, Desktop 1,871),
+  zero failures/errors/skips. `:desktop:assemble`, `:android:assembleDebug`, and `git diff --check` pass.
+
 # Desktop Batch TTS Hotfix — batch stall recovery, dead lease reclaim, and structured diagnostics
 
 - Fixed Batch TTS stall under abrupt Edge WebSocket closure / native listener hangs by moving provider
