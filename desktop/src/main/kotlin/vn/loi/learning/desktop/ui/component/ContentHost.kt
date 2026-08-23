@@ -45,6 +45,7 @@ fun ContentHost(
 
     runtimeConfiguration: DesktopRuntimeConfiguration,
     vocabularyReminderSettingsController: vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettingsController?,
+    syncController: vn.loi.learning.desktop.sync.DesktopSyncController? = null,
     strings: DesktopStrings,
     learningContentPresenter: LearningContentPresenter,
     contentMediaStorage: vn.loi.learning.application.port.ContentMediaStorage,
@@ -266,6 +267,7 @@ fun ContentHost(
                 runtimeDiagnostics = runtimeDiagnostics,
                 runtimeConfiguration = runtimeConfiguration,
                 vocabularyReminderSettingsController = vocabularyReminderSettingsController,
+                syncController = syncController,
                 strings = strings,
                 onRuntimeConfigurationChanged = ::updatePresentation,
                 onExportDiagnostics = onExportDiagnostics,

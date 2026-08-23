@@ -1078,6 +1078,8 @@ Engine core.
    REST adapter, and explicit post-apply session orchestration are complete. Private Storage/blob
    transport plus private user-prefixed content-addressed Storage are implemented. No remote delete
    policy exists; live RLS/Storage validation awaits a Supabase CLI/Docker environment.
-7. **Desktop Integration.**
+7. **Desktop Integration — complete, live UAT pending:** Settings provides validated non-secret
+   connection persistence, memory-only email/password sessions, explicit manual Push → Pull → Apply →
+   ACK, media transfer, safe status/diagnostics, and no startup/background network activity.
 8. **Android Integration.**
 9. **End-to-End Conflict/Retry/UAT Gate.**

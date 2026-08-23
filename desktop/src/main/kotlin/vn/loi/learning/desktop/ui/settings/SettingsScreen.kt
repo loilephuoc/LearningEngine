@@ -63,6 +63,7 @@ fun SettingsScreen(
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
     vocabularyReminderSettingsController: DesktopVocabularyReminderSettingsController?,
+    syncController: vn.loi.learning.desktop.sync.DesktopSyncController? = null,
     strings: DesktopStrings,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
@@ -281,6 +282,8 @@ fun SettingsScreen(
         )
 
         SettingsCategoryHeading("Sao lưu & Đồng bộ (Backup & Sync)")
+
+        syncController?.let { DesktopSupabaseSyncSettings(it) }
 
         Column(
             modifier = Modifier.fillMaxWidth(),

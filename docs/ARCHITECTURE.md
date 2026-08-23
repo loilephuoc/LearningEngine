@@ -1938,3 +1938,12 @@ refresh token, expiry, and safe email projection. `RefreshingSupabaseSessionProv
 and replaces the complete token pair only after a valid response; failure clears session authority and
 requires sign-in again. Password arrays are cleared after submission. No password or token is persisted,
 logged, or included in diagnostics, so process restart intentionally returns to signed-out state.
+
+Desktop Settings owns only presentation and delegates connection, authentication, and explicit sync
+commands to `DesktopSyncController`. The non-secret project URL/publishable key round-trip through a
+dedicated atomic properties store; saved keys are masked in UI. Runtime construction creates auth,
+event, blob, and manual-sync adapters without network access. Only a user command uploads local media
+before its event, pushes the durable outbox, pulls ordered pages, downloads/validates remote media,
+dispatches each delta to its existing Content/Review/Media application service, and ACKs after committed
+local cursor advancement. No scheduler, polling, Realtime, package replacement, or Study mutation is
+introduced.

@@ -2,6 +2,14 @@
 
 ## Current incremental cross-platform sync continuation
 
+- Capability 7 integrates Desktop Settings with validated Supabase connection persistence, memory-only
+  password sessions, serialized refresh rotation, and explicit manual Push/Pull/Apply/ACK including
+  media transfer. Startup/recomposition/sign-out perform no sync; no token/password is persisted; local
+  repositories remain authority. Live login/sync and visual UAT await a real configured project. The
+  full clean gate passes 825 suites / 5,107 tests (root 431 / 2,311; Android 100 / 983;
+  Desktop 294 / 1,813), zero failures/errors/skips, and Desktop assemble passes. The next capability
+  is Android integration; Android UI was intentionally unchanged here.
+
 - Capability 6 adds secure, replaceable Supabase REST event and Storage blob adapters. Versioned SQL
   owns per-user revisions, idempotent push, monotonic device ACK, least-privilege grants/RLS, a private
   user-prefixed content-addressed bucket, and pgTAP security tests. Authenticated session identity is

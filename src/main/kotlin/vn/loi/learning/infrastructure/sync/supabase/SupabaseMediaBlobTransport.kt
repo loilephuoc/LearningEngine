@@ -55,6 +55,7 @@ class SupabaseMediaBlobTransport(
 
     private fun request(method: String, path: String, body: ByteArray? = null, mimeType: String? = null): SupabaseHttpResponse {
         var attempt = 0
+        var authenticationRetried = false
         while (true) {
             check(!Thread.currentThread().isInterrupted) { "Sync request cancelled." }
             attempt++
@@ -69,6 +70,13 @@ class SupabaseMediaBlobTransport(
                 }
                 val exponential = configuration.retry.initialDelayMillis * (1L shl (attempt - 1).coerceAtMost(20))
                 delay(min(exponential, configuration.retry.maxDelayMillis))
+                continue
+            }
+            if (response.status == 401 && !authenticationRetried && sessions is RefreshableSupabaseSessionProvider) {
+                authenticationRetried = true
+                sessions.refreshAfterUnauthorized(session.accessToken)
+                    ?: throw SupabaseTransportException("SYNC_SUPABASE_AUTHENTICATION_REQUIRED", false, 401)
+                attempt--
                 continue
             }
             val retryable = response.status == 408 || response.status == 429 || response.status >= 500

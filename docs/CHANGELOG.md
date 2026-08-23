@@ -1,3 +1,16 @@
+# Desktop manual Supabase sync controls
+
+- Added atomic Desktop connection configuration for HTTPS project URL plus publishable/anon key, with
+  masked display, explicit service-role warning, missing/invalid states, and no startup network.
+- Added Vietnamese Settings controls for memory-only email/password sign-in, logout, manual sync,
+  Push/Apply/media/conflict/pending counts, last success, offline/relogin/conflict/pending diagnostics,
+  and suppression of concurrent login/sync actions.
+- Wired manual media upload → event push → ordered pull → media download/validation → canonical
+  Content/Review/Media apply → post-commit ACK through the existing persisted local sync state.
+- Added one-time refresh-and-retry on transport 401 while preserving bounded retry and redaction.
+- Full clean verification passes 825 suites / 5,107 tests with zero failures, errors, or skips;
+  Desktop assemble passes without a Supabase credential or network request.
+
 # Supabase password session client
 
 - Added password sign-in, refresh-token rotation, logout, validated authenticated UUID/session parsing,

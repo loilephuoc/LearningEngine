@@ -21,6 +21,7 @@ class DesktopRuntimeSession internal constructor(
     val vocabularyReminderRuntime: DesktopVocabularyReminderRuntime?,
     val vocabularyReminderPopupController: DesktopVocabularyReminderPopupController?,
     val vocabularyReminderSettingsController: DesktopVocabularyReminderSettingsController?,
+    val syncController: vn.loi.learning.desktop.sync.DesktopSyncController,
     private val logger: DesktopRuntimeLogger
 ) : AutoCloseable {
     val recovery: DesktopRecoveryManager =
@@ -168,6 +169,9 @@ object DesktopRuntimeLifecycle {
                 vocabularyReminderRuntime = reminderComponents?.runtime,
                 vocabularyReminderPopupController = reminderComponents?.popupController,
                 vocabularyReminderSettingsController = reminderComponents?.settingsController,
+                syncController = vn.loi.learning.desktop.sync.DesktopSyncRuntimeFactory.create(
+                    directories.config, directories.data, applicationContext
+                ),
                 logger = logger
             )
         } catch (failure: Throwable) {

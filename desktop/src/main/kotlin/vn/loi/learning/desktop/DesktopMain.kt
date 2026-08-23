@@ -191,6 +191,7 @@ fun main() {
                     runtimeDiagnostics = runtime.diagnostics,
                     runtimeConfiguration = runtimeConfiguration,
                     vocabularyReminderSettingsController = runtime.vocabularyReminderSettingsController,
+                    syncController = runtime.syncController,
                     studySessionPolicyProvider = runtime::loadStudySessionPolicy,
                     onboardingRequired =
                         runtime.onboarding.initial ==

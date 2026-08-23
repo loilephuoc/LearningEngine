@@ -68,6 +68,7 @@ class SupabaseSyncTransport(
     private fun request(method: String, path: String, body: ByteArray? = null): SupabaseHttpResponse {
         var attempt = 0
         var last: Throwable? = null
+        var authenticationRetried = false
         while (attempt < configuration.retry.maxAttempts) {
             check(!Thread.currentThread().isInterrupted) { "Sync request cancelled." }
             attempt++
@@ -81,6 +82,13 @@ class SupabaseSyncTransport(
                     ), body, configuration.requestTimeoutMillis)
                 )
                 if (response.status in 200..299) return response
+                if (response.status == 401 && !authenticationRetried && sessions is RefreshableSupabaseSessionProvider) {
+                    authenticationRetried = true
+                    sessions.refreshAfterUnauthorized(session.accessToken)
+                        ?: throw SupabaseTransportException("SYNC_SUPABASE_AUTHENTICATION_REQUIRED", false, 401)
+                    attempt--
+                    continue
+                }
                 val retryable = response.status == 408 || response.status == 429 || response.status >= 500
                 val error = SupabaseTransportException(statusCode(response.status), retryable, response.status)
                 if (!retryable || attempt == configuration.retry.maxAttempts) throw error

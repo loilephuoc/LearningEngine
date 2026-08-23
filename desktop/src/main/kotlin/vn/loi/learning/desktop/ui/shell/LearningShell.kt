@@ -78,6 +78,7 @@ fun LearningShell(
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
     vocabularyReminderSettingsController: vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettingsController?,
+    syncController: vn.loi.learning.desktop.sync.DesktopSyncController? = null,
     studySessionPolicyProvider: () -> SessionPolicy,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
@@ -517,6 +518,7 @@ fun LearningShell(
 
                     runtimeConfiguration = runtimeConfiguration,
                     vocabularyReminderSettingsController = vocabularyReminderSettingsController,
+                    syncController = syncController,
                     strings = strings,
                     learningContentPresenter = learningContentPresenter,
                     contentMediaStorage = contentMediaStorage,

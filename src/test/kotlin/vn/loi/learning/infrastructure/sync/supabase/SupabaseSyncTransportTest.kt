@@ -60,6 +60,23 @@ class SupabaseSyncTransportTest {
         assertTrue(client.requests.isEmpty())
     }
 
+    @Test fun `unauthorized response refreshes once and retries with rotated access token`() {
+        val client = QueueClient(response(401, ""), response(200, "[]"))
+        val provider = object : RefreshableSupabaseSessionProvider {
+            var current = session
+            var refreshes = 0
+            override fun currentSession() = current
+            override fun refreshAfterUnauthorized(rejectedAccessToken: String): SupabaseSession {
+                refreshes++
+                current = current.copy(accessToken = "rotated-token")
+                return current
+            }
+        }
+        assertTrue(SupabaseSyncTransport(config, provider, client).pull(account, SyncCursor.START, 10).changes.isEmpty())
+        assertEquals(1, provider.refreshes)
+        assertEquals("Bearer rotated-token", client.requests.last().headers["Authorization"])
+    }
+
     private fun transport(client: QueueClient) = SupabaseSyncTransport(config, SupabaseSessionProvider { session }, client)
     private fun change(i: Int) = OutboundSyncChange(account, SyncEventId("event-$i"), IdempotencyKey("key-$i"), SyncDeviceId("desktop"), SyncEntityId("content-$i"), delta = ContentFieldDelta(ContentField.QUESTION, DeltaOperation.SET, "value-$i"))
     private fun response(status: Int, body: String) = SupabaseHttpResponse(status, body.toByteArray())
