@@ -856,7 +856,7 @@ class AndroidStudyFacade(
             }
         }
         val plan = AndroidStartupTrace.measured("study_load_recall_plan") { createPlan(next) }
-            ?: return AndroidStudyState.Failed("Shared recall planning is unavailable.")
+            ?: return AndroidStudyState.Failed("Không thể tạo kế hoạch ghi nhớ cho phiên học này.", session.id.value)
         val state = AndroidStartupTrace.measured("study_load_presentation") { present(plan) }
         return if (deferHud) state else AndroidStartupTrace.measured("study_load_hud") {
             attachHud(state, next.session, contentIds, knownDaily)
@@ -1274,7 +1274,7 @@ class AndroidStudyFacade(
     private fun prepareTypingNext(sessionId: String, tracePlanId: String): AndroidStudyState {
         AndroidTypingSuccessTrace.nextEvent("sessionReloadStart", tracePlanId)
         val session = context.engine.getSession(SessionId(sessionId))
-            ?: return AndroidStudyState.Failed("Study session is unavailable. Return to Library and try again.", sessionId)
+            ?: return AndroidStudyState.Failed("Phiên học không khả dụng. Vui lòng quay lại Thư viện và thử lại.", sessionId)
         AndroidTypingSuccessTrace.nextEvent("sessionReloadEnd", tracePlanId)
         if (session.status == SessionStatus.FINISHED) return completeExhaustedSession(session)
         AndroidTypingSuccessTrace.nextEvent("queueAdvanceStart", tracePlanId)
@@ -1294,7 +1294,7 @@ class AndroidStudyFacade(
         }
         AndroidTypingSuccessTrace.nextEvent("planResolveStart", tracePlanId)
         val plan = createPlan(next)
-            ?: return AndroidStudyState.Failed("Shared recall planning is unavailable for this session.", sessionId)
+            ?: return AndroidStudyState.Failed("Không thể tạo kế hoạch ghi nhớ cho phiên học này.", sessionId)
         AndroidTypingSuccessTrace.nextEvent("planResolveEnd", tracePlanId)
         AndroidTypingSuccessTrace.nextEvent("mediaResolveStart", tracePlanId)
         val presented = present(plan)
@@ -1589,7 +1589,7 @@ class AndroidStudyFacade(
                 ),
                 generatedAt = generatedAt,
                 recentModeHistory = next.session.recallModeHistory,
-                studyMode = next.session.studyMode
+                studyMode = if (next.session.studyMode == StudyMode.LEARN_NEW) StudyMode.ADAPTIVE else next.session.studyMode
             )
         )
         return (result as? ProductionRecallPlanResult.Created)?.plan

@@ -89,6 +89,8 @@ class UpdateActiveStudySessionLimitsUseCase(
                     newItemLimit = additionalNewQuota,
                     reviewItemLimit = additionalReviewQuota
                 ),
+                newItemsReviewed = 0,
+                reviewItemsReviewed = 0,
                 reviewedItemIds = excludedItems,
                 reviewedContentIds = excludedContents
             )

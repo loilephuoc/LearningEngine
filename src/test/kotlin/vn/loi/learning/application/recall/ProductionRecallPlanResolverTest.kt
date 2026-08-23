@@ -44,6 +44,19 @@ class ProductionRecallPlanResolverTest {
     }
 
     @Test
+    fun `learn new mode does not produce recall plans because it uses introduction projection`() {
+        val result = resolver.resolve(
+            request(
+                contents = contents(),
+                profile = profile(DifficultyLevel.MASTERED),
+                recommendation = recommendation(RecommendationAction.MONITOR_ONLY)
+            ).copy(studyMode = StudyMode.LEARN_NEW)
+        )
+
+        assertIs<ProductionRecallPlanResult.Unavailable>(result)
+    }
+
+    @Test
     fun `explicit typing overrides adaptive selection without fallback`() {
         val explicit = assertIs<ProductionRecallPlanResult.Created>(
             resolver.resolve(
