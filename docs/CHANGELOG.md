@@ -1,3 +1,19 @@
+# Android Hotfix 5 — safe NEW re-entry after live limit increase
+
+- Added an explicit phase interpretation for the persisted Android Study session and delayed DUE/SKIM
+  NEW re-entry until the displayed card completes. The next NEW phase admits exactly the canonical daily
+  remainder, preserves outstanding DUE scheduling, returns to DUE after NEW exhaustion, ignores live
+  decreases, and avoids duplicate membership under repeated increases.
+- Removed the DUE/SKIM live-replan path that could violate the fixed-practice queue invariant. Candidate
+  construction remains before persistence for same-phase NEW replanning, and existing transactional
+  rollback coverage remains authoritative for failed updates.
+- Prevented the asynchronous initial Home result from replacing a newer Study/Retry state. Foreground
+  audio lifecycle regressions now cover live-replan surface recreation and failure-to-Retry recreation:
+  old loops stop, foreground regain does not replay them, and new explicit playback remains usable.
+- Commits: `f8005c69` and `413998cd`. Verification: `clean test` passes 842 suites / 5,245 tests
+  (root 432 / 2,322; Android 109 / 1,059; Desktop 301 / 1,864), zero failures/errors/skips. Android debug
+  assemble, Desktop assemble, and `git diff --check` pass.
+
 # Android Hotfix 4 — multi-session daily caps and Study foreground audio
 
 - Fixed Android live-limit replanning so absolute daily NEW/REVIEW limits are no longer interpreted as

@@ -1,5 +1,23 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Android Hotfix 5 — safe NEW re-entry and audio ownership after live replanning
+
+- Android now derives an explicit persisted pipeline phase from the active `StudySession`: NEW and DUE
+  remain evaluative `LEARN_NEW` phases, while SKIM remains `PRACTICE_ONLY`. A live New Limit increase
+  during DUE/SKIM preserves the displayed card and queue; after that card completes, the current phase
+  closes and the canonical pipeline opens a NEW phase for exactly the learner-global remaining daily
+  capacity. Exhausting that capacity returns to still-scheduled DUE work. Repeated increases are
+  idempotent, while decreases and already-exhausted capacity do not re-enter NEW.
+- DUE/SKIM live updates no longer construct an incompatible queue snapshot by combining a changed
+  evaluative membership with the old fixed-practice membership. Same-phase NEW replanning retains the
+  established transaction boundary. Initial asynchronous Home loading is also guarded from replacing a
+  newer Study/Retry state, preserving the single Activity-owned foreground audio controller across live
+  replanning, failure recovery, and surface recreation.
+- Commits: `f8005c69` queue/pipeline safety and `413998cd` foreground audio ownership. Full clean
+  verification passes root 2,322, Android 1,059, and Desktop 1,864 tests (5,245 total), with zero
+  failures/errors/skips; Android debug assemble, Desktop assemble, and `git diff --check` pass.
+  Physical-device Hotfix 5 UAT remains.
+
 ## Android Hotfix 4 — multi-session daily caps and Study foreground audio
 
 - Android live limit updates now translate canonical learner-global daily remaining capacity into an

@@ -1,5 +1,16 @@
 # Roadmap
 
+## Android Hotfix 5 — live-limit NEW re-entry
+
+- **Automated implementation complete; physical Android UAT pending:** increasing New Limit after the
+  canonical pipeline has entered DUE or SKIM preserves the current card and resumes NEW only at the next
+  safe card boundary, using exact learner-global remaining capacity. Remaining DUE work is retained and
+  resumes after NEW exhausts; repeated increases do not duplicate membership, and decreases do not cause
+  re-entry.
+- Invalid fixed-practice/evaluative queue combinations are no longer constructed during DUE/SKIM live
+  updates. Retry and surface recreation retain one foreground audio owner, invalidate old playback, do
+  not auto-resume on foreground return, and still allow explicit new playback.
+
 ## Android Hotfix 4 — daily admission and foreground Study audio
 
 - **Automated implementation complete; physical Android UAT pending:** live NEW and REVIEW limit edits
