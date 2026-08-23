@@ -549,7 +549,7 @@ class AndroidStudyViewModel(
                     runCatching { AndroidStartupTrace.measured(phase, action) }
                         .getOrElse { AndroidStudyState.Failed("Learning overview unavailable.") }
                 }
-                publish(updated)
+                if (mutableState.value is AndroidStudyState.Loading) publish(updated)
             }
         }
     }

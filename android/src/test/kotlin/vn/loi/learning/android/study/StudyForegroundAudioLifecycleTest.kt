@@ -72,6 +72,38 @@ class StudyForegroundAudioLifecycleTest {
         assertEquals("fresh.mp3", audio.played.last())
     }
 
+    @Test
+    fun `loop started after live replan surface recreation still stops on Home`() {
+        StudyControllerBridge.onStudySurfaceChanged(false)
+        StudyControllerBridge.onStudySurfaceChanged(true)
+        val stopsBeforePlayback = audio.stopCount
+        assertTrue(StudyControllerBridge.playAudio("reentered-new", "after-replan.mp3", "EXPECTED_ANSWER", true, StudyAudioReason.MANUAL_LOOP))
+
+        StudyControllerBridge.onActivityForegroundChanged(false)
+
+        assertEquals(stopsBeforePlayback + 1, audio.stopCount)
+        assertNull(StudyControllerBridge.currentPlayback)
+    }
+
+    @Test
+    fun `failed update Retry recreation invalidates old loop and new Retry playback remains foreground owned`() {
+        assertTrue(StudyControllerBridge.playAudio("before-failure", "old.mp3", "EXPECTED_ANSWER", true, StudyAudioReason.MANUAL_LOOP))
+        StudyControllerBridge.onStudySurfaceChanged(false)
+        assertEquals(1, audio.stopCount)
+        assertNull(StudyControllerBridge.currentPlayback)
+
+        StudyControllerBridge.onStudySurfaceChanged(true)
+        assertTrue(StudyControllerBridge.playAudio("retry-item", "retry.mp3", "EXAMPLE_EN", true, StudyAudioReason.MANUAL_LOOP))
+        StudyControllerBridge.onActivityForegroundChanged(false)
+
+        assertEquals(2, audio.stopCount)
+        assertNull(StudyControllerBridge.currentPlayback)
+        StudyControllerBridge.onActivityForegroundChanged(true)
+        assertEquals(2, audio.played.size, "Foreground regain must not replay the old loop")
+        assertTrue(StudyControllerBridge.playAudio("retry-item", "fresh.mp3", "EXPECTED_ANSWER", false, StudyAudioReason.MANUAL_PLAY))
+        assertEquals("fresh.mp3", audio.played.last())
+    }
+
     private class RecordingAudioController : AndroidAudioController() {
         val played = mutableListOf<String?>()
         var stopCount = 0
