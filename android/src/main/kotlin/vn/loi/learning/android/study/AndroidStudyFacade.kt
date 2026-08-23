@@ -860,13 +860,16 @@ class AndroidStudyFacade(
         return runCatching {
             context.engine.updateActiveSessionLimits(item.session.id, newLimit, reviewLimit)
             loadExact(item.session.id.value)
-        }.getOrElse { AndroidStudyState.Failed(it.message ?: "Không thể cập nhật giới hạn phiên học.", item.session.id.value) }
+        }.getOrElse { error ->
+            AndroidStartupTrace.write(false, "phase=study_update_limits_failed error=${error.message}")
+            AndroidStudyState.Failed(error.message ?: "Không thể cập nhật giới hạn phiên học.", item.session.id.value)
+        }
     }
 
     fun loadExact(sessionId: String): AndroidStudyState {
         reconcileActiveSession()
         val session = context.engine.getSession(SessionId(sessionId))
-            ?: return AndroidStudyState.Failed("Study session is unavailable. Return to Library and try again.", sessionId)
+            ?: return AndroidStudyState.Failed("Phiên học không khả dụng. Vui lòng quay lại Thư viện và thử lại.", sessionId)
         if (session.status == SessionStatus.FINISHED) return completeExhaustedSession(session)
         val next = context.engine.getNextSessionItem(session.id, Moment(now()))
             ?: return completeExhaustedSession(session)
@@ -878,7 +881,7 @@ class AndroidStudyFacade(
             return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
         }
         val plan = createPlan(next)
-            ?: return AndroidStudyState.Failed("Shared recall planning is unavailable for this session.", sessionId)
+            ?: return AndroidStudyState.Failed("Không thể tạo kế hoạch ghi nhớ cho phiên học này.", sessionId)
         return attachHud(present(plan), next.session)
     }
 

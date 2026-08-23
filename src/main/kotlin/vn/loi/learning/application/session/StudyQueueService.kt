@@ -40,6 +40,11 @@ class StudyQueueService(
         return snapshot
     }
 
+    fun save(snapshot: StudyQueueSnapshot): StudyQueueSnapshot {
+        repository.save(snapshot)
+        return snapshot
+    }
+
     fun create(
         sessionId: SessionId,
         createdAt: Moment,

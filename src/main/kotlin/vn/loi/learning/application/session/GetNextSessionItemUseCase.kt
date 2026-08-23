@@ -108,6 +108,8 @@ class GetNextSessionItemUseCase(
                 studyQueueService
             )
 
+        repairQueueIfMismatched(session, queueService)
+
         while (true) {
             val queue =
                 queueService.require(
@@ -279,5 +281,33 @@ class GetNextSessionItemUseCase(
         }
 
         return session
+    }
+
+    private fun repairQueueIfMismatched(
+        session: StudySession,
+        queueService: StudyQueueService
+    ) {
+        val queue = queueService.get(session.id) ?: return
+        if (queue.practiceLoopPolicy != vn.loi.learning.domain.study.session.model.PracticeLoopPolicy.NONE) return
+        if (queue.completedItemCount < session.totalReviews && session.reviewedItemIds.isNotEmpty()) {
+            val missingCompleted = session.reviewedItemIds.filterNot { it in queue.learningItemIds.take(queue.currentIndex) }
+            if (missingCompleted.isNotEmpty() || queue.currentIndex < session.totalReviews) {
+                val remainingItems = queue.learningItemIds.drop(queue.currentIndex).filterNot { it in session.reviewedItemIds }
+                val repairedIds = (session.reviewedItemIds + remainingItems).toList()
+                val repairedOrigins = queue.itemOrigins.toMutableMap()
+                val repairedContentIds = queue.itemContentIds.toMutableMap()
+                val repaired = queue.copy(
+                    learningItemIds = repairedIds,
+                    currentIndex = minOf(session.totalReviews, repairedIds.size),
+                    itemOrigins = repairedOrigins,
+                    itemContentIds = repairedContentIds,
+                    effectiveNewWorkload = maxOf(queue.effectiveNewWorkload, session.newItemsReviewed),
+                    effectiveReviewWorkload = maxOf(queue.effectiveReviewWorkload, session.reviewItemsReviewed),
+                    configuredNewTarget = maxOf(queue.configuredNewTarget, session.policy.newItemLimit),
+                    configuredReviewTarget = maxOf(queue.configuredReviewTarget, session.policy.reviewItemLimit)
+                )
+                queueService.save(repaired)
+            }
+        }
     }
 }

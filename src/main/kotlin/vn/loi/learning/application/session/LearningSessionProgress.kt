@@ -36,19 +36,20 @@ data class LearningSessionProgress(
             require(session.id == queue.sessionId) {
                 "Session and queue progress must have the same session ID."
             }
-            require(session.totalReviews <= queue.completedItemCount) {
-                "Reviewed count cannot exceed completed queue items."
-            }
+            val completed = maxOf(session.totalReviews, queue.completedItemCount)
+            val total = maxOf(queue.totalItemCount, completed)
+            val remaining = maxOf(0, total - completed)
+            val isQueueCompleted = queue.isCompleted || completed >= total
             return LearningSessionProgress(
-                completedItemCount = queue.completedItemCount,
+                completedItemCount = completed,
                 reviewedItemCount = session.totalReviews,
-                skippedItemCount = queue.completedItemCount - session.totalReviews,
-                remainingItemCount = queue.remainingItemCount,
-                totalItemCount = queue.totalItemCount,
-                currentPosition = if (queue.isCompleted) null else queue.currentIndex + 1,
+                skippedItemCount = maxOf(0, completed - session.totalReviews),
+                remainingItemCount = remaining,
+                totalItemCount = total,
+                currentPosition = if (isQueueCompleted) null else queue.currentIndex + 1,
                 totalIsKnown = true,
-                isEmpty = queue.isEmpty,
-                isCompleted = queue.isCompleted
+                isEmpty = queue.isEmpty && completed == 0,
+                isCompleted = isQueueCompleted
             )
         }
 
