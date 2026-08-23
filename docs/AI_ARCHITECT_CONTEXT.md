@@ -1,5 +1,14 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Desktop Batch TTS Hotfix 3 — multi-voice resilient pool, dynamic circuit breaker, failed-only retry, and visible apply phase
+
+- Ordered Multi-Voice Resilient Candidate Pool: user configures 1 primary voice and up to 3 ordered fallback voices (4 total candidates per language). Candidate lists strictly enforce language consistency, deduplication, and exclusion of primary voice from fallback positions. Presets persist and restore fallback candidates accurately.
+- Health-Aware Dynamic Circuit Breaker & Exponential Cooldown: consecutive circuit open trips apply exponential backoff cooldowns (30s, 60s, 120s, 240s, max 300s). In-flight probe concurrency is strictly bounded to 1 probe across the batch. Open/degraded voices are bypassed in 0ms without consuming synthesis timeout budgets. Cancellation and local I/O errors do not poison provider voice health.
+- Fail-Target-and-Continue: when all candidates in the resilient pool fail for a target, the runner marks that target `FAILED`, persists the checkpoint record, logs structured diagnostics, and continues to target $N+1$.
+- Failed-Only Retention & Retry: upon batch completion with failures, users can retry only unresolved failed targets with current voice settings. Retried successes merge seamlessly into the combined batch summary without re-synthesizing previously succeeded targets.
+- Visible & Safe Apply Phase: Apply execution is elevated to a first-class visible UI step (`APPLYING`) showing live applied item counts, elapsed timer, and progress bar, followed by a dedicated completion view (`APPLY_COMPLETED`). Window close and Escape key dismissal are guarded during active persistence to prevent partial writes. Draft content edits and package problem projections (`Missing Translation Audio`) update and reload cleanly upon completion.
+- Commit: `1fdf08a9`. Verification: `clean test` passes 5,255 tests (root 2,322, Android 1,059, Desktop 1,874), zero failures/errors/skips. Desktop assemble, Android debug assemble, and `git diff --check` pass.
+
 ## Desktop Batch TTS Hotfix 2 — fast cancellation, provider health routing, and truthful liveness UX
 
 - Fixed repeated synthesis stalls on degraded TTS voices: introduced `BatchTtsVoiceHealthTracker` circuit
