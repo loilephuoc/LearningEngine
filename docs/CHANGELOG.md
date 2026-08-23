@@ -4906,3 +4906,16 @@ Searchable desktop collections now expose a polite live result status that disti
   media, metadata, LearningItem, MemoryState, and ReviewEvent data.
 - Added deterministic same-field conflict preservation/diagnostics and verified independent-field
   convergence, retry/no-op, nullable removal semantics, and persisted restart round trips.
+# Android Supabase login network permission repair
+
+- Added the Android `INTERNET` manifest permission required by the already explicit, user-triggered
+  Supabase authentication and manual-sync transports. No startup, background, or automatic network
+  behavior was added.
+- Kept publishable-key handling opaque and accepted the current Supabase password-token response
+  shape, including `token_type`, `expires_at`, user metadata, and `weak_password`, while retaining
+  memory-only password/token handling and redacted diagnostics.
+- Android now distinguishes safe authentication network, invalid-credential, and malformed-response
+  messages. Saving a replacement connection is regression-tested to rebuild the runtime before the
+  next sign-in.
+- Full clean verification passes 830 suites / 5,153 tests (root 431 / 2,312; Android 104 / 1,007;
+  Desktop 295 / 1,834), with zero failures, errors, or skips; Android debug assembly passes.

@@ -22,6 +22,43 @@ class SupabaseAuthClientTest {
         assertFalse(session.toString().contains("private-password"))
     }
 
+    @Test fun `password sign in accepts current Supabase token response schema and publishable key`() {
+        val http = QueueClient(response(200, """{
+            "access_token":"header.payload.signature",
+            "token_type":"bearer",
+            "expires_in":3600,
+            "expires_at":3700,
+            "refresh_token":"refresh-token",
+            "user":{
+                "id":"$USER_ID",
+                "aud":"authenticated",
+                "role":"authenticated",
+                "email":"learner@example.com",
+                "app_metadata":{"provider":"email"},
+                "user_metadata":{}
+            },
+            "weak_password":null
+        }"""))
+        val client = SupabaseAuthClient(
+            SupabaseConfiguration("https://project.supabase.co", "sb_publishable_fixture"),
+            http
+        ) { 100 }
+
+        val session = client.signIn("learner@example.com", "password".toCharArray())
+
+        val request = http.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals("/auth/v1/token?grant_type=password", request.uri.rawPath + "?" + request.uri.rawQuery)
+        assertEquals("sb_publishable_fixture", request.headers["apikey"])
+        assertEquals("application/json", request.headers["Content-Type"])
+        assertNull(request.headers["Authorization"])
+        assertEquals(USER_ID, session.accountId.value)
+        assertEquals("header.payload.signature", session.accessToken)
+        assertEquals("refresh-token", session.refreshToken)
+        assertEquals(3700, session.expiresAtEpochSeconds)
+        assertEquals("learner@example.com", session.userEmail)
+    }
+
     @Test fun `invalid credentials and malformed response use redacted diagnostics`() {
         val invalid = assertFailsWith<SupabaseAuthException> { SupabaseAuthClient(config, QueueClient(response(400, "private-password publishable-secret"))).signIn("a@b.com", "private-password".toCharArray()) }
         assertEquals("SYNC_AUTH_INVALID_CREDENTIALS", invalid.code)

@@ -1081,9 +1081,10 @@ Engine core.
 7. **Desktop Integration — complete, live UAT pending:** Settings provides validated non-secret
    connection persistence, memory-only email/password sessions, explicit manual Push → Pull → Apply →
    ACK, media transfer, safe status/diagnostics, and no startup/background network activity.
-8. **Android Integration — automated scope complete, live UAT pending:** isolated validated connection
+8. **Android Integration — automated scope complete, live login re-UAT pending:** isolated validated connection
    persistence, memory-only password sessions, refresh-capable Supabase transport composition, and a
    lifecycle-cancellable explicit manual Push → Pull → Apply → ACK controller are complete. A Vietnamese
    Settings route provides configuration, authentication, manual actions, summaries and safe diagnostics;
-   live-device/network UAT remains deferred.
+   the missing Android Internet permission found by live UAT is repaired and protected by regression
+   coverage. Physical login must be retried before any live sync UAT.
 9. **End-to-End Conflict/Retry/UAT Gate.**

@@ -2,6 +2,15 @@
 
 ## Current incremental cross-platform sync continuation
 
+- Android live login UAT isolated the client failure to the absent `android.permission.INTERNET` manifest
+  declaration. The request path, opaque `sb_publishable_*` handling, current Supabase token response
+  parsing, one-read HTTP body boundary, and immediate runtime rebuild after saved configuration are now
+  regression-covered. Safe UI diagnostics distinguish network, invalid credentials, and malformed auth
+  responses without rendering raw bodies or secrets. Full clean verification passes 830 suites / 5,153
+  tests (root 431 / 2,312; Android 104 / 1,007; Desktop 295 / 1,834), zero failures/errors/skips, and
+  Android debug assembly passes. Physical login re-UAT is required; live Sync remains blocked until it
+  passes.
+
 - Capability 8B adds the Vietnamese Android Settings sync screen and minimal private route over the 8A
   controller. Configuration, memory-only login/logout, manual sync/cancel, summaries and safe diagnostics
   are explicit; screen entry, recomposition and recreation remain network-silent. No manifest, background

@@ -20,6 +20,32 @@ class AndroidSyncRuntimeControllerTest {
         assertEquals(0, fixture.operation.runs)
     }
 
+    @Test fun `saving replacement connection rebuilds runtime before next sign in`() = runTest {
+        val repository = FakeRepository()
+        val configurations = mutableListOf<SupabaseConfiguration>()
+        val sessions = mutableListOf<FakeSessions>()
+        val controller = AndroidSyncRuntimeController(
+            this,
+            repository,
+            { configuration ->
+                configurations += configuration
+                AndroidSyncRuntimeController.Runtime(FakeSessions().also(sessions::add), FakeOperation())
+            },
+            StandardTestDispatcher(testScheduler)
+        )
+
+        controller.configure("https://first.supabase.co", "sb_publishable_first")
+        controller.configure("https://second.supabase.co", "sb_publishable_second")
+        controller.signIn("learner@example.com", "secret".toCharArray())
+        advanceUntilIdle()
+
+        assertEquals(listOf("https://first.supabase.co", "https://second.supabase.co"), configurations.map { it.baseUri.toString() })
+        assertEquals(listOf("sb_publishable_first", "sb_publishable_second"), configurations.map { it.publishableKey })
+        assertEquals(0, sessions.first().signIns)
+        assertEquals(1, sessions.last().signIns)
+        assertEquals("https://second.supabase.co", repository.load()?.projectUrl)
+    }
+
     @Test fun `authentication success enables explicit sync and second sync is no changes`() = runTest {
         val fixture = fixture(listOf(summary(pushed = 1, applied = 2), summary()))
         fixture.controller.configure(URL, KEY)

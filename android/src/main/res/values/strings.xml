@@ -414,6 +414,8 @@
     <string name="sync_fatal_error">Không thể hoàn tất đồng bộ</string>
     <string name="sync_cancelled">Đã hủy đồng bộ</string>
     <string name="sync_invalid_configuration">URL hoặc publishable key không hợp lệ.</string>
+    <string name="sync_invalid_credentials">Email hoặc mật khẩu không đúng.</string>
+    <string name="sync_invalid_auth_response">Máy chủ đăng nhập trả về phản hồi không hợp lệ.</string>
     <string name="sync_safe_error">Không thể hoàn tất thao tác. Không có dữ liệu đăng nhập nào được hiển thị.</string>
     <string name="sync_summary_events">Sự kiện đã đẩy: %1$d · Đã áp dụng: %2$d</string>
     <string name="sync_summary_media">Tệp đã tải lên: %1$d · Tải xuống: %2$d</string>

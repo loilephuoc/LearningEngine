@@ -101,6 +101,9 @@ private val AndroidSyncUiState.busy get() = phase == AndroidSyncPhase.AUTHENTICA
 
 @Composable private fun diagnosticText(code: String) = when (code) {
     "SYNC_CONFIGURATION_INVALID" -> stringResource(R.string.sync_invalid_configuration)
+    "SYNC_AUTH_INVALID_CREDENTIALS" -> stringResource(R.string.sync_invalid_credentials)
+    "SYNC_AUTH_NETWORK_ERROR" -> stringResource(R.string.sync_offline)
+    "SYNC_AUTH_RESPONSE_MALFORMED" -> stringResource(R.string.sync_invalid_auth_response)
     "SYNC_AUTH_RELOGIN_REQUIRED" -> stringResource(R.string.sync_requires_login)
     "SYNC_SUPABASE_NETWORK_ERROR" -> stringResource(R.string.sync_offline)
     else -> stringResource(R.string.sync_safe_error)
