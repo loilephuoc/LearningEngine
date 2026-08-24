@@ -1991,6 +1991,9 @@ correct evidence receives bounded visual/audio feedback and advances automatical
 evidence briefly exposes both selected and expected choices before composing the shared Full Answer
 content. MCQ never exposes manual rating or Continue authority. Its wrong-answer Full Answer uses the
 existing review-navigation gesture path, while all non-MCQ response-action defaults remain unchanged.
+Wrong-answer context is projected from the selected choice identity already held by MCQ runtime state.
+The shared answer component accepts optional section headings; MCQ enables them for distinct English
+Example and Vietnamese Translation surfaces while other modes retain their default presentation.
 
 ## Android debug adaptive-study preview boundary
 

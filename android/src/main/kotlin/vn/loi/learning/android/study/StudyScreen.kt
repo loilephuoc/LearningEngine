@@ -2208,10 +2208,33 @@ private fun StudyRevealAndFeedbackContent(
             if (!typingSuccessPending && state !is AndroidStudyState.Typing) {
                 Box(modifier = Modifier.graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }) {
                     LearningEngineStatusBadge(
-                        label = badgeText,
+                        label = if (state is AndroidStudyState.MultipleChoice &&
+                            state.outcome == RecallOutcome.INCORRECT
+                        ) stringResource(R.string.study_answer_incorrect) else badgeText,
                         tone = tone,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                     )
+                }
+            }
+
+            if (state is AndroidStudyState.MultipleChoice && state.outcome == RecallOutcome.INCORRECT) {
+                selectedMultipleChoiceAnswer(state)?.let { selectedAnswer ->
+                    Column(
+                        Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
+                    ) {
+                        Text(
+                            stringResource(R.string.study_mcq_you_selected),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            selectedAnswer,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
 
@@ -2259,6 +2282,13 @@ private fun StudyRevealAndFeedbackContent(
                 },
                 answerHero = state is AndroidStudyState.Typing,
                 allowStandaloneVietnameseExample = forcedTypingReveal
+                    || state is AndroidStudyState.MultipleChoice,
+                englishExampleSectionLabel = if (state is AndroidStudyState.MultipleChoice) {
+                    stringResource(R.string.study_example_english)
+                } else null,
+                vietnameseExampleSectionLabel = if (state is AndroidStudyState.MultipleChoice) {
+                    stringResource(R.string.study_translation_vietnamese)
+                } else null
             )
 
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)

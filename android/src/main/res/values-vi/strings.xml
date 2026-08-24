@@ -86,6 +86,10 @@
     <string name="study_adaptive_unavailable">Hiện không có từ nào đến hạn ôn</string>
     <string name="study_typing_unavailable">Chưa có từ vựng nào để luyện gõ</string>
     <string name="study_reveal_answer">Xem đáp án</string>
+    <string name="study_answer_incorrect">Chưa chính xác</string>
+    <string name="study_mcq_you_selected">Bạn đã chọn:</string>
+    <string name="study_example_english">Ví dụ tiếng Anh</string>
+    <string name="study_translation_vietnamese">Bản dịch tiếng Việt</string>
     <string name="study_session_complete">Hoàn thành phiên học</string>
     <string name="study_session_unavailable">Không thể mở phiên học</string>
     <string name="study_rating_again">Học lại</string>

@@ -17,6 +17,7 @@ import vn.loi.learning.domain.study.recall.*
 import vn.loi.learning.domain.study.session.model.*
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
+import vn.loi.learning.android.study.design.selectedMultipleChoiceAnswer
 
 class AndroidStudyFacadeTest {
     @Test fun `session content snapshot is keyed by session and package and invalidated on Home`() {
@@ -219,6 +220,8 @@ class AndroidStudyFacadeTest {
         val state = assertIs<AndroidStudyState.MultipleChoice>(f.facade.present(plan))
         val completed = assertIs<AndroidStudyState.MultipleChoice>(f.facade.choose(state, "a"))
         assertEquals(RecallOutcome.INCORRECT, completed.outcome)
+        assertEquals("a", completed.selectedChoiceId)
+        assertEquals("Wrong", selectedMultipleChoiceAnswer(completed))
         val committedCount = f.context.engine.getReviewHistory(f.learner, f.itemId).size
         assertEquals(completed, f.facade.choose(completed, "b"))
         assertEquals(committedCount, f.context.engine.getReviewHistory(f.learner, f.itemId).size)

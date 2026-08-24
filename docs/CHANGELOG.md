@@ -7,6 +7,9 @@
   into the shared production Full Answer. MCQ omits Continue, Undo and manual rating controls and uses
   the established swipe navigation gesture. Shared Recall remains the sole automatic evaluation and
   persistence authority, with an early duplicate-selection guard.
+- Wrong Full Answer now names the actual selected option from MCQ state using localized text. Its
+  existing English Example and Vietnamese Translation surfaces have distinct localized headings and
+  retain independent production audio roles, including safe text-only presentation when media is absent.
 
 # Android Adaptive Study UI Lab 2.0 — production renderer preview
 

@@ -75,6 +75,8 @@ internal fun StudyAnswerSection(
     onVietnameseExampleAudio: (() -> Unit)? = null,
     answerHero: Boolean = false,
     allowStandaloneVietnameseExample: Boolean = false,
+    englishExampleSectionLabel: String? = null,
+    vietnameseExampleSectionLabel: String? = null,
     swipeSuccessGlowActive: Boolean = false,
     interactionEnabled: Boolean = true
 ) {
@@ -155,7 +157,8 @@ internal fun StudyAnswerSection(
                         true,
                         onEnglishExampleAudio,
                         "English example",
-                        interactionEnabled
+                        interactionEnabled,
+                        englishExampleSectionLabel
                     )
                 }
                 vietnameseExample?.takeIf(String::isNotBlank)?.let {
@@ -170,7 +173,8 @@ internal fun StudyAnswerSection(
                         false,
                         onVietnameseExampleAudio,
                         "Vietnamese example",
-                        interactionEnabled = interactionEnabled && onVietnameseExampleAudio != null
+                        interactionEnabled = interactionEnabled && onVietnameseExampleAudio != null,
+                        visibleLabel = vietnameseExampleSectionLabel
                     )
                 }
             }
@@ -190,7 +194,8 @@ private fun StudyExampleSurface(
     isLooping: Boolean,
     onAudio: (() -> Unit)?,
     accessibilityLabel: String?,
-    interactionEnabled: Boolean
+    interactionEnabled: Boolean,
+    visibleLabel: String? = null
 ) {
     Surface(
         shape = LearningEngineShapes.medium,
@@ -198,13 +203,23 @@ private fun StudyExampleSurface(
         border = BorderStroke(if (isPlaying) 2.dp else 1.dp, border),
         modifier = Modifier.fillMaxWidth()
     ) {
-        StudyAudioTextTarget(
-            text, style, audioPath, isPlaying, isLooping, onAudio, centered = false,
-            contentColor = content, accessibilityLabel = accessibilityLabel,
-            boundedAudioTarget = !isLooping,
-            interactionEnabled = interactionEnabled,
-            interaction = if (onAudio == null) StudyTextInteraction.PASSIVE else StudyTextInteraction.AUDIO
-        )
+        Column(Modifier.fillMaxWidth()) {
+            visibleLabel?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = content,
+                    modifier = Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.extraSmall)
+                )
+            }
+            StudyAudioTextTarget(
+                text, style, audioPath, isPlaying, isLooping, onAudio, centered = false,
+                contentColor = content, accessibilityLabel = accessibilityLabel,
+                boundedAudioTarget = !isLooping,
+                interactionEnabled = interactionEnabled,
+                interaction = if (onAudio == null) StudyTextInteraction.PASSIVE else StudyTextInteraction.AUDIO
+            )
+        }
     }
 }
 

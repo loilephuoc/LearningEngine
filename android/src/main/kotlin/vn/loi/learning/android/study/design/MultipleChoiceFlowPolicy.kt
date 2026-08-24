@@ -1,5 +1,6 @@
 package vn.loi.learning.android.study.design
 
+import vn.loi.learning.android.study.AndroidStudyState
 import vn.loi.learning.domain.study.recall.RecallOutcome
 
 internal const val MULTIPLE_CHOICE_MINIMUM_FEEDBACK_MILLIS = 350L
@@ -27,3 +28,6 @@ internal fun multipleChoiceAllowsManualRating(): Boolean = false
 
 internal fun shouldAutoplayMultipleChoiceQuestion(completed: Boolean, audioPath: String?): Boolean =
     !completed && !audioPath.isNullOrBlank()
+
+internal fun selectedMultipleChoiceAnswer(state: AndroidStudyState.MultipleChoice): String? =
+    state.selectedChoiceId?.let { selectedId -> state.choices.firstOrNull { it.id == selectedId }?.text }

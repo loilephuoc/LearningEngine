@@ -5,7 +5,9 @@
 - **Automated implementation complete; physical Android UAT pending:** MCQ centers its question with
   safe replay placement, autoplays once per item, locks one submission, and uses objective Shared Recall
   evaluation. Correct answers replay once then auto-advance; wrong answers show option feedback then the
-  shared Full Answer without Continue or manual rating, with swipe-up advancement.
+  shared Full Answer without Continue or manual rating, with swipe-up advancement. Wrong Full Answer
+  identifies the selected option and separates English Example from Vietnamese Translation with
+  independent audio actions.
 
 ## Android Adaptive Study UI Lab 2.0
 

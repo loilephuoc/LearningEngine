@@ -86,6 +86,10 @@
     <string name="study_adaptive_unavailable">No adaptive review is currently due</string>
     <string name="study_typing_unavailable">No introduced vocabulary is available for typing practice</string>
     <string name="study_reveal_answer">Reveal answer</string>
+    <string name="study_answer_incorrect">Incorrect</string>
+    <string name="study_mcq_you_selected">You selected:</string>
+    <string name="study_example_english">Example English</string>
+    <string name="study_translation_vietnamese">Translation Vietnamese</string>
     <string name="study_session_complete">Session complete</string>
     <string name="study_session_unavailable">Study session unavailable</string>
     <string name="study_rating_again">Again</string>

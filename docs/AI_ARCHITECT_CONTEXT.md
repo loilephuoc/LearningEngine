@@ -2337,6 +2337,12 @@ PASS; Continuous Review Mode remains the unimplemented PLE-032 capability.
 - Production MCQ centers the prompt, claims one item-keyed autoplay, locks immediate red/green choice
   feedback, replays and auto-advances correct answers, and transitions wrong answers to the shared Full
   Answer without Continue/manual rating. Swipe-up uses existing review navigation.
+- Wrong Full Answer now resolves the displayed wrong answer from `selectedChoiceId` and the plan choices.
+  English Example and Vietnamese Translation remain shared answer surfaces but gain MCQ-only localized
+  headings and retain separate `EXAMPLE_ENGLISH`/`EXAMPLE_VIETNAMESE` audio routing.
+- Follow-up verification retains the green 854-suite / 5,361-test baseline (root 2,322; Android 1,092;
+  Desktop 1,947), with zero failures, errors or skips. At install time `adb devices -l` returned no
+  connected device, so no installation, uninstall, data clear or ADB reconfiguration was attempted.
 - Focused Android compile/unit/assemble gates passed. Full `clean test` passed 854 XML suites / 5,361
   tests (root 2,322; Android 1,092; Desktop 1,947), with zero failures, errors or skipped tests.
 - `:android:installDebug` built the APK and targeted the sole authorized device `24090RA29C`, but the

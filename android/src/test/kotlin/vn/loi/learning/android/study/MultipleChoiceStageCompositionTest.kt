@@ -17,6 +17,9 @@ class MultipleChoiceStageCompositionTest {
     private val screen = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt")
     )
+    private val answerSection = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/components/IntroductionAnswerSection.kt")
+    )
 
     @Test
     fun `MCQ delegates composition and reuses Study foundation`() {
@@ -58,6 +61,15 @@ class MultipleChoiceStageCompositionTest {
         assertTrue(screen.contains("MULTIPLE_CHOICE_AUDIO_WATCHDOG_MILLIS"))
         assertTrue(screen.contains("onEvent(AndroidStudyEvent.NextVisited)"))
         assertTrue(screen.contains("multipleChoiceAllowsManualRating()"))
+        assertTrue(screen.contains("selectedMultipleChoiceAnswer(state)"))
+        assertTrue(screen.contains("R.string.study_mcq_you_selected"))
+        assertTrue(screen.contains("R.string.study_example_english"))
+        assertTrue(screen.contains("R.string.study_translation_vietnamese"))
+        assertTrue(screen.contains("AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio"))
+        assertTrue(screen.contains("AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio"))
+        assertTrue(answerSection.contains("englishExampleSectionLabel"))
+        assertTrue(answerSection.contains("vietnameseExampleSectionLabel"))
+        assertTrue(answerSection.contains("visibleLabel"))
         assertFalse(stage.contains("Snackbar"))
         assertFalse(stage.contains("Dialog("))
     }
