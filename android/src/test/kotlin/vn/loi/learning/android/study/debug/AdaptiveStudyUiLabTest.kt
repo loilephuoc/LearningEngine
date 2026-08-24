@@ -1,5 +1,7 @@
 package vn.loi.learning.android.study.debug
 
+import java.nio.file.Files
+import java.nio.file.Path
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -140,7 +142,6 @@ class AdaptiveStudyUiLabTest {
     fun `state factory creates valid multiple choice state with fallback distractors when package is small`() {
         val target = sampleContent("c1", "resilience", "khả năng phục hồi")
         val other = sampleContent("c2", "meticulous", "tỉ mỉ")
-        // Only 2 contents in package -> needs fallback distractors
         val allContents = listOf(target, other)
 
         val state = AdaptiveStudyUiLabStateFactory.buildState(
@@ -260,5 +261,40 @@ class AdaptiveStudyUiLabTest {
         assertEquals(RecallMode.MULTIPLE_CHOICE, LabStudyMode.MULTIPLE_CHOICE.recallMode)
         assertEquals(RecallMode.IMAGE_RECALL, LabStudyMode.IMAGE_RECALL.recallMode)
         assertEquals(RecallMode.EXAMPLE_COMPLETION, LabStudyMode.EXAMPLE_COMPLETION.recallMode)
+    }
+
+    @Test
+    fun `lab layout eliminates nested vertical scroll to guarantee finite constraints for production stages`() {
+        val screenSource = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/android/study/debug/AdaptiveStudyUiLabScreen.kt")
+        )
+
+        // Root Column inside Scaffold must NOT have verticalScroll modifier
+        val rootColumnModifier = screenSource
+            .substringAfter("Scaffold(")
+            .substringAfter("Column(")
+            .substringAfter("modifier = Modifier")
+            .substringBefore("// 1. Controls Header:")
+            .substringBefore(")")
+        assertFalse(
+            rootColumnModifier.contains("verticalScroll"),
+            "Root Column modifier must NOT have verticalScroll which causes infinite maximum height constraints on child stages"
+        )
+
+        // Stage host container must use weight(1f) to ensure finite bounded height
+        assertTrue(
+            screenSource.contains(".weight(1f)"),
+            "Stage host container must use weight(1f) to guarantee finite bounds"
+        )
+
+        // All 5 real production stage composables must be directly embedded
+        assertTrue(screenSource.contains("TypingStudyStage("))
+        assertTrue(screenSource.contains("ListeningStudyStage("))
+        assertTrue(screenSource.contains("MultipleChoiceStudyStage("))
+        assertTrue(screenSource.contains("ImageRecallStudyStage("))
+        assertTrue(screenSource.contains("ExampleCompletionStudyStage("))
+
+        // Stage modifier inside bounded container must use verticalScroll
+        assertTrue(screenSource.contains(".verticalScroll(stageScrollState)"))
     }
 }

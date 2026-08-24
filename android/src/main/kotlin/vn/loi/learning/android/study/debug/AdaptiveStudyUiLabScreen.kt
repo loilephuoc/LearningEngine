@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -57,7 +58,6 @@ import vn.loi.learning.android.study.modes.ImageRecallStudyStage
 import vn.loi.learning.android.study.modes.ListeningStudyStage
 import vn.loi.learning.android.study.modes.MultipleChoiceStudyStage
 import vn.loi.learning.android.study.modes.TypingStudyStage
-import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentCustomField
 import vn.loi.learning.domain.content.model.ContentCustomFields
@@ -68,6 +68,7 @@ import vn.loi.learning.domain.content.model.ContentMetadata
 import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
 import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.infrastructure.LearningApplicationContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -196,21 +197,21 @@ fun AdaptiveStudyUiLabScreen(
             )
         }
     ) { padding ->
+        // Bounded layout: Root Column without verticalScroll ensures finite constraints for child Stage
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // 1. Controls Header: Package & Item Selector
             Card(
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     // Package selector
                     var packageMenuExpanded by remember { mutableStateOf(false) }
                     Row(
@@ -288,10 +289,11 @@ fun AdaptiveStudyUiLabScreen(
                 }
             }
 
-            // 2. Mode Selector Chips
+            // 2. Mode Selector Chips (Horizontal Scroll only)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp)
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -304,10 +306,11 @@ fun AdaptiveStudyUiLabScreen(
                 }
             }
 
-            // 3. Stage Simulation Actions / Test Bar
+            // 3. Stage Simulation Actions / Test Bar (Horizontal Scroll only)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -378,16 +381,29 @@ fun AdaptiveStudyUiLabScreen(
                 }
             }
 
-            // 4. Real Stage Composable Execution
+            Spacer(Modifier.height(4.dp))
+
+            // 4. Bounded Real Stage Composable Container (weight(1f) provides finite max height)
+            val stageScrollState = rememberScrollState()
+            LaunchedEffect(currentItemIndex, selectedMode, selectedPackageId) {
+                stageScrollState.scrollTo(0)
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .weight(1f)
                     .background(
                         color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
                     )
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
             ) {
                 val dummyFeedback: @Composable () -> Unit = {}
+                val stageModifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(stageScrollState)
+
                 when (val s = studyState) {
                     is AndroidStudyState.Typing -> {
                         TypingStudyStage(
@@ -405,7 +421,8 @@ fun AdaptiveStudyUiLabScreen(
                                 }
                             },
                             onOpenFullscreenImage = {},
-                            feedbackContent = dummyFeedback
+                            feedbackContent = dummyFeedback,
+                            modifier = stageModifier
                         )
                     }
                     is AndroidStudyState.Listening -> {
@@ -422,7 +439,8 @@ fun AdaptiveStudyUiLabScreen(
                                     else -> Unit
                                 }
                             },
-                            feedbackContent = dummyFeedback
+                            feedbackContent = dummyFeedback,
+                            modifier = stageModifier
                         )
                     }
                     is AndroidStudyState.MultipleChoice -> {
@@ -443,7 +461,8 @@ fun AdaptiveStudyUiLabScreen(
                                 }
                             },
                             onOpenFullscreenImage = {},
-                            feedbackContent = dummyFeedback
+                            feedbackContent = dummyFeedback,
+                            modifier = stageModifier
                         )
                     }
                     is AndroidStudyState.ImageRecall -> {
@@ -460,7 +479,8 @@ fun AdaptiveStudyUiLabScreen(
                                 }
                             },
                             onOpenFullscreenImage = {},
-                            feedbackContent = dummyFeedback
+                            feedbackContent = dummyFeedback,
+                            modifier = stageModifier
                         )
                     }
                     is AndroidStudyState.ExampleCompletion -> {
@@ -477,7 +497,8 @@ fun AdaptiveStudyUiLabScreen(
                                     else -> Unit
                                 }
                             },
-                            feedbackContent = dummyFeedback
+                            feedbackContent = dummyFeedback,
+                            modifier = stageModifier
                         )
                     }
                     else -> {
@@ -485,8 +506,6 @@ fun AdaptiveStudyUiLabScreen(
                     }
                 }
             }
-
-            Spacer(Modifier.height(32.dp))
         }
     }
 }
