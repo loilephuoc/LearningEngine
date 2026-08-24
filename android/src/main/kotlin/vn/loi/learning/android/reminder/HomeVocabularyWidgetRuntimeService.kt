@@ -119,14 +119,14 @@ class HomeVocabularyWidgetRuntimeService : Service(), HomeWidgetRuntimeClock {
                     logFgsState("CLOCK_TICK", "ARMED", true, currentIntervalMs)
                     Log.i(
                         TAG,
-                        "[HOME_WIDGET_RUNTIME_TICK] pid=${Process.myPid()} intervalMs=$currentIntervalMs elapsedRealtime=$now deviceState=${coordinator?.currentDeviceState} homeSurfaceState=${coordinator?.homeSurfaceState} widgetCount=${coordinator?.getActiveWidgetCount()}"
+                        "[HOME_WIDGET_RUNTIME_TICK] pid=${Process.myPid()} intervalMs=$currentIntervalMs elapsedRealtime=$now deviceState=${coordinator?.currentDeviceState} foregroundState=${coordinator?.homeForegroundState} widgetCount=${coordinator?.getActiveWidgetCount()}"
                     )
 
                     coordinator?.onRuntimeTick()
 
-                    // Re-arm next interval if still allowed
+                    // Re-arm next interval if clock is still eligible (screen on, unlocked, widgets exist, auto-next on)
                     if (tickRunnable === this) {
-                        if (coordinator?.isHomeWidgetRuntimeAllowed() == true) {
+                        if (coordinator?.isRuntimeClockEligible() == true) {
                             lastScheduledElapsedRealtime = SystemClock.elapsedRealtime()
                             mainHandler.postDelayed(this, currentIntervalMs)
                         } else {
@@ -140,7 +140,7 @@ class HomeVocabularyWidgetRuntimeService : Service(), HomeWidgetRuntimeClock {
             logFgsState("CLOCK_SCHEDULE: $reason", "ARMED", true, intervalMs)
             Log.i(
                 TAG,
-                "[HOME_WIDGET_RUNTIME_RESUME] pid=${Process.myPid()} intervalMs=$intervalMs reason=$reason deviceState=${coordinator?.currentDeviceState} homeSurfaceState=${coordinator?.homeSurfaceState} widgetCount=${coordinator?.getActiveWidgetCount()}"
+                "[HOME_WIDGET_RUNTIME_RESUME] pid=${Process.myPid()} intervalMs=$intervalMs reason=$reason deviceState=${coordinator?.currentDeviceState} foregroundState=${coordinator?.homeForegroundState} widgetCount=${coordinator?.getActiveWidgetCount()}"
             )
             mainHandler.postDelayed(runnable, intervalMs)
         }
@@ -165,7 +165,7 @@ class HomeVocabularyWidgetRuntimeService : Service(), HomeWidgetRuntimeClock {
             logFgsState("CLOCK_PAUSE: $reason", "PAUSED", false, 0L)
             Log.i(
                 TAG,
-                "[HOME_WIDGET_RUNTIME_PAUSE] pid=${Process.myPid()} reason=$reason deviceState=${coordinator?.currentDeviceState} homeSurfaceState=${coordinator?.homeSurfaceState} widgetCount=${coordinator?.getActiveWidgetCount()}"
+                "[HOME_WIDGET_RUNTIME_PAUSE] pid=${Process.myPid()} reason=$reason deviceState=${coordinator?.currentDeviceState} foregroundState=${coordinator?.homeForegroundState} widgetCount=${coordinator?.getActiveWidgetCount()}"
             )
         }
     }
@@ -187,11 +187,11 @@ class HomeVocabularyWidgetRuntimeService : Service(), HomeWidgetRuntimeClock {
         val coordinator = app?.homeVocabularyWidgetCoordinator
         val hasWidgets = coordinator?.hasActiveWidgets() ?: false
         val autoNextEnabled = coordinator?.isAutoNextEnabled() ?: false
-        val runtimeAllowed = coordinator?.isHomeWidgetRuntimeAllowed() ?: false
+        val runtimeAllowed = coordinator?.shouldHomeWidgetAutoNextRun() ?: false
 
         Log.i(
             TAG,
-            "[HOME_WIDGET_FGS_STATE] pid=${Process.myPid()} serviceInstance=${instance != null} clockState=$clockState scheduled=$scheduled intervalMs=$intervalMs deviceState=${coordinator?.currentDeviceState} homeSurfaceState=${coordinator?.homeSurfaceState} hasWidgets=$hasWidgets autoNextEnabled=$autoNextEnabled runtimeAllowed=$runtimeAllowed reason=$reason"
+            "[HOME_WIDGET_FGS_STATE] pid=${Process.myPid()} serviceInstance=${instance != null} clockState=$clockState scheduled=$scheduled intervalMs=$intervalMs deviceState=${coordinator?.currentDeviceState} foregroundState=${coordinator?.homeForegroundState} hasWidgets=$hasWidgets autoNextEnabled=$autoNextEnabled runtimeAllowed=$runtimeAllowed reason=$reason"
         )
     }
 

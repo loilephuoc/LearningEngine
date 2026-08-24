@@ -90,6 +90,18 @@ class AndroidHomeVocabularyWidgetCoordinator(
         }
     }
 
+    fun isRuntimeClockEligible(): Boolean {
+        return synchronized(stateLock) {
+            syncActiveWidgetIds()
+            val settings = preferencesController.currentHomeWidget()
+            val hasWidgets = activeWidgetIds.isNotEmpty()
+            val screenOnUnlocked =
+                currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+
+            hasWidgets && settings.autoNextEnabled && screenOnUnlocked
+        }
+    }
+
     fun reconcileRuntimeServiceLifetime(reason: String) {
         if (shouldRuntimeServiceRun()) {
             if (runtimeClock == null && HomeVocabularyWidgetRuntimeService.instance == null) {
@@ -170,19 +182,10 @@ class AndroidHomeVocabularyWidgetCoordinator(
 
     fun shouldHomeWidgetAutoNextRun(): Boolean {
         return synchronized(stateLock) {
-            syncActiveWidgetIds()
-
             val settings = preferencesController.currentHomeWidget()
-            val hasWidgets = activeWidgetIds.isNotEmpty()
-            val screenOnUnlocked =
-                currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
-            val homeVisible =
-                homeForegroundState == HomeForegroundState.HOME
+            val homeVisible = homeForegroundState == HomeForegroundState.HOME
 
-            hasWidgets &&
-                    settings.autoNextEnabled &&
-                    screenOnUnlocked &&
-                    (!settings.updateOnlyScreenOn || homeVisible)
+            isRuntimeClockEligible() && (!settings.updateOnlyScreenOn || homeVisible)
         }
     }
 
@@ -533,6 +536,29 @@ class AndroidHomeVocabularyWidgetCoordinator(
 
             synchronized(stateLock) {
                 isAdvancingCandidate = false
+
+                // Final hard-gate race check immediately before committing candidate transition
+                if (currentDeviceState == VocabularyPresentationDeviceState.SCREEN_OFF ||
+                    currentDeviceState == VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+                ) {
+                    Log.i(
+                        TAG_SCHEDULER,
+                        "[HomeWidgetAdvanceRejected] action=ABORT_COMMIT deviceState=$currentDeviceState reason=$reason"
+                    )
+                    return@execute
+                }
+
+                if (reason == "RUNTIME_SERVICE_TICK" || reason == "TIMER_FIRED") {
+                    val currentSettings = preferencesController.currentHomeWidget()
+                    if (currentSettings.updateOnlyScreenOn && homeForegroundState != HomeForegroundState.HOME) {
+                        Log.i(
+                            TAG_SCHEDULER,
+                            "[HomeWidgetAdvanceRejected] action=ABORT_COMMIT foregroundState=$homeForegroundState reason=$reason"
+                        )
+                        return@execute
+                    }
+                }
+
                 currentCandidate = candidate
                 if (candidate != null) {
                     currentCycleToken++
@@ -577,6 +603,18 @@ class AndroidHomeVocabularyWidgetCoordinator(
 
             synchronized(stateLock) {
                 isAdvancingCandidate = false
+
+                // Final hard-gate race check immediately before committing candidate transition
+                if (currentDeviceState == VocabularyPresentationDeviceState.SCREEN_OFF ||
+                    currentDeviceState == VocabularyPresentationDeviceState.LOCKED_SCREEN_ON
+                ) {
+                    Log.i(
+                        TAG_NAV,
+                        "[HomeWidgetNavigation] action=ABORT_PREVIOUS deviceState=$currentDeviceState reason=$reason"
+                    )
+                    return@execute
+                }
+
                 currentCandidate = candidate
                 if (candidate != null) {
                     currentCycleToken++
@@ -859,32 +897,32 @@ class AndroidHomeVocabularyWidgetCoordinator(
             syncActiveWidgetIds()
             val settings = preferencesController.currentHomeWidget()
             val hasWidgets = activeWidgetIds.isNotEmpty()
-            val homeWidgetRuntimeAllowed = isHomeWidgetRuntimeAllowed()
-            val shouldRunTimer = shouldHomeWidgetAutoNextRun()
+            val clockEligible = isRuntimeClockEligible()
+            val runtimeAllowed = shouldHomeWidgetAutoNextRun()
             val interval = settings.clampedIntervalMillis
 
             val clockState = when {
                 !hasWidgets || !settings.autoNextEnabled -> "STOPPED"
-                !shouldRunTimer -> "PAUSED"
+                !clockEligible -> "PAUSED"
                 else -> "ARMED"
             }
 
             Log.i(
                 TAG_SCHEDULER,
-                "[HOME_WIDGET_FGS_STATE] pid=${android.os.Process.myPid()} serviceInstance=${HomeVocabularyWidgetRuntimeService.instance != null} clockState=$clockState scheduled=$shouldRunTimer intervalMs=${if (shouldRunTimer) interval else 0L} deviceState=$currentDeviceState homeSurfaceState=$homeSurfaceState hasWidgets=$hasWidgets autoNextEnabled=${settings.autoNextEnabled} runtimeAllowed=$homeWidgetRuntimeAllowed reason=$reason (fresh=$freshInterval)"
+                "[HOME_WIDGET_FGS_STATE] pid=${android.os.Process.myPid()} serviceInstance=${HomeVocabularyWidgetRuntimeService.instance != null} clockState=$clockState scheduled=$clockEligible intervalMs=${if (clockEligible) interval else 0L} deviceState=$currentDeviceState foregroundState=$homeForegroundState hasWidgets=$hasWidgets autoNextEnabled=${settings.autoNextEnabled} runtimeAllowed=$runtimeAllowed reason=$reason (fresh=$freshInterval)"
             )
             Log.i(
                 TAG_SCHEDULER,
-                "[HOME_WIDGET_RUNTIME] deviceState=$currentDeviceState homeSurfaceState=$homeSurfaceState hasWidgets=$hasWidgets autoNextEnabled=${settings.autoNextEnabled} intervalMillis=$interval runtimeAllowed=$homeWidgetRuntimeAllowed timerScheduled=${isTimerScheduled()} reason=$reason (fresh=$freshInterval)"
+                "[HOME_WIDGET_RUNTIME] deviceState=$currentDeviceState foregroundState=$homeForegroundState hasWidgets=$hasWidgets autoNextEnabled=${settings.autoNextEnabled} intervalMillis=$interval clockEligible=$clockEligible runtimeAllowed=$runtimeAllowed timerScheduled=${isTimerScheduled()} reason=$reason (fresh=$freshInterval)"
             )
 
             reconcileRuntimeServiceLifetime(reason)
 
-            if (!shouldRunTimer) {
+            if (!clockEligible) {
                 if (currentDeviceState == VocabularyPresentationDeviceState.LOCKED_SCREEN_ON) {
                     Log.i(TAG_SCHEDULER, "[HomeWidgetAutoNextTimer] state=LOCKED_SCREEN_ON action=SUPPRESSED")
-                } else if (currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && homeSurfaceState != HomeSurfaceState.VISIBLE) {
-                    Log.i(TAG_SCHEDULER, "[HomeWidgetAutoNextTimer] state=UNLOCKED_OTHER_APP homeSurfaceState=$homeSurfaceState action=SUPPRESSED")
+                } else if (currentDeviceState == VocabularyPresentationDeviceState.SCREEN_OFF) {
+                    Log.i(TAG_SCHEDULER, "[HomeWidgetAutoNextTimer] state=SCREEN_OFF action=SUPPRESSED")
                 }
                 cancelAutoNextTimer(reason)
                 return
@@ -906,7 +944,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
             cancelAutoNextTimer("RE_ARM (fresh=$freshInterval)")
             armedIntervalMs = interval
             Log.i(TAG_SCHEDULER, "[HOME_WIDGET_TIMER_SCHEDULE] intervalMillis=$interval reason=$reason (fresh=$freshInterval)")
-            Log.i(TAG_SCHEDULER, "[HomeWidgetAutoNextTimer] state=UNLOCKED_SCREEN_ON homeSurfaceState=$homeSurfaceState action=START intervalMs=$interval reason=$reason")
+            Log.i(TAG_SCHEDULER, "[HomeWidgetAutoNextTimer] state=UNLOCKED_SCREEN_ON foregroundState=$homeForegroundState action=START intervalMs=$interval reason=$reason")
 
             val runnable = object : Runnable {
                 override fun run() {
@@ -915,14 +953,25 @@ class AndroidHomeVocabularyWidgetCoordinator(
                             autoNextRunnable = null
                             return
                         }
+                        if (settings.updateOnlyScreenOn) {
+                            refreshForegroundState("IN_PROCESS_CLOCK_TICK")
+                        }
                         if (shouldHomeWidgetAutoNextRun()) {
                             Log.i(TAG_SCHEDULER, "[HOME_WIDGET_TIMER_FIRE] intervalMillis=$interval candidateId=${currentCandidate?.contentId?.value}")
                             Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] action=FIRE intervalMs=$interval")
                             advanceToNextCandidate("TIMER_FIRED")
-                            mainHandler.postDelayed(this, interval)
-                            return
+                        } else {
+                            Log.w(
+                                TAG_SCHEDULER,
+                                "[HOME_WIDGET_RUNTIME_GATE_REJECT] pid=${android.os.Process.myPid()} deviceState=$currentDeviceState foregroundState=$homeForegroundState widgetCount=${activeWidgetIds.size} autoNextEnabled=${settings.autoNextEnabled} updateOnlyScreenOn=${settings.updateOnlyScreenOn}"
+                            )
                         }
-                        cancelAutoNextTimer("TIMER_CONDITIONS_CHANGED")
+
+                        if (isRuntimeClockEligible()) {
+                            mainHandler.postDelayed(this, interval)
+                        } else {
+                            cancelAutoNextTimer("CLOCK_INELIGIBLE_AFTER_TICK")
+                        }
                     }
                 }
             }
