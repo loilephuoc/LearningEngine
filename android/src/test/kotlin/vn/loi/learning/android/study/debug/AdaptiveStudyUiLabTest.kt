@@ -264,12 +264,12 @@ class AdaptiveStudyUiLabTest {
     }
 
     @Test
-    fun `lab layout eliminates nested vertical scroll to guarantee finite constraints for production stages`() {
+    fun `lab layout respects stage scroll ownership and guarantees finite constraints`() {
         val screenSource = Files.readString(
             Path.of("src/main/kotlin/vn/loi/learning/android/study/debug/AdaptiveStudyUiLabScreen.kt")
         )
 
-        // Root Column inside Scaffold must NOT have verticalScroll modifier
+        // 1. Root Column inside Scaffold must NOT have verticalScroll modifier
         val rootColumnModifier = screenSource
             .substringAfter("Scaffold(")
             .substringAfter("Column(")
@@ -278,23 +278,53 @@ class AdaptiveStudyUiLabTest {
             .substringBefore(")")
         assertFalse(
             rootColumnModifier.contains("verticalScroll"),
-            "Root Column modifier must NOT have verticalScroll which causes infinite maximum height constraints on child stages"
+            "Root Column modifier must NOT have verticalScroll which causes infinite maximum height constraints"
         )
 
-        // Stage host container must use weight(1f) to ensure finite bounded height
+        // 2. Stage host container must use weight(1f) to ensure finite bounded height
         assertTrue(
             screenSource.contains(".weight(1f)"),
             "Stage host container must use weight(1f) to guarantee finite bounds"
         )
 
-        // All 5 real production stage composables must be directly embedded
+        // 3. TypingStudyStage MUST receive fillMaxSize and MUST NOT have verticalScroll passed to it
+        // because TypingStudyStage owns vertical scrolling internally via TypedAnswerStageFrame(fillViewport = true)
+        val typingCall = screenSource.substringAfter("is AndroidStudyState.Typing ->")
+            .substringBefore("is AndroidStudyState.Listening ->")
+        assertTrue(
+            typingCall.contains("modifier = Modifier.fillMaxSize()"),
+            "TypingStudyStage must receive Modifier.fillMaxSize() without verticalScroll wrapper"
+        )
+        val typingCallCode = typingCall.lines().filterNot { it.trim().startsWith("//") }.joinToString("\n")
+        assertFalse(
+            typingCallCode.contains("verticalScroll"),
+            "TypingStudyStage must NOT have verticalScroll modifier passed into it"
+        )
+
+        // 4. Non-typing stages (Listening, MultipleChoice, ImageRecall, ExampleCompletion)
+        // receive verticalScroll within the finite weight(1f) container
+        val whenBlock = screenSource.substringAfter("when (val s = studyState) {")
+        val listeningCall = whenBlock.substringAfter("is AndroidStudyState.Listening ->")
+            .substringBefore("is AndroidStudyState.MultipleChoice ->")
+        assertTrue(listeningCall.contains("verticalScroll(nonTypingScrollState)"))
+
+        val mcCall = whenBlock.substringAfter("is AndroidStudyState.MultipleChoice ->")
+            .substringBefore("is AndroidStudyState.ImageRecall ->")
+        assertTrue(mcCall.contains("verticalScroll(nonTypingScrollState)"))
+
+        val irCall = whenBlock.substringAfter("is AndroidStudyState.ImageRecall ->")
+            .substringBefore("is AndroidStudyState.ExampleCompletion ->")
+        assertTrue(irCall.contains("verticalScroll(nonTypingScrollState)"))
+
+        val ecCall = whenBlock.substringAfter("is AndroidStudyState.ExampleCompletion ->")
+            .substringBefore("Trạng thái kiểm thử không khả dụng")
+        assertTrue(ecCall.contains("verticalScroll(nonTypingScrollState)"))
+
+        // 5. All 5 real production stage composables must be directly embedded
         assertTrue(screenSource.contains("TypingStudyStage("))
         assertTrue(screenSource.contains("ListeningStudyStage("))
         assertTrue(screenSource.contains("MultipleChoiceStudyStage("))
         assertTrue(screenSource.contains("ImageRecallStudyStage("))
         assertTrue(screenSource.contains("ExampleCompletionStudyStage("))
-
-        // Stage modifier inside bounded container must use verticalScroll
-        assertTrue(screenSource.contains(".verticalScroll(stageScrollState)"))
     }
 }

@@ -384,9 +384,11 @@ fun AdaptiveStudyUiLabScreen(
             Spacer(Modifier.height(4.dp))
 
             // 4. Bounded Real Stage Composable Container (weight(1f) provides finite max height)
-            val stageScrollState = rememberScrollState()
+            val nonTypingScrollState = rememberScrollState()
             LaunchedEffect(currentItemIndex, selectedMode, selectedPackageId) {
-                stageScrollState.scrollTo(0)
+                if (selectedMode != LabStudyMode.TYPING) {
+                    nonTypingScrollState.scrollTo(0)
+                }
             }
 
             Box(
@@ -400,12 +402,11 @@ fun AdaptiveStudyUiLabScreen(
                     .padding(horizontal = 16.dp, vertical = 6.dp)
             ) {
                 val dummyFeedback: @Composable () -> Unit = {}
-                val stageModifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(stageScrollState)
 
                 when (val s = studyState) {
                     is AndroidStudyState.Typing -> {
+                        // TypingStudyStage OWNS vertical scrolling internally via TypedAnswerStageFrame(fillViewport = true).
+                        // It MUST receive Modifier.fillMaxSize() WITHOUT any verticalScroll modifier from parent.
                         TypingStudyStage(
                             state = s,
                             activeRole = null,
@@ -422,7 +423,7 @@ fun AdaptiveStudyUiLabScreen(
                             },
                             onOpenFullscreenImage = {},
                             feedbackContent = dummyFeedback,
-                            modifier = stageModifier
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
                     is AndroidStudyState.Listening -> {
@@ -440,7 +441,7 @@ fun AdaptiveStudyUiLabScreen(
                                 }
                             },
                             feedbackContent = dummyFeedback,
-                            modifier = stageModifier
+                            modifier = Modifier.fillMaxWidth().verticalScroll(nonTypingScrollState)
                         )
                     }
                     is AndroidStudyState.MultipleChoice -> {
@@ -462,7 +463,7 @@ fun AdaptiveStudyUiLabScreen(
                             },
                             onOpenFullscreenImage = {},
                             feedbackContent = dummyFeedback,
-                            modifier = stageModifier
+                            modifier = Modifier.fillMaxWidth().verticalScroll(nonTypingScrollState)
                         )
                     }
                     is AndroidStudyState.ImageRecall -> {
@@ -480,7 +481,7 @@ fun AdaptiveStudyUiLabScreen(
                             },
                             onOpenFullscreenImage = {},
                             feedbackContent = dummyFeedback,
-                            modifier = stageModifier
+                            modifier = Modifier.fillMaxWidth().verticalScroll(nonTypingScrollState)
                         )
                     }
                     is AndroidStudyState.ExampleCompletion -> {
@@ -498,7 +499,7 @@ fun AdaptiveStudyUiLabScreen(
                                 }
                             },
                             feedbackContent = dummyFeedback,
-                            modifier = stageModifier
+                            modifier = Modifier.fillMaxWidth().verticalScroll(nonTypingScrollState)
                         )
                     }
                     else -> {
