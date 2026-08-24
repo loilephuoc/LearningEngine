@@ -507,6 +507,7 @@ fun SettingsScreen(
     onHomeWidgetSettings: () -> Unit = {},
     onBackupRestore: () -> Unit = {},
     onSyncSettings: () -> Unit = {},
+    onAdaptiveStudyUiLab: () -> Unit = {},
     currentLanguage: AppLanguage = AppLanguage.ENGLISH,
     onLanguage: (AppLanguage) -> Unit = {},
     dailyNotificationSettings: vn.loi.learning.android.notification.DailyLearningNotificationSettings = vn.loi.learning.android.notification.DailyLearningNotificationSettings(),
@@ -723,6 +724,17 @@ fun SettingsScreen(
                 onBackupRestore)
             LearningEngineSettingsRow(Icons.Default.Download, stringResource(R.string.settings_import_package), stringResource(R.string.settings_import_package_desc),
                 { onAction(AndroidOperationKind.IMPORT) })
+        }
+        if (vn.loi.learning.android.BuildConfig.DEBUG) {
+            Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+                Text("Công cụ phát triển (Developer Tools)", style = LearningTextRole.sectionTitle)
+                LearningEngineSettingsRow(
+                    Icons.Default.Build,
+                    "Adaptive Study UI Lab",
+                    "Xem trước và thử nghiệm các chế độ học thích ứng mà không ảnh hưởng tiến độ",
+                    onAdaptiveStudyUiLab
+                )
+            }
         }
     }
 }

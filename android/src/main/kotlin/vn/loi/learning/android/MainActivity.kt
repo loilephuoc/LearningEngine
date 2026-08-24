@@ -704,6 +704,7 @@ class MainActivity : ComponentActivity() {
                             onHomeWidgetSettings = { navController.navigate("home_widget_settings") { launchSingleTop = true } },
                             onBackupRestore = { navController.navigate("backup_restore") { launchSingleTop = true } },
                             onSyncSettings = { navController.navigate("sync_settings") { launchSingleTop = true } },
+                            onAdaptiveStudyUiLab = { navController.navigate("adaptive_study_ui_lab") { launchSingleTop = true } },
                             currentLanguage = currentLanguage,
                             onLanguage = { vn.loi.learning.android.platform.AppLanguageManager.setLanguage(this@MainActivity, it) },
                             dailyNotificationSettings = dailyNotificationSettings,
@@ -833,6 +834,15 @@ class MainActivity : ComponentActivity() {
                         ControllerDiagnosticsScreen(
                             onBack = { navController.popBackStack() }
                         )
+                    }
+                    if (BuildConfig.DEBUG) {
+                        composable("adaptive_study_ui_lab", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                            vn.loi.learning.android.study.debug.AdaptiveStudyUiLabScreen(
+                                engine = app.graph.engine,
+                                resolveMedia = { ref -> app.graph.media.resolve(ref)?.toString() },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
                     }
                 } } }
             }
