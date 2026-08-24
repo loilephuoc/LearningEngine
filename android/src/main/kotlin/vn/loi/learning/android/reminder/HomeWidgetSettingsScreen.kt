@@ -58,6 +58,23 @@ fun HomeWidgetSettingsScreen(
     var homeWidgetPackageDropdownExpanded by remember { mutableStateOf(false) }
     var homeWidgetModeDropdownExpanded by remember { mutableStateOf(false) }
 
+    var hasUsageAccess by remember {
+        mutableStateOf(HomeWidgetForegroundAppDetector.checkUsageAccess(context))
+    }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                hasUsageAccess = HomeWidgetForegroundAppDetector.checkUsageAccess(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(availablePackages, homeWidgetDraft.selectedPackageId) {
         if (homeWidgetDraft.selectedPackageId == null && availablePackages.isNotEmpty()) {
             val defaultPkgId = availablePackages.first().id
@@ -423,6 +440,40 @@ fun HomeWidgetSettingsScreen(
                                 applyHomeWidgetDraft(homeWidgetDraft.copy(updateOnlyScreenOn = enabled))
                             }
                         )
+                    }
+
+                    if (homeWidgetDraft.updateOnlyScreenOn && !hasUsageAccess) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.widget_usage_access_required_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Button(
+                                    onClick = {
+                                        HomeWidgetForegroundAppDetector.openUsageAccessSettings(context)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ),
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.widget_grant_usage_access),
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

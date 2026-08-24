@@ -700,14 +700,12 @@ class AndroidVocabularyReminderOverlayController(
                         currentOnDismissed = null
                         state = OverlayState.HIDDEN
                         showing.set(false)
-                        vn.loi.learning.android.controller.ControllerSystemActionBridge.reconcileHomeSurface()
                     }
                 } catch (e: Throwable) {
                     Log.w(TAG, "Error removing overlay view after exit animation", e)
                 }
                 onComplete?.invoke()
                 dismissCallback?.invoke(reason)
-                vn.loi.learning.android.controller.ControllerSystemActionBridge.reconcileHomeSurface()
             }
             ?.start()
     }

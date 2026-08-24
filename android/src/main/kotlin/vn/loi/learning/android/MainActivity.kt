@@ -123,8 +123,8 @@ class MainActivity : ComponentActivity() {
             vn.loi.learning.android.reminder.VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON,
             "MAIN_ACTIVITY_RESUMED"
         )
-        app?.homeVocabularyWidgetCoordinator?.setHomeSurfaceState(
-            vn.loi.learning.android.reminder.HomeSurfaceState.HIDDEN,
+        app?.homeVocabularyWidgetCoordinator?.setHomeForegroundState(
+            vn.loi.learning.android.reminder.HomeForegroundState.OTHER_APP,
             "LEARNING_ENGINE_FOREGROUND"
         )
     }
@@ -142,23 +142,8 @@ class MainActivity : ComponentActivity() {
         ControllerDiagnosticsHolder.setForeground(false)
         vn.loi.learning.android.controller.StudyControllerBridge.onActivityForegroundChanged(false)
         val app = application as? LearningEngineAndroidApplication
-        val accessibilityActive = ControllerDiagnosticsHolder.state.value.isAccessibilityServiceConnected
-        if (!accessibilityActive) {
-            app?.homeVocabularyWidgetCoordinator?.setHomeSurfaceState(
-                vn.loi.learning.android.reminder.HomeSurfaceState.UNKNOWN,
-                "LEARNING_ENGINE_STOPPED_ACCESSIBILITY_DISCONNECTED"
-            )
-        } else {
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                val resolved = vn.loi.learning.android.controller.ControllerSystemActionBridge.reconcileHomeSurface()
-                if (resolved != vn.loi.learning.android.reminder.HomeSurfaceState.UNKNOWN) {
-                    app?.homeVocabularyWidgetCoordinator?.setHomeSurfaceState(
-                        resolved,
-                        "LEARNING_ENGINE_STOPPED"
-                    )
-                }
-            }, 100)
-        }
+        app?.homeVocabularyWidgetCoordinator?.refreshForegroundState("LEARNING_ENGINE_STOPPED")
+        app?.homeVocabularyWidgetCoordinator?.reconcileRuntimeClock("LEARNING_ENGINE_STOPPED")
     }
 
     override fun onDestroy() {

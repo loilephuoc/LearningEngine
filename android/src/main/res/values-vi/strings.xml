@@ -436,6 +436,8 @@
     <string name="widget_card_opacity_current">Hiện tại: %1$d%%</string>
     <string name="widget_screen_on_only_title">Chỉ cập nhật khi màn hình BẬT</string>
     <string name="widget_screen_on_only_explanation">Tạm dừng bộ đếm khi màn hình tắt để tiết kiệm pin.</string>
+    <string name="widget_usage_access_required_desc">Để chỉ tự chuyển từ khi bạn đang ở Màn hình chính, LearningEngine cần quyền Truy cập dữ liệu sử dụng để nhận biết ứng dụng đang hiển thị.</string>
+    <string name="widget_grant_usage_access">Cấp quyền truy cập</string>
     <string name="lock_screen_wallpaper_title">Hình nền từ vựng màn hình khóa</string>
     <string name="lock_screen_wallpaper_desc">Hiển thị từ vựng trên màn hình khóa qua hình nền. Vân tay và bảo mật hệ thống vẫn hoạt động 100%.</string>
     <string name="lock_screen_note_desc">Lưu ý: Từ vựng được hiển thị bằng cách cập nhật hình nền màn hình khóa khi khóa máy. Hình nền màn hình chính không bị ảnh hưởng.</string>

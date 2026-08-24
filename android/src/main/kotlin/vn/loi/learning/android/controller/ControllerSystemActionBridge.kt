@@ -10,7 +10,6 @@ object ControllerSystemActionBridge {
 
     private val lockScreenHandlerRef = AtomicReference<(() -> Boolean)?>(null)
     private val foregroundPackageQueryRef = AtomicReference<(() -> String?)?>(null)
-    private val homeSurfaceReconcilerRef = AtomicReference<(() -> vn.loi.learning.android.reminder.HomeSurfaceState)?>(null)
 
     fun registerLockScreenHandler(handler: () -> Boolean) {
         lockScreenHandlerRef.set(handler)
@@ -40,29 +39,12 @@ object ControllerSystemActionBridge {
         foregroundPackageQueryRef.set(null)
     }
 
-    fun registerHomeSurfaceReconciler(reconciler: () -> vn.loi.learning.android.reminder.HomeSurfaceState) {
-        homeSurfaceReconcilerRef.set(reconciler)
-    }
-
-    fun unregisterHomeSurfaceReconciler(reconciler: () -> vn.loi.learning.android.reminder.HomeSurfaceState) {
-        homeSurfaceReconcilerRef.compareAndSet(reconciler, null)
-    }
-
-    fun unregisterHomeSurfaceReconciler() {
-        homeSurfaceReconcilerRef.set(null)
-    }
-
-    fun reconcileHomeSurface(): vn.loi.learning.android.reminder.HomeSurfaceState {
-        return homeSurfaceReconcilerRef.get()?.invoke() ?: vn.loi.learning.android.reminder.HomeSurfaceState.UNKNOWN
-    }
-
-    fun isHomeSurfaceReconcilerAvailable(): Boolean {
-        return homeSurfaceReconcilerRef.get() != null
+    fun getForegroundPackage(): String? {
+        return foregroundPackageQueryRef.get()?.invoke()
     }
 
     fun clear() {
         lockScreenHandlerRef.set(null)
         foregroundPackageQueryRef.set(null)
-        homeSurfaceReconcilerRef.set(null)
     }
 }

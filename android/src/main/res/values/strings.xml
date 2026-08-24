@@ -436,6 +436,8 @@
     <string name="widget_card_opacity_current">Current: %1$d%%</string>
     <string name="widget_screen_on_only_title">Update only while screen is ON</string>
     <string name="widget_screen_on_only_explanation">Pauses timer when screen is off to save battery.</string>
+    <string name="widget_usage_access_required_desc">To update words only while on the Home screen, LearningEngine requires Usage Access permission to detect the active application.</string>
+    <string name="widget_grant_usage_access">Grant Usage Access</string>
     <string name="lock_screen_wallpaper_title">Lock-Screen Wallpaper Vocabulary</string>
     <string name="lock_screen_wallpaper_desc">Displays vocabulary on the lock screen via wallpaper. Native fingerprint and SystemUI Keyguard remain 100% functional.</string>
     <string name="lock_screen_note_desc">Note: Vocabulary is displayed by updating the lock-screen wallpaper. Your lock-screen wallpaper will be updated automatically on screen lock. Home screen wallpaper remains unchanged.</string>

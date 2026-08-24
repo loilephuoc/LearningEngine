@@ -38,8 +38,13 @@ class AndroidHomeVocabularyWidgetCoordinator(
     private val preferencesController: AndroidVocabularyReminderPreferencesController,
     private val selector: AndroidVocabularyReminderCandidateSelector,
     private val difficultMarkers: AndroidVocabularyReminderDifficultMarkers,
-    private val resolveMedia: (String) -> String? = { null }
+    private val resolveMedia: (String) -> String? = { null },
+    detector: HomeWidgetForegroundDetector? = null
 ) {
+
+    private val foregroundDetector: HomeWidgetForegroundDetector = detector ?: HomeWidgetForegroundAppDetector(context) {
+        resolveDefaultLauncherPackage()
+    }
 
     private val coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -97,15 +102,16 @@ class AndroidHomeVocabularyWidgetCoordinator(
 
     fun onRuntimeTick() {
         synchronized(stateLock) {
-            syncActiveWidgetIds()
             val settings = preferencesController.currentHomeWidget()
-            val hasWidgets = activeWidgetIds.isNotEmpty()
-            val runtimeAllowed = isHomeWidgetRuntimeAllowed()
 
-            if (!hasWidgets || !settings.autoNextEnabled || (settings.updateOnlyScreenOn && !runtimeAllowed)) {
+            if (settings.updateOnlyScreenOn) {
+                refreshForegroundState("RUNTIME_TICK")
+            }
+
+            if (!shouldHomeWidgetAutoNextRun()) {
                 Log.w(
                     TAG_SCHEDULER,
-                    "[HOME_WIDGET_RUNTIME_GATE_REJECT] pid=${android.os.Process.myPid()} deviceState=$currentDeviceState homeSurfaceState=$homeSurfaceState widgetCount=${activeWidgetIds.size} autoNextEnabled=${settings.autoNextEnabled} runtimeAllowed=$runtimeAllowed"
+                    "[HOME_WIDGET_RUNTIME_GATE_REJECT] pid=${android.os.Process.myPid()} deviceState=$currentDeviceState foregroundState=$homeForegroundState widgetCount=${activeWidgetIds.size} autoNextEnabled=${settings.autoNextEnabled} updateOnlyScreenOn=${settings.updateOnlyScreenOn}"
                 )
                 return
             }
@@ -129,15 +135,55 @@ class AndroidHomeVocabularyWidgetCoordinator(
         private set
 
     @Volatile
-    var homeSurfaceState: HomeSurfaceState = HomeSurfaceState.UNKNOWN
+    var homeForegroundState: HomeForegroundState = HomeForegroundState.UNKNOWN
         private set
 
+    val homeSurfaceState: HomeSurfaceState
+        get() = when (homeForegroundState) {
+            HomeForegroundState.HOME -> HomeSurfaceState.VISIBLE
+            HomeForegroundState.OTHER_APP -> HomeSurfaceState.HIDDEN
+            HomeForegroundState.UNKNOWN -> HomeSurfaceState.UNKNOWN
+        }
+
     val homeSurfaceVisible: Boolean
-        get() = homeSurfaceState == HomeSurfaceState.VISIBLE
+        get() = homeForegroundState == HomeForegroundState.HOME
+
+    fun refreshForegroundState(reason: String): HomeForegroundState {
+        val result = foregroundDetector.detectForeground()
+        synchronized(stateLock) {
+            val oldState = homeForegroundState
+            homeForegroundState = result.state
+            if (oldState != result.state) {
+                Log.i(
+                    TAG_SCHEDULER,
+                    "[HomeWidgetForegroundChange] from=$oldState to=${result.state} reason=$reason"
+                )
+            }
+        }
+        return result.state
+    }
 
     fun isHomeWidgetRuntimeAllowed(): Boolean {
         return currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON &&
-            homeSurfaceState == HomeSurfaceState.VISIBLE
+                homeForegroundState == HomeForegroundState.HOME
+    }
+
+    fun shouldHomeWidgetAutoNextRun(): Boolean {
+        return synchronized(stateLock) {
+            syncActiveWidgetIds()
+
+            val settings = preferencesController.currentHomeWidget()
+            val hasWidgets = activeWidgetIds.isNotEmpty()
+            val screenOnUnlocked =
+                currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON
+            val homeVisible =
+                homeForegroundState == HomeForegroundState.HOME
+
+            hasWidgets &&
+                    settings.autoNextEnabled &&
+                    screenOnUnlocked &&
+                    (!settings.updateOnlyScreenOn || homeVisible)
+        }
     }
 
     @Volatile
@@ -177,11 +223,11 @@ class AndroidHomeVocabularyWidgetCoordinator(
         return Companion.isTransientSystemPackage(pkg)
     }
 
-    fun setHomeSurfaceState(state: HomeSurfaceState, reason: String) {
+    fun setHomeForegroundState(state: HomeForegroundState, reason: String) {
         synchronized(stateLock) {
-            val oldState = homeSurfaceState
-            homeSurfaceState = state
-            val wasAllowed = (currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && oldState == HomeSurfaceState.VISIBLE)
+            val oldState = homeForegroundState
+            homeForegroundState = state
+            val wasAllowed = (currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON && oldState == HomeForegroundState.HOME)
             val nowAllowed = isHomeWidgetRuntimeAllowed()
 
             Log.i(
@@ -190,9 +236,9 @@ class AndroidHomeVocabularyWidgetCoordinator(
             )
 
             val reasonTag = when (state) {
-                HomeSurfaceState.VISIBLE -> "HOME_VISIBLE"
-                HomeSurfaceState.HIDDEN -> "HOME_HIDDEN"
-                HomeSurfaceState.UNKNOWN -> "HOME_UNKNOWN"
+                HomeForegroundState.HOME -> "HOME_VISIBLE"
+                HomeForegroundState.OTHER_APP -> "HOME_HIDDEN"
+                HomeForegroundState.UNKNOWN -> "HOME_UNKNOWN"
             }
 
             if (wasAllowed && !nowAllowed) {
@@ -203,9 +249,18 @@ class AndroidHomeVocabularyWidgetCoordinator(
         }
     }
 
+    fun setHomeSurfaceState(state: HomeSurfaceState, reason: String) {
+        val target = when (state) {
+            HomeSurfaceState.VISIBLE -> HomeForegroundState.HOME
+            HomeSurfaceState.HIDDEN -> HomeForegroundState.OTHER_APP
+            HomeSurfaceState.UNKNOWN -> HomeForegroundState.UNKNOWN
+        }
+        setHomeForegroundState(target, reason)
+    }
+
     fun setHomeSurfaceVisible(visible: Boolean, reason: String) {
-        setHomeSurfaceState(
-            if (visible) HomeSurfaceState.VISIBLE else HomeSurfaceState.HIDDEN,
+        setHomeForegroundState(
+            if (visible) HomeForegroundState.HOME else HomeForegroundState.OTHER_APP,
             reason
         )
     }
@@ -264,29 +319,11 @@ class AndroidHomeVocabularyWidgetCoordinator(
                     reconcileRuntimeClock("DEVICE_LOCKED: $reason")
                 }
                 VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON -> {
-                    val resolvedState = vn.loi.learning.android.controller.ControllerSystemActionBridge.reconcileHomeSurface()
-                    if (resolvedState != HomeSurfaceState.UNKNOWN) {
-                        homeSurfaceState = resolvedState
-                    }
+                    refreshForegroundState("DEVICE_UNLOCKED: $reason")
                     reconcileRuntimeClock("DEVICE_UNLOCKED: $reason")
-                    reconcilePostUnlockHomeState()
                 }
             }
         }
-    }
-
-    fun reconcilePostUnlockHomeState() {
-        mainHandler.postDelayed({
-            synchronized(stateLock) {
-                if (currentDeviceState == VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON) {
-                    val resolvedState = vn.loi.learning.android.controller.ControllerSystemActionBridge.reconcileHomeSurface()
-                    if (resolvedState != HomeSurfaceState.UNKNOWN) {
-                        homeSurfaceState = resolvedState
-                    }
-                    reconcileRuntimeClock("POST_UNLOCK_RECONCILE")
-                }
-            }
-        }, 150)
     }
 
     fun handleScreenOff() = transitionDeviceState(VocabularyPresentationDeviceState.SCREEN_OFF, "DIRECT_SCREEN_OFF")
@@ -658,10 +695,10 @@ class AndroidHomeVocabularyWidgetCoordinator(
             return
         }
 
-        if (!isHomeWidgetRuntimeAllowed()) {
+        if (!shouldHomeWidgetAutoNextRun()) {
             Log.i(
                 TAG_AUDIO_PLAY,
-                "[HomeWidgetAudioPlayback] candidateId=$candidateId trigger=CANDIDATE_TRANSITION played=false skipReason=HOME_SURFACE_NOT_ALLOWED state=$currentDeviceState homeSurfaceState=$homeSurfaceState"
+                "[HomeWidgetAudioPlayback] candidateId=$candidateId trigger=CANDIDATE_TRANSITION played=false skipReason=RUNTIME_POLICY_NOT_ALLOWED state=$currentDeviceState homeSurfaceState=$homeSurfaceState updateOnlyScreenOn=${settings.updateOnlyScreenOn}"
             )
             return
         }
@@ -823,7 +860,7 @@ class AndroidHomeVocabularyWidgetCoordinator(
             val settings = preferencesController.currentHomeWidget()
             val hasWidgets = activeWidgetIds.isNotEmpty()
             val homeWidgetRuntimeAllowed = isHomeWidgetRuntimeAllowed()
-            val shouldRunTimer = hasWidgets && settings.autoNextEnabled && (!settings.updateOnlyScreenOn || homeWidgetRuntimeAllowed)
+            val shouldRunTimer = shouldHomeWidgetAutoNextRun()
             val interval = settings.clampedIntervalMillis
 
             val clockState = when {
@@ -878,16 +915,12 @@ class AndroidHomeVocabularyWidgetCoordinator(
                             autoNextRunnable = null
                             return
                         }
-                        if (activeWidgetIds.isNotEmpty()) {
-                            val curSettings = preferencesController.currentHomeWidget()
-                            val curRuntimeAllowed = isHomeWidgetRuntimeAllowed()
-                            if (curSettings.autoNextEnabled && (!curSettings.updateOnlyScreenOn || curRuntimeAllowed)) {
-                                Log.i(TAG_SCHEDULER, "[HOME_WIDGET_TIMER_FIRE] intervalMillis=$interval candidateId=${currentCandidate?.contentId?.value}")
-                                Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] action=FIRE intervalMs=$interval")
-                                advanceToNextCandidate("TIMER_FIRED")
-                                mainHandler.postDelayed(this, interval)
-                                return
-                            }
+                        if (shouldHomeWidgetAutoNextRun()) {
+                            Log.i(TAG_SCHEDULER, "[HOME_WIDGET_TIMER_FIRE] intervalMillis=$interval candidateId=${currentCandidate?.contentId?.value}")
+                            Log.i(TAG_SCHEDULER, "[HomeWidgetScheduler] action=FIRE intervalMs=$interval")
+                            advanceToNextCandidate("TIMER_FIRED")
+                            mainHandler.postDelayed(this, interval)
+                            return
                         }
                         cancelAutoNextTimer("TIMER_CONDITIONS_CHANGED")
                     }
