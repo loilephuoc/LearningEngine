@@ -206,6 +206,24 @@ class AndroidStudyFacadeTest {
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
     }
 
+    @Test fun `wrong MCQ is committed automatically once and cannot be manually resubmitted`() {
+        val f = fixture()
+        val base = assertIs<AndroidStudyState.Typing>(f.facade.load()).plan
+        val choices = listOf(RecallChoice("a", "Wrong", false), RecallChoice("b", "hello", true))
+        val plan = base.copy(
+            mode = RecallMode.MULTIPLE_CHOICE,
+            prompt = RecallPrompt.MultipleChoice("Choose", choices),
+            answerContract = base.answerContract.copy(canonicalAnswer = "b", kind = RecallAnswerKind.CHOICE),
+            platformRequirements = RecallPlatformRequirements(requiresChoiceSelection = true)
+        )
+        val state = assertIs<AndroidStudyState.MultipleChoice>(f.facade.present(plan))
+        val completed = assertIs<AndroidStudyState.MultipleChoice>(f.facade.choose(state, "a"))
+        assertEquals(RecallOutcome.INCORRECT, completed.outcome)
+        val committedCount = f.context.engine.getReviewHistory(f.learner, f.itemId).size
+        assertEquals(completed, f.facade.choose(completed, "b"))
+        assertEquals(committedCount, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+    }
+
     @Test fun `android listening resolves media and represents unavailable audio`() {
         val f = fixture(resolveMedia = { if (it == "audio/word.mp3") "C:/media/word.mp3" else null })
         val base = assertIs<AndroidStudyState.Typing>(f.facade.load()).plan

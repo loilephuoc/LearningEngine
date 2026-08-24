@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.vector.ImageVector
 import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
@@ -489,7 +490,8 @@ fun LearningEngineAudioTextRow(
     isLooping: Boolean,
     onToggleAudio: () -> Unit,
     modifier: Modifier = Modifier,
-    headingSemantics: Boolean = false
+    headingSemantics: Boolean = false,
+    textAlign: TextAlign = TextAlign.Start
 ) {
     LearningEngineAudioTextRow(
         annotatedText = AnnotatedString(text),
@@ -501,7 +503,8 @@ fun LearningEngineAudioTextRow(
         onToggleAudio = onToggleAudio,
         modifier = modifier,
         headingSemantics = headingSemantics,
-        contentDescriptionOverride = null
+        contentDescriptionOverride = null,
+        textAlign = textAlign
     )
 }
 
@@ -516,17 +519,36 @@ fun LearningEngineAudioTextRow(
     onToggleAudio: () -> Unit,
     modifier: Modifier = Modifier,
     headingSemantics: Boolean = false,
-    contentDescriptionOverride: String? = null
+    contentDescriptionOverride: String? = null,
+    textAlign: TextAlign = TextAlign.Start
 ) {
     val hasAudio = !audioPath.isNullOrBlank()
     val shape = LearningEngineShapes.small
     val desc = contentDescriptionOverride ?: annotatedText.text
 
     val rowContent: @Composable () -> Unit = {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .defaultMinSize(minHeight = LearningSpacing.touchTarget)
+        if (textAlign == TextAlign.Center) Box(
+            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = LearningSpacing.touchTarget)
+                .padding(vertical = LearningSpacing.extraSmall),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = annotatedText,
+                style = style,
+                color = if (isPlaying) MaterialTheme.colorScheme.primary else color,
+                textAlign = textAlign,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = LearningSpacing.touchTarget)
+                    .semantics { if (headingSemantics) heading() }
+            )
+            if (hasAudio) {
+                LearningEngineAudioIndicator(
+                    isPlaying = isPlaying,
+                    isLooping = isLooping,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
+            }
+        } else Row(
+            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = LearningSpacing.touchTarget)
                 .padding(horizontal = LearningSpacing.small, vertical = LearningSpacing.extraSmall),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -535,16 +557,10 @@ fun LearningEngineAudioTextRow(
                 text = annotatedText,
                 style = style,
                 color = if (isPlaying) MaterialTheme.colorScheme.primary else color,
-                modifier = Modifier
-                    .weight(1f, fill = false)
+                modifier = Modifier.weight(1f, fill = false)
                     .semantics { if (headingSemantics) heading() }
             )
-            if (hasAudio) {
-                LearningEngineAudioIndicator(
-                    isPlaying = isPlaying,
-                    isLooping = isLooping
-                )
-            }
+            if (hasAudio) LearningEngineAudioIndicator(isPlaying = isPlaying, isLooping = isLooping)
         }
     }
 
@@ -576,7 +592,8 @@ fun LearningEngineAudioTextRow(
                     text = annotatedText,
                     style = style,
                     color = color,
-                    modifier = Modifier.semantics {
+                    textAlign = textAlign,
+                    modifier = Modifier.fillMaxWidth().semantics {
                         if (headingSemantics) heading()
                         if (contentDescriptionOverride != null) contentDescription = contentDescriptionOverride
                     }

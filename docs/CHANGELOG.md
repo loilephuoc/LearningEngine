@@ -1,3 +1,13 @@
+# Android Adaptive Study MCQ Flow Hotfix 1
+
+- Centered the MCQ question independently of its trailing replay control and retained safe wrapping.
+- Added item-keyed, ownership-claimed question autoplay plus a one-shot correct-answer replay with a
+  bounded completion watchdog and minimum perceptible feedback interval.
+- Correct answers now advance without reveal; wrong answers transition from locked red/green choices
+  into the shared production Full Answer. MCQ omits Continue, Undo and manual rating controls and uses
+  the established swipe navigation gesture. Shared Recall remains the sole automatic evaluation and
+  persistence authority, with an early duplicate-selection guard.
+
 # Android Adaptive Study UI Lab 2.0 — production renderer preview
 
 - Reworked the debug Lab into a package/item/mode controller and added a debug-gated preview route.

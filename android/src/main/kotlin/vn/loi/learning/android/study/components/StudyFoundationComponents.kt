@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -123,7 +124,9 @@ internal fun StudyPrompt(
     isPlaying: Boolean,
     onToggleAudio: () -> Unit,
     modifier: Modifier = Modifier,
-    supporting: Boolean = false
+    supporting: Boolean = false,
+    textAlign: TextAlign = TextAlign.Start,
+    isLooping: Boolean = true
 ) {
     LearningEngineAudioTextRow(
         text = text,
@@ -131,10 +134,11 @@ internal fun StudyPrompt(
         color = if (supporting) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
         audioPath = audioPath,
         isPlaying = isPlaying,
-        isLooping = true,
+        isLooping = isLooping,
         onToggleAudio = onToggleAudio,
         headingSemantics = true,
-        modifier = modifier
+        modifier = modifier,
+        textAlign = textAlign
     )
 }
 

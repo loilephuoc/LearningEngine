@@ -1983,6 +1983,15 @@ DPAPI-protected opaque file (`supabase-session.dpapi`). It is not package/projec
 share lifecycle with TTS checkpoints. The existing refresh provider owns refresh rotation and logout;
 the Desktop controller owns startup projection and fails closed when protected state is corrupt or no
 longer valid. Passwords and service-role credentials are outside this persistence contract.
+## Android objective Multiple Choice completion
+
+Android MCQ keeps evaluation and persistence in Shared Recall through `AndroidStudyFacade.choose`;
+the UI does not infer an FSRS rating. The production presentation owns a two-path completion policy:
+correct evidence receives bounded visual/audio feedback and advances automatically, while incorrect
+evidence briefly exposes both selected and expected choices before composing the shared Full Answer
+content. MCQ never exposes manual rating or Continue authority. Its wrong-answer Full Answer uses the
+existing review-navigation gesture path, while all non-MCQ response-action defaults remain unchanged.
+
 ## Android debug adaptive-study preview boundary
 
 The debug-only Adaptive Study UI Lab is a controller, not a second study renderer. It resolves an

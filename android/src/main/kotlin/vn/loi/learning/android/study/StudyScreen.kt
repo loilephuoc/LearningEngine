@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallOutcome
@@ -706,6 +707,7 @@ private fun StudyRuntimeScreen(
     var revealAudioStarted by rememberSaveable(itemKey) { mutableStateOf(false) }
     var quickReviewTransitionPending by remember(itemKey) { mutableStateOf(false) }
     var quickReviewQuestionPlaying by remember(itemKey) { mutableStateOf(false) }
+    var multipleChoiceWrongRevealReady by remember(itemKey) { mutableStateOf(false) }
     var quickReviewTransitionGeneration by remember { mutableLongStateOf(0L) }
     val foregroundAudioOwner = remember(audioController, itemKey) { Any() }
 
@@ -1030,6 +1032,63 @@ private fun StudyRuntimeScreen(
         }
     }
 
+    LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen) {
+        val multipleChoice = state as? AndroidStudyState.MultipleChoice ?: return@LaunchedEffect
+        if (shouldAutoplayMultipleChoiceQuestion(multipleChoice.completed, multipleChoice.resolvedPromptAudio) &&
+            autoplayGateOpen &&
+            audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.PROMPT)
+        ) {
+            restartAudio(AudioRole.PROMPT, multipleChoice.resolvedPromptAudio, false)
+        }
+    }
+
+    LaunchedEffect(itemKey, (state as? AndroidStudyState.MultipleChoice)?.completed,
+        (state as? AndroidStudyState.MultipleChoice)?.outcome) {
+        val multipleChoice = state as? AndroidStudyState.MultipleChoice ?: return@LaunchedEffect
+        if (!multipleChoice.completed) return@LaunchedEffect
+        val feedbackStartedAt = System.currentTimeMillis()
+        when (multipleChoice.outcome) {
+            RecallOutcome.CORRECT -> {
+                vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                    vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+                )
+                audioController.stop()
+                activeRole = null
+                val audioFinished = CompletableDeferred<Unit>()
+                val initial = audioController.replay(
+                    multipleChoice.resolvedPromptAudio,
+                    isLooping = false,
+                    onPlaybackEvent = { event ->
+                        if (event is AndroidAudioPlaybackEvent.Completed) audioFinished.complete(Unit)
+                    },
+                    onState = { playback ->
+                        when (playback) {
+                            AndroidAudioState.Playing -> activeRole = AudioRole.PROMPT
+                            AndroidAudioState.Idle, AndroidAudioState.Unavailable,
+                            is AndroidAudioState.Failed -> {
+                                activeRole = null
+                                audioFinished.complete(Unit)
+                            }
+                            else -> Unit
+                        }
+                    }
+                )
+                if (initial is AndroidAudioState.Unavailable || initial is AndroidAudioState.Failed) {
+                    audioFinished.complete(Unit)
+                }
+                withTimeoutOrNull(MULTIPLE_CHOICE_AUDIO_WATCHDOG_MILLIS) { audioFinished.await() }
+                val visibleMillis = System.currentTimeMillis() - feedbackStartedAt
+                delay((MULTIPLE_CHOICE_MINIMUM_FEEDBACK_MILLIS - visibleMillis).coerceAtLeast(0L))
+                onEvent(AndroidStudyEvent.NextVisited)
+            }
+            RecallOutcome.INCORRECT -> {
+                delay(MULTIPLE_CHOICE_MINIMUM_FEEDBACK_MILLIS)
+                multipleChoiceWrongRevealReady = true
+            }
+            else -> Unit
+        }
+    }
+
     LaunchedEffect(
         itemKey,
         audioOwnerToken,
@@ -1145,6 +1204,9 @@ private fun StudyRuntimeScreen(
     }
     val typingSuccessPending = (state as? AndroidStudyState.Typing)?.completionPending == true
     val isEnded = state.completed || isRevealed
+    val multipleChoicePath = (state as? AndroidStudyState.MultipleChoice)?.let {
+        multipleChoiceCompletionPath(it.completed, it.outcome, multipleChoiceWrongRevealReady)
+    }
     val preserveTypingIme = state is AndroidStudyState.Typing &&
         state.completionPending && state.outcome == RecallOutcome.CORRECT
 
@@ -1204,7 +1266,9 @@ private fun StudyRuntimeScreen(
                 is AndroidStudyState.Typing -> Modifier.fillMaxWidth().weight(1f)
                 else -> Modifier.fillMaxWidth().verticalScroll(scrollState)
             }).reviewNavigationGestures(
-                enabled = state !is AndroidStudyState.Introduction && isEnded && !typingSuccessPending,
+                enabled = state !is AndroidStudyState.Introduction && isEnded && !typingSuccessPending &&
+                    (state !is AndroidStudyState.MultipleChoice ||
+                        multipleChoicePath == MultipleChoiceCompletionPath.WRONG_FULL_ANSWER),
                 canPrevious = state.navigation.canPrevious,
                 canNext = state.navigation.canNext,
                 onPrevious = { stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited) },
@@ -1268,6 +1332,7 @@ private fun StudyRuntimeScreen(
                 }
             },
             onTypingStageTap = toggleTypingRevealedAudioLoop,
+            multipleChoiceWrongRevealReady = multipleChoiceWrongRevealReady,
             onEvent = stopAudioAndDispatch,
             onOpenFullscreenImage = onOpenFullscreenImage,
             isMuted = isMuted,
@@ -1523,6 +1588,7 @@ private fun LearningEngineLearningStage(
     onIntroductionNext: () -> Unit,
     onIntroductionRating: (ReviewRating) -> Unit,
     onTypingStageTap: () -> Unit = {},
+    multipleChoiceWrongRevealReady: Boolean = false,
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit,
     isMuted: Boolean = false,
@@ -1569,6 +1635,8 @@ private fun LearningEngineLearningStage(
                 activeRole,
                 playAudio,
                 onEvent,
+                showResponseActions = state !is AndroidStudyState.MultipleChoice ||
+                    multipleChoiceAllowsManualRating(),
                 onTypingStageTap = onTypingStageTap,
                 typingLeadContent = if (state is AndroidStudyState.Typing && state.revealed) {
                     {
@@ -1631,6 +1699,7 @@ private fun LearningEngineLearningStage(
             onEvent = onEvent,
             onOpenFullscreenImage = onOpenFullscreenImage,
             feedbackContent = feedbackContent,
+            showFullAnswer = state.outcome == RecallOutcome.INCORRECT && multipleChoiceWrongRevealReady,
             modifier = modifier
         )
         return
@@ -2087,6 +2156,7 @@ private fun StudyRevealAndFeedbackContent(
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit,
+    showResponseActions: Boolean = true,
     onTypingStageTap: () -> Unit = {},
     typingLeadContent: (@Composable () -> Unit)? = null
 ) {
@@ -2193,8 +2263,9 @@ private fun StudyRevealAndFeedbackContent(
 
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
-            // Response Actions: Continue, Undo, Rating override
-            Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
+            // Response Actions: Continue, Undo, Rating override. Objective MCQ evidence advances
+            // automatically and never exposes a manual rating authority.
+            if (showResponseActions) Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
                 if (typingSuccessPending) {
                     val typing = state as AndroidStudyState.Typing
                     Text(

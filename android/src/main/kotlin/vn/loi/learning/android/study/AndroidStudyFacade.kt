@@ -1485,8 +1485,13 @@ class AndroidStudyFacade(
         return projected
     }
 
-    fun choose(state: AndroidStudyState.MultipleChoice, choiceId: String): AndroidStudyState =
-        execute(state.copy(selectedChoiceId = choiceId), RecallSubmission.Choice(submissionContext(state.plan), choiceId))
+    fun choose(state: AndroidStudyState.MultipleChoice, choiceId: String): AndroidStudyState {
+        if (state.completed || state.selectedChoiceId != null || state.plan.planId in submittedPlans) return state
+        return execute(
+            state.copy(selectedChoiceId = choiceId),
+            RecallSubmission.Choice(submissionContext(state.plan), choiceId)
+        )
+    }
 
     fun submitText(state: AndroidStudyState.Runtime, typedAnswer: String? = null): AndroidStudyState {
         val answerToUse = typedAnswer ?: when (state) {

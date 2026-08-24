@@ -2329,6 +2329,21 @@ PASS; Continuous Review Mode remains the unimplemented PLE-032 capability.
 - Verification: focused flow/dock/keyboard/chrome selection passed 50 tests; final
   `.\gradlew.bat clean test --no-daemon` passed 2,602 tests (root 1,698; Desktop 904), with
   zero failures, errors, or skipped tests.
+# Android Adaptive Study MCQ Flow Hotfix 1 — 2026-08-24
+
+- Baseline `integration/learning-engine-2.0` at `9570a6f9`; physical MCQ UAT remains pending.
+- Shared Recall remains the only MCQ evaluation/learning authority. `AndroidStudyFacade.choose` now
+  rejects duplicate selection before state mutation or execution.
+- Production MCQ centers the prompt, claims one item-keyed autoplay, locks immediate red/green choice
+  feedback, replays and auto-advances correct answers, and transitions wrong answers to the shared Full
+  Answer without Continue/manual rating. Swipe-up uses existing review navigation.
+- Focused Android compile/unit/assemble gates passed. Full `clean test` passed 854 XML suites / 5,361
+  tests (root 2,322; Android 1,092; Desktop 1,947), with zero failures, errors or skipped tests.
+- `:android:installDebug` built the APK and targeted the sole authorized device `24090RA29C`, but the
+  device rejected installation with `INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`. No
+  uninstall, data clear or ADB reconfiguration was attempted. Physical UAT remains pending. The three
+  known unrelated local edits remain outside this capability.
+
 # Android Adaptive Study UI Lab 2.0 continuation — 2026-08-24
 
 - Branch `integration/learning-engine-2.0`, continuation baseline `97c73a59`; physical Android UAT is pending.

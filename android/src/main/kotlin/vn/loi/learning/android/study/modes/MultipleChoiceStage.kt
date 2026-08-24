@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import vn.loi.learning.android.study.AndroidStudyEvent
 import vn.loi.learning.android.study.AndroidStudyState
 import vn.loi.learning.android.study.AudioRole
@@ -32,6 +33,7 @@ internal fun MultipleChoiceStudyStage(
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit,
     feedbackContent: @Composable () -> Unit,
+    showFullAnswer: Boolean,
     modifier: Modifier = Modifier
 ) {
     var pendingChoiceId by remember(state.plan.planId.value) { mutableStateOf<String?>(null) }
@@ -64,7 +66,9 @@ internal fun MultipleChoiceStudyStage(
                 text = state.question,
                 audioPath = state.resolvedPromptAudio,
                 isPlaying = activeRole == AudioRole.PROMPT,
-                onToggleAudio = { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, true) }
+                onToggleAudio = { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, false) },
+                textAlign = TextAlign.Center,
+                isLooping = false
             )
             if (state.completed) {
                 ReviewImageNavigationOverlay(
@@ -82,27 +86,29 @@ internal fun MultipleChoiceStudyStage(
                 StudyMedia(state.resolvedImage, multipleChoiceMediaRole(), density,
                     availableMediaHeightDp, onOpenFullscreenImage)
             }
-            Column(
-                Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(StudySpacing.choiceGap)
-            ) {
-                presentations.forEach { choice ->
-                    StudyChoiceTile(
-                        anchor = choice.anchor,
-                        text = choice.text,
-                        visualState = choice.visualState,
-                        enabled = choice.enabled,
-                        stateDescriptionText = choice.stateDescription(presentations.size),
-                        onClick = {
-                            if (pendingChoiceId == null && !state.completed) {
-                                pendingChoiceId = choice.id
-                                onEvent(AndroidStudyEvent.Choose(choice.id))
+            if (!showFullAnswer) {
+                Column(
+                    Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(StudySpacing.choiceGap)
+                ) {
+                    presentations.forEach { choice ->
+                        StudyChoiceTile(
+                            anchor = choice.anchor,
+                            text = choice.text,
+                            visualState = choice.visualState,
+                            enabled = choice.enabled,
+                            stateDescriptionText = choice.stateDescription(presentations.size),
+                            onClick = {
+                                if (pendingChoiceId == null && !state.completed) {
+                                    pendingChoiceId = choice.id
+                                    onEvent(AndroidStudyEvent.Choose(choice.id))
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
-            feedbackContent()
+            if (showFullAnswer) feedbackContent()
         }
     }
 }

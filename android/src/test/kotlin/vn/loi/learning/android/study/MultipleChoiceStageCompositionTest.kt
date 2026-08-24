@@ -50,7 +50,14 @@ class MultipleChoiceStageCompositionTest {
     @Test
     fun `prompt audio and answer reveal keep established routes`() {
         assertEquals(1, Regex("playAudio\\(AudioRole\\.PROMPT").findAll(stage).count())
+        assertTrue(stage.contains("textAlign = TextAlign.Center"))
+        assertTrue(stage.contains("showFullAnswer"))
+        assertTrue(stage.contains("if (showFullAnswer) feedbackContent()"))
         assertTrue(screen.contains("StudyAnswerSection("))
+        assertTrue(screen.contains("audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.PROMPT)"))
+        assertTrue(screen.contains("MULTIPLE_CHOICE_AUDIO_WATCHDOG_MILLIS"))
+        assertTrue(screen.contains("onEvent(AndroidStudyEvent.NextVisited)"))
+        assertTrue(screen.contains("multipleChoiceAllowsManualRating()"))
         assertFalse(stage.contains("Snackbar"))
         assertFalse(stage.contains("Dialog("))
     }

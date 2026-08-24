@@ -1,5 +1,12 @@
 # Roadmap
 
+## Android Adaptive Study MCQ Flow Hotfix 1
+
+- **Automated implementation complete; physical Android UAT pending:** MCQ centers its question with
+  safe replay placement, autoplays once per item, locks one submission, and uses objective Shared Recall
+  evaluation. Correct answers replay once then auto-advance; wrong answers show option feedback then the
+  shared Full Answer without Continue or manual rating, with swipe-up advancement.
+
 ## Android Adaptive Study UI Lab 2.0
 
 - **Automated implementation complete; physical Android UAT pending:** the debug-only Lab selects an

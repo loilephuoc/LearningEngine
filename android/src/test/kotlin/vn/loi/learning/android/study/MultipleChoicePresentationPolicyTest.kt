@@ -75,4 +75,30 @@ class MultipleChoicePresentationPolicyTest {
         assertEquals("27", result[26].anchor)
         assertFalse(result.any { it.text.isBlank() })
     }
+
+    @Test
+    fun `completion policy separates correct fast path from wrong full answer`() {
+        assertEquals(
+            MultipleChoiceCompletionPath.QUESTION,
+            multipleChoiceCompletionPath(false, null, wrongRevealReady = false)
+        )
+        assertEquals(
+            MultipleChoiceCompletionPath.CORRECT_FAST_ADVANCE,
+            multipleChoiceCompletionPath(true, RecallOutcome.CORRECT, wrongRevealReady = false)
+        )
+        assertEquals(
+            MultipleChoiceCompletionPath.WRONG_OPTION_FEEDBACK,
+            multipleChoiceCompletionPath(true, RecallOutcome.INCORRECT, wrongRevealReady = false)
+        )
+        assertEquals(
+            MultipleChoiceCompletionPath.WRONG_FULL_ANSWER,
+            multipleChoiceCompletionPath(true, RecallOutcome.INCORRECT, wrongRevealReady = true)
+        )
+        assertFalse(multipleChoiceAllowsManualRating())
+        assertTrue(MULTIPLE_CHOICE_MINIMUM_FEEDBACK_MILLIS in 250L..500L)
+        assertTrue(shouldAutoplayMultipleChoiceQuestion(completed = false, audioPath = "question.mp3"))
+        assertFalse(shouldAutoplayMultipleChoiceQuestion(completed = false, audioPath = null))
+        assertFalse(shouldAutoplayMultipleChoiceQuestion(completed = false, audioPath = ""))
+        assertFalse(shouldAutoplayMultipleChoiceQuestion(completed = true, audioPath = "question.mp3"))
+    }
 }

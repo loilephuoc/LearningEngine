@@ -278,7 +278,7 @@ object AdaptiveStudyUiLabStateFactory {
 
         val navigation = AndroidReviewNavigation(
             canPrevious = currentIndex > 0,
-            canNext = currentIndex < totalCount - 1,
+            canNext = totalCount > 0,
             historyPreview = false
         )
 
