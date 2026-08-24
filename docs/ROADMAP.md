@@ -1,5 +1,12 @@
 # Roadmap
 
+## Android Adaptive Study UI Lab 2.0
+
+- **Automated implementation complete; physical Android UAT pending:** the debug-only Lab selects an
+  installed package item and one of all five adaptive recall modes, then opens the canonical production
+  `StudyScreen` with a forced ephemeral state. The preview contains no Lab overlay and no persistence
+  authority; interactions remain local and Back returns to the retained selector entry.
+
 ## Android Hotfix 5 — live-limit NEW re-entry
 
 - **Automated implementation complete; physical Android UAT pending:** increasing New Limit after the

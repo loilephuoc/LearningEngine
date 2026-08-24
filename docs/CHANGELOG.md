@@ -1,3 +1,13 @@
+# Android Adaptive Study UI Lab 2.0 — production renderer preview
+
+- Reworked the debug Lab into a package/item/mode controller and added a debug-gated preview route.
+- Forced Typing, Listening, Multiple Choice, Image Recall and Example Completion states now render
+  through the canonical production `StudyScreen`, including its chrome, stage composition, media,
+  lifecycle, focus, keyboard and scroll behavior.
+- Preview interactions update only ephemeral Compose state and never invoke `AndroidStudyFacade`,
+  review commits, scheduling, queues or persisted learner progress. Missing resolved media remains a
+  normal unavailable-media state.
+
 # Desktop Batch TTS Hotfix 4.1 — Fallback Voice Configuration UX + Multi-Target Preview + Runtime Voice Transparency + Desktop-Readable Visual Scale + Regression Safety
 
 - Fallback Voice Configuration UX: Simplified fallback voice management directly within each language's configuration card. Displays clear execution order numbers (1., 2., 3.), voice display names with region and gender subtitles, immediate reordering (`[↑]`, `[↓]`) and removal (`[Remove]`). Direct `+ Add fallback voice` button opens the full `SearchableVoicePickerDialog`, with explicit disabled state explanations when reaching the 3-fallback cap or when no compatible voices remain in catalog.

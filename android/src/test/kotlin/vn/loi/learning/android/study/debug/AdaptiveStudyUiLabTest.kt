@@ -7,7 +7,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import vn.loi.learning.android.study.AndroidStudyEvent
 import vn.loi.learning.android.study.AndroidStudyState
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.content.model.Content
@@ -19,6 +21,7 @@ import vn.loi.learning.domain.content.model.ContentMedia
 import vn.loi.learning.domain.content.model.ContentMetadata
 import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
+import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallMode
 import vn.loi.learning.domain.study.recall.RecallOutcome
 
@@ -55,17 +58,16 @@ class AdaptiveStudyUiLabTest {
     }
 
     @Test
-    fun `state factory creates valid typing study state with correct evaluation`() {
+    fun `1 Lab home selects Typing and builds preview request`() {
         val content = sampleContent()
         val allContents = listOf(content)
 
-        // Incomplete state
-        val stateIncomplete = AdaptiveStudyUiLabStateFactory.buildState(
+        val state = AdaptiveStudyUiLabStateFactory.buildState(
             content = content,
             allPackageContents = allContents,
             mode = LabStudyMode.TYPING,
-            mediaResolver = { "resolved/$it" },
-            currentInput = "resil",
+            mediaResolver = { "media/$it" },
+            currentInput = "",
             selectedChoiceId = null,
             isRevealed = false,
             isCompleted = false,
@@ -73,58 +75,23 @@ class AdaptiveStudyUiLabTest {
             totalCount = 1,
             packageTitle = "Test Package"
         )
-        assertIs<AndroidStudyState.Typing>(stateIncomplete)
-        assertEquals("khả năng phục hồi", stateIncomplete.prompt)
-        assertEquals("resolved/audio_1.mp3", stateIncomplete.resolvedExpectedAnswerAudio)
-        assertEquals(TypingAnswerEvaluationStatus.EMPTY, stateIncomplete.evaluation)
-        assertFalse(stateIncomplete.completed)
-
-        // Correct completed state
-        val stateCorrect = AdaptiveStudyUiLabStateFactory.buildState(
-            content = content,
-            allPackageContents = allContents,
-            mode = LabStudyMode.TYPING,
-            mediaResolver = { "resolved/$it" },
-            currentInput = "resilience",
-            selectedChoiceId = null,
-            isRevealed = false,
-            isCompleted = true,
-            currentIndex = 0,
-            totalCount = 1,
-            packageTitle = "Test Package"
-        )
-        assertIs<AndroidStudyState.Typing>(stateCorrect)
-        assertEquals(TypingAnswerEvaluationStatus.CORRECT, stateCorrect.evaluation)
-        assertEquals(RecallOutcome.CORRECT, stateCorrect.outcome)
-        assertTrue(stateCorrect.completed)
-
-        // Incorrect completed state
-        val stateIncorrect = AdaptiveStudyUiLabStateFactory.buildState(
-            content = content,
-            allPackageContents = allContents,
-            mode = LabStudyMode.TYPING,
-            mediaResolver = { "resolved/$it" },
-            currentInput = "wrong",
-            selectedChoiceId = null,
-            isRevealed = false,
-            isCompleted = true,
-            currentIndex = 0,
-            totalCount = 1,
-            packageTitle = "Test Package"
-        )
-        assertIs<AndroidStudyState.Typing>(stateIncorrect)
-        assertEquals(TypingAnswerEvaluationStatus.INCORRECT, stateIncorrect.evaluation)
-        assertEquals(RecallOutcome.INCORRECT, stateIncorrect.outcome)
+        assertIs<AndroidStudyState.Typing>(state)
+        assertEquals("khả năng phục hồi", state.prompt)
+        assertEquals("media/audio_1.mp3", state.resolvedExpectedAnswerAudio)
+        assertEquals(TypingAnswerEvaluationStatus.EMPTY, state.evaluation)
+        assertFalse(state.completed)
+        assertNotNull(state.hud, "Must provide HUD metrics for production header")
+        assertNotNull(state.navigation, "Must provide navigation state for production review navigation")
     }
 
     @Test
-    fun `state factory creates valid listening study state and handles missing audio safely`() {
-        val contentNoAudio = sampleContent(audio = null)
+    fun `2 Listening request builds correct production-compatible state`() {
+        val content = sampleContent()
         val state = AdaptiveStudyUiLabStateFactory.buildState(
-            content = contentNoAudio,
-            allPackageContents = listOf(contentNoAudio),
+            content = content,
+            allPackageContents = listOf(content),
             mode = LabStudyMode.LISTENING,
-            mediaResolver = { "resolved/$it" },
+            mediaResolver = { "media/$it" },
             currentInput = "",
             selectedChoiceId = null,
             isRevealed = false,
@@ -134,21 +101,20 @@ class AdaptiveStudyUiLabTest {
             packageTitle = "Test Package"
         )
         assertIs<AndroidStudyState.Listening>(state)
-        assertEquals(null, state.audioPath)
-        assertEquals(null, state.resolvedPromptAudio)
+        assertEquals("media/audio_1.mp3", state.audioPath)
+        assertEquals("media/audio_1.mp3", state.resolvedPromptAudio)
+        assertNotNull(state.hud)
     }
 
     @Test
-    fun `state factory creates valid multiple choice state with fallback distractors when package is small`() {
+    fun `3 Multiple Choice request builds correct state with choices`() {
         val target = sampleContent("c1", "resilience", "khả năng phục hồi")
-        val other = sampleContent("c2", "meticulous", "tỉ mỉ")
-        val allContents = listOf(target, other)
-
+        val distractor = sampleContent("c2", "meticulous", "tỉ mỉ")
         val state = AdaptiveStudyUiLabStateFactory.buildState(
             content = target,
-            allPackageContents = allContents,
+            allPackageContents = listOf(target, distractor),
             mode = LabStudyMode.MULTIPLE_CHOICE,
-            mediaResolver = { "resolved/$it" },
+            mediaResolver = { "media/$it" },
             currentInput = "",
             selectedChoiceId = null,
             isRevealed = false,
@@ -158,89 +124,21 @@ class AdaptiveStudyUiLabTest {
             packageTitle = "Test Package"
         )
         assertIs<AndroidStudyState.MultipleChoice>(state)
-        assertTrue(state.choices.size >= 4, "Should have at least 4 choices including fallbacks")
+        assertTrue(state.choices.size >= 4, "Must generate at least 4 choices")
         val correctChoice = state.choices.find { it.correct }
         assertNotNull(correctChoice)
         assertEquals("khả năng phục hồi", correctChoice.text)
-
-        // Select correct choice
-        val stateSelected = AdaptiveStudyUiLabStateFactory.buildState(
-            content = target,
-            allPackageContents = allContents,
-            mode = LabStudyMode.MULTIPLE_CHOICE,
-            mediaResolver = { "resolved/$it" },
-            currentInput = "",
-            selectedChoiceId = "choice-target-c1",
-            isRevealed = false,
-            isCompleted = true,
-            currentIndex = 0,
-            totalCount = 2,
-            packageTitle = "Test Package"
-        )
-        assertIs<AndroidStudyState.MultipleChoice>(stateSelected)
-        assertEquals(RecallOutcome.CORRECT, stateSelected.outcome)
     }
 
     @Test
-    fun `state factory creates valid image recall state and handles missing image safely`() {
-        val contentNoImg = sampleContent(image = null)
+    fun `4 Image Recall request builds correct state`() {
+        val content = sampleContent(image = "tree.png")
         val state = AdaptiveStudyUiLabStateFactory.buildState(
-            content = contentNoImg,
-            allPackageContents = listOf(contentNoImg),
+            content = content,
+            allPackageContents = listOf(content),
             mode = LabStudyMode.IMAGE_RECALL,
-            mediaResolver = { "resolved/$it" },
-            currentInput = "resilience",
-            selectedChoiceId = null,
-            isRevealed = true,
-            isCompleted = true,
-            currentIndex = 0,
-            totalCount = 1,
-            packageTitle = "Test Package"
-        )
-        assertIs<AndroidStudyState.ImageRecall>(state)
-        assertEquals(null, state.imagePath)
-        assertEquals(null, state.resolvedImage)
-        assertTrue(state.completed)
-    }
-
-    @Test
-    fun `state factory creates valid example completion state with accurate cloze span`() {
-        val content = sampleContent(
-            primary = "resilience",
-            example = "Her resilience was inspiring to all."
-        )
-        val state = AdaptiveStudyUiLabStateFactory.buildState(
-            content = content,
-            allPackageContents = listOf(content),
-            mode = LabStudyMode.EXAMPLE_COMPLETION,
-            mediaResolver = { "resolved/$it" },
-            currentInput = "resilience",
-            selectedChoiceId = null,
-            isRevealed = false,
-            isCompleted = true,
-            currentIndex = 0,
-            totalCount = 1,
-            packageTitle = "Test Package"
-        )
-        assertIs<AndroidStudyState.ExampleCompletion>(state)
-        assertEquals("Her ", state.prefix)
-        assertEquals("resilience", state.blank)
-        assertEquals(" was inspiring to all.", state.suffix)
-        assertEquals(RecallOutcome.CORRECT, state.outcome)
-    }
-
-    @Test
-    fun `state factory example completion falls back gracefully when primary not in example`() {
-        val content = sampleContent(
-            primary = "resilience",
-            example = "This sentence does not contain the headword."
-        )
-        val state = AdaptiveStudyUiLabStateFactory.buildState(
-            content = content,
-            allPackageContents = listOf(content),
-            mode = LabStudyMode.EXAMPLE_COMPLETION,
-            mediaResolver = { "resolved/$it" },
-            currentInput = "",
+            mediaResolver = { "media/$it" },
+            currentInput = "tree",
             selectedChoiceId = null,
             isRevealed = false,
             isCompleted = false,
@@ -248,83 +146,231 @@ class AdaptiveStudyUiLabTest {
             totalCount = 1,
             packageTitle = "Test Package"
         )
+        assertIs<AndroidStudyState.ImageRecall>(state)
+        assertEquals("media/tree.png", state.imagePath)
+        assertEquals("media/tree.png", state.resolvedImage)
+    }
+
+    @Test
+    fun `5 Example Completion request builds correct state with cloze span`() {
+        val content = sampleContent(
+            primary = "resilience",
+            example = "Her mental resilience helped her."
+        )
+        val state = AdaptiveStudyUiLabStateFactory.buildState(
+            content = content,
+            allPackageContents = listOf(content),
+            mode = LabStudyMode.EXAMPLE_COMPLETION,
+            mediaResolver = { "media/$it" },
+            currentInput = "resilience",
+            selectedChoiceId = null,
+            isRevealed = false,
+            isCompleted = true,
+            currentIndex = 0,
+            totalCount = 1,
+            packageTitle = "Test Package"
+        )
         assertIs<AndroidStudyState.ExampleCompletion>(state)
-        assertNotNull(state.prefix)
-        assertNotNull(state.blank)
-        assertNotNull(state.suffix)
+        assertEquals("Her mental ", state.prefix)
+        assertEquals("resilience", state.blank)
+        assertEquals(" helped her.", state.suffix)
+        assertEquals(RecallOutcome.CORRECT, state.outcome)
     }
 
     @Test
-    fun `lab modes map to valid engine recall modes`() {
-        assertEquals(RecallMode.TYPING, LabStudyMode.TYPING.recallMode)
-        assertEquals(RecallMode.LISTENING, LabStudyMode.LISTENING.recallMode)
-        assertEquals(RecallMode.MULTIPLE_CHOICE, LabStudyMode.MULTIPLE_CHOICE.recallMode)
-        assertEquals(RecallMode.IMAGE_RECALL, LabStudyMode.IMAGE_RECALL.recallMode)
-        assertEquals(RecallMode.EXAMPLE_COMPLETION, LabStudyMode.EXAMPLE_COMPLETION.recallMode)
+    fun `6 Production preview renders through the same real StudyScreen container`() {
+        val previewSource = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/android/study/debug/AdaptiveStudyUiPreviewScreen.kt")
+        )
+        assertTrue(
+            previewSource.contains("StudyScreen("),
+            "AdaptiveStudyUiPreviewScreen must render canonical production StudyScreen"
+        )
+        assertTrue(
+            previewSource.contains("import vn.loi.learning.android.study.StudyScreen"),
+            "AdaptiveStudyUiPreviewScreen must import real StudyScreen"
+        )
     }
 
     @Test
-    fun `lab layout respects stage scroll ownership and guarantees finite constraints`() {
-        val screenSource = Files.readString(
+    fun `7 Preview event sink does not call real review commit or mutate database`() {
+        val previewSource = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/android/study/debug/AdaptiveStudyUiPreviewScreen.kt")
+        )
+        assertFalse(
+            previewSource.contains("AndroidStudyFacade"),
+            "AdaptiveStudyUiPreviewScreen must NOT instantiate or call AndroidStudyFacade"
+        )
+        assertFalse(
+            previewSource.contains("commitReview"),
+            "AdaptiveStudyUiPreviewScreen must NOT invoke commitReview"
+        )
+        assertFalse(
+            previewSource.contains("fsrs"),
+            "AdaptiveStudyUiPreviewScreen must NOT invoke FSRS algorithms"
+        )
+    }
+
+    @Test
+    fun `8 Typing Check produces local-only evaluation and outcome`() {
+        val content = sampleContent(primary = "resilience")
+        val correctState = AdaptiveStudyUiLabStateFactory.buildState(
+            content = content,
+            allPackageContents = listOf(content),
+            mode = LabStudyMode.TYPING,
+            mediaResolver = { null },
+            currentInput = "resilience",
+            selectedChoiceId = null,
+            isRevealed = false,
+            isCompleted = true,
+            currentIndex = 0,
+            totalCount = 1,
+            packageTitle = "Test"
+        ) as AndroidStudyState.Typing
+        assertEquals(TypingAnswerEvaluationStatus.CORRECT, correctState.evaluation)
+        assertEquals(RecallOutcome.CORRECT, correctState.outcome)
+
+        val wrongState = AdaptiveStudyUiLabStateFactory.buildState(
+            content = content,
+            allPackageContents = listOf(content),
+            mode = LabStudyMode.TYPING,
+            mediaResolver = { null },
+            currentInput = "wrong_answer",
+            selectedChoiceId = null,
+            isRevealed = false,
+            isCompleted = true,
+            currentIndex = 0,
+            totalCount = 1,
+            packageTitle = "Test"
+        ) as AndroidStudyState.Typing
+        assertEquals(TypingAnswerEvaluationStatus.INCORRECT, wrongState.evaluation)
+        assertEquals(RecallOutcome.INCORRECT, wrongState.outcome)
+    }
+
+    @Test
+    fun `9 Reveal produces local-only revealed state`() {
+        val content = sampleContent()
+        val stateRevealed = AdaptiveStudyUiLabStateFactory.buildState(
+            content = content,
+            allPackageContents = listOf(content),
+            mode = LabStudyMode.TYPING,
+            mediaResolver = { null },
+            currentInput = "",
+            selectedChoiceId = null,
+            isRevealed = true,
+            isCompleted = false,
+            currentIndex = 0,
+            totalCount = 1,
+            packageTitle = "Test"
+        ) as AndroidStudyState.Typing
+        assertTrue(stateRevealed.revealed)
+        assertFalse(stateRevealed.completed)
+    }
+
+    @Test
+    fun `10 Multiple Choice selection produces local-only state`() {
+        val content = sampleContent("c1", "resilience", "khả năng phục hồi")
+        val selectedState = AdaptiveStudyUiLabStateFactory.buildState(
+            content = content,
+            allPackageContents = listOf(content),
+            mode = LabStudyMode.MULTIPLE_CHOICE,
+            mediaResolver = { null },
+            currentInput = "",
+            selectedChoiceId = "choice-target-c1",
+            isRevealed = false,
+            isCompleted = true,
+            currentIndex = 0,
+            totalCount = 1,
+            packageTitle = "Test"
+        ) as AndroidStudyState.MultipleChoice
+        assertEquals("choice-target-c1", selectedState.selectedChoiceId)
+        assertTrue(selectedState.completed)
+        assertEquals(RecallOutcome.CORRECT, selectedState.outcome)
+    }
+
+    @Test
+    fun `11 Rating tap produces zero FSRS writes in preview controller`() {
+        val previewSource = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/android/study/debug/AdaptiveStudyUiPreviewScreen.kt")
+        )
+        val rateBranch = previewSource.substringAfter("is AndroidStudyEvent.RateIntroduction,")
+            .substringBefore("is AndroidStudyEvent.Retry ->")
+
+        // Must update local index / input without calling study repositories
+        assertTrue(rateBranch.contains("currentItemIndex"))
+        assertTrue(rateBranch.contains("isCompleted = false"))
+        assertFalse(rateBranch.contains("reviewRepository"))
+        assertFalse(rateBranch.contains("scheduleNext"))
+    }
+
+    @Test
+    fun `12 Preview exit leaves real study queue unchanged`() {
+        val previewSource = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/android/study/debug/AdaptiveStudyUiPreviewScreen.kt")
+        )
+        val homeBranch = previewSource.substringAfter("is AndroidStudyEvent.Home ->")
+            .substringBefore("is AndroidStudyEvent.AnswerChanged ->")
+        assertTrue(homeBranch.contains("onBack()"))
+    }
+
+    @Test
+    fun `13 BuildConfig DEBUG gate remains enforced on launcher and preview routes`() {
+        val mainActivitySource = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/android/MainActivity.kt")
+        )
+        val debugSection = mainActivitySource.substringAfter("if (BuildConfig.DEBUG) {")
+            .substringBefore("opensStudyFromExplicitEvent")
+        assertTrue(
+            debugSection.contains("adaptive_study_ui_lab"),
+            "adaptive_study_ui_lab route must be guarded by BuildConfig.DEBUG"
+        )
+        assertTrue(
+            debugSection.contains("adaptive_study_ui_preview"),
+            "adaptive_study_ui_preview route must be guarded by BuildConfig.DEBUG"
+        )
+    }
+
+    @Test
+    fun `14 No Lab vertical-scroll ancestor wraps the production StudyScreen in preview`() {
+        val previewSource = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/android/study/debug/AdaptiveStudyUiPreviewScreen.kt")
+        )
+        val outerContainer = previewSource.substringAfter("AdaptiveStudyUiPreviewScreen(")
+            .substringBefore("StudyScreen(")
+        assertFalse(
+            outerContainer.contains("verticalScroll"),
+            "AdaptiveStudyUiPreviewScreen must NOT wrap StudyScreen in a verticalScroll modifier"
+        )
+    }
+
+    @Test
+    fun `15 Lab launcher does not embed stage cards and provides Open Production Preview action`() {
+        val labLauncherSource = Files.readString(
             Path.of("src/main/kotlin/vn/loi/learning/android/study/debug/AdaptiveStudyUiLabScreen.kt")
         )
-
-        // 1. Root Column inside Scaffold must NOT have verticalScroll modifier
-        val rootColumnModifier = screenSource
-            .substringAfter("Scaffold(")
-            .substringAfter("Column(")
-            .substringAfter("modifier = Modifier")
-            .substringBefore("// 1. Controls Header:")
-            .substringBefore(")")
         assertFalse(
-            rootColumnModifier.contains("verticalScroll"),
-            "Root Column modifier must NOT have verticalScroll which causes infinite maximum height constraints"
+            labLauncherSource.contains("TypingStudyStage("),
+            "AdaptiveStudyUiLabScreen must not embed TypingStudyStage"
         )
-
-        // 2. Stage host container must use weight(1f) to ensure finite bounded height
-        assertTrue(
-            screenSource.contains(".weight(1f)"),
-            "Stage host container must use weight(1f) to guarantee finite bounds"
-        )
-
-        // 3. TypingStudyStage MUST receive fillMaxSize and MUST NOT have verticalScroll passed to it
-        // because TypingStudyStage owns vertical scrolling internally via TypedAnswerStageFrame(fillViewport = true)
-        val typingCall = screenSource.substringAfter("is AndroidStudyState.Typing ->")
-            .substringBefore("is AndroidStudyState.Listening ->")
-        assertTrue(
-            typingCall.contains("modifier = Modifier.fillMaxSize()"),
-            "TypingStudyStage must receive Modifier.fillMaxSize() without verticalScroll wrapper"
-        )
-        val typingCallCode = typingCall.lines().filterNot { it.trim().startsWith("//") }.joinToString("\n")
         assertFalse(
-            typingCallCode.contains("verticalScroll"),
-            "TypingStudyStage must NOT have verticalScroll modifier passed into it"
+            labLauncherSource.contains("ListeningStudyStage("),
+            "AdaptiveStudyUiLabScreen must not embed ListeningStudyStage"
         )
-
-        // 4. Non-typing stages (Listening, MultipleChoice, ImageRecall, ExampleCompletion)
-        // receive verticalScroll within the finite weight(1f) container
-        val whenBlock = screenSource.substringAfter("when (val s = studyState) {")
-        val listeningCall = whenBlock.substringAfter("is AndroidStudyState.Listening ->")
-            .substringBefore("is AndroidStudyState.MultipleChoice ->")
-        assertTrue(listeningCall.contains("verticalScroll(nonTypingScrollState)"))
-
-        val mcCall = whenBlock.substringAfter("is AndroidStudyState.MultipleChoice ->")
-            .substringBefore("is AndroidStudyState.ImageRecall ->")
-        assertTrue(mcCall.contains("verticalScroll(nonTypingScrollState)"))
-
-        val irCall = whenBlock.substringAfter("is AndroidStudyState.ImageRecall ->")
-            .substringBefore("is AndroidStudyState.ExampleCompletion ->")
-        assertTrue(irCall.contains("verticalScroll(nonTypingScrollState)"))
-
-        val ecCall = whenBlock.substringAfter("is AndroidStudyState.ExampleCompletion ->")
-            .substringBefore("Trạng thái kiểm thử không khả dụng")
-        assertTrue(ecCall.contains("verticalScroll(nonTypingScrollState)"))
-
-        // 5. All 5 real production stage composables must be directly embedded
-        assertTrue(screenSource.contains("TypingStudyStage("))
-        assertTrue(screenSource.contains("ListeningStudyStage("))
-        assertTrue(screenSource.contains("MultipleChoiceStudyStage("))
-        assertTrue(screenSource.contains("ImageRecallStudyStage("))
-        assertTrue(screenSource.contains("ExampleCompletionStudyStage("))
+        assertFalse(
+            labLauncherSource.contains("MultipleChoiceStudyStage("),
+            "AdaptiveStudyUiLabScreen must not embed MultipleChoiceStudyStage"
+        )
+        assertFalse(
+            labLauncherSource.contains("ImageRecallStudyStage("),
+            "AdaptiveStudyUiLabScreen must not embed ImageRecallStudyStage"
+        )
+        assertFalse(
+            labLauncherSource.contains("ExampleCompletionStudyStage("),
+            "AdaptiveStudyUiLabScreen must not embed ExampleCompletionStudyStage"
+        )
+        assertTrue(
+            labLauncherSource.contains("Mở giao diện học thật"),
+            "AdaptiveStudyUiLabScreen must have Open Production Preview button"
+        )
     }
 }

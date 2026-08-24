@@ -1983,3 +1983,11 @@ DPAPI-protected opaque file (`supabase-session.dpapi`). It is not package/projec
 share lifecycle with TTS checkpoints. The existing refresh provider owns refresh rotation and logout;
 the Desktop controller owns startup projection and fails closed when protected state is corrupt or no
 longer valid. Passwords and service-role credentials are outside this persistence contract.
+## Android debug adaptive-study preview boundary
+
+The debug-only Adaptive Study UI Lab is a controller, not a second study renderer. It resolves an
+installed package item and a forced recall mode into ephemeral `AndroidStudyState`, then supplies
+that state directly to the canonical Android `StudyScreen`. The preview owns only in-memory answer,
+reveal, selection and navigation state; it never constructs `AndroidStudyFacade` or enters the
+Application learning-commit path. Consequently production presentation, media, lifecycle, focus and
+scroll ownership stay shared while FSRS, review, queue and package progress remain untouched.

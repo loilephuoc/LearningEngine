@@ -839,6 +839,28 @@ class MainActivity : ComponentActivity() {
                         composable("adaptive_study_ui_lab", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                             vn.loi.learning.android.study.debug.AdaptiveStudyUiLabScreen(
                                 engine = app.graph.engine,
+                                onBack = { navController.popBackStack() },
+                                onOpenPreview = { packageId, itemIndex, mode ->
+                                    navController.navigate("adaptive_study_ui_preview/$packageId/$itemIndex/${mode.name}")
+                                }
+                            )
+                        }
+                        composable(
+                            "adaptive_study_ui_preview/{packageId}/{itemIndex}/{mode}",
+                            enterTransition = { fadeIn() },
+                            exitTransition = { fadeOut() }
+                        ) { backStackEntry ->
+                            val packageId = backStackEntry.arguments?.getString("packageId") ?: "demo-package"
+                            val itemIndex = backStackEntry.arguments?.getString("itemIndex")?.toIntOrNull() ?: 0
+                            val modeName = backStackEntry.arguments?.getString("mode") ?: vn.loi.learning.android.study.debug.LabStudyMode.TYPING.name
+                            val mode = runCatching { vn.loi.learning.android.study.debug.LabStudyMode.valueOf(modeName) }
+                                .getOrDefault(vn.loi.learning.android.study.debug.LabStudyMode.TYPING)
+
+                            vn.loi.learning.android.study.debug.AdaptiveStudyUiPreviewScreen(
+                                engine = app.graph.engine,
+                                initialPackageId = packageId,
+                                initialItemIndex = itemIndex,
+                                initialMode = mode,
                                 resolveMedia = { ref -> app.graph.media.resolve(ref)?.toString() },
                                 onBack = { navController.popBackStack() }
                             )

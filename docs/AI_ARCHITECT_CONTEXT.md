@@ -2329,6 +2329,20 @@ PASS; Continuous Review Mode remains the unimplemented PLE-032 capability.
 - Verification: focused flow/dock/keyboard/chrome selection passed 50 tests; final
   `.\gradlew.bat clean test --no-daemon` passed 2,602 tests (root 1,698; Desktop 904), with
   zero failures, errors, or skipped tests.
+# Android Adaptive Study UI Lab 2.0 continuation — 2026-08-24
+
+- Branch `integration/learning-engine-2.0`, continuation baseline `97c73a59`; physical Android UAT is pending.
+- The debug-gated Lab is now only an installed-package/item/forced-mode controller. Its preview passes
+  ephemeral state for all five recall modes directly to canonical `StudyScreen`; no debug layout or
+  controls wrap or overlay production rendering.
+- Preview interaction has no `AndroidStudyFacade` or persistence authority. Answer, reveal, choice,
+  rating and navigation events remain local, while production `StudyScreen` retains media, lifecycle,
+  focus, keyboard and scroll ownership.
+- Focused Android compile, unit test and assemble gates passed. Full `clean test` passed 854 XML suites /
+  5,359 tests (root 2,322; Android 1,090; Desktop 1,947), with zero failures, errors or skipped tests.
+- Unrelated local edits in `.idea/gradle.xml`, the widget star drawable and Desktop Content Editor remain
+  outside this capability and must stay untouched.
+
 # PLE-030.9 continuation snapshot
 
 - Final session-goal remediation: Study entry compares the active policy's New/Review

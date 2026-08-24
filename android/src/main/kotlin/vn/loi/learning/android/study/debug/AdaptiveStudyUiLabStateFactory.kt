@@ -1,10 +1,20 @@
 package vn.loi.learning.android.study.debug
 
+import vn.loi.learning.android.study.AndroidReviewNavigation
+import vn.loi.learning.android.study.AndroidStudyFacade
+import vn.loi.learning.android.study.AndroidStudySessionHud
 import vn.loi.learning.android.study.AndroidStudyState
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.partofspeech.PartOfSpeechExtractor
 import vn.loi.learning.domain.content.model.Content
+import vn.loi.learning.domain.content.model.ContentCustomField
+import vn.loi.learning.domain.content.model.ContentCustomFields
 import vn.loi.learning.domain.content.model.ContentFieldId
+import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.model.ContentMedia
+import vn.loi.learning.domain.content.model.ContentMetadata
+import vn.loi.learning.domain.content.model.ContentText
+import vn.loi.learning.domain.content.model.ContentType
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.recall.CaseSensitivity
@@ -39,6 +49,95 @@ object AdaptiveStudyUiLabStateFactory {
         "Quá trình tích lũy kinh nghiệm",
         "Phương pháp tư duy trực quan"
     )
+
+    fun createDemoPackageContents(): List<Content> {
+        return listOf(
+            Content(
+                id = ContentId("demo-1"),
+                type = ContentType.WORD,
+                text = ContentText(
+                    primaryText = "resilience",
+                    translatedText = "khả năng phục hồi nhanh chóng",
+                    exampleText = "Her mental resilience helped her overcome the severe hardship."
+                ),
+                media = ContentMedia(
+                    primaryAudio = "resilience.mp3",
+                    translatedAudio = "resilience_vi.mp3",
+                    image = "resilience.png"
+                ),
+                metadata = ContentMetadata(lesson = "Unit 1: Mindset"),
+                customFields = ContentCustomFields(
+                    setOf(
+                        ContentCustomField(ContentFieldId("ipa"), "rɪˈzɪl.jəns"),
+                        ContentCustomField(ContentFieldId("partOfSpeech"), "noun")
+                    )
+                )
+            ),
+            Content(
+                id = ContentId("demo-2"),
+                type = ContentType.WORD,
+                text = ContentText(
+                    primaryText = "meticulous",
+                    translatedText = "tỉ mỉ, cẩn trọng",
+                    exampleText = "He is always meticulous about keeping his laboratory notes clean."
+                ),
+                media = ContentMedia(
+                    primaryAudio = "meticulous.mp3",
+                    translatedAudio = "meticulous_vi.mp3",
+                    image = null
+                ),
+                metadata = ContentMetadata(lesson = "Unit 1: Mindset"),
+                customFields = ContentCustomFields(
+                    setOf(
+                        ContentCustomField(ContentFieldId("ipa"), "məˈtɪk.jə.ləs"),
+                        ContentCustomField(ContentFieldId("partOfSpeech"), "adjective")
+                    )
+                )
+            ),
+            Content(
+                id = ContentId("demo-3"),
+                type = ContentType.WORD,
+                text = ContentText(
+                    primaryText = "illuminate",
+                    translatedText = "soi sáng, làm sáng tỏ",
+                    exampleText = "A single beam of sunlight illuminated the ancient painting."
+                ),
+                media = ContentMedia(
+                    primaryAudio = "illuminate.mp3",
+                    translatedAudio = null,
+                    image = "illuminate.jpg"
+                ),
+                metadata = ContentMetadata(lesson = "Unit 2: Science"),
+                customFields = ContentCustomFields(
+                    setOf(
+                        ContentCustomField(ContentFieldId("ipa"), "ɪˈluː.mə.neɪt"),
+                        ContentCustomField(ContentFieldId("partOfSpeech"), "verb")
+                    )
+                )
+            ),
+            Content(
+                id = ContentId("demo-4"),
+                type = ContentType.WORD,
+                text = ContentText(
+                    primaryText = "ambiguity",
+                    translatedText = "sự mơ hồ, không rõ ràng",
+                    exampleText = "There was some ambiguity in the contract wording that required clarification."
+                ),
+                media = ContentMedia(
+                    primaryAudio = null,
+                    translatedAudio = null,
+                    image = null
+                ),
+                metadata = ContentMetadata(lesson = "Unit 2: Science"),
+                customFields = ContentCustomFields(
+                    setOf(
+                        ContentCustomField(ContentFieldId("ipa"), "ˌæm.bɪˈɡjuː.ə.ti"),
+                        ContentCustomField(ContentFieldId("partOfSpeech"), "noun")
+                    )
+                )
+            )
+        )
+    }
 
     fun createPlan(
         mode: LabStudyMode,
@@ -160,6 +259,29 @@ object AdaptiveStudyUiLabStateFactory {
             }
         } else null
 
+        val hud = AndroidStudySessionHud(
+            newCompleted = 3,
+            newTarget = 10,
+            newConfiguredTarget = 10,
+            reviewCompleted = 7,
+            reviewTarget = 20,
+            reviewConfiguredTarget = 20,
+            totalLearned = totalCount,
+            dueCount = 5,
+            againCount = 1,
+            hardCount = 2,
+            goodCount = 5,
+            easyCount = 2,
+            skimStatus = null,
+            focusedPractice = false
+        )
+
+        val navigation = AndroidReviewNavigation(
+            canPrevious = currentIndex > 0,
+            canNext = currentIndex < totalCount - 1,
+            historyPreview = false
+        )
+
         return when (mode) {
             LabStudyMode.TYPING -> {
                 val evaluation = evaluateTyping(currentInput, content.text.primaryText, isCompleted)
@@ -184,7 +306,9 @@ object AdaptiveStudyUiLabStateFactory {
                     resolvedImage = resolvedImage,
                     currentPosition = currentIndex + 1,
                     totalItems = totalCount,
-                    contextTitle = packageTitle
+                    contextTitle = packageTitle,
+                    hud = hud,
+                    navigation = navigation
                 )
             }
             LabStudyMode.LISTENING -> {
@@ -207,7 +331,9 @@ object AdaptiveStudyUiLabStateFactory {
                     resolvedImage = resolvedImage,
                     currentPosition = currentIndex + 1,
                     totalItems = totalCount,
-                    contextTitle = packageTitle
+                    contextTitle = packageTitle,
+                    hud = hud,
+                    navigation = navigation
                 )
             }
             LabStudyMode.MULTIPLE_CHOICE -> {
@@ -231,7 +357,9 @@ object AdaptiveStudyUiLabStateFactory {
                     resolvedImage = resolvedImage,
                     currentPosition = currentIndex + 1,
                     totalItems = totalCount,
-                    contextTitle = packageTitle
+                    contextTitle = packageTitle,
+                    hud = hud,
+                    navigation = navigation
                 )
             }
             LabStudyMode.IMAGE_RECALL -> {
@@ -254,7 +382,9 @@ object AdaptiveStudyUiLabStateFactory {
                     resolvedImage = resolvedImage,
                     currentPosition = currentIndex + 1,
                     totalItems = totalCount,
-                    contextTitle = packageTitle
+                    contextTitle = packageTitle,
+                    hud = hud,
+                    navigation = navigation
                 )
             }
             LabStudyMode.EXAMPLE_COMPLETION -> {
@@ -294,7 +424,9 @@ object AdaptiveStudyUiLabStateFactory {
                     resolvedImage = resolvedImage,
                     currentPosition = currentIndex + 1,
                     totalItems = totalCount,
-                    contextTitle = packageTitle
+                    contextTitle = packageTitle,
+                    hud = hud,
+                    navigation = navigation
                 )
             }
         }
