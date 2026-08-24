@@ -319,7 +319,12 @@ fun BatchTtsDialog(
     // Voice Preview States
     var isPreviewingEn by remember { mutableStateOf(false) }
     var isPreviewingVi by remember { mutableStateOf(false) }
+    var previewingVoiceId by remember { mutableStateOf<String?>(null) }
     var previewJob by remember { mutableStateOf<Job?>(null) }
+
+    // Session-persistent Voice Picker Filter States
+    val englishPickerFilterState = remember { VoicePickerFilterState() }
+    val vietnamesePickerFilterState = remember { VoicePickerFilterState() }
 
     // Batch execution state
     var summary by remember { mutableStateOf(BatchTtsSummary.initial(scopeScan.totalValidTargets)) }
@@ -373,6 +378,7 @@ fun BatchTtsDialog(
         if (localAudioPlayer.state is AudioPlayerState.Idle) {
             isPreviewingEn = false
             isPreviewingVi = false
+            previewingVoiceId = null
         }
     }
 
@@ -392,35 +398,45 @@ fun BatchTtsDialog(
         localAudioPlayer.stop()
         isPreviewingEn = false
         isPreviewingVi = false
+        previewingVoiceId = null
     }
 
-    fun handlePreview(text: String, language: TtsLanguage) {
+    fun handlePreviewCandidateVoice(
+        voice: TtsVoice,
+        text: String,
+        ratePercent: Int,
+        pitchHz: Int,
+        volumePercent: Int
+    ) {
         stopAudio()
-        val voice = if (language == TtsLanguage.ENGLISH) selectedEnglishVoice else selectedVietnameseVoice
-        val rate = if (language == TtsLanguage.ENGLISH) englishRate else vietnameseRate
-        val pitch = if (language == TtsLanguage.ENGLISH) {
-            if (englishPitchHz >= 0) "+${englishPitchHz}Hz" else "${englishPitchHz}Hz"
-        } else {
-            if (vietnamesePitchHz >= 0) "+${vietnamesePitchHz}Hz" else "${vietnamesePitchHz}Hz"
-        }
-        val volume = if (language == TtsLanguage.ENGLISH) {
-            if (englishVolumePercent >= 0) "+${englishVolumePercent}%" else "${englishVolumePercent}%"
-        } else {
-            if (vietnameseVolumePercent >= 0) "+${vietnameseVolumePercent}%" else "${vietnameseVolumePercent}%"
-        }
+        if (text.isBlank()) return
 
-        if (voice == null || text.isBlank()) return
+        val rate = ratePercent
+        val pitch = if (pitchHz >= 0) "+${pitchHz}Hz" else "${pitchHz}Hz"
+        val volume = if (volumePercent >= 0) "+${volumePercent}%" else "${volumePercent}%"
 
-        if (language == TtsLanguage.ENGLISH) isPreviewingEn = true else isPreviewingVi = true
+        previewingVoiceId = voice.id
+        if (voice.isEnglish) isPreviewingEn = true else isPreviewingVi = true
 
         previewJob = coroutineScope.launch {
             try {
                 val previewPath = ttsService.preview(text, voice, rate, pitch, volume)
                 localAudioPlayer.play(previewPath)
             } catch (_: Exception) {
+                previewingVoiceId = null
                 isPreviewingEn = false
                 isPreviewingVi = false
             }
+        }
+    }
+
+    fun handlePreview(text: String, language: TtsLanguage) {
+        val voice = if (language == TtsLanguage.ENGLISH) selectedEnglishVoice else selectedVietnameseVoice
+        val rate = if (language == TtsLanguage.ENGLISH) englishRate else vietnameseRate
+        val pitchHz = if (language == TtsLanguage.ENGLISH) englishPitchHz else vietnamesePitchHz
+        val volumePercent = if (language == TtsLanguage.ENGLISH) englishVolumePercent else vietnameseVolumePercent
+        if (voice != null) {
+            handlePreviewCandidateVoice(voice, text, rate, pitchHz, volumePercent)
         }
     }
 
@@ -803,7 +819,13 @@ fun BatchTtsDialog(
                                 },
                                 isPreviewingEn = isPreviewingEn,
                                 isPreviewingVi = isPreviewingVi,
+                                previewingVoiceId = previewingVoiceId,
+                                englishFilterState = englishPickerFilterState,
+                                vietnameseFilterState = vietnamesePickerFilterState,
                                 onPreviewText = { text, lang -> handlePreview(text, lang) },
+                                onPreviewCandidateVoice = { voice, text, rate, pitch, vol ->
+                                    handlePreviewCandidateVoice(voice, text, rate, pitch, vol)
+                                },
                                 onStopPreview = { stopAudio() }
                             )
                         }
@@ -1045,7 +1067,11 @@ private fun ConfigStepContent(
     onVietnameseStrategyChange: (VoiceStrategyMode) -> Unit,
     isPreviewingEn: Boolean,
     isPreviewingVi: Boolean,
+    previewingVoiceId: String?,
+    englishFilterState: VoicePickerFilterState,
+    vietnameseFilterState: VoicePickerFilterState,
     onPreviewText: (text: String, language: TtsLanguage) -> Unit,
+    onPreviewCandidateVoice: (voice: TtsVoice, text: String, rate: Int, pitchHz: Int, volumePercent: Int) -> Unit,
     onStopPreview: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -1195,6 +1221,8 @@ private fun ConfigStepContent(
                 scopeScan = scopeScan,
                 currentVoice = selectedEnglishVoice,
                 candidateVoices = availableVoices.filter { it.isEnglish },
+                filterState = englishFilterState,
+                previewingVoiceId = previewingVoiceId,
                 onVoiceSelect = onEnglishVoiceChange,
                 fallbackVoices = englishFallbacks,
                 onFallbackVoicesChange = onEnglishFallbacksChange,
@@ -1208,6 +1236,7 @@ private fun ConfigStepContent(
                 onStrategyChange = onEnglishStrategyChange,
                 isPreviewing = isPreviewingEn,
                 onPreview = { text -> onPreviewText(text, TtsLanguage.ENGLISH) },
+                onPreviewCandidateVoice = onPreviewCandidateVoice,
                 onStop = onStopPreview
             )
 
@@ -1218,6 +1247,8 @@ private fun ConfigStepContent(
                 scopeScan = scopeScan,
                 currentVoice = selectedVietnameseVoice,
                 candidateVoices = availableVoices.filter { it.isVietnamese },
+                filterState = vietnameseFilterState,
+                previewingVoiceId = previewingVoiceId,
                 onVoiceSelect = onVietnameseVoiceChange,
                 fallbackVoices = vietnameseFallbacks,
                 onFallbackVoicesChange = onVietnameseFallbacksChange,
@@ -1231,6 +1262,7 @@ private fun ConfigStepContent(
                 onStrategyChange = onVietnameseStrategyChange,
                 isPreviewing = isPreviewingVi,
                 onPreview = { text -> onPreviewText(text, TtsLanguage.VIETNAMESE) },
+                onPreviewCandidateVoice = onPreviewCandidateVoice,
                 onStop = onStopPreview
             )
         }
@@ -1246,38 +1278,48 @@ private fun FieldCheckbox(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = if (checked) LEColors.primarySoft else LEColors.surface,
+        color = LEColors.surface,
         shape = LERadius.xs,
-        border = BorderStroke(1.dp, if (checked) LEColors.primary.copy(alpha = 0.4f) else LEColors.borderSubtle),
-        modifier = modifier.clickable { onCheckedChange(!checked) }
+        border = BorderStroke(1.dp, if (checked) LEColors.primary else LEColors.borderSubtle),
+        modifier = modifier
+            .clip(LERadius.xs)
+            .clickable { onCheckedChange(!checked) }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = LESpacing.md, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = LESpacing.sm, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+            ) {
                 Checkbox(
                     checked = checked,
-                    onCheckedChange = onCheckedChange,
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = LEColors.primary,
-                        uncheckedColor = LEColors.borderSubtle
-                    ),
-                    modifier = Modifier.size(24.dp)
+                    onCheckedChange = null,
+                    colors = CheckboxDefaults.colors(checkedColor = LEColors.primary),
+                    modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(label, style = BatchTtsUiScale.controlPrimary)
+                Text(label, style = BatchTtsUiScale.controlPrimary, color = LEColors.textPrimary)
             }
-            Surface(
-                color = if (missingCount > 0) LEColors.warningContainer else LEColors.surfaceElevated,
-                shape = LERadius.xs
-            ) {
+            if (missingCount > 0) {
+                Surface(
+                    color = LEColors.primarySoft,
+                    shape = LERadius.xs
+                ) {
+                    Text(
+                        text = "$missingCount",
+                        style = BatchTtsUiScale.controlSecondary,
+                        fontWeight = FontWeight.Bold,
+                        color = LEColors.primary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            } else {
                 Text(
-                    text = "$missingCount missing",
+                    text = "0",
                     style = BatchTtsUiScale.controlSecondary,
-                    color = if (missingCount > 0) LEColors.warning else LEColors.textMuted,
-                    fontWeight = FontWeight.Bold,
+                    color = LEColors.textMuted,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
@@ -1294,7 +1336,7 @@ private fun MetricCard(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = if (highlight) LEColors.primarySoft else LEColors.surfaceElevated,
+        color = LEColors.surfaceElevated,
         shape = LERadius.sm,
         border = BorderStroke(1.dp, if (highlight) LEColors.primary.copy(alpha = 0.3f) else LEColors.borderSubtle),
         modifier = modifier
@@ -1315,6 +1357,8 @@ private fun VoiceStrategyCard(
     scopeScan: BatchTtsScopeScan,
     currentVoice: TtsVoice?,
     candidateVoices: List<TtsVoice>,
+    filterState: VoicePickerFilterState,
+    previewingVoiceId: String?,
     onVoiceSelect: (TtsVoice) -> Unit,
     fallbackVoices: OrderedFallbackVoices,
     onFallbackVoicesChange: (OrderedFallbackVoices) -> Unit,
@@ -1328,6 +1372,7 @@ private fun VoiceStrategyCard(
     onStrategyChange: (VoiceStrategyMode) -> Unit,
     isPreviewing: Boolean,
     onPreview: (text: String) -> Unit,
+    onPreviewCandidateVoice: (voice: TtsVoice, text: String, rate: Int, pitchHz: Int, volumePercent: Int) -> Unit,
     onStop: () -> Unit
 ) {
     var showPrimaryVoicePicker by remember { mutableStateOf(false) }
@@ -1341,6 +1386,13 @@ private fun VoiceStrategyCard(
     var sampleIndex by remember(effectiveSampleField) { mutableStateOf(0) }
     val clampedIndex = if (allSamples.isNotEmpty()) sampleIndex.coerceIn(0, allSamples.lastIndex) else 0
     val currentSample = allSamples.getOrNull(clampedIndex)
+
+    val activeSampleText = currentSample?.text?.takeIf { it.isNotBlank() }
+        ?: if (languageLabel.contains("English", ignoreCase = true) || languageLabel.contains("Anh", ignoreCase = true)) {
+            "Hello! This is a preview of the selected text to speech voice."
+        } else {
+            "Xin chào! Đây là âm thanh nghe thử của giọng đọc được chọn."
+        }
 
     Surface(
         color = LEColors.surfaceElevated,
@@ -1382,17 +1434,35 @@ private fun VoiceStrategyCard(
                         title = "Chọn giọng đọc chính ($languageLabel)",
                         currentVoice = currentVoice,
                         candidateVoices = candidateVoices,
+                        filterState = filterState,
+                        previewingVoiceId = previewingVoiceId,
+                        onPreviewVoice = { voice ->
+                            onPreviewCandidateVoice(voice, activeSampleText, currentRate, currentPitchHz, currentVolumePercent)
+                        },
+                        onStopPreview = onStop,
                         onSelectVoice = onVoiceSelect,
-                        onDismiss = { showPrimaryVoicePicker = false }
+                        onDismiss = {
+                            onStop()
+                            showPrimaryVoicePicker = false
+                        }
                     )
                 }
             }
 
             // Fallback Voices with Execution Order
             FallbackVoiceEditor(
+                languageLabel = languageLabel,
                 primaryVoice = currentVoice,
                 fallbackVoices = fallbackVoices,
                 catalog = candidateVoices,
+                filterState = filterState,
+                previewingVoiceId = previewingVoiceId,
+                activeSampleText = activeSampleText,
+                currentRate = currentRate,
+                currentPitchHz = currentPitchHz,
+                currentVolumePercent = currentVolumePercent,
+                onPreviewCandidateVoice = onPreviewCandidateVoice,
+                onStop = onStop,
                 onChange = onFallbackVoicesChange
             )
 
@@ -1571,9 +1641,18 @@ private fun VoiceStrategyCard(
 
 @Composable
 private fun FallbackVoiceEditor(
+    languageLabel: String,
     primaryVoice: TtsVoice?,
     fallbackVoices: OrderedFallbackVoices,
     catalog: List<TtsVoice>,
+    filterState: VoicePickerFilterState,
+    previewingVoiceId: String?,
+    activeSampleText: String,
+    currentRate: Int,
+    currentPitchHz: Int,
+    currentVolumePercent: Int,
+    onPreviewCandidateVoice: (voice: TtsVoice, text: String, rate: Int, pitchHz: Int, volumePercent: Int) -> Unit,
+    onStop: () -> Unit,
     onChange: (OrderedFallbackVoices) -> Unit
 ) {
     var showAddFallbackPicker by remember { mutableStateOf(false) }
@@ -1589,21 +1668,51 @@ private fun FallbackVoiceEditor(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(
-                    text = "Fallback Voices — execution order",
-                    style = BatchTtsUiScale.controlSecondary,
-                    fontWeight = FontWeight.Bold,
-                    color = LEColors.textSecondary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Fallback Voices — execution order",
+                        style = BatchTtsUiScale.controlSecondary,
+                        fontWeight = FontWeight.Bold,
+                        color = LEColors.textSecondary
+                    )
+                    Surface(
+                        color = if (fallbackVoices.voices.size >= OrderedFallbackVoices.MAX_FALLBACKS) LEColors.primarySoft else LEColors.surfaceElevated,
+                        shape = LERadius.xs
+                    ) {
+                        Text(
+                            text = "${fallbackVoices.voices.size} / ${OrderedFallbackVoices.MAX_FALLBACKS}",
+                            style = BatchTtsUiScale.controlSecondary,
+                            fontWeight = FontWeight.Bold,
+                            color = if (fallbackVoices.voices.size >= OrderedFallbackVoices.MAX_FALLBACKS) LEColors.primary else LEColors.textMuted,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
                 if (fallbackVoices.voices.size >= OrderedFallbackVoices.MAX_FALLBACKS) {
                     Text(
-                        text = "Maximum 3 fallback voices",
+                        text = "Maximum 3 fallback voices · 3 selected",
+                        style = BatchTtsUiScale.previewSource,
+                        fontWeight = FontWeight.Medium,
+                        color = LEColors.primary
+                    )
+                } else if (available.isEmpty() && fallbackVoices.voices.isNotEmpty()) {
+                    Text(
+                        text = "No additional compatible voices available · ${fallbackVoices.voices.size} selected",
                         style = BatchTtsUiScale.previewSource,
                         color = LEColors.textMuted
                     )
                 } else if (available.isEmpty() && fallbackVoices.voices.isEmpty()) {
                     Text(
                         text = "No additional compatible voices available",
+                        style = BatchTtsUiScale.previewSource,
+                        color = LEColors.textMuted
+                    )
+                } else {
+                    Text(
+                        text = "Maximum 3 fallback voices · ${fallbackVoices.voices.size} selected",
                         style = BatchTtsUiScale.previewSource,
                         color = LEColors.textMuted
                     )
@@ -1619,14 +1728,23 @@ private fun FallbackVoiceEditor(
                 )
                 if (showAddFallbackPicker) {
                     SearchableVoicePickerDialog(
-                        title = "Thêm giọng đọc dự phòng (Fallback)",
+                        title = "Thêm giọng đọc dự phòng ($languageLabel)",
                         currentVoice = null,
                         candidateVoices = available,
+                        filterState = filterState,
+                        previewingVoiceId = previewingVoiceId,
+                        onPreviewVoice = { voice ->
+                            onPreviewCandidateVoice(voice, activeSampleText, currentRate, currentPitchHz, currentVolumePercent)
+                        },
+                        onStopPreview = onStop,
                         onSelectVoice = { voice ->
                             onChange(fallbackVoices.add(voice, primaryVoice))
                             showAddFallbackPicker = false
                         },
-                        onDismiss = { showAddFallbackPicker = false }
+                        onDismiss = {
+                            onStop()
+                            showAddFallbackPicker = false
+                        }
                     )
                 }
             }

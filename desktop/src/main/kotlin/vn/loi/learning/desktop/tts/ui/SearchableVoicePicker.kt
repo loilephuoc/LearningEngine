@@ -177,36 +177,62 @@ fun VoicePickerAnchor(
 }
 
 /**
- * Reusable modal dialog for searching and selecting TTS voices with region and gender filtering.
+ * State holder for session-persistent filters in SearchableVoicePickerDialog.
+ */
+class VoicePickerFilterState(
+    initialSearchQuery: String = "",
+    initialRegionCode: String? = null,
+    initialGender: String? = null
+) {
+    var searchQuery by mutableStateOf(initialSearchQuery)
+    var selectedRegionCode by mutableStateOf(initialRegionCode)
+    var selectedGender by mutableStateOf(initialGender)
+
+    fun clear() {
+        searchQuery = ""
+        selectedRegionCode = null
+        selectedGender = null
+    }
+}
+
+/**
+ * Reusable modal dialog for searching and selecting TTS voices with region and gender filtering,
+ * session-persistent filter state, and inline preview.
  */
 @Composable
 fun SearchableVoicePickerDialog(
     title: String,
     currentVoice: TtsVoice?,
     candidateVoices: List<TtsVoice>,
+    filterState: VoicePickerFilterState = remember { VoicePickerFilterState() },
+    previewingVoiceId: String? = null,
+    onPreviewVoice: ((TtsVoice) -> Unit)? = null,
+    onStopPreview: (() -> Unit)? = null,
     onSelectVoice: (TtsVoice) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedRegionCode by remember { mutableStateOf<String?>(null) }
-    var selectedGender by remember { mutableStateOf<String?>(null) } // null = All, "Female", "Male"
     var regionDropdownExpanded by remember { mutableStateOf(false) }
 
     val availableRegions = remember(candidateVoices) {
         SearchableVoicePickerHelper.extractRegions(candidateVoices)
     }
 
-    val filteredVoices = remember(candidateVoices, searchQuery, selectedRegionCode, selectedGender) {
+    val filteredVoices = remember(candidateVoices, filterState.searchQuery, filterState.selectedRegionCode, filterState.selectedGender) {
         candidateVoices.filter { voice ->
-            val matchesSearch = SearchableVoicePickerHelper.matchesQuery(voice, searchQuery)
-            val matchesRegion = selectedRegionCode == null || voice.locale.equals(selectedRegionCode, ignoreCase = true)
-            val matchesGender = selectedGender == null || voice.gender.equals(selectedGender, ignoreCase = true)
+            val matchesSearch = SearchableVoicePickerHelper.matchesQuery(voice, filterState.searchQuery)
+            val matchesRegion = filterState.selectedRegionCode == null || voice.locale.equals(filterState.selectedRegionCode, ignoreCase = true)
+            val matchesGender = filterState.selectedGender == null || voice.gender.equals(filterState.selectedGender, ignoreCase = true)
             matchesSearch && matchesRegion && matchesGender
         }
     }
 
+    val handleDismiss = {
+        onStopPreview?.invoke()
+        onDismiss()
+    }
+
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = handleDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
@@ -217,7 +243,7 @@ fun SearchableVoicePickerDialog(
                 .border(1.dp, LEColors.borderSubtle, LERadius.md)
                 .onKeyEvent { keyEvent ->
                     if (keyEvent.key == Key.Escape) {
-                        onDismiss()
+                        handleDismiss()
                         true
                     } else false
                 },
@@ -240,15 +266,15 @@ fun SearchableVoicePickerDialog(
                     )
                     LESecondaryButton(
                         text = "✕",
-                        onClick = onDismiss,
+                        onClick = handleDismiss,
                         modifier = Modifier.size(32.dp)
                     )
                 }
 
                 // Search Box
                 OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
+                    value = filterState.searchQuery,
+                    onValueChange = { filterState.searchQuery = it },
                     placeholder = { Text("Tìm kiếm theo tên giọng, quốc gia, locale (ví dụ: Ava, US, en-GB)...", style = BatchTtsUiScale.body) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -258,12 +284,12 @@ fun SearchableVoicePickerDialog(
                         unfocusedBorderColor = LEColors.borderSubtle
                     ),
                     trailingIcon = {
-                        if (searchQuery.isNotBlank()) {
+                        if (filterState.searchQuery.isNotBlank()) {
                             Text(
                                 text = "✕",
                                 style = BatchTtsUiScale.buttonLabel,
                                 color = LEColors.textMuted,
-                                modifier = Modifier.clickable { searchQuery = "" }.padding(LESpacing.xs)
+                                modifier = Modifier.clickable { filterState.searchQuery = "" }.padding(LESpacing.xs)
                             )
                         }
                     }
@@ -283,8 +309,8 @@ fun SearchableVoicePickerDialog(
                                 .height(36.dp)
                                 .clip(LERadius.xs)
                                 .clickable { regionDropdownExpanded = true }
-                                .border(1.dp, if (selectedRegionCode != null) LEColors.primary else LEColors.borderSubtle, LERadius.xs),
-                            color = if (selectedRegionCode != null) LEColors.primarySoft else LEColors.surfaceElevated
+                                .border(1.dp, if (filterState.selectedRegionCode != null) LEColors.primary else LEColors.borderSubtle, LERadius.xs),
+                            color = if (filterState.selectedRegionCode != null) LEColors.primarySoft else LEColors.surfaceElevated
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxSize().padding(horizontal = LESpacing.sm),
@@ -292,10 +318,10 @@ fun SearchableVoicePickerDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = selectedRegionCode?.let { SearchableVoicePickerHelper.formatRegionDisplayName(it) } ?: "Tất cả vùng / accent",
+                                    text = filterState.selectedRegionCode?.let { SearchableVoicePickerHelper.formatRegionDisplayName(it) } ?: "Tất cả vùng / accent",
                                     style = BatchTtsUiScale.controlSecondary,
-                                    fontWeight = if (selectedRegionCode != null) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (selectedRegionCode != null) LEColors.primary else LEColors.textSecondary,
+                                    fontWeight = if (filterState.selectedRegionCode != null) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (filterState.selectedRegionCode != null) LEColors.primary else LEColors.textSecondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -308,17 +334,17 @@ fun SearchableVoicePickerDialog(
                             onDismissRequest = { regionDropdownExpanded = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Tất cả vùng / accent", style = BatchTtsUiScale.body, fontWeight = if (selectedRegionCode == null) FontWeight.Bold else FontWeight.Normal) },
+                                text = { Text("Tất cả vùng / accent", style = BatchTtsUiScale.body, fontWeight = if (filterState.selectedRegionCode == null) FontWeight.Bold else FontWeight.Normal) },
                                 onClick = {
-                                    selectedRegionCode = null
+                                    filterState.selectedRegionCode = null
                                     regionDropdownExpanded = false
                                 }
                             )
                             availableRegions.forEach { region ->
                                 DropdownMenuItem(
-                                    text = { Text(region.displayName, style = BatchTtsUiScale.body, fontWeight = if (selectedRegionCode == region.localeCode) FontWeight.Bold else FontWeight.Normal) },
+                                    text = { Text(region.displayName, style = BatchTtsUiScale.body, fontWeight = if (filterState.selectedRegionCode == region.localeCode) FontWeight.Bold else FontWeight.Normal) },
                                     onClick = {
-                                        selectedRegionCode = region.localeCode
+                                        filterState.selectedRegionCode = region.localeCode
                                         regionDropdownExpanded = false
                                     }
                                 )
@@ -329,12 +355,12 @@ fun SearchableVoicePickerDialog(
                     // Gender Filter Chips
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf(null to "Tất cả", "Female" to "Nữ", "Male" to "Nam").forEach { (genderValue, label) ->
-                            val isSelected = selectedGender == genderValue
+                            val isSelected = filterState.selectedGender == genderValue
                             Surface(
                                 modifier = Modifier
                                     .height(36.dp)
                                     .clip(LERadius.xs)
-                                    .clickable { selectedGender = genderValue }
+                                    .clickable { filterState.selectedGender = genderValue }
                                     .border(1.dp, if (isSelected) LEColors.primary else LEColors.borderSubtle, LERadius.xs),
                                 color = if (isSelected) LEColors.primarySoft else LEColors.surfaceElevated
                             ) {
@@ -365,16 +391,14 @@ fun SearchableVoicePickerDialog(
                         style = BatchTtsUiScale.controlSecondary,
                         color = LEColors.textMuted
                     )
-                    if (selectedRegionCode != null || selectedGender != null || searchQuery.isNotBlank()) {
+                    if (filterState.selectedRegionCode != null || filterState.selectedGender != null || filterState.searchQuery.isNotBlank()) {
                         Text(
                             text = "Xóa bộ lọc",
                             style = BatchTtsUiScale.controlSecondary,
                             fontWeight = FontWeight.Bold,
                             color = LEColors.primary,
                             modifier = Modifier.clickable {
-                                searchQuery = ""
-                                selectedRegionCode = null
-                                selectedGender = null
+                                filterState.clear()
                             }
                         )
                     }
@@ -401,13 +425,14 @@ fun SearchableVoicePickerDialog(
                     ) {
                         items(filteredVoices, key = { it.id }) { voice ->
                             val isSelected = voice.id == currentVoice?.id
+                            val isPlayingThis = previewingVoiceId == voice.id
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(LERadius.xs)
                                     .clickable {
+                                        handleDismiss()
                                         onSelectVoice(voice)
-                                        onDismiss()
                                     }
                                     .border(
                                         1.dp,
@@ -417,7 +442,7 @@ fun SearchableVoicePickerDialog(
                                 color = if (isSelected) LEColors.primarySoft else LEColors.surface
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = LESpacing.md, vertical = 10.dp),
+                                    modifier = Modifier.padding(horizontal = LESpacing.md, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
@@ -454,13 +479,52 @@ fun SearchableVoicePickerDialog(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
-                                    if (isSelected) {
-                                        Text(
-                                            text = "✓",
-                                            style = BatchTtsUiScale.sectionHeading,
-                                            color = LEColors.primary,
-                                            fontWeight = FontWeight.Bold
-                                        )
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                                    ) {
+                                        if (onPreviewVoice != null) {
+                                            Surface(
+                                                modifier = Modifier
+                                                    .clip(LERadius.xs)
+                                                    .clickable {
+                                                        if (isPlayingThis) {
+                                                            onStopPreview?.invoke()
+                                                        } else {
+                                                            onPreviewVoice(voice)
+                                                        }
+                                                    }
+                                                    .border(
+                                                        1.dp,
+                                                        if (isPlayingThis) LEColors.primary else LEColors.borderSubtle,
+                                                        LERadius.xs
+                                                    ),
+                                                color = if (isPlayingThis) LEColors.primarySoft else LEColors.surfaceElevated
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    Text(
+                                                        text = if (isPlayingThis) "■ Stop" else "▶ Nghe thử",
+                                                        style = BatchTtsUiScale.controlSecondary,
+                                                        fontWeight = if (isPlayingThis) FontWeight.Bold else FontWeight.Medium,
+                                                        color = if (isPlayingThis) LEColors.primary else LEColors.textSecondary
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        if (isSelected) {
+                                            Text(
+                                                text = "✓",
+                                                style = BatchTtsUiScale.sectionHeading,
+                                                color = LEColors.primary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -475,7 +539,7 @@ fun SearchableVoicePickerDialog(
                 ) {
                     LESecondaryButton(
                         text = "Đóng",
-                        onClick = onDismiss,
+                        onClick = handleDismiss,
                         modifier = Modifier.height(BatchTtsUiScale.buttonHeightSmall)
                     )
                 }
