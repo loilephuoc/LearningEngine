@@ -293,12 +293,24 @@ fun ReminderSettingsScreen(
 
             // Active Pause Banner with Resume Now button
             val nowEpoch = System.currentTimeMillis()
-            val isPaused = settings.unlockedPausedUntilEpochMillis > nowEpoch
+            val isIndefinite = settings.unlockedPausedIndefinitely
+            val isTimedPaused = settings.unlockedPausedUntilEpochMillis > nowEpoch
+            val isPaused = isIndefinite || isTimedPaused
             if (settings.enabled && isPaused) {
-                val remainingMinutes = ((settings.unlockedPausedUntilEpochMillis - nowEpoch) / 60_000L).coerceAtLeast(1L)
-                val pausedUntilTimeStr = Instant.ofEpochMilli(settings.unlockedPausedUntilEpochMillis)
-                    .atZone(ZoneId.systemDefault())
-                    .format(DateTimeFormatter.ofPattern("HH:mm"))
+                val titleText = if (isIndefinite) {
+                    stringResource(R.string.reminder_paused_indefinite)
+                } else {
+                    val remainingMinutes = ((settings.unlockedPausedUntilEpochMillis - nowEpoch) / 60_000L).coerceAtLeast(1L)
+                    stringResource(R.string.reminder_paused_remaining, remainingMinutes.toInt())
+                }
+                val subText = if (isIndefinite) {
+                    stringResource(R.string.reminder_paused_indefinite_desc)
+                } else {
+                    val pausedUntilTimeStr = Instant.ofEpochMilli(settings.unlockedPausedUntilEpochMillis)
+                        .atZone(ZoneId.systemDefault())
+                        .format(DateTimeFormatter.ofPattern("HH:mm"))
+                    stringResource(R.string.reminder_paused_until_time, pausedUntilTimeStr)
+                }
 
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -326,13 +338,13 @@ fun ReminderSettingsScreen(
                             )
                             Column {
                                 Text(
-                                    text = stringResource(R.string.reminder_paused_remaining, remainingMinutes.toInt()),
+                                    text = titleText,
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer
                                 )
                                 Text(
-                                    text = stringResource(R.string.reminder_paused_until_time, pausedUntilTimeStr),
+                                    text = subText,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.85f)
                                 )

@@ -363,6 +363,8 @@
     <string name="reminder_preview_sent">Đã gửi thông báo xem trước.</string>
     <string name="reminder_paused_remaining">Đang tạm dừng (còn %1$d phút)</string>
     <string name="reminder_paused_until_time">Tạm dừng đến %1$s</string>
+    <string name="reminder_paused_indefinite">Đã tạm dừng vô thời hạn</string>
+    <string name="reminder_paused_indefinite_desc">Chạm Tiếp tục để bật lại cửa sổ từ vựng mở khóa</string>
     <string name="reminder_hub_header_desc">Tùy chọn phương thức và vị trí bạn muốn ôn tập từ vựng thụ động trong ngày.</string>
     <string name="reminder_hub_lock_desc">Hiển thị từ vựng trên hình nền màn hình khóa khi thiết bị đang khóa</string>
     <string name="reminder_hub_popup_desc">Hiển thị thẻ flashcard định kỳ trong khi sử dụng điện thoại</string>

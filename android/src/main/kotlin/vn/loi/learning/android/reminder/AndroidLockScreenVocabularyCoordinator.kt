@@ -294,19 +294,29 @@ class AndroidLockScreenVocabularyCoordinator(
             val state = currentDeviceState
             val settings = preferencesController.current()
             val now = System.currentTimeMillis()
+            val isIndefinite = settings.unlockedPausedIndefinitely
             val pausedUntil = settings.unlockedPausedUntilEpochMillis
-            val isPaused = now < pausedUntil
+            val isTimedPaused = now < pausedUntil
+            val isPaused = isIndefinite || isTimedPaused
             val intervalMs = settings.unlockedReminderIntervalMillis
 
             if (state != VocabularyPresentationDeviceState.UNLOCKED_SCREEN_ON || !settings.enabled) {
-                Log.i(TAG_UNLOCKED_TIMER, "[UnlockedSchedule] reason=$reason state=$state pausedUntil=$pausedUntil now=$now intervalMs=$intervalMs action=CANCEL")
+                Log.i(TAG_UNLOCKED_TIMER, "[UnlockedSchedule] reason=$reason state=$state isIndefinite=$isIndefinite pausedUntil=$pausedUntil now=$now intervalMs=$intervalMs action=CANCEL")
                 cancelUnlockedReminderTimer()
                 cancelPauseExpiryTimer()
                 AndroidLockScreenVocabularyService.updateNotification(context)
                 return
             }
 
-            if (isPaused) {
+            if (isIndefinite) {
+                Log.i(TAG_UNLOCKED_TIMER, "[UnlockedSchedule] reason=$reason state=$state isIndefinite=true now=$now intervalMs=$intervalMs action=INDEFINITE_PAUSED")
+                cancelUnlockedReminderTimer()
+                cancelPauseExpiryTimer()
+                AndroidLockScreenVocabularyService.updateNotification(context)
+                return
+            }
+
+            if (isTimedPaused) {
                 val remainingPauseMs = (pausedUntil - now).coerceAtLeast(100L)
                 Log.i(TAG_UNLOCKED_TIMER, "[UnlockedSchedule] reason=$reason state=$state pausedUntil=$pausedUntil now=$now intervalMs=$intervalMs action=WAIT_PAUSE")
                 cancelUnlockedReminderTimer()
@@ -739,10 +749,18 @@ class AndroidLockScreenVocabularyCoordinator(
                 mode = settings.selectionMode,
                 displayDurationMillis = settings.displayDurationMillis,
                 onQuickPause = if (settings.quickPauseActionsEnabled) {
-                    { minutes ->
+                    { action ->
                         isPausedAgain = true
-                        Log.i(TAG_UNLOCKED_TIMER, "[UnlockedPause] duration=${minutes}m userAction=TAP")
-                        preferencesController.pauseUnlocked(java.time.Duration.ofMinutes(minutes))
+                        when (action) {
+                            is ReminderQuickPauseAction.ForDuration -> {
+                                Log.i(TAG_UNLOCKED_TIMER, "[UnlockedPause] duration=${action.duration.toMinutes()}m userAction=TAP")
+                                preferencesController.pauseUnlocked(action.duration)
+                            }
+                            is ReminderQuickPauseAction.Indefinitely -> {
+                                Log.i(TAG_UNLOCKED_TIMER, "[UnlockedPause] duration=INDEFINITE userAction=TAP")
+                                preferencesController.pauseUnlockedIndefinitely()
+                            }
+                        }
                         AndroidLockScreenVocabularyService.updateNotification(context)
                         if (source == "RESUME_NOW") {
                             Log.i(TAG_UNLOCKED_TIMER, "[UnlockedResumeNow] action=NORMAL_REARM_SUPPRESSED reason=PAUSED_AGAIN")

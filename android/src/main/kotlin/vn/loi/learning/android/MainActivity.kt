@@ -215,8 +215,8 @@ class MainActivity : ComponentActivity() {
             candidate = candidate,
             mode = vn.loi.learning.android.reminder.AndroidVocabularyReminderSelectionMode.RANDOM_ALL,
             displayDurationMillis = duration,
-            onQuickPause = { minutes ->
-                app.reminderPreferencesController.pauseUnlocked(java.time.Duration.ofMinutes(minutes))
+            onQuickPause = { action ->
+                app.reminderPreferencesController.handleQuickPause(action)
             }
         )
     }
@@ -268,6 +268,7 @@ class MainActivity : ComponentActivity() {
                 "PAUSE_5M" -> app.reminderPreferencesController.pauseUnlocked5Minutes()
                 "PAUSE_30M" -> app.reminderPreferencesController.pauseUnlocked30Minutes()
                 "PAUSE_1H" -> app.reminderPreferencesController.pauseUnlockedOneHour()
+                "PAUSE_INDEFINITE" -> app.reminderPreferencesController.pauseUnlockedIndefinitely()
                 "RESUME" -> app.reminderPreferencesController.resumeUnlocked()
             }
         }

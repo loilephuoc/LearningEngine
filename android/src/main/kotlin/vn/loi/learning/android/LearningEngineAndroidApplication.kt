@@ -71,8 +71,8 @@ class LearningEngineAndroidApplication : Application() {
         vn.loi.learning.android.reminder.AndroidVocabularyReminderOverlayController(
             this,
             resolveMedia = { ref -> graph.media.resolve(ref)?.toString() },
-            defaultQuickPauseHandler = { minutes ->
-                reminderPreferencesController.pauseUnlocked(java.time.Duration.ofMinutes(minutes))
+            defaultQuickPauseHandler = { action ->
+                reminderPreferencesController.handleQuickPause(action)
             }
         )
     }

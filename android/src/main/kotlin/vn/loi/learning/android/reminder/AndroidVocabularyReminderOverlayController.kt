@@ -56,7 +56,7 @@ interface AndroidVocabularyReminderOverlayPresenter {
         mode: AndroidVocabularyReminderSelectionMode,
         displayDurationMillis: Long = 5000L,
         onReview: ((packageId: String, contentId: String, mode: AndroidVocabularyReminderSelectionMode) -> Unit)? = null,
-        onQuickPause: ((durationMinutes: Long) -> Unit)? = null,
+        onQuickPause: ((action: ReminderQuickPauseAction) -> Unit)? = null,
         onDismissed: ((reason: String) -> Unit)? = null
     ): Boolean
     fun hide()
@@ -97,7 +97,7 @@ class SystemVocabularyReminderDeviceStateProvider(
 class AndroidVocabularyReminderOverlayController(
     private val context: Context,
     private val resolveMedia: (String) -> String? = { null },
-    private val defaultQuickPauseHandler: ((Long) -> Unit)? = null
+    private val defaultQuickPauseHandler: ((ReminderQuickPauseAction) -> Unit)? = null
 ) : AndroidVocabularyReminderOverlayPresenter {
 
     private val windowManager: WindowManager? = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
@@ -119,7 +119,7 @@ class AndroidVocabularyReminderOverlayController(
         mode: AndroidVocabularyReminderSelectionMode,
         displayDurationMillis: Long,
         onReview: ((packageId: String, contentId: String, mode: AndroidVocabularyReminderSelectionMode) -> Unit)?,
-        onQuickPause: ((durationMinutes: Long) -> Unit)?,
+        onQuickPause: ((action: ReminderQuickPauseAction) -> Unit)?,
         onDismissed: ((reason: String) -> Unit)?
     ): Boolean {
         if (windowManager == null) return false
@@ -150,7 +150,7 @@ class AndroidVocabularyReminderOverlayController(
         mode: AndroidVocabularyReminderSelectionMode,
         displayDurationMillis: Long,
         onReview: ((packageId: String, contentId: String, mode: AndroidVocabularyReminderSelectionMode) -> Unit)?,
-        onQuickPause: ((durationMinutes: Long) -> Unit)?,
+        onQuickPause: ((action: ReminderQuickPauseAction) -> Unit)?,
         onDismissed: ((reason: String) -> Unit)?
     ): Boolean {
         // Cancel in-flight animations and cleanly remove prior view if re-entered
@@ -285,7 +285,7 @@ class AndroidVocabularyReminderOverlayController(
         pause5mBtn.setOnClickListener {
             requestDismiss(instanceId, "USER_PAUSE_5M") {
                 Log.i(TAG, "[UnlockedPause] duration=5m userAction=TAP")
-                onQuickPause?.invoke(5L)
+                onQuickPause?.invoke(ReminderQuickPauseAction.ForDuration(java.time.Duration.ofMinutes(5)))
             }
         }
         pause5mBtn.setOnLongClickListener {
@@ -304,28 +304,28 @@ class AndroidVocabularyReminderOverlayController(
                     1 -> {
                         requestDismiss(instanceId, "USER_PAUSE_30M") {
                             Log.i(TAG, "[UnlockedPause] duration=30m userAction=LONG_PRESS_MENU")
-                            onQuickPause?.invoke(30L)
+                            onQuickPause?.invoke(ReminderQuickPauseAction.ForDuration(java.time.Duration.ofMinutes(30)))
                         }
                         true
                     }
                     2 -> {
                         requestDismiss(instanceId, "USER_PAUSE_1H") {
                             Log.i(TAG, "[UnlockedPause] duration=1h userAction=LONG_PRESS_MENU")
-                            onQuickPause?.invoke(60L)
+                            onQuickPause?.invoke(ReminderQuickPauseAction.ForDuration(java.time.Duration.ofHours(1)))
                         }
                         true
                     }
                     3 -> {
                         requestDismiss(instanceId, "USER_PAUSE_4H") {
                             Log.i(TAG, "[UnlockedPause] duration=4h userAction=LONG_PRESS_MENU")
-                            onQuickPause?.invoke(240L)
+                            onQuickPause?.invoke(ReminderQuickPauseAction.ForDuration(java.time.Duration.ofHours(4)))
                         }
                         true
                     }
                     4 -> {
                         requestDismiss(instanceId, "USER_PAUSE_INDEFINITE") {
                             Log.i(TAG, "[UnlockedPause] duration=INDEFINITE userAction=LONG_PRESS_MENU")
-                            onQuickPause?.invoke(Long.MAX_VALUE)
+                            onQuickPause?.invoke(ReminderQuickPauseAction.Indefinitely)
                         }
                         true
                     }

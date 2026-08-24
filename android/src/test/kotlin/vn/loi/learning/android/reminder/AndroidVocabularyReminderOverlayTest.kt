@@ -33,7 +33,7 @@ class AndroidVocabularyReminderOverlayTest {
             mode: AndroidVocabularyReminderSelectionMode,
             displayDurationMillis: Long,
             onReview: ((packageId: String, contentId: String, mode: AndroidVocabularyReminderSelectionMode) -> Unit)?,
-            onQuickPause: ((durationMinutes: Long) -> Unit)?,
+            onQuickPause: ((action: ReminderQuickPauseAction) -> Unit)?,
             onDismissed: ((reason: String) -> Unit)?
         ): Boolean {
             showCount++
@@ -267,12 +267,12 @@ class AndroidVocabularyReminderOverlayTest {
         val fakePresenter = FakeOverlayPresenter()
 
         testCases.forEach { candidate ->
-            var pauseTriggeredMinutes: Long? = null
+            var pauseTriggeredAction: ReminderQuickPauseAction? = null
             val shown = fakePresenter.show(
                 candidate = candidate,
                 mode = AndroidVocabularyReminderSelectionMode.RANDOM_ALL,
                 displayDurationMillis = 5000L,
-                onQuickPause = { mins -> pauseTriggeredMinutes = mins }
+                onQuickPause = { action -> pauseTriggeredAction = action }
             )
             assertTrue(shown)
             assertTrue(fakePresenter.isShowing)
@@ -287,16 +287,16 @@ class AndroidVocabularyReminderOverlayTest {
     }
 
     @Test
-    fun `quick pause callbacks in presenter show pass valid durations 5m 30m 60m`() {
+    fun `quick pause callbacks in presenter show pass valid durations and indefinite`() {
         val fakePresenter = FakeOverlayPresenter()
         val candidate = createTestCandidate("pause-test")
-        var pausedDuration: Long? = null
+        var pausedAction: ReminderQuickPauseAction? = null
 
         fakePresenter.show(
             candidate = candidate,
             mode = AndroidVocabularyReminderSelectionMode.RANDOM_ALL,
             displayDurationMillis = 5000L,
-            onQuickPause = { mins -> pausedDuration = mins }
+            onQuickPause = { action -> pausedAction = action }
         )
 
         assertTrue(fakePresenter.isShowing)
@@ -317,20 +317,20 @@ class AndroidVocabularyReminderOverlayTest {
     fun `close button action only dismisses popup without setting pause`() {
         val fakePresenter = FakeOverlayPresenter()
         val candidate = createTestCandidate("close-test")
-        var pausedDuration: Long? = null
+        var pausedAction: ReminderQuickPauseAction? = null
 
         fakePresenter.show(
             candidate = candidate,
             mode = AndroidVocabularyReminderSelectionMode.RANDOM_ALL,
             displayDurationMillis = 5000L,
-            onQuickPause = { mins -> pausedDuration = mins }
+            onQuickPause = { action -> pausedAction = action }
         )
         assertTrue(fakePresenter.isShowing)
 
         // Dismiss without invoking onQuickPause
         fakePresenter.hide()
         assertFalse(fakePresenter.isShowing)
-        assertEquals(null, pausedDuration)
+        assertEquals(null, pausedAction)
     }
 
     @Test
@@ -543,7 +543,7 @@ class AndroidVocabularyReminderOverlayTest {
     }
 
     @Test
-    fun `resume now clears active pauses of 5m 30m and 1h`() {
+    fun `resume now clears active pauses of 5m 30m and 1h and indefinite`() {
         val now = 10_000_000L
         val fakeStore = FakePreferenceStore()
         val controller = AndroidVocabularyReminderPreferencesController(fakeStore)
@@ -551,20 +551,36 @@ class AndroidVocabularyReminderOverlayTest {
         // 1. Pause 5m then resume
         controller.pauseUnlocked(java.time.Duration.ofMinutes(5), java.time.Instant.ofEpochMilli(now))
         assertTrue(controller.current().unlockedPausedUntilEpochMillis > now)
+        assertFalse(controller.current().unlockedPausedIndefinitely)
         controller.resumeUnlocked()
         assertEquals(0L, controller.current().unlockedPausedUntilEpochMillis)
+        assertFalse(controller.current().unlockedPausedIndefinitely)
 
         // 2. Pause 30m then resume
         controller.pauseUnlocked(java.time.Duration.ofMinutes(30), java.time.Instant.ofEpochMilli(now))
         assertTrue(controller.current().unlockedPausedUntilEpochMillis > now)
+        assertFalse(controller.current().unlockedPausedIndefinitely)
         controller.resumeUnlocked()
         assertEquals(0L, controller.current().unlockedPausedUntilEpochMillis)
+        assertFalse(controller.current().unlockedPausedIndefinitely)
 
         // 3. Pause 1h then resume
         controller.pauseUnlocked(java.time.Duration.ofHours(1), java.time.Instant.ofEpochMilli(now))
         assertTrue(controller.current().unlockedPausedUntilEpochMillis > now)
+        assertFalse(controller.current().unlockedPausedIndefinitely)
         controller.resumeUnlocked()
         assertEquals(0L, controller.current().unlockedPausedUntilEpochMillis)
+        assertFalse(controller.current().unlockedPausedIndefinitely)
+
+        // 4. Pause indefinitely then resume
+        controller.pauseUnlockedIndefinitely()
+        assertEquals(0L, controller.current().unlockedPausedUntilEpochMillis)
+        assertTrue(controller.current().unlockedPausedIndefinitely)
+        assertTrue(controller.current().isUnlockedPaused)
+        controller.resumeUnlocked()
+        assertEquals(0L, controller.current().unlockedPausedUntilEpochMillis)
+        assertFalse(controller.current().unlockedPausedIndefinitely)
+        assertFalse(controller.current().isUnlockedPaused)
     }
 
     @Test
@@ -778,11 +794,13 @@ class AndroidVocabularyReminderOverlayTest {
     fun `overlay exposes tap long press mute and image-only six dp radius`() {
         val controller = java.io.File("src/main/kotlin/vn/loi/learning/android/reminder/AndroidVocabularyReminderOverlayController.kt").readText()
         val layout = java.io.File("src/main/res/layout/overlay_vocabulary_reminder.xml").readText()
-        assertTrue(controller.contains("onQuickPause?.invoke(5L)"))
+        assertTrue(controller.contains("ReminderQuickPauseAction.ForDuration(java.time.Duration.ofMinutes(5))"))
         assertTrue(controller.contains("pause5mBtn.setOnLongClickListener"))
-        listOf("30L", "60L", "240L", "Long.MAX_VALUE").forEach { duration ->
-            assertTrue(controller.contains("onQuickPause?.invoke($duration)"))
-        }
+        assertTrue(controller.contains("ReminderQuickPauseAction.ForDuration(java.time.Duration.ofMinutes(30))"))
+        assertTrue(controller.contains("ReminderQuickPauseAction.ForDuration(java.time.Duration.ofHours(1))"))
+        assertTrue(controller.contains("ReminderQuickPauseAction.ForDuration(java.time.Duration.ofHours(4))"))
+        assertTrue(controller.contains("ReminderQuickPauseAction.Indefinitely"))
+        assertFalse(controller.contains("Long.MAX_VALUE"))
         assertTrue(controller.contains("LearningEngineAudioPolicy.toggleMuted()"))
         assertTrue(controller.contains("createRoundedCornerBitmap(rawBitmap, 6f * density)"))
         assertTrue(layout.contains("@+id/overlay_toggle_mute"))

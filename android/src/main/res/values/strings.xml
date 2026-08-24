@@ -363,6 +363,8 @@
     <string name="reminder_preview_sent">Preview notification sent.</string>
     <string name="reminder_paused_remaining">Paused (%1$d min remaining)</string>
     <string name="reminder_paused_until_time">Paused until %1$s</string>
+    <string name="reminder_paused_indefinite">Paused indefinitely</string>
+    <string name="reminder_paused_indefinite_desc">Tap Resume to re-enable unlocked vocabulary popups</string>
     <string name="reminder_hub_header_desc">Choose how and where you want to review vocabulary passively throughout your day.</string>
     <string name="reminder_hub_lock_desc">Show vocabulary on lock screen wallpaper when device is locked</string>
     <string name="reminder_hub_popup_desc">Show periodic flashcard popups while using your phone</string>

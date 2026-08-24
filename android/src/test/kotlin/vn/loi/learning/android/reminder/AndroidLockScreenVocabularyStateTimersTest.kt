@@ -239,4 +239,37 @@ class AndroidLockScreenVocabularyStateTimersTest {
         assertEquals("cand-A", reRenderedVisible?.candidate?.contentId?.value)
         assertEquals("cand-B", buffer.nextReady?.candidate?.contentId?.value)
     }
+
+    @Test
+    fun `indefinite pause sets indefinite flag and cancels unlocked timers until explicit resume`() {
+        val store = InMemoryStore()
+        val controller = AndroidVocabularyReminderPreferencesController(store)
+
+        controller.updateSettings(
+            AndroidVocabularyReminderSettings(
+                enabled = true,
+                intervalMillis = 60_000L
+            )
+        )
+
+        // Indefinite pause
+        assertTrue(controller.pauseUnlockedIndefinitely())
+
+        val settings = controller.current()
+        assertTrue(settings.isUnlockedPaused)
+        assertTrue(settings.unlockedPausedIndefinitely)
+        assertEquals(0L, settings.unlockedPausedUntilEpochMillis)
+        assertEquals(UnlockedReminderPauseState.PausedIndefinitely, settings.unlockedPauseState)
+
+        // Persisted state preserves indefinite pause
+        val loaded = store.load()
+        assertTrue(loaded.isUnlockedPaused)
+        assertTrue(loaded.unlockedPausedIndefinitely)
+
+        // Resuming unlocked clears indefinite pause
+        assertTrue(controller.resumeUnlocked())
+        assertFalse(controller.current().isUnlockedPaused)
+        assertFalse(controller.current().unlockedPausedIndefinitely)
+        assertEquals(UnlockedReminderPauseState.Active, controller.current().unlockedPauseState)
+    }
 }

@@ -67,11 +67,14 @@ class AndroidLockScreenVocabularyService : Service() {
         val now = System.currentTimeMillis()
         val app = application as? LearningEngineAndroidApplication
         val settings = app?.reminderPreferencesController?.current()
-        val isPaused = settings != null && settings.enabled && settings.unlockedPausedUntilEpochMillis > now
+        val isIndefinite = settings != null && settings.enabled && settings.unlockedPausedIndefinitely
+        val isTimedPaused = settings != null && settings.enabled && settings.unlockedPausedUntilEpochMillis > now
+        val isPaused = isIndefinite || isTimedPaused
 
         val notification = buildServiceNotification(
             context = this,
             isPaused = isPaused,
+            isIndefinite = isIndefinite,
             pausedUntilEpochMillis = settings?.unlockedPausedUntilEpochMillis ?: 0L,
             now = now
         )
@@ -159,6 +162,7 @@ class AndroidLockScreenVocabularyService : Service() {
         fun buildServiceNotification(
             context: Context,
             isPaused: Boolean,
+            isIndefinite: Boolean = false,
             pausedUntilEpochMillis: Long,
             now: Long
         ): Notification {
@@ -167,16 +171,20 @@ class AndroidLockScreenVocabularyService : Service() {
             manager?.cancel(LEGACY_PAUSE_NOTIFICATION_ID)
 
             if (isPaused) {
-                val remainingMinutes = ((pausedUntilEpochMillis - now) / 60_000L).coerceAtLeast(1L)
-                val timeStr = Instant.ofEpochMilli(pausedUntilEpochMillis)
-                    .atZone(ZoneId.systemDefault())
-                    .format(DateTimeFormatter.ofPattern("HH:mm"))
+                val contentText = if (isIndefinite) {
+                    "Đã tạm dừng vô thời hạn"
+                } else {
+                    val remainingMinutes = ((pausedUntilEpochMillis - now) / 60_000L).coerceAtLeast(1L)
+                    val timeStr = Instant.ofEpochMilli(pausedUntilEpochMillis)
+                        .atZone(ZoneId.systemDefault())
+                        .format(DateTimeFormatter.ofPattern("HH:mm"))
 
-                val durationText = when (remainingMinutes) {
-                    60L -> "1 hour"
-                    else -> "$remainingMinutes min"
+                    val durationText = when (remainingMinutes) {
+                        60L -> "1 hour"
+                        else -> "$remainingMinutes min"
+                    }
+                    "Paused for $durationText · until $timeStr"
                 }
-                val contentText = "Paused for $durationText · until $timeStr"
 
                 // Body tap -> Resume now
                 val bodyResumeIntent = Intent(context, AndroidVocabularyReminderResumeReceiver::class.java).apply {
@@ -209,7 +217,7 @@ class AndroidLockScreenVocabularyService : Service() {
                     setOnClickPendingIntent(R.id.pause_resume_now, actionPendingIntent)
                 }
 
-                Log.i(TAG, "[ReminderServiceNotification] state=PAUSED pausedUntil=$pausedUntilEpochMillis remainingMs=${pausedUntilEpochMillis - now} action=UPDATE")
+                Log.i(TAG, "[ReminderServiceNotification] state=PAUSED isIndefinite=$isIndefinite pausedUntil=$pausedUntilEpochMillis remainingMs=${pausedUntilEpochMillis - now} action=UPDATE")
 
                 return NotificationCompat.Builder(context, CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_notification_reminder)
@@ -257,11 +265,14 @@ class AndroidLockScreenVocabularyService : Service() {
             val now = System.currentTimeMillis()
             val app = context.applicationContext as? LearningEngineAndroidApplication
             val settings = app?.reminderPreferencesController?.current()
-            val isPaused = settings != null && settings.enabled && settings.unlockedPausedUntilEpochMillis > now
+            val isIndefinite = settings != null && settings.enabled && settings.unlockedPausedIndefinitely
+            val isTimedPaused = settings != null && settings.enabled && settings.unlockedPausedUntilEpochMillis > now
+            val isPaused = isIndefinite || isTimedPaused
 
             val notification = buildServiceNotification(
                 context = context,
                 isPaused = isPaused,
+                isIndefinite = isIndefinite,
                 pausedUntilEpochMillis = settings?.unlockedPausedUntilEpochMillis ?: 0L,
                 now = now
             )

@@ -26,6 +26,17 @@ enum class AndroidVocabularyReminderIntervalUnit {
     MINUTES
 }
 
+sealed interface ReminderQuickPauseAction {
+    data class ForDuration(val duration: java.time.Duration) : ReminderQuickPauseAction
+    data object Indefinitely : ReminderQuickPauseAction
+}
+
+sealed interface UnlockedReminderPauseState {
+    data object Active : UnlockedReminderPauseState
+    data class PausedUntil(val epochMillis: Long) : UnlockedReminderPauseState
+    data object PausedIndefinitely : UnlockedReminderPauseState
+}
+
 data class AndroidVocabularyReminderSettings(
     val enabled: Boolean = false,
     val selectedPackageId: String? = null,
@@ -38,7 +49,8 @@ data class AndroidVocabularyReminderSettings(
     val overlayPopupEnabled: Boolean = false,
     val pausedUntil: Instant? = null,
     val quickPauseActionsEnabled: Boolean = true,
-    val unlockedPausedUntilEpochMillis: Long = 0L
+    val unlockedPausedUntilEpochMillis: Long = 0L,
+    val unlockedPausedIndefinitely: Boolean = false
 ) {
     val intervalMinutes: Int
         get() = (intervalMillis / 60_000L).toInt().coerceAtLeast(1)
@@ -46,8 +58,15 @@ data class AndroidVocabularyReminderSettings(
     val unlockedReminderIntervalMillis: Long
         get() = intervalMillis
 
+    val unlockedPauseState: UnlockedReminderPauseState
+        get() = when {
+            unlockedPausedIndefinitely -> UnlockedReminderPauseState.PausedIndefinitely
+            System.currentTimeMillis() < unlockedPausedUntilEpochMillis -> UnlockedReminderPauseState.PausedUntil(unlockedPausedUntilEpochMillis)
+            else -> UnlockedReminderPauseState.Active
+        }
+
     val isUnlockedPaused: Boolean
-        get() = System.currentTimeMillis() < unlockedPausedUntilEpochMillis
+        get() = unlockedPausedIndefinitely || System.currentTimeMillis() < unlockedPausedUntilEpochMillis
 
     init {
         require(intervalMillis in MIN_INTERVAL_MILLIS..MAX_INTERVAL_MILLIS) {
@@ -133,7 +152,11 @@ data class AndroidVocabularyReminderDraft(
     val overlayPopupEnabled: Boolean = false,
     val quickPauseActionsEnabled: Boolean = true
 ) {
-    fun validate(pausedUntil: Instant?, unlockedPausedUntilEpochMillis: Long = 0L): AndroidVocabularyReminderDraftValidation {
+    fun validate(
+        pausedUntil: Instant?,
+        unlockedPausedUntilEpochMillis: Long = 0L,
+        unlockedPausedIndefinitely: Boolean = false
+    ): AndroidVocabularyReminderDraftValidation {
         val intervalValue = intervalValueText.trim().toIntOrNull()
             ?: return AndroidVocabularyReminderDraftValidation.Invalid("Interval must be a valid positive number.")
         if (intervalValue <= 0) {
@@ -174,7 +197,8 @@ data class AndroidVocabularyReminderDraft(
                 overlayPopupEnabled = overlayPopupEnabled,
                 pausedUntil = pausedUntil,
                 quickPauseActionsEnabled = quickPauseActionsEnabled,
-                unlockedPausedUntilEpochMillis = unlockedPausedUntilEpochMillis
+                unlockedPausedUntilEpochMillis = unlockedPausedUntilEpochMillis,
+                unlockedPausedIndefinitely = unlockedPausedIndefinitely
             )
         )
     }

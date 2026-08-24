@@ -65,6 +65,17 @@ class AndroidSettingsNavigationTest {
         controller.updateSettings(controller.settings.value.copy(unlockedPausedUntilEpochMillis = futureEpoch))
         assertTrue(controller.settings.value.enabled)
         assertTrue(controller.settings.value.isUnlockedPaused)
+
+        // Indefinite Pause
+        controller.pauseUnlockedIndefinitely()
+        assertTrue(controller.settings.value.enabled)
+        assertTrue(controller.settings.value.isUnlockedPaused)
+        assertTrue(controller.settings.value.unlockedPausedIndefinitely)
+
+        // Resume
+        controller.resumeUnlocked()
+        assertFalse(controller.settings.value.isUnlockedPaused)
+        assertFalse(controller.settings.value.unlockedPausedIndefinitely)
     }
 
     @Test

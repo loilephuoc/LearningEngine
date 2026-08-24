@@ -119,6 +119,7 @@ fun VocabularyRemindersHubScreen(
             }
             val reminderStatus = when {
                 !reminderSettings.enabled -> stringResource(R.string.reminder_status_off)
+                reminderSettings.unlockedPausedIndefinitely -> stringResource(R.string.reminder_paused_indefinite)
                 isPaused && pausedUntilEpoch > 0L -> {
                     val timeStr = Instant.ofEpochMilli(pausedUntilEpoch)
                         .atZone(ZoneId.systemDefault())

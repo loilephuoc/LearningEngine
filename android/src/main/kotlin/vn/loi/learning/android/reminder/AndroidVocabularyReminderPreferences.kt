@@ -64,6 +64,7 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
 
         val quickPauseActionsEnabled = prefs.getBoolean(KEY_REMINDER_QUICK_PAUSE_ACTIONS_ENABLED, defaults.quickPauseActionsEnabled)
         val unlockedPausedUntilEpochMillis = prefs.getLong(KEY_REMINDER_UNLOCKED_PAUSED_UNTIL, defaults.unlockedPausedUntilEpochMillis)
+        val unlockedPausedIndefinitely = prefs.getBoolean(KEY_REMINDER_UNLOCKED_PAUSED_INDEFINITELY, defaults.unlockedPausedIndefinitely)
 
         return AndroidVocabularyReminderSettings(
             enabled = enabled,
@@ -77,7 +78,8 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
             overlayPopupEnabled = overlayPopupEnabled,
             pausedUntil = pausedUntil,
             quickPauseActionsEnabled = quickPauseActionsEnabled,
-            unlockedPausedUntilEpochMillis = unlockedPausedUntilEpochMillis
+            unlockedPausedUntilEpochMillis = unlockedPausedUntilEpochMillis,
+            unlockedPausedIndefinitely = unlockedPausedIndefinitely
         )
     }
 
@@ -101,6 +103,7 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
             }
             putBoolean(KEY_REMINDER_QUICK_PAUSE_ACTIONS_ENABLED, settings.quickPauseActionsEnabled)
             putLong(KEY_REMINDER_UNLOCKED_PAUSED_UNTIL, settings.unlockedPausedUntilEpochMillis)
+            putBoolean(KEY_REMINDER_UNLOCKED_PAUSED_INDEFINITELY, settings.unlockedPausedIndefinitely)
         }.coordinatedCommit()
     }
 
@@ -256,6 +259,7 @@ class SharedPreferencesVocabularyReminderPreferenceStore(
         private const val KEY_PAUSED_UNTIL = "reminder.paused_until_epoch_millis"
         private const val KEY_REMINDER_QUICK_PAUSE_ACTIONS_ENABLED = "reminder.quick_pause_actions_enabled"
         private const val KEY_REMINDER_UNLOCKED_PAUSED_UNTIL = "reminder.unlocked_paused_until_epoch_millis"
+        private const val KEY_REMINDER_UNLOCKED_PAUSED_INDEFINITELY = "reminder.unlocked_paused_indefinitely"
 
         private const val KEY_LOCKSCREEN_ENABLED = "lockscreen.enabled"
         private const val KEY_LOCKSCREEN_PACKAGE_ID = "lockscreen.selected_package_id"
@@ -342,7 +346,25 @@ class AndroidVocabularyReminderPreferencesController(
     fun pauseUnlocked(duration: Duration, now: Instant = Instant.now()): Boolean {
         val untilEpoch = now.toEpochMilli() + duration.toMillis()
         Log.i("UnlockedPause", "[UnlockedPause] duration=${duration.toMinutes()}m pausedUntil=$untilEpoch")
-        return updateSettings(mutableSettings.value.copy(unlockedPausedUntilEpochMillis = untilEpoch))
+        return updateSettings(mutableSettings.value.copy(
+            unlockedPausedUntilEpochMillis = untilEpoch,
+            unlockedPausedIndefinitely = false
+        ))
+    }
+
+    fun pauseUnlockedIndefinitely(): Boolean {
+        Log.i("UnlockedPause", "[UnlockedPause] duration=INDEFINITE pausedIndefinitely=true")
+        return updateSettings(mutableSettings.value.copy(
+            unlockedPausedUntilEpochMillis = 0L,
+            unlockedPausedIndefinitely = true
+        ))
+    }
+
+    fun handleQuickPause(action: ReminderQuickPauseAction, now: Instant = Instant.now()): Boolean {
+        return when (action) {
+            is ReminderQuickPauseAction.ForDuration -> pauseUnlocked(action.duration, now)
+            is ReminderQuickPauseAction.Indefinitely -> pauseUnlockedIndefinitely()
+        }
     }
 
     fun pauseUnlocked5Minutes(): Boolean = pauseUnlocked(Duration.ofMinutes(5))
@@ -350,7 +372,10 @@ class AndroidVocabularyReminderPreferencesController(
     fun pauseUnlockedOneHour(): Boolean = pauseUnlocked(Duration.ofHours(1))
     fun resumeUnlocked(): Boolean {
         Log.i("UnlockedPause", "[UnlockedPause] duration=0m pausedUntil=0 (RESUME)")
-        return updateSettings(mutableSettings.value.copy(unlockedPausedUntilEpochMillis = 0L))
+        return updateSettings(mutableSettings.value.copy(
+            unlockedPausedUntilEpochMillis = 0L,
+            unlockedPausedIndefinitely = false
+        ))
     }
 
     private fun pauseFor(duration: Duration, now: Instant = Instant.now()): Boolean {
