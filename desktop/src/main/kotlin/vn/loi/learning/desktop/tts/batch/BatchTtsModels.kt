@@ -103,23 +103,20 @@ data class BatchTtsLanguageRequirements(
         (!requiresEnglish || englishVoice != null) && (!requiresVietnamese || vietnameseVoice != null)
 
     companion object {
-        fun from(scan: BatchTtsScopeScan): BatchTtsLanguageRequirements {
-            val hasExplicitTargetCounts = scan.englishTargetsCount > 0 || scan.vietnameseTargetsCount > 0
-            return if (hasExplicitTargetCounts) {
-                BatchTtsLanguageRequirements(
-                    requiresEnglish = scan.englishTargetsCount > 0,
-                    requiresVietnamese = scan.vietnameseTargetsCount > 0
-                )
-            } else {
-                val selectedLanguages = scan.selectedFields.mapNotNull { field ->
-                    BatchTtsLanguageResolver.resolveTargetLanguage(null, null, field)
-                }.toSet()
-                BatchTtsLanguageRequirements(
-                    requiresEnglish = TtsLanguage.ENGLISH in selectedLanguages,
-                    requiresVietnamese = TtsLanguage.VIETNAMESE in selectedLanguages
-                )
+        fun from(selectedFields: Set<TtsField>): BatchTtsLanguageRequirements {
+            val hasEnglish = selectedFields.any {
+                BatchTtsLanguageResolver.resolveTargetLanguage(null, null, it) == TtsLanguage.ENGLISH
             }
+            val hasVietnamese = selectedFields.any {
+                BatchTtsLanguageResolver.resolveTargetLanguage(null, null, it) == TtsLanguage.VIETNAMESE
+            }
+            return BatchTtsLanguageRequirements(
+                requiresEnglish = hasEnglish,
+                requiresVietnamese = hasVietnamese
+            )
         }
+
+        fun from(scan: BatchTtsScopeScan): BatchTtsLanguageRequirements = from(scan.selectedFields)
     }
 }
 

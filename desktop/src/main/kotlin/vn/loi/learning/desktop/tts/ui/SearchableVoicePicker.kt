@@ -1,6 +1,8 @@
 package vn.loi.learning.desktop.tts.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -31,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.launch
 import androidx.compose.ui.window.DialogProperties
 import java.util.Locale
 import vn.loi.learning.desktop.tts.TtsVoice
@@ -212,6 +218,9 @@ fun SearchableVoicePickerDialog(
     onDismiss: () -> Unit
 ) {
     var regionDropdownExpanded by remember { mutableStateOf(false) }
+    val lazyListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    var lastPreviewedVoiceId by remember { mutableStateOf<String?>(null) }
 
     val availableRegions = remember(candidateVoices) {
         SearchableVoicePickerHelper.extractRegions(candidateVoices)
@@ -419,113 +428,236 @@ fun SearchableVoicePickerDialog(
                         )
                     }
                 } else {
-                    LazyColumn(
+                    Row(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(filteredVoices, key = { it.id }) { voice ->
-                            val isSelected = voice.id == currentVoice?.id
-                            val isPlayingThis = previewingVoiceId == voice.id
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(filteredVoices, key = { it.id }) { voice ->
+                                val isSelected = voice.id == currentVoice?.id
+                                val isPlayingThis = previewingVoiceId == voice.id
+                                val isLastPreviewed = !isPlayingThis && voice.id == lastPreviewedVoiceId
+
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(LERadius.xs)
+                                        .clickable {
+                                            handleDismiss()
+                                            onSelectVoice(voice)
+                                        }
+                                        .border(
+                                            width = if (isPlayingThis) 1.5.dp else 1.dp,
+                                            color = when {
+                                                isPlayingThis -> LEColors.primary
+                                                isSelected -> LEColors.primary
+                                                isLastPreviewed -> LEColors.primary.copy(alpha = 0.5f)
+                                                else -> LEColors.borderSubtle.copy(alpha = 0.6f)
+                                            },
+                                            shape = LERadius.xs
+                                        ),
+                                    color = when {
+                                        isPlayingThis -> LEColors.primarySoft
+                                        isSelected -> LEColors.primarySoft.copy(alpha = 0.4f)
+                                        isLastPreviewed -> LEColors.surfaceElevated
+                                        else -> LEColors.surface
+                                    }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = LESpacing.md, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                                            ) {
+                                                Text(
+                                                    text = voice.displayName,
+                                                    style = BatchTtsUiScale.controlPrimary,
+                                                    fontWeight = if (isSelected || isPlayingThis) FontWeight.Bold else FontWeight.SemiBold,
+                                                    color = if (isSelected || isPlayingThis) LEColors.primary else LEColors.textPrimary
+                                                )
+                                                if (isPlayingThis) {
+                                                    Surface(
+                                                        color = LEColors.primary,
+                                                        shape = LERadius.xs
+                                                    ) {
+                                                        Text(
+                                                            text = "Đang phát",
+                                                            style = BatchTtsUiScale.badge,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = Color.White,
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                } else if (isLastPreviewed) {
+                                                    Surface(
+                                                        color = LEColors.surfaceElevated,
+                                                        border = BorderStroke(1.dp, LEColors.primary.copy(alpha = 0.4f)),
+                                                        shape = LERadius.xs
+                                                    ) {
+                                                        Text(
+                                                            text = "Vừa nghe",
+                                                            style = BatchTtsUiScale.badge,
+                                                            color = LEColors.textMuted,
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                }
+                                                if (voice.gender != null) {
+                                                    Surface(
+                                                        color = LEColors.surfaceElevated,
+                                                        shape = LERadius.xs
+                                                    ) {
+                                                        Text(
+                                                            text = voice.gender,
+                                                            style = BatchTtsUiScale.controlSecondary,
+                                                            color = LEColors.textSecondary,
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            Text(
+                                                text = "${SearchableVoicePickerHelper.formatRegionDisplayName(voice.locale)} · ${voice.id}",
+                                                style = BatchTtsUiScale.controlSecondary,
+                                                color = LEColors.textMuted,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                                        ) {
+                                            if (onPreviewVoice != null) {
+                                                Surface(
+                                                    modifier = Modifier
+                                                        .clip(LERadius.xs)
+                                                        .clickable {
+                                                            if (isPlayingThis) {
+                                                                onStopPreview?.invoke()
+                                                            } else {
+                                                                lastPreviewedVoiceId = voice.id
+                                                                onPreviewVoice(voice)
+                                                            }
+                                                        }
+                                                        .border(
+                                                            1.dp,
+                                                            if (isPlayingThis) LEColors.primary else LEColors.borderSubtle,
+                                                            LERadius.xs
+                                                        ),
+                                                    color = if (isPlayingThis) LEColors.primarySoft else LEColors.surfaceElevated
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = if (isPlayingThis) "■ Stop" else "▶ Nghe thử",
+                                                            style = BatchTtsUiScale.controlSecondary,
+                                                            fontWeight = if (isPlayingThis) FontWeight.Bold else FontWeight.Medium,
+                                                            color = if (isPlayingThis) LEColors.primary else LEColors.textSecondary
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            if (isSelected) {
+                                                Text(
+                                                    text = "✓",
+                                                    style = BatchTtsUiScale.sectionHeading,
+                                                    color = LEColors.primary,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        val canScrollUp = lazyListState.canScrollBackward || lazyListState.firstVisibleItemIndex > 0 || lazyListState.firstVisibleItemScrollOffset > 0
+                        val canScrollDown = lazyListState.canScrollForward
+
+                        Column(
+                            modifier = Modifier.fillMaxHeight().width(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            // Up navigation button (moves one row upward)
                             Surface(
                                 modifier = Modifier
-                                    .fillMaxWidth()
+                                    .size(24.dp)
                                     .clip(LERadius.xs)
-                                    .clickable {
-                                        handleDismiss()
-                                        onSelectVoice(voice)
+                                    .clickable(enabled = canScrollUp) {
+                                        coroutineScope.launch {
+                                            val target = (lazyListState.firstVisibleItemIndex - 1).coerceAtLeast(0)
+                                            lazyListState.animateScrollToItem(target)
+                                        }
                                     }
                                     .border(
                                         1.dp,
-                                        if (isSelected) LEColors.primary else LEColors.borderSubtle.copy(alpha = 0.6f),
+                                        if (canScrollUp) LEColors.borderSubtle else LEColors.borderSubtle.copy(alpha = 0.3f),
                                         LERadius.xs
                                     ),
-                                color = if (isSelected) LEColors.primarySoft else LEColors.surface
+                                color = if (canScrollUp) LEColors.surfaceElevated else LEColors.surface
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = LESpacing.md, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                                        ) {
-                                            Text(
-                                                text = voice.displayName,
-                                                style = BatchTtsUiScale.controlPrimary,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                                color = if (isSelected) LEColors.primary else LEColors.textPrimary
-                                            )
-                                            if (voice.gender != null) {
-                                                Surface(
-                                                    color = LEColors.surfaceElevated,
-                                                    shape = LERadius.xs
-                                                ) {
-                                                    Text(
-                                                        text = voice.gender,
-                                                        style = BatchTtsUiScale.controlSecondary,
-                                                        color = LEColors.textSecondary,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                        Text(
-                                            text = "${SearchableVoicePickerHelper.formatRegionDisplayName(voice.locale)} · ${voice.id}",
-                                            style = BatchTtsUiScale.controlSecondary,
-                                            color = LEColors.textMuted,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "▲",
+                                        style = BatchTtsUiScale.previewSource,
+                                        color = if (canScrollUp) LEColors.textPrimary else LEColors.textMuted
+                                    )
+                                }
+                            }
 
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
-                                    ) {
-                                        if (onPreviewVoice != null) {
-                                            Surface(
-                                                modifier = Modifier
-                                                    .clip(LERadius.xs)
-                                                    .clickable {
-                                                        if (isPlayingThis) {
-                                                            onStopPreview?.invoke()
-                                                        } else {
-                                                            onPreviewVoice(voice)
-                                                        }
-                                                    }
-                                                    .border(
-                                                        1.dp,
-                                                        if (isPlayingThis) LEColors.primary else LEColors.borderSubtle,
-                                                        LERadius.xs
-                                                    ),
-                                                color = if (isPlayingThis) LEColors.primarySoft else LEColors.surfaceElevated
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                                ) {
-                                                    Text(
-                                                        text = if (isPlayingThis) "■ Stop" else "▶ Nghe thử",
-                                                        style = BatchTtsUiScale.controlSecondary,
-                                                        fontWeight = if (isPlayingThis) FontWeight.Bold else FontWeight.Medium,
-                                                        color = if (isPlayingThis) LEColors.primary else LEColors.textSecondary
-                                                    )
-                                                }
-                                            }
-                                        }
+                            // Draggable Vertical Scrollbar
+                            VerticalScrollbar(
+                                adapter = rememberScrollbarAdapter(lazyListState),
+                                modifier = Modifier.weight(1f).width(8.dp),
+                                style = ScrollbarStyle(
+                                    minimalHeight = 24.dp,
+                                    thickness = 8.dp,
+                                    shape = LERadius.xs,
+                                    hoverDurationMillis = 200,
+                                    unhoverColor = LEColors.borderSubtle,
+                                    hoverColor = LEColors.primary
+                                )
+                            )
 
-                                        if (isSelected) {
-                                            Text(
-                                                text = "✓",
-                                                style = BatchTtsUiScale.sectionHeading,
-                                                color = LEColors.primary,
-                                                fontWeight = FontWeight.Bold
-                                            )
+                            // Down navigation button (moves one row downward)
+                            Surface(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(LERadius.xs)
+                                    .clickable(enabled = canScrollDown) {
+                                        coroutineScope.launch {
+                                            val target = (lazyListState.firstVisibleItemIndex + 1).coerceAtMost(filteredVoices.lastIndex)
+                                            lazyListState.animateScrollToItem(target)
                                         }
                                     }
+                                    .border(
+                                        1.dp,
+                                        if (canScrollDown) LEColors.borderSubtle else LEColors.borderSubtle.copy(alpha = 0.3f),
+                                        LERadius.xs
+                                    ),
+                                color = if (canScrollDown) LEColors.surfaceElevated else LEColors.surface
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "▼",
+                                        style = BatchTtsUiScale.previewSource,
+                                        color = if (canScrollDown) LEColors.textPrimary else LEColors.textMuted
+                                    )
                                 }
                             }
                         }
