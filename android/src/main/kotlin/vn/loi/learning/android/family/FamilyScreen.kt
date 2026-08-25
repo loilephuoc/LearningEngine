@@ -188,10 +188,19 @@ fun FamilyScreen(
     var reminderTarget by remember { mutableStateOf<ReminderTargetInfo?>(null) }
 
     legacyImportPreview?.let { preview ->
-        FamilyLegacyImportPreviewScreen(preview = preview, onBack = { legacyImportPreview = null })
+        FamilyLegacyImportPreviewScreen(
+            preview = preview,
+            repository = repository,
+            onBack = {
+                legacyImportPreview = null
+            },
+            onImportFinished = {
+                legacyImportPreview = null
+                tab = FamilyTab.PERSONS
+            }
+        )
         return
     }
-
     Scaffold(
         topBar = {
             TopAppBar(
