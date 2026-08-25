@@ -9,8 +9,15 @@ import vn.loi.learning.android.study.SharedPreferencesStudyPreferenceStore
 import vn.loi.learning.android.platform.AndroidStartupTrace
 import vn.loi.learning.android.reminder.AndroidLockScreenVocabularyService
 import vn.loi.learning.infrastructure.persistence.json.JsonPersistenceTrace
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 
 class LearningEngineAndroidApplication : Application() {
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
         AndroidStartupTrace.enabled = BuildConfig.DEBUG
@@ -21,6 +28,14 @@ class LearningEngineAndroidApplication : Application() {
         reminderNotificationHelper.createNotificationChannel()
         dailyNotificationHelper.createNotificationChannels()
         dailyNotificationScheduler.reconcile()
+        familyNotificationPublisher.createChannel()
+        familyReminderReconciler.reconcile(forceReschedule = true)
+        familyCloudSyncController.enqueueBackground()
+        applicationScope.launch {
+            familyRepository.snapshot.drop(1).collect {
+                familyReminderReconciler.reconcile()
+            }
+        }
         AndroidLockScreenVocabularyService.reconcile(this, "APPLICATION_ON_CREATE")
         homeVocabularyWidgetCoordinator.start()
     }
@@ -42,6 +57,53 @@ class LearningEngineAndroidApplication : Application() {
     }
     val studyPreferencesController: AndroidStudyPreferencesController by lazy {
         AndroidStudyPreferencesController(SharedPreferencesStudyPreferenceStore(this))
+    }
+    val familySyncMetadataStore: vn.loi.learning.android.family.FamilySyncMetadataStore by lazy {
+        vn.loi.learning.android.family.FamilySyncMetadataStore(
+            filesDir.toPath().resolve("learning-engine/family/family-sync-v1.json")
+        )
+    }
+    private val rawFamilyRepository: vn.loi.learning.android.family.FamilyRepository by lazy {
+        vn.loi.learning.android.family.JsonFamilyRepository(filesDir.toPath().resolve("learning-engine/family/family-v1.json"))
+    }
+    val familyRepository: vn.loi.learning.android.family.FamilyRepository by lazy {
+        vn.loi.learning.android.family.SyncAwareFamilyRepository(rawFamilyRepository, familySyncMetadataStore) {
+            familyCloudSyncController.enqueueBackground()
+        }
+    }
+    val familyCloudSyncController: vn.loi.learning.android.family.FamilyCloudSyncController by lazy {
+        val configuration = if (BuildConfig.FAMILY_SUPABASE_URL.isBlank() || BuildConfig.FAMILY_SUPABASE_PUBLISHABLE_KEY.isBlank()) null
+        else runCatching {
+            vn.loi.learning.infrastructure.sync.supabase.SupabaseConfiguration(
+                BuildConfig.FAMILY_SUPABASE_URL,
+                BuildConfig.FAMILY_SUPABASE_PUBLISHABLE_KEY
+            )
+        }.getOrNull()
+        vn.loi.learning.android.family.FamilyCloudSyncController(
+            this,
+            applicationScope,
+            configuration,
+            familyRepository,
+            familySyncMetadataStore,
+            afterMerge = { familyReminderReconciler.reconcile() }
+        )
+    }
+    val familyReminderScheduler: vn.loi.learning.android.family.AndroidFamilyReminderScheduler by lazy {
+        vn.loi.learning.android.family.AndroidFamilyReminderScheduler(this)
+    }
+    val familyNotificationPublisher: vn.loi.learning.android.family.FamilyNotificationPublisher by lazy {
+        vn.loi.learning.android.family.FamilyNotificationPublisher(this)
+    }
+    val familyReminderReconciler: vn.loi.learning.android.family.ReminderScheduleReconciler by lazy {
+        vn.loi.learning.android.family.ReminderScheduleReconciler(
+            snapshot = { familyRepository.snapshot.value },
+            projector = vn.loi.learning.android.family.FamilyReminderScheduleProjector(
+                vn.loi.learning.android.family.CalendarProjectionService(
+                    vn.loi.learning.android.family.AstronomicalVietnameseLunarCalendar()
+                )
+            ),
+            scheduler = familyReminderScheduler
+        )
     }
     val controllerPreferencesController: vn.loi.learning.android.controller.ControllerPreferencesController by lazy {
         vn.loi.learning.android.controller.ControllerPreferencesController(

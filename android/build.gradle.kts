@@ -1,6 +1,10 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -13,6 +17,23 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        val localProperties = Properties().apply {
+            val file = rootProject.file("local.properties")
+            if (file.exists()) {
+                FileInputStream(file).use { load(it) }
+            }
+        }
+        val supabaseUrl = providers.gradleProperty("LEARNING_ENGINE_SUPABASE_URL")
+            .orElse(providers.environmentVariable("LEARNING_ENGINE_SUPABASE_URL"))
+            .orNull?.takeIf { it.isNotBlank() }
+            ?: localProperties.getProperty("LEARNING_ENGINE_SUPABASE_URL").orEmpty()
+        val supabaseKey = providers.gradleProperty("LEARNING_ENGINE_SUPABASE_PUBLISHABLE_KEY")
+            .orElse(providers.environmentVariable("LEARNING_ENGINE_SUPABASE_PUBLISHABLE_KEY"))
+            .orNull?.takeIf { it.isNotBlank() }
+            ?: localProperties.getProperty("LEARNING_ENGINE_SUPABASE_PUBLISHABLE_KEY").orEmpty()
+        fun quoted(value: String) = "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+        buildConfigField("String", "FAMILY_SUPABASE_URL", quoted(supabaseUrl))
+        buildConfigField("String", "FAMILY_SUPABASE_PUBLISHABLE_KEY", quoted(supabaseKey))
     }
     buildFeatures {
         compose = true
@@ -62,6 +83,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")

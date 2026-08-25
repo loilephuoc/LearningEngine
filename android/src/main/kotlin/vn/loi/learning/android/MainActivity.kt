@@ -36,6 +36,8 @@ import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.library.*
 import vn.loi.learning.android.packageexperience.*
 import vn.loi.learning.android.autoplay.*
+import vn.loi.learning.android.family.FamilyHomeEntry
+import vn.loi.learning.android.family.FamilyScreen
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +69,7 @@ import vn.loi.learning.android.reminder.ReminderSettingsScreen
 import vn.loi.learning.android.reminder.VocabularyRemindersHubScreen
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
@@ -82,6 +85,7 @@ data class PendingReminderReviewTarget(
 class MainActivity : ComponentActivity() {
 
     private val pendingReminderTarget = MutableStateFlow<PendingReminderReviewTarget?>(null)
+    private val pendingFamilyOpenDate = MutableStateFlow<String?>(null)
 
     private val recordAudioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -156,6 +160,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleReminderIntent(intent)
+        handleFamilyReminderIntent(intent)
         if (intent.action == "vn.loi.learning.android.ACTION_TEST_WALLPAPER_DEBUG") {
             vn.loi.learning.android.reminder.AndroidLockScreenWallpaperRenderer.renderDebugSafeZones()
         } else if (intent.action == "vn.loi.learning.android.ACTION_TEST_WALLPAPER_APPLY") {
@@ -288,9 +293,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun handleFamilyReminderIntent(intent: Intent?) {
+        if (intent?.action == vn.loi.learning.android.family.FamilyNotificationPublisher.ACTION_OPEN_FAMILY) {
+            pendingFamilyOpenDate.value = intent.getStringExtra(
+                vn.loi.learning.android.family.AndroidFamilyReminderScheduler.EXTRA_OCCURRENCE_DATE
+            ) ?: java.time.LocalDate.now().toString()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleReminderIntent(intent)
+        handleFamilyReminderIntent(intent)
         if (intent?.action == "vn.loi.learning.android.ACTION_TEST_WALLPAPER_DEBUG") {
             vn.loi.learning.android.reminder.AndroidLockScreenWallpaperRenderer.renderDebugSafeZones()
         } else if (intent?.action == "vn.loi.learning.android.ACTION_TEST_WALLPAPER_APPLY") {
@@ -316,6 +330,7 @@ class MainActivity : ComponentActivity() {
             val studyLimits by app.studyPreferencesController.limits.collectAsStateWithLifecycle()
             val continuousSkim by app.studyPreferencesController.continuousSkim.collectAsStateWithLifecycle()
             val dailyNotificationSettings by app.dailyNotificationPreferencesController.settings.collectAsStateWithLifecycle()
+            val familySnapshot by app.familyRepository.snapshot.collectAsStateWithLifecycle()
 
             val locale = java.util.Locale(currentLanguage.code)
             val currentConfig = LocalConfiguration.current
@@ -486,6 +501,12 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                val familyOpenDate by pendingFamilyOpenDate.collectAsStateWithLifecycle()
+                LaunchedEffect(familyOpenDate) {
+                    if (familyOpenDate != null) {
+                        navController.navigate("family") { launchSingleTop = true }
+                    }
+                }
                 val showRootNavigation = when {
                     currentRoute == "autoplay" -> false
                     currentRoute == "controller_diagnostics" -> false
@@ -523,18 +544,32 @@ class MainActivity : ComponentActivity() {
                         BackHandler(enabled = contentState is AndroidContentOperationState.Running) {
                             contentViewModel.cancel()
                         }
-                        HomeScreen(home, contentState, onEvent = openStudyFromExplicitEvent,
-                            onLibrary = { navController.navigate("library") }, onReview = { navController.navigate("review") },
-                            onStudyLauncher = { navController.navigate("study") { launchSingleTop = true } },
-                            onAutoPlay = { navController.navigate("autoplay") { launchSingleTop = true } },
-                            onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
-                                contentViewModel.begin(kind)
-                                when (kind) {
-                                    AndroidOperationKind.IMPORT -> importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "application/json"))
-                                    AndroidOperationKind.BACKUP -> backupLauncher.launch("learning-engine-backup.lebak")
-                                    AndroidOperationKind.RESTORE -> restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                        Column(Modifier.fillMaxSize()) {
+                            FamilyHomeEntry(
+                                familySnapshot,
+                                onOpen = { navController.navigate("family") { launchSingleTop = true } },
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                            HomeScreen(home, contentState, onEvent = openStudyFromExplicitEvent,
+                                onLibrary = { navController.navigate("library") }, onReview = { navController.navigate("review") },
+                                onStudyLauncher = { navController.navigate("study") { launchSingleTop = true } },
+                                onAutoPlay = { navController.navigate("autoplay") { launchSingleTop = true } },
+                                onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
+                                    contentViewModel.begin(kind)
+                                    when (kind) {
+                                        AndroidOperationKind.IMPORT -> importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "application/json"))
+                                        AndroidOperationKind.BACKUP -> backupLauncher.launch("learning-engine-backup.lebak")
+                                        AndroidOperationKind.RESTORE -> restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                                    }
                                 }
-                            }
+                            )
+                        }
+                    }
+                    composable("family", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        FamilyScreen(
+                            app.familyRepository,
+                            initialCalendarDate = familyOpenDate?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable("autoplay", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
