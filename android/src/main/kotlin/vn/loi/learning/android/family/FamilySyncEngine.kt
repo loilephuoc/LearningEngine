@@ -85,6 +85,7 @@ class FamilySyncEngine(
 
     private fun enqueueInitialSnapshot(snapshot: FamilyLocalSnapshot) {
         snapshot.persons.forEach { metadata.enqueue(FamilySyncEntityKey(FamilySyncEntityType.PERSON, it.id), it.updatedAtEpochMillis) }
+        snapshot.personContactFields.forEach { metadata.enqueue(FamilySyncEntityKey(FamilySyncEntityType.PERSON_CONTACT_FIELD, it.id), it.updatedAtEpochMillis) }
         snapshot.categories.filter { !it.builtIn }.forEach { metadata.enqueue(FamilySyncEntityKey(FamilySyncEntityType.CATEGORY, it.id), it.updatedAtEpochMillis) }
         snapshot.events.forEach { metadata.enqueue(FamilySyncEntityKey(FamilySyncEntityType.EVENT, it.id), it.updatedAtEpochMillis) }
         snapshot.reminderRules.forEach { metadata.enqueue(FamilySyncEntityKey(FamilySyncEntityType.REMINDER_RULE, it.id), it.updatedAtEpochMillis) }
@@ -96,14 +97,15 @@ class FamilySyncEngine(
 
 object FamilySnapshotMerger {
     fun merge(local: FamilyLocalSnapshot, remote: FamilyLocalSnapshot, pending: Set<FamilySyncEntityKey>): FamilyLocalSnapshot = FamilyLocalSnapshot(
-        schemaVersion = 4,
+        schemaVersion = 5,
         persons = merge(local.persons, remote.persons, FamilySyncEntityType.PERSON, pending, Person::id, Person::deletedAtEpochMillis),
         categories = DEFAULT_EVENT_CATEGORIES.mergeById(merge(local.categories.filter { !it.builtIn }, remote.categories.filter { !it.builtIn }, FamilySyncEntityType.CATEGORY, pending, EventCategory::id, EventCategory::deletedAtEpochMillis), EventCategory::id),
         events = merge(local.events, remote.events, FamilySyncEntityType.EVENT, pending, ImportantEvent::id, ImportantEvent::deletedAtEpochMillis),
         reminderRules = merge(local.reminderRules, remote.reminderRules, FamilySyncEntityType.REMINDER_RULE, pending, ReminderRule::id, ReminderRule::deletedAtEpochMillis),
         tasks = merge(local.tasks, remote.tasks, FamilySyncEntityType.TASK, pending, Task::id, Task::deletedAtEpochMillis),
         checklistItems = merge(local.checklistItems, remote.checklistItems, FamilySyncEntityType.CHECKLIST_ITEM, pending, ChecklistItem::id, ChecklistItem::deletedAtEpochMillis),
-        taskOccurrenceCompletions = merge(local.taskOccurrenceCompletions, remote.taskOccurrenceCompletions, FamilySyncEntityType.TASK_COMPLETION, pending, TaskOccurrenceCompletion::id, TaskOccurrenceCompletion::deletedAtEpochMillis)
+        taskOccurrenceCompletions = merge(local.taskOccurrenceCompletions, remote.taskOccurrenceCompletions, FamilySyncEntityType.TASK_COMPLETION, pending, TaskOccurrenceCompletion::id, TaskOccurrenceCompletion::deletedAtEpochMillis),
+        personContactFields = merge(local.personContactFields, remote.personContactFields, FamilySyncEntityType.PERSON_CONTACT_FIELD, pending, PersonContactField::id, PersonContactField::deletedAtEpochMillis)
     )
 
     private fun <T> merge(local: List<T>, remote: List<T>, type: FamilySyncEntityType, pending: Set<FamilySyncEntityKey>, id: (T) -> String, deleted: (T) -> Long?): List<T> {

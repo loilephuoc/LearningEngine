@@ -9,8 +9,8 @@ import org.junit.Test
 
 class FamilyRepositoryTest {
     @Test
-    fun `atomic repository roundtrips persons, events, reminder rules, tasks, checklist, and completions in v4`() = runTest {
-        val dir = Files.createTempDirectory("family-v4-test")
+    fun `atomic repository roundtrips family snapshot including flexible person fields in v5`() = runTest {
+        val dir = Files.createTempDirectory("family-v5-test")
         val file = dir.resolve("family-v1.json")
         val repository = JsonFamilyRepository(file)
 
@@ -79,6 +79,11 @@ class FamilyRepositoryTest {
         val rule2 = ReminderRule("r2", ReminderTargetType.TASK, "t1", 0, ReminderOffsetUnit.DAY, 7, 0, true, 1, 2)
 
         repository.upsertPerson(p1)
+        repository.setPersonContactFieldsForPerson("p1", listOf(
+            PersonContactField("pf1", "p1", PersonContactFieldType.PHONE, "Công ty", "0281234567", false, 0, 1, 2),
+            PersonContactField("pf2", "p1", PersonContactFieldType.EMAIL, "Công việc", "an@example.com", true, 1, 1, 2),
+            PersonContactField("pf3", "p1", PersonContactFieldType.CUSTOM, "Mã nhân viên", "EMP-001", false, 2, 1, 2)
+        ))
         repository.upsertCategory(customCategory)
         repository.upsertEvent(solarEvent)
         repository.upsertTask(task1)
@@ -89,9 +94,11 @@ class FamilyRepositoryTest {
         repository.upsertReminderRule(rule2)
 
         val loaded = JsonFamilyRepository(file).snapshot.value
-        assertEquals(4, loaded.schemaVersion)
+        assertEquals(5, loaded.schemaVersion)
         assertEquals(1, loaded.persons.size)
         assertEquals("Nguyễn An", loaded.persons.single().fullName)
+        assertEquals(3, loaded.personContactFields.count { it.deletedAtEpochMillis == null })
+        assertEquals("EMP-001", loaded.personContactFields.single { it.type == PersonContactFieldType.CUSTOM }.value)
 
         assertEquals(1, loaded.tasks.size)
         val loadedTask = loaded.tasks.single()
@@ -108,7 +115,7 @@ class FamilyRepositoryTest {
         assertEquals(ReminderTargetType.TASK, loaded.reminderRules.first().targetType)
 
         val savedContent = Files.readString(file)
-        assertTrue(savedContent.contains("\"schemaVersion\": 4"))
+        assertTrue(savedContent.contains("\"schemaVersion\": 5"))
         assertTrue(savedContent.contains("\"tasks\":"))
         assertTrue(savedContent.contains("\"checklistItems\":"))
         assertTrue(savedContent.contains("\"taskOccurrenceCompletions\":"))
@@ -116,7 +123,7 @@ class FamilyRepositoryTest {
     }
 
     @Test
-    fun `v3 snapshot migrates smoothly to v4 without losing data`() = runTest {
+    fun `v3 snapshot migrates smoothly to v5 without losing data`() = runTest {
         val dir = Files.createTempDirectory("family-v3-migration")
         val file = dir.resolve("family-v1.json")
 
@@ -186,7 +193,7 @@ class FamilyRepositoryTest {
         val repository = JsonFamilyRepository(file)
         val snapshot = repository.snapshot.value
 
-        assertEquals(4, snapshot.schemaVersion)
+        assertEquals(5, snapshot.schemaVersion)
         assertEquals(1, snapshot.persons.size)
         assertEquals("Trần Sang", snapshot.persons.single().fullName)
         assertEquals(1, snapshot.events.size)
@@ -194,10 +201,17 @@ class FamilyRepositoryTest {
         assertEquals(0, snapshot.tasks.size)
         assertEquals(0, snapshot.checklistItems.size)
         assertEquals(0, snapshot.taskOccurrenceCompletions.size)
+        assertEquals("0912345678", snapshot.personContactFields.single { it.type == PersonContactFieldType.PHONE }.value)
+        assertEquals("Đà Nẵng", snapshot.personContactFields.single { it.type == PersonContactFieldType.ADDRESS }.value)
+
+        // First write upgrades the file to v5; reloading must not duplicate migrated legacy fields.
+        repository.upsertPerson(snapshot.persons.single().copy(updatedAtEpochMillis = 201))
+        val reloaded = JsonFamilyRepository(file).snapshot.value
+        assertEquals(2, reloaded.personContactFields.count { it.personId == "p1" && it.deletedAtEpochMillis == null })
     }
 
     @Test
-    fun `v2 snapshot migrates memorials and old reminder rules to v4 schema`() = runTest {
+    fun `v2 snapshot migrates memorials and old reminder rules to v5 schema`() = runTest {
         val dir = Files.createTempDirectory("family-v2-migration")
         val file = dir.resolve("family-v1.json")
 
@@ -256,7 +270,7 @@ class FamilyRepositoryTest {
         val repository = JsonFamilyRepository(file)
         val snapshot = repository.snapshot.value
 
-        assertEquals(4, snapshot.schemaVersion)
+        assertEquals(5, snapshot.schemaVersion)
         assertEquals(1, snapshot.persons.size)
         assertEquals(PersonGroup.FRIEND, snapshot.persons.single().group)
         assertEquals(1, snapshot.events.size)
@@ -505,4 +519,21 @@ class FamilyRepositoryTest {
         assertEquals(ReminderOffsetUnit.WEEK, loadedRule.unit)
         assertEquals(9, loadedRule.remindHour)
     }
+    @Test
+    fun `set person contact fields tombstones removed field without affecting siblings`() = runTest {
+        val dir = Files.createTempDirectory("family-contact-field-delete")
+        val repository = JsonFamilyRepository(dir.resolve("family-v1.json"))
+        val person = Person("p1", "An", createdAtEpochMillis = 1, updatedAtEpochMillis = 1)
+        repository.upsertPerson(person)
+        val phone1 = PersonContactField("f1", "p1", PersonContactFieldType.PHONE, "Di động", "0901", true, 0, 1, 1)
+        val phone2 = PersonContactField("f2", "p1", PersonContactFieldType.PHONE, "Công ty", "0902", false, 1, 1, 1)
+        repository.setPersonContactFieldsForPerson("p1", listOf(phone1, phone2))
+        repository.setPersonContactFieldsForPerson("p1", listOf(phone2.copy(updatedAtEpochMillis = 2)))
+
+        val snapshot = repository.snapshot.value
+        assertNotNull(snapshot.personContactFields.single { it.id == "f1" }.deletedAtEpochMillis)
+        assertNull(snapshot.personContactFields.single { it.id == "f2" }.deletedAtEpochMillis)
+        assertEquals("0902", snapshot.personContactFields.single { it.id == "f2" }.value)
+    }
+
 }

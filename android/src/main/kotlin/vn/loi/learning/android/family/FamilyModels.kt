@@ -26,6 +26,37 @@ data class Person(
     val deletedAtEpochMillis: Long? = null
 )
 
+
+enum class PersonContactFieldType {
+    PHONE,
+    EMAIL,
+    ADDRESS,
+    WEBSITE,
+    COMPANY,
+    JOB_TITLE,
+    CUSTOM
+}
+
+data class PersonContactField(
+    val id: String,
+    val personId: String,
+    val type: PersonContactFieldType,
+    val label: String? = null,
+    val value: String,
+    val isPrimary: Boolean = false,
+    val sortOrder: Int = 0,
+    val createdAtEpochMillis: Long,
+    val updatedAtEpochMillis: Long,
+    val deletedAtEpochMillis: Long? = null
+) {
+    init {
+        require(value.isNotBlank()) { "Person contact field value must not be blank" }
+        if (type == PersonContactFieldType.CUSTOM) {
+            require(!label.isNullOrBlank()) { "CUSTOM person contact field requires a label" }
+        }
+    }
+}
+
 data class EventCategory(
     val id: String,
     val name: String,
@@ -220,14 +251,15 @@ data class TaskOccurrenceCompletion(
 )
 
 data class FamilyLocalSnapshot(
-    val schemaVersion: Int = 4,
+    val schemaVersion: Int = 5,
     val persons: List<Person> = emptyList(),
     val categories: List<EventCategory> = DEFAULT_EVENT_CATEGORIES,
     val events: List<ImportantEvent> = emptyList(),
     val reminderRules: List<ReminderRule> = emptyList(),
     val tasks: List<Task> = emptyList(),
     val checklistItems: List<ChecklistItem> = emptyList(),
-    val taskOccurrenceCompletions: List<TaskOccurrenceCompletion> = emptyList()
+    val taskOccurrenceCompletions: List<TaskOccurrenceCompletion> = emptyList(),
+    val personContactFields: List<PersonContactField> = emptyList()
 )
 
 enum class CalendarItemType {

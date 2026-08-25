@@ -3,14 +3,19 @@ package vn.loi.learning.android.family
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -188,8 +193,8 @@ fun FamilyScreen(
                     if (isCurrentlyCompleted) {
                         val existingComp = snapshot.taskOccurrenceCompletions.firstOrNull {
                             it.taskId == task.id &&
-                            it.occurrenceDateTime.toLocalDate() == occDate &&
-                            it.deletedAtEpochMillis == null
+                                    it.occurrenceDateTime.toLocalDate() == occDate &&
+                                    it.deletedAtEpochMillis == null
                         }
                         if (existingComp != null) {
                             repository.undoTaskOccurrenceCompletion(existingComp.id, System.currentTimeMillis())
@@ -197,8 +202,8 @@ fun FamilyScreen(
                     } else {
                         val alreadyCompleted = snapshot.taskOccurrenceCompletions.any {
                             it.taskId == task.id &&
-                            it.occurrenceDateTime.toLocalDate() == occDate &&
-                            it.deletedAtEpochMillis == null
+                                    it.occurrenceDateTime.toLocalDate() == occDate &&
+                                    it.deletedAtEpochMillis == null
                         }
                         if (!alreadyCompleted) {
                             val comp = TaskOccurrenceCompletion(
@@ -225,8 +230,8 @@ fun FamilyScreen(
             } else {
                 snapshot.taskOccurrenceCompletions.any {
                     it.taskId == task.id &&
-                    it.occurrenceDateTime.toLocalDate() == occDate &&
-                    it.deletedAtEpochMillis == null
+                            it.occurrenceDateTime.toLocalDate() == occDate &&
+                            it.deletedAtEpochMillis == null
                 }
             }
             val checklist = snapshot.checklistItems.filter { it.taskId == task.id && it.deletedAtEpochMillis == null }
@@ -378,13 +383,17 @@ fun FamilyScreen(
     if (addingPerson || editingPerson != null) {
         PersonEditor(
             existing = editingPerson,
+            existingContactFields = editingPerson?.let { person ->
+                snapshot.personContactFields.filter { it.personId == person.id && it.deletedAtEpochMillis == null }.sortedBy { it.sortOrder }
+            }.orEmpty(),
             onDismiss = {
                 addingPerson = false
                 editingPerson = null
             }
-        ) { person ->
+        ) { person, contactFields ->
             scope.launch {
                 repository.upsertPerson(person)
+                repository.setPersonContactFieldsForPerson(person.id, contactFields)
                 // Ensure default same-day reminder if birthday present and no reminder exists
                 if (person.birthDateSolar != null && !hasSameDayReminder(snapshot.reminderRules, ReminderTargetType.PERSON_BIRTHDAY, person.id)) {
                     repository.upsertReminderRule(createDefaultSameDayReminderRule(ReminderTargetType.PERSON_BIRTHDAY, person.id))
@@ -450,8 +459,8 @@ fun FamilyScreen(
                         if (completedOccurrence && !isCurrentlyCompleted) {
                             val alreadyCompleted = snapshot.taskOccurrenceCompletions.any {
                                 it.taskId == task.id &&
-                                it.occurrenceDateTime.toLocalDate() == occDate &&
-                                it.deletedAtEpochMillis == null
+                                        it.occurrenceDateTime.toLocalDate() == occDate &&
+                                        it.deletedAtEpochMillis == null
                             }
                             if (!alreadyCompleted) {
                                 val completion = TaskOccurrenceCompletion(
@@ -467,8 +476,8 @@ fun FamilyScreen(
                         } else if (!completedOccurrence && isCurrentlyCompleted) {
                             val existingComp = snapshot.taskOccurrenceCompletions.firstOrNull {
                                 it.taskId == task.id &&
-                                it.occurrenceDateTime.toLocalDate() == occDate &&
-                                it.deletedAtEpochMillis == null
+                                        it.occurrenceDateTime.toLocalDate() == occDate &&
+                                        it.deletedAtEpochMillis == null
                             }
                             if (existingComp != null) {
                                 repository.undoTaskOccurrenceCompletion(existingComp.id, System.currentTimeMillis())
@@ -698,6 +707,34 @@ private fun CalendarScreenView(
     val projectionService = remember { CalendarProjectionService(calendar) }
 
     var filterMenuExpanded by remember { mutableStateOf(false) }
+    var showMonthYearPicker by remember { mutableStateOf(false) }
+
+    fun navigateByMonths(deltaMonths: Long) {
+        val newDate = FamilyCalendarNavigationHelper.shiftMonthPreservingDay(selectedDate, deltaMonths)
+        selectedDate = newDate
+        currentMonth = YearMonth.from(newDate)
+    }
+
+    fun navigateToYearMonth(targetYearMonth: YearMonth) {
+        val newDate = FamilyCalendarNavigationHelper.jumpToYearMonthPreservingDay(selectedDate, targetYearMonth)
+        selectedDate = newDate
+        currentMonth = targetYearMonth
+    }
+
+    fun navigateToToday() {
+        val (newToday, newMonth) = FamilyCalendarNavigationHelper.resolveToday(today)
+        selectedDate = newToday
+        currentMonth = newMonth
+        currentWeekStart = newToday.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    }
+
+    fun selectDate(date: LocalDate) {
+        val (safeDate, newMonth) = FamilyCalendarNavigationHelper.resolveDateSelection(date)
+        selectedDate = safeDate
+        if (newMonth != currentMonth) {
+            currentMonth = newMonth
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         // Compact Control Bar - Row 1: View Modes Segmented Button + "Hôm nay" Button
@@ -729,11 +766,7 @@ private fun CalendarScreenView(
             }
 
             OutlinedButton(
-                onClick = {
-                    currentMonth = YearMonth.from(today)
-                    currentWeekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-                    selectedDate = today
-                },
+                onClick = { navigateToToday() },
                 modifier = Modifier.height(36.dp),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                 shape = RoundedCornerShape(8.dp)
@@ -765,33 +798,35 @@ private fun CalendarScreenView(
                 when (viewMode) {
                     CalendarViewMode.MONTH -> {
                         IconButton(
-                            onClick = {
-                                val newMonth = currentMonth.minusMonths(1)
-                                currentMonth = newMonth
-                                if (selectedDate.month != newMonth.month || selectedDate.year != newMonth.year) {
-                                    selectedDate = if (today.year == newMonth.year && today.month == newMonth.month) today else newMonth.atDay(1)
-                                }
-                            },
+                            onClick = { navigateByMonths(-1) },
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(Icons.Default.ChevronLeft, "Tháng trước", modifier = Modifier.size(20.dp))
                         }
-                        Text(
-                            "Tháng ${currentMonth.monthValue}/${currentMonth.year}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                            maxLines = 1,
-                            softWrap = false
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { showMonthYearPicker = true }
+                                .padding(horizontal = 6.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                "Tháng ${currentMonth.monthValue}/${currentMonth.year}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Chọn tháng và năm",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         IconButton(
-                            onClick = {
-                                val newMonth = currentMonth.plusMonths(1)
-                                currentMonth = newMonth
-                                if (selectedDate.month != newMonth.month || selectedDate.year != newMonth.year) {
-                                    selectedDate = if (today.year == newMonth.year && today.month == newMonth.month) today else newMonth.atDay(1)
-                                }
-                            },
+                            onClick = { navigateByMonths(1) },
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(Icons.Default.ChevronRight, "Tháng sau", modifier = Modifier.size(20.dp))
@@ -904,12 +939,9 @@ private fun CalendarScreenView(
                     calendar = calendar,
                     projectionService = projectionService,
                     now = now,
-                    onSelectDate = { date ->
-                        selectedDate = date
-                        if (date.month != currentMonth.month || date.year != currentMonth.year) {
-                            currentMonth = YearMonth.from(date)
-                        }
-                    },
+                    onSelectDate = { date -> selectDate(date) },
+                    onSwipeNextMonth = { navigateByMonths(1) },
+                    onSwipePrevMonth = { navigateByMonths(-1) },
                     onEditPerson = onEditPerson,
                     onEditEvent = onEditEvent,
                     onEditTaskOccurrence = onEditTaskOccurrence,
@@ -950,6 +982,22 @@ private fun CalendarScreenView(
                 )
             }
         }
+
+        if (showMonthYearPicker) {
+            FamilyMonthYearPickerDialog(
+                initialYearMonth = currentMonth,
+                today = today,
+                onDismiss = { showMonthYearPicker = false },
+                onConfirm = { targetYearMonth ->
+                    showMonthYearPicker = false
+                    navigateToYearMonth(targetYearMonth)
+                },
+                onToday = {
+                    showMonthYearPicker = false
+                    navigateToToday()
+                }
+            )
+        }
     }
 }
 
@@ -971,6 +1019,8 @@ private fun MonthCalendarView(
     projectionService: CalendarProjectionService,
     now: LocalDateTime,
     onSelectDate: (LocalDate) -> Unit,
+    onSwipeNextMonth: () -> Unit,
+    onSwipePrevMonth: () -> Unit,
     onEditPerson: (Person) -> Unit,
     onEditEvent: (ImportantEvent) -> Unit,
     onEditTaskOccurrence: (Task, LocalDate, LocalTime?) -> Unit,
@@ -998,109 +1048,137 @@ private fun MonthCalendarView(
         list
     }
 
+    var totalDragX by remember { mutableFloatStateOf(0f) }
+    val density = LocalDensity.current
+    val swipeThresholdPx = with(density) { 50.dp.toPx() }
+
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        // Weekday header
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp)) {
-            listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN").forEach { label ->
-                Text(
-                    text = label,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+        // Month Grid Container with horizontal swipe detection
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(currentMonth) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { totalDragX = 0f },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            totalDragX += dragAmount
+                        },
+                        onDragEnd = {
+                            if (totalDragX < -swipeThresholdPx) {
+                                onSwipeNextMonth()
+                            } else if (totalDragX > swipeThresholdPx) {
+                                onSwipePrevMonth()
+                            }
+                            totalDragX = 0f
+                        },
+                        onDragCancel = { totalDragX = 0f }
+                    )
+                }
+        ) {
+            // Weekday header
+            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp)) {
+                listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN").forEach { label ->
+                    Text(
+                        text = label,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
-        }
 
-        // Month Grid
-        days.chunked(7).forEach { week ->
-            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 1.dp)) {
-                week.forEach { date ->
-                    val isCurrentMonth = date.month == currentMonth.month
-                    val isToday = date == today
-                    val isSelected = date == selectedDate
-                    val cellOccurrences = filteredMonthOccurrences.filter { it.date == date }
-                    val isOccupied = cellOccurrences.isNotEmpty()
-                    val lunar = remember(date) { calendar.solarToLunar(date) }
-                    val lunarText = if (lunar.day == 1) "${lunar.day}/${lunar.month}" else "${lunar.day}"
+            // Month Grid
+            days.chunked(7).forEach { week ->
+                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 1.dp)) {
+                    week.forEach { date ->
+                        val isCurrentMonth = date.month == currentMonth.month
+                        val isToday = date == today
+                        val isSelected = date == selectedDate
+                        val cellOccurrences = filteredMonthOccurrences.filter { it.date == date }
+                        val isOccupied = cellOccurrences.isNotEmpty()
+                        val lunar = remember(date) { calendar.solarToLunar(date) }
+                        val lunarText = if (lunar.day == 1) "${lunar.day}/${lunar.month}" else "${lunar.day}"
 
-                    val cellColor = when {
-                        isSelected -> MaterialTheme.colorScheme.primaryContainer
-                        isToday -> MaterialTheme.colorScheme.surfaceVariant
-                        isOccupied -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f)
-                        else -> MaterialTheme.colorScheme.surface
-                    }
+                        val cellColor = when {
+                            isSelected -> MaterialTheme.colorScheme.primaryContainer
+                            isToday -> MaterialTheme.colorScheme.surfaceVariant
+                            isOccupied -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f)
+                            else -> MaterialTheme.colorScheme.surface
+                        }
 
-                    val cellBorder = when {
-                        isSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                        isToday -> BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary)
-                        isOccupied -> BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
-                        else -> null
-                    }
+                        val cellBorder = when {
+                            isSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                            isToday -> BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary)
+                            isOccupied -> BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+                            else -> null
+                        }
 
-                    Surface(
-                        onClick = { onSelectDate(date) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(54.dp)
-                            .padding(1.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        color = cellColor,
-                        border = cellBorder
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 1.dp, vertical = 2.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.SpaceBetween
+                        Surface(
+                            onClick = { onSelectDate(date) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(54.dp)
+                                .padding(1.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            color = cellColor,
+                            border = cellBorder
                         ) {
-                            Text(
-                                text = "${date.dayOfMonth}",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isCurrentMonth) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                            )
-                            Text(
-                                text = lunarText,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 9.5.sp,
-                                fontWeight = if (lunar.day == 1 || lunar.day == 15) FontWeight.Bold else FontWeight.Medium,
-                                color = familyLunarDateColor(isCurrentMonth)
-                            )
-                            // Bounded markers row (max 3 prominent dots + "+N" overflow indicator)
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth().height(8.dp)
+                            Column(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 1.dp, vertical = 2.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.SpaceBetween
                             ) {
-                                if (cellOccurrences.isNotEmpty()) {
-                                    val maxDots = 3
-                                    val visibleOccurrences = cellOccurrences.take(maxDots)
-                                    visibleOccurrences.forEach { occ ->
-                                        Box(
-                                            Modifier
-                                                .size(5.5.dp)
-                                                .padding(horizontal = 0.5.dp)
-                                                .background(
-                                                    color = when (occ.sourceType) {
-                                                        CalendarItemType.BIRTHDAY -> MaterialTheme.colorScheme.primary
-                                                        CalendarItemType.EVENT -> Color(0xFFF57C00)
-                                                        CalendarItemType.TASK_DUE -> if (occ.completed) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.error
-                                                        CalendarItemType.TASK_COMPLETION -> Color(0xFF2E7D32)
-                                                    },
-                                                    shape = RoundedCornerShape(3.dp)
-                                                )
-                                        )
-                                    }
-                                    val overflow = cellOccurrences.size - visibleOccurrences.size
-                                    if (overflow > 0) {
-                                        Text(
-                                            text = "+$overflow",
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(start = 1.dp)
-                                        )
+                                Text(
+                                    text = "${date.dayOfMonth}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isCurrentMonth) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                )
+                                Text(
+                                    text = lunarText,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 9.5.sp,
+                                    fontWeight = if (lunar.day == 1 || lunar.day == 15) FontWeight.Bold else FontWeight.Medium,
+                                    color = familyLunarDateColor(isCurrentMonth)
+                                )
+                                // Bounded markers row (max 3 prominent dots + "+N" overflow indicator)
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth().height(8.dp)
+                                ) {
+                                    if (cellOccurrences.isNotEmpty()) {
+                                        val maxDots = 3
+                                        val visibleOccurrences = cellOccurrences.take(maxDots)
+                                        visibleOccurrences.forEach { occ ->
+                                            Box(
+                                                Modifier
+                                                    .size(5.5.dp)
+                                                    .padding(horizontal = 0.5.dp)
+                                                    .background(
+                                                        color = when (occ.sourceType) {
+                                                            CalendarItemType.BIRTHDAY -> MaterialTheme.colorScheme.primary
+                                                            CalendarItemType.EVENT -> Color(0xFFF57C00)
+                                                            CalendarItemType.TASK_DUE -> if (occ.completed) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.error
+                                                            CalendarItemType.TASK_COMPLETION -> Color(0xFF2E7D32)
+                                                        },
+                                                        shape = RoundedCornerShape(3.dp)
+                                                    )
+                                            )
+                                        }
+                                        val overflow = cellOccurrences.size - visibleOccurrences.size
+                                        if (overflow > 0) {
+                                            Text(
+                                                text = "+$overflow",
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(start = 1.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1850,8 +1928,9 @@ private fun ReminderManagerDialog(
 @Composable
 private fun PersonEditor(
     existing: Person?,
+    existingContactFields: List<PersonContactField>,
     onDismiss: () -> Unit,
-    onSave: (Person) -> Unit
+    onSave: (Person, List<PersonContactField>) -> Unit
 ) {
     var group by remember(existing) { mutableStateOf(existing?.group ?: PersonGroup.FAMILY) }
     var name by remember(existing) { mutableStateOf(existing?.fullName.orEmpty()) }
@@ -1861,11 +1940,18 @@ private fun PersonEditor(
         val formatted = DateInputHelper.formatDate(existing?.birthDateSolar)
         mutableStateOf(TextFieldValue(formatted, TextRange(formatted.length)))
     }
-    var phone by remember(existing) { mutableStateOf(existing?.phone.orEmpty()) }
-    var address by remember(existing) { mutableStateOf(existing?.address.orEmpty()) }
     var note by remember(existing) { mutableStateOf(existing?.note.orEmpty()) }
+    var showAddFieldChooser by remember { mutableStateOf(false) }
+    val contactDrafts = remember(existing?.id, existingContactFields) {
+        mutableStateListOf<PersonContactFieldDraft>().apply {
+            addAll(existingContactFields.map(PersonContactFieldDraft::from))
+        }
+    }
 
     val parsedDate = remember(birthdayValue.text) { DateInputHelper.parseDate(birthdayValue.text) }
+    val invalidCustomField = contactDrafts.any {
+        it.value.isNotBlank() && it.type == PersonContactFieldType.CUSTOM && it.label.isBlank()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1896,38 +1982,210 @@ private fun PersonEditor(
                     onValueChange = { birthdayValue = it },
                     label = "Ngày sinh dương lịch (dd-MM-yyyy)"
                 )
-                Field(phone, { phone = it }, "Điện thoại", KeyboardType.Phone)
-                Field(address, { address = it }, "Địa chỉ")
+
+                HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                Text("Thông tin liên hệ", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Có thể thêm nhiều số điện thoại, email, địa chỉ hoặc trường riêng như mã nhân viên, mã hồ sơ...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                contactDrafts.forEachIndexed { index, draft ->
+                    PersonContactFieldEditorRow(
+                        draft = draft,
+                        onChange = { changed -> contactDrafts[index] = changed },
+                        onRemove = { contactDrafts.removeAt(index) }
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = { showAddFieldChooser = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Thêm thông tin")
+                }
+
                 Field(note, { note = it }, "Ghi chú")
             }
         },
         confirmButton = {
             TextButton(
-                enabled = name.isNotBlank() && (birthdayValue.text.isBlank() || parsedDate != null),
+                enabled = name.isNotBlank() && (birthdayValue.text.isBlank() || parsedDate != null) && !invalidCustomField,
                 onClick = {
                     val now = System.currentTimeMillis()
+                    val personId = existing?.id ?: UUID.randomUUID().toString()
+                    val activeDrafts = contactDrafts.filter { it.value.isNotBlank() }
+                    val contactFields = activeDrafts.mapIndexed { index, draft ->
+                        PersonContactField(
+                            id = draft.id,
+                            personId = personId,
+                            type = draft.type,
+                            label = draft.label.trim().blankNull(),
+                            value = draft.value.trim(),
+                            isPrimary = draft.isPrimary,
+                            sortOrder = index,
+                            createdAtEpochMillis = draft.createdAtEpochMillis ?: now,
+                            updatedAtEpochMillis = now,
+                            deletedAtEpochMillis = null
+                        )
+                    }
+                    val primaryPhone = contactFields.firstOrNull { it.type == PersonContactFieldType.PHONE && it.isPrimary }
+                        ?: contactFields.firstOrNull { it.type == PersonContactFieldType.PHONE }
+                    val primaryAddress = contactFields.firstOrNull { it.type == PersonContactFieldType.ADDRESS && it.isPrimary }
+                        ?: contactFields.firstOrNull { it.type == PersonContactFieldType.ADDRESS }
                     onSave(
                         Person(
-                            id = existing?.id ?: UUID.randomUUID().toString(),
+                            id = personId,
                             fullName = name.trim(),
                             nickname = nickname.blankNull(),
                             group = group,
                             relationshipLabel = relation.blankNull(),
                             birthDateSolar = parsedDate,
-                            phone = phone.blankNull(),
-                            address = address.blankNull(),
+                            phone = primaryPhone?.value,
+                            address = primaryAddress?.value,
                             note = note.blankNull(),
                             avatarRef = existing?.avatarRef,
                             createdAtEpochMillis = existing?.createdAtEpochMillis ?: now,
                             updatedAtEpochMillis = now,
                             deletedAtEpochMillis = existing?.deletedAtEpochMillis
-                        )
+                        ),
+                        contactFields
                     )
                 }
             ) { Text("Lưu") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
     )
+
+    if (showAddFieldChooser) {
+        AlertDialog(
+            onDismissRequest = { showAddFieldChooser = false },
+            title = { Text("Thêm thông tin") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    PersonContactFieldType.entries.forEach { type ->
+                        TextButton(
+                            onClick = {
+                                contactDrafts += PersonContactFieldDraft.new(type)
+                                showAddFieldChooser = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(type.displayName(), modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showAddFieldChooser = false }) { Text("Hủy") } }
+        )
+    }
+}
+
+private data class PersonContactFieldDraft(
+    val id: String,
+    val type: PersonContactFieldType,
+    val label: String,
+    val value: String,
+    val isPrimary: Boolean,
+    val createdAtEpochMillis: Long?
+) {
+    companion object {
+        fun from(field: PersonContactField) = PersonContactFieldDraft(
+            id = field.id,
+            type = field.type,
+            label = field.label.orEmpty(),
+            value = field.value,
+            isPrimary = field.isPrimary,
+            createdAtEpochMillis = field.createdAtEpochMillis
+        )
+
+        fun new(type: PersonContactFieldType) = PersonContactFieldDraft(
+            id = UUID.randomUUID().toString(),
+            type = type,
+            label = type.defaultLabel(),
+            value = "",
+            isPrimary = false,
+            createdAtEpochMillis = null
+        )
+    }
+}
+
+@Composable
+private fun PersonContactFieldEditorRow(
+    draft: PersonContactFieldDraft,
+    onChange: (PersonContactFieldDraft) -> Unit,
+    onRemove: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(draft.type.displayName(), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Default.Close, contentDescription = "Xóa trường")
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+                OutlinedTextField(
+                    value = draft.label,
+                    onValueChange = { onChange(draft.copy(label = it)) },
+                    label = { Text(if (draft.type == PersonContactFieldType.CUSTOM) "Tên trường *" else "Nhãn") },
+                    singleLine = true,
+                    modifier = Modifier.weight(0.42f)
+                )
+                OutlinedTextField(
+                    value = draft.value,
+                    onValueChange = { onChange(draft.copy(value = it)) },
+                    label = { Text("Giá trị") },
+                    singleLine = draft.type != PersonContactFieldType.ADDRESS,
+                    keyboardOptions = KeyboardOptions(keyboardType = draft.type.keyboardType()),
+                    modifier = Modifier.weight(0.58f)
+                )
+            }
+            if (draft.type in setOf(PersonContactFieldType.PHONE, PersonContactFieldType.EMAIL, PersonContactFieldType.ADDRESS)) {
+                FilterChip(
+                    selected = draft.isPrimary,
+                    onClick = { onChange(draft.copy(isPrimary = !draft.isPrimary)) },
+                    label = { Text("Thông tin chính") },
+                    leadingIcon = if (draft.isPrimary) ({ Icon(Icons.Default.Check, null) }) else null
+                )
+            }
+        }
+    }
+}
+
+private fun PersonContactFieldType.displayName(): String = when (this) {
+    PersonContactFieldType.PHONE -> "Điện thoại"
+    PersonContactFieldType.EMAIL -> "Email"
+    PersonContactFieldType.ADDRESS -> "Địa chỉ"
+    PersonContactFieldType.WEBSITE -> "Website"
+    PersonContactFieldType.COMPANY -> "Công ty"
+    PersonContactFieldType.JOB_TITLE -> "Chức vụ"
+    PersonContactFieldType.CUSTOM -> "Trường tùy chỉnh"
+}
+
+private fun PersonContactFieldType.defaultLabel(): String = when (this) {
+    PersonContactFieldType.PHONE -> "Di động"
+    PersonContactFieldType.EMAIL -> "Cá nhân"
+    PersonContactFieldType.ADDRESS -> "Nhà"
+    PersonContactFieldType.WEBSITE -> "Website"
+    PersonContactFieldType.COMPANY -> "Công ty"
+    PersonContactFieldType.JOB_TITLE -> "Chức vụ"
+    PersonContactFieldType.CUSTOM -> ""
+}
+
+private fun PersonContactFieldType.keyboardType(): KeyboardType = when (this) {
+    PersonContactFieldType.PHONE -> KeyboardType.Phone
+    PersonContactFieldType.EMAIL -> KeyboardType.Email
+    PersonContactFieldType.WEBSITE -> KeyboardType.Uri
+    else -> KeyboardType.Text
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -3210,4 +3468,249 @@ fun FamilyHomeEntry(snapshot: FamilyLocalSnapshot, onOpen: () -> Unit, modifier:
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FamilyMonthYearPickerDialog(
+    initialYearMonth: YearMonth,
+    today: LocalDate,
+    onDismiss: () -> Unit,
+    onConfirm: (YearMonth) -> Unit,
+    onToday: () -> Unit
+) {
+    var selectedYear by remember { mutableIntStateOf(initialYearMonth.year) }
+    var selectedMonth by remember { mutableIntStateOf(initialYearMonth.monthValue) }
+    var showYearPicker by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Chọn tháng và năm",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Year selector: arrows remain useful for +/- 1 year, while the center opens fast selection.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (selectedYear > FamilyCalendarNavigationHelper.SUPPORTED_YEAR_RANGE.first) {
+                                selectedYear--
+                            }
+                        },
+                        enabled = selectedYear > FamilyCalendarNavigationHelper.SUPPORTED_YEAR_RANGE.first
+                    ) {
+                        Icon(Icons.Default.ChevronLeft, contentDescription = "Năm trước")
+                    }
+
+                    Surface(
+                        onClick = { showYearPicker = true },
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Năm $selectedYear",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Chọn nhanh năm",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = {
+                            if (selectedYear < FamilyCalendarNavigationHelper.SUPPORTED_YEAR_RANGE.last) {
+                                selectedYear++
+                            }
+                        },
+                        enabled = selectedYear < FamilyCalendarNavigationHelper.SUPPORTED_YEAR_RANGE.last
+                    ) {
+                        Icon(Icons.Default.ChevronRight, contentDescription = "Năm sau")
+                    }
+                }
+
+                // 3x4 Month Grid
+                val months = (1..12).toList()
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    months.chunked(4).forEach { rowMonths ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            rowMonths.forEach { m ->
+                                val isSelected = m == selectedMonth
+                                val isCurrentMonthOfToday = (m == today.monthValue && selectedYear == today.year)
+
+                                Surface(
+                                    onClick = { selectedMonth = m },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(38.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = when {
+                                        isSelected -> MaterialTheme.colorScheme.primary
+                                        isCurrentMonthOfToday -> MaterialTheme.colorScheme.primaryContainer
+                                        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    },
+                                    border = if (isCurrentMonthOfToday && !isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "T$m",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (isSelected || isCurrentMonthOfToday) FontWeight.Bold else FontWeight.Normal,
+                                            color = when {
+                                                isSelected -> MaterialTheme.colorScheme.onPrimary
+                                                isCurrentMonthOfToday -> MaterialTheme.colorScheme.onPrimaryContainer
+                                                else -> MaterialTheme.colorScheme.onSurface
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(YearMonth.of(selectedYear, selectedMonth)) }) {
+                Text("Đi tới")
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onToday) { Text("Hôm nay") }
+                TextButton(onClick = onDismiss) { Text("Hủy") }
+            }
+        }
+    )
+
+    if (showYearPicker) {
+        FamilyFastYearPickerDialog(
+            initialYear = selectedYear,
+            onDismiss = { showYearPicker = false },
+            onSelect = { year ->
+                selectedYear = year
+                showYearPicker = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun FamilyFastYearPickerDialog(
+    initialYear: Int,
+    onDismiss: () -> Unit,
+    onSelect: (Int) -> Unit
+) {
+    val supportedYears = FamilyCalendarNavigationHelper.SUPPORTED_YEAR_RANGE.toList()
+    val initialIndex = (initialYear - FamilyCalendarNavigationHelper.SUPPORTED_YEAR_RANGE.first)
+        .coerceIn(supportedYears.indices)
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (initialIndex - 3).coerceAtLeast(0))
+    var yearInput by remember(initialYear) { mutableStateOf(initialYear.toString()) }
+    val parsedYear = FamilyCalendarNavigationHelper.parseSupportedYear(yearInput)
+    val isInputError = yearInput.isNotBlank() && parsedYear == null
+
+    LaunchedEffect(parsedYear) {
+        parsedYear?.let { year ->
+            val targetIndex = (year - FamilyCalendarNavigationHelper.SUPPORTED_YEAR_RANGE.first)
+                .coerceIn(supportedYears.indices)
+            listState.animateScrollToItem((targetIndex - 3).coerceAtLeast(0))
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Chọn năm", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = yearInput,
+                    onValueChange = { newValue ->
+                        if (newValue.length <= 4 && newValue.all(Char::isDigit)) {
+                            yearInput = newValue
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Năm") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = isInputError,
+                    supportingText = {
+                        when {
+                            isInputError -> Text("Năm phải từ ${FamilyCalendarNavigationHelper.SUPPORTED_YEAR_RANGE.first} đến ${FamilyCalendarNavigationHelper.SUPPORTED_YEAR_RANGE.last}")
+                            else -> Text("Nhập trực tiếp hoặc chọn nhanh bên dưới")
+                        }
+                    }
+                )
+
+                HorizontalDivider()
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 230.dp),
+                    state = listState,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(supportedYears, key = { it }) { year ->
+                        val isSelected = year == parsedYear
+                        Surface(
+                            onClick = { yearInput = year.toString() },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                        ) {
+                            Text(
+                                text = year.toString(),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { parsedYear?.let(onSelect) },
+                enabled = parsedYear != null
+            ) {
+                Text("Chọn")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Hủy") }
+        }
+    )
 }

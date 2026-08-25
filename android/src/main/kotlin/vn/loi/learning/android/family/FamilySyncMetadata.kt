@@ -11,6 +11,7 @@ import kotlinx.serialization.json.Json
 
 enum class FamilySyncEntityType(val table: String) {
     PERSON("family_persons"),
+    PERSON_CONTACT_FIELD("family_person_contact_fields"),
     CATEGORY("family_event_categories"),
     EVENT("family_events"),
     REMINDER_RULE("family_reminder_rules"),
@@ -105,7 +106,23 @@ class SyncAwareFamilyRepository(
     }
 
     override suspend fun upsertPerson(person: Person) { delegate.upsertPerson(person); changed(FamilySyncEntityType.PERSON, person.id, person.updatedAtEpochMillis) }
-    override suspend fun deletePerson(id: String, atEpochMillis: Long) { delegate.deletePerson(id, atEpochMillis); changed(FamilySyncEntityType.PERSON, id, atEpochMillis) }
+    override suspend fun deletePerson(id: String, atEpochMillis: Long) {
+        val fieldIds = snapshot.value.personContactFields.filter { it.personId == id && it.deletedAtEpochMillis == null }.map { it.id }
+        delegate.deletePerson(id, atEpochMillis)
+        changed(FamilySyncEntityType.PERSON, id, atEpochMillis)
+        fieldIds.forEach { changed(FamilySyncEntityType.PERSON_CONTACT_FIELD, it, atEpochMillis) }
+    }
+    override suspend fun upsertPersonContactField(field: PersonContactField) { delegate.upsertPersonContactField(field); changed(FamilySyncEntityType.PERSON_CONTACT_FIELD, field.id, field.updatedAtEpochMillis) }
+    override suspend fun deletePersonContactField(id: String, atEpochMillis: Long) { delegate.deletePersonContactField(id, atEpochMillis); changed(FamilySyncEntityType.PERSON_CONTACT_FIELD, id, atEpochMillis) }
+    override suspend fun setPersonContactFieldsForPerson(personId: String, fields: List<PersonContactField>) {
+        val before = snapshot.value.personContactFields.filter { it.personId == personId }.map { it.id }.toSet()
+        delegate.setPersonContactFieldsForPerson(personId, fields)
+        val now = System.currentTimeMillis()
+        (before + fields.map { it.id }).forEach { id ->
+            val updatedAt = snapshot.value.personContactFields.firstOrNull { it.id == id }?.updatedAtEpochMillis ?: now
+            changed(FamilySyncEntityType.PERSON_CONTACT_FIELD, id, updatedAt)
+        }
+    }
     override suspend fun upsertCategory(category: EventCategory) { delegate.upsertCategory(category); if (!category.builtIn) changed(FamilySyncEntityType.CATEGORY, category.id, category.updatedAtEpochMillis) }
     override suspend fun deleteCategory(id: String, atEpochMillis: Long) { delegate.deleteCategory(id, atEpochMillis); changed(FamilySyncEntityType.CATEGORY, id, atEpochMillis) }
     override suspend fun upsertEvent(event: ImportantEvent) { delegate.upsertEvent(event); changed(FamilySyncEntityType.EVENT, event.id, event.updatedAtEpochMillis) }
@@ -130,5 +147,5 @@ class SyncAwareFamilyRepository(
     override suspend fun undoTaskOccurrenceCompletion(completionId: String, atEpochMillis: Long) { delegate.undoTaskOccurrenceCompletion(completionId, atEpochMillis); changed(FamilySyncEntityType.TASK_COMPLETION, completionId, atEpochMillis) }
 }
 
-fun FamilyLocalSnapshot.hasUserData(): Boolean = persons.isNotEmpty() || events.isNotEmpty() || tasks.isNotEmpty() ||
+fun FamilyLocalSnapshot.hasUserData(): Boolean = persons.isNotEmpty() || personContactFields.isNotEmpty() || events.isNotEmpty() || tasks.isNotEmpty() ||
     reminderRules.isNotEmpty() || checklistItems.isNotEmpty() || taskOccurrenceCompletions.isNotEmpty() || categories.any { !it.builtIn }

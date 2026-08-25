@@ -66,10 +66,27 @@ class SupabaseFamilyRemoteTransport(
 class FamilySyncException(val code: String, val retryable: Boolean, cause: Throwable? = null) : RuntimeException(code, cause)
 
 internal class RemoteSnapshotBuilder {
-    val persons = mutableListOf<Person>(); val categories = mutableListOf<EventCategory>(); val events = mutableListOf<ImportantEvent>()
+    val persons = mutableListOf<Person>(); val personContactFields = mutableListOf<PersonContactField>(); val categories = mutableListOf<EventCategory>(); val events = mutableListOf<ImportantEvent>()
     val rules = mutableListOf<ReminderRule>(); val tasks = mutableListOf<Task>(); val checklist = mutableListOf<ChecklistItem>()
     val completions = mutableListOf<TaskOccurrenceCompletion>(); var malformedRows = 0
-    fun build() = FamilyLocalSnapshot(4, persons, DEFAULT_EVENT_CATEGORIES.mergeById(categories) { it.id }, events, rules, tasks, checklist, completions)
+    fun build(): FamilyLocalSnapshot {
+        val compatibleFields = personContactFields.toMutableList()
+        persons.forEach { person ->
+            if (compatibleFields.none { it.personId == person.id && it.type == PersonContactFieldType.PHONE } && !person.phone.isNullOrBlank()) {
+                compatibleFields += PersonContactField(
+                    "${person.id}:legacy-phone", person.id, PersonContactFieldType.PHONE, "Di động", person.phone, true, 0,
+                    person.createdAtEpochMillis, person.updatedAtEpochMillis, person.deletedAtEpochMillis
+                )
+            }
+            if (compatibleFields.none { it.personId == person.id && it.type == PersonContactFieldType.ADDRESS } && !person.address.isNullOrBlank()) {
+                compatibleFields += PersonContactField(
+                    "${person.id}:legacy-address", person.id, PersonContactFieldType.ADDRESS, "Nhà", person.address, true, 100,
+                    person.createdAtEpochMillis, person.updatedAtEpochMillis, person.deletedAtEpochMillis
+                )
+            }
+        }
+        return FamilyLocalSnapshot(5, persons, DEFAULT_EVENT_CATEGORIES.mergeById(categories) { it.id }, events, rules, tasks, checklist, completions, compatibleFields)
+    }
 }
 
 object FamilyRemoteMapper {
@@ -77,6 +94,9 @@ object FamilyRemoteMapper {
         FamilySyncEntityType.PERSON -> snapshot.persons.find { it.id == key.id }?.let { p -> base(p.id, owner, p.createdAtEpochMillis, p.updatedAtEpochMillis, p.deletedAtEpochMillis) {
             put("full_name", p.fullName); nullable("nickname", p.nickname); put("group_type", p.group.name); nullable("relationship_label", p.relationshipLabel)
             nullable("birth_date_solar", p.birthDateSolar?.toString()); nullable("phone", p.phone); nullable("address", p.address); nullable("note", p.note); nullable("avatar_ref", p.avatarRef)
+        } }
+        FamilySyncEntityType.PERSON_CONTACT_FIELD -> snapshot.personContactFields.find { it.id == key.id }?.let { f -> base(f.id, owner, f.createdAtEpochMillis, f.updatedAtEpochMillis, f.deletedAtEpochMillis) {
+            put("person_id", f.personId); put("field_type", f.type.name); nullable("label", f.label); put("field_value", f.value); put("is_primary", f.isPrimary); put("sort_order", f.sortOrder)
         } }
         FamilySyncEntityType.CATEGORY -> snapshot.categories.find { it.id == key.id }?.let { c -> base(c.id, owner, c.createdAtEpochMillis, c.updatedAtEpochMillis, c.deletedAtEpochMillis) {
             put("name", c.name); nullable("built_in_key", c.builtInKey); put("built_in", c.builtIn); nullable("icon_key", c.iconKey); put("sort_order", c.sortOrder)
@@ -107,6 +127,7 @@ object FamilyRemoteMapper {
         val id = row.str("id"); val created = row.long("created_at_epoch_millis"); val updated = row.long("updated_at_epoch_millis"); val deleted = row.longOrNull("deleted_at_epoch_millis")
         when (type) {
             FamilySyncEntityType.PERSON -> b.persons += Person(id, row.str("full_name"), row.strOrNull("nickname"), PersonGroup.valueOf(row.str("group_type")), row.strOrNull("relationship_label"), row.strOrNull("birth_date_solar")?.let(LocalDate::parse), row.strOrNull("phone"), row.strOrNull("address"), row.strOrNull("note"), row.strOrNull("avatar_ref"), created, updated, deleted)
+            FamilySyncEntityType.PERSON_CONTACT_FIELD -> b.personContactFields += PersonContactField(id, row.str("person_id"), PersonContactFieldType.valueOf(row.str("field_type")), row.strOrNull("label"), row.str("field_value"), row.bool("is_primary"), row.int("sort_order"), created, updated, deleted)
             FamilySyncEntityType.CATEGORY -> b.categories += EventCategory(id, row.str("name"), row.strOrNull("built_in_key"), row.bool("built_in"), row.strOrNull("icon_key"), row.int("sort_order"), created, updated, deleted)
             FamilySyncEntityType.EVENT -> b.events += ImportantEvent(id, row.str("category_id"), row.str("title"), row.strOrNull("related_person_id"), row.strOrNull("related_person_name"), CalendarType.valueOf(row.str("calendar_type")), row.strOrNull("solar_date")?.let(LocalDate::parse), row.intOrNull("lunar_day"), row.intOrNull("lunar_month"), row.bool("lunar_leap_month"), row.intOrNull("source_year"), RecurrenceType.valueOf(row.str("recurrence")), row.strOrNull("note"), created, updated, deleted)
             FamilySyncEntityType.REMINDER_RULE -> b.rules += ReminderRule(id, ReminderTargetType.valueOf(row.str("target_type")), row.str("target_id"), row.int("amount"), ReminderOffsetUnit.valueOf(row.str("offset_unit")), row.int("remind_hour"), row.int("remind_minute"), row.bool("enabled"), created, updated, deleted, ReminderRepeatMode.valueOf(row.str("repeat_mode")), row.strOrNull("occurrence_date")?.let(LocalDate::parse))

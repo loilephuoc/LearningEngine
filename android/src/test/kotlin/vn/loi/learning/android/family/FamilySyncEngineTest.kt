@@ -16,7 +16,7 @@ class FamilySyncEngineTest {
         val source = completeSnapshot()
         val builder = RemoteSnapshotBuilder()
         val keys = listOf(
-            FamilySyncEntityKey(FamilySyncEntityType.PERSON, "p"), FamilySyncEntityKey(FamilySyncEntityType.CATEGORY, "custom"),
+            FamilySyncEntityKey(FamilySyncEntityType.PERSON, "p"), FamilySyncEntityKey(FamilySyncEntityType.PERSON_CONTACT_FIELD, "pf"), FamilySyncEntityKey(FamilySyncEntityType.CATEGORY, "custom"),
             FamilySyncEntityKey(FamilySyncEntityType.EVENT, "e"), FamilySyncEntityKey(FamilySyncEntityType.REMINDER_RULE, "r"),
             FamilySyncEntityKey(FamilySyncEntityType.TASK, "t"), FamilySyncEntityKey(FamilySyncEntityType.CHECKLIST_ITEM, "i"),
             FamilySyncEntityKey(FamilySyncEntityType.TASK_COMPLETION, "c")
@@ -24,6 +24,7 @@ class FamilySyncEngineTest {
         keys.forEach { key -> FamilyRemoteMapper.read(key.type, FamilyRemoteMapper.toRow(key, USER_A, source)!!, builder) }
         val result = builder.build()
         assertEquals(source.persons.single(), result.persons.single())
+        assertEquals(source.personContactFields.single(), result.personContactFields.single())
         assertEquals(source.events.single(), result.events.single())
         assertEquals(source.reminderRules.single(), result.reminderRules.single())
         assertEquals(ReminderRepeatMode.ONCE, result.reminderRules.single().repeatMode)
@@ -145,8 +146,23 @@ class FamilySyncEngineTest {
             events = listOf(ImportantEvent("e", "custom", "Âm lịch", relatedPersonId = "p", calendarType = CalendarType.LUNAR, lunarDay = 24, lunarMonth = 7, lunarLeapMonth = false, recurrence = RecurrenceType.YEARLY, createdAtEpochMillis = 1, updatedAtEpochMillis = 2)),
             reminderRules = listOf(rule), tasks = listOf(task("t", "Task").copy(description = null, priority = TaskPriority.HIGH)),
             checklistItems = listOf(ChecklistItem("i", "t", "Mục", true, 1, 1, 2)),
-            taskOccurrenceCompletions = listOf(TaskOccurrenceCompletion("c", "t", LocalDateTime.of(2027, 9, 5, 8, 0), LocalDateTime.of(2027, 9, 4, 7, 0), 1, 2))
+            taskOccurrenceCompletions = listOf(TaskOccurrenceCompletion("c", "t", LocalDateTime.of(2027, 9, 5, 8, 0), LocalDateTime.of(2027, 9, 4, 7, 0), 1, 2)),
+            personContactFields = listOf(PersonContactField("pf", "p", PersonContactFieldType.CUSTOM, "Mã hồ sơ", "HS-001", false, 0, 1, 2))
         )
+    }
+
+    @Test fun `independent person contact fields merge without overwriting sibling field`() {
+        val localPhone = PersonContactField("phone", "p", PersonContactFieldType.PHONE, "Di động", "0901", true, 0, 1, 3)
+        val localEmail = PersonContactField("email", "p", PersonContactFieldType.EMAIL, "Cá nhân", "local@example.com", true, 1, 1, 3)
+        val remotePhone = localPhone.copy(value = "0902", updatedAtEpochMillis = 4)
+        val remoteEmail = localEmail.copy(value = "remote@example.com", updatedAtEpochMillis = 4)
+        val merged = FamilySnapshotMerger.merge(
+            FamilyLocalSnapshot(personContactFields = listOf(localPhone, localEmail)),
+            FamilyLocalSnapshot(personContactFields = listOf(remotePhone, remoteEmail)),
+            setOf(FamilySyncEntityKey(FamilySyncEntityType.PERSON_CONTACT_FIELD, "phone"))
+        )
+        assertEquals("0901", merged.personContactFields.single { it.id == "phone" }.value)
+        assertEquals("remote@example.com", merged.personContactFields.single { it.id == "email" }.value)
     }
 
     companion object { private const val USER_A = "00000000-0000-0000-0000-000000000001"; private const val USER_B = "00000000-0000-0000-0000-000000000002" }

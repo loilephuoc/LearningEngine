@@ -21,6 +21,9 @@ interface FamilyRepository {
 
     suspend fun upsertPerson(person: Person)
     suspend fun deletePerson(id: String, atEpochMillis: Long)
+    suspend fun upsertPersonContactField(field: PersonContactField)
+    suspend fun deletePersonContactField(id: String, atEpochMillis: Long)
+    suspend fun setPersonContactFieldsForPerson(personId: String, fields: List<PersonContactField>)
 
     suspend fun upsertCategory(category: EventCategory)
     suspend fun deleteCategory(id: String, atEpochMillis: Long)
@@ -57,7 +60,7 @@ class JsonFamilyRepository(
 
     override suspend fun reload(): FamilyLocalSnapshot = mutex.withLock { loadFromDisk().also { state.value = it } }
     override suspend fun replaceSnapshot(snapshot: FamilyLocalSnapshot) = mutex.withLock {
-        require(snapshot.schemaVersion == 4)
+        require(snapshot.schemaVersion == 5)
         save(snapshot)
         state.value = snapshot
     }
@@ -67,7 +70,33 @@ class JsonFamilyRepository(
     }
 
     override suspend fun deletePerson(id: String, atEpochMillis: Long) = mutate { snap ->
-        snap.copy(persons = snap.persons.map { if (it.id == id) it.copy(updatedAtEpochMillis = atEpochMillis, deletedAtEpochMillis = atEpochMillis) else it })
+        snap.copy(
+            persons = snap.persons.map { if (it.id == id) it.copy(updatedAtEpochMillis = atEpochMillis, deletedAtEpochMillis = atEpochMillis) else it },
+            personContactFields = snap.personContactFields.map {
+                if (it.personId == id && it.deletedAtEpochMillis == null) it.copy(updatedAtEpochMillis = atEpochMillis, deletedAtEpochMillis = atEpochMillis) else it
+            }
+        )
+    }
+
+    override suspend fun upsertPersonContactField(field: PersonContactField) = mutate {
+        it.copy(personContactFields = it.personContactFields.upsert(field) { value -> value.id })
+    }
+
+    override suspend fun deletePersonContactField(id: String, atEpochMillis: Long) = mutate { snap ->
+        snap.copy(personContactFields = snap.personContactFields.map {
+            if (it.id == id) it.copy(updatedAtEpochMillis = atEpochMillis, deletedAtEpochMillis = atEpochMillis) else it
+        })
+    }
+
+    override suspend fun setPersonContactFieldsForPerson(personId: String, fields: List<PersonContactField>) = mutate { snap ->
+        val now = System.currentTimeMillis()
+        val incomingIds = fields.mapTo(hashSetOf()) { it.id }
+        val retained = snap.personContactFields.map { current ->
+            if (current.personId == personId && current.id !in incomingIds && current.deletedAtEpochMillis == null) {
+                current.copy(updatedAtEpochMillis = now, deletedAtEpochMillis = now)
+            } else current
+        }
+        snap.copy(personContactFields = retained.upsertAll(fields) { it.id })
     }
 
     override suspend fun upsertCategory(category: EventCategory) = mutate {
@@ -156,7 +185,7 @@ class JsonFamilyRepository(
         val stored = Files.newBufferedReader(file, StandardCharsets.UTF_8).use {
             json.decodeFromString<StoredSnapshotReader>(it.readText())
         }
-        require(stored.schemaVersion in 1..4) { "Unsupported Family schema ${stored.schemaVersion}" }
+        require(stored.schemaVersion in 1..5) { "Unsupported Family schema ${stored.schemaVersion}" }
         return stored.toDomain()
     }
 
@@ -164,7 +193,7 @@ class JsonFamilyRepository(
         Files.createDirectories(file.parent)
         val temporary = file.resolveSibling("${file.fileName}.tmp")
         Files.newBufferedWriter(temporary, StandardCharsets.UTF_8).use {
-            it.write(json.encodeToString(StoredSnapshotV4.from(snapshot)))
+            it.write(json.encodeToString(StoredSnapshotV5.from(snapshot)))
         }
         runCatching { Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) }
             .getOrElse { Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING) }
@@ -178,26 +207,28 @@ private fun <T> List<T>.upsertAll(values: List<T>, id: (T) -> String): List<T> =
     values.fold(this) { result, value -> result.upsert(value, id) }
 
 @Serializable
-private data class StoredSnapshotV4(
-    val schemaVersion: Int = 4,
+private data class StoredSnapshotV5(
+    val schemaVersion: Int = 5,
     val persons: List<StoredPerson> = emptyList(),
     val categories: List<StoredCategory> = emptyList(),
     val events: List<StoredEvent> = emptyList(),
     val reminderRules: List<StoredReminderRuleV3> = emptyList(),
     val tasks: List<StoredTask> = emptyList(),
     val checklistItems: List<StoredChecklistItem> = emptyList(),
-    val taskOccurrenceCompletions: List<StoredTaskOccurrenceCompletion> = emptyList()
+    val taskOccurrenceCompletions: List<StoredTaskOccurrenceCompletion> = emptyList(),
+    val personContactFields: List<StoredPersonContactField> = emptyList()
 ) {
     companion object {
-        fun from(s: FamilyLocalSnapshot) = StoredSnapshotV4(
-            schemaVersion = 4,
+        fun from(s: FamilyLocalSnapshot) = StoredSnapshotV5(
+            schemaVersion = 5,
             persons = s.persons.map(StoredPerson::from),
             categories = s.categories.map(StoredCategory::from),
             events = s.events.map(StoredEvent::from),
             reminderRules = s.reminderRules.map(StoredReminderRuleV3::from),
             tasks = s.tasks.map(StoredTask::from),
             checklistItems = s.checklistItems.map(StoredChecklistItem::from),
-            taskOccurrenceCompletions = s.taskOccurrenceCompletions.map(StoredTaskOccurrenceCompletion::from)
+            taskOccurrenceCompletions = s.taskOccurrenceCompletions.map(StoredTaskOccurrenceCompletion::from),
+            personContactFields = s.personContactFields.map(StoredPersonContactField::from)
         )
     }
 }
@@ -213,7 +244,8 @@ private data class StoredSnapshotReader(
     val reminderRules: List<StoredFlexibleRule> = emptyList(),
     val tasks: List<StoredTask> = emptyList(),
     val checklistItems: List<StoredChecklistItem> = emptyList(),
-    val taskOccurrenceCompletions: List<StoredTaskOccurrenceCompletion> = emptyList()
+    val taskOccurrenceCompletions: List<StoredTaskOccurrenceCompletion> = emptyList(),
+    val personContactFields: List<StoredPersonContactField> = emptyList()
 ) {
     fun toDomain(): FamilyLocalSnapshot {
         val mergedPersons: List<Person> = when (schemaVersion) {
@@ -241,6 +273,11 @@ private data class StoredSnapshotReader(
         val domainTasks: List<Task> = tasks.map { it.toDomain() }
         val domainChecklist: List<ChecklistItem> = checklistItems.map { it.toDomain() }
         val domainCompletions: List<TaskOccurrenceCompletion> = taskOccurrenceCompletions.map { it.toDomain() }
+        val storedContactFields = personContactFields.map { it.toDomain() }
+        val migratedLegacyContactFields = if (schemaVersion < 5) {
+            mergedPersons.flatMap { person -> legacyContactFieldsFor(person) }
+        } else emptyList()
+        val domainContactFields = (storedContactFields + migratedLegacyContactFields).associateBy { it.id }.values.toList()
 
         // Ensure default same-day reminder for dated targets that have existing rules but lack a same-day rule
         val backfilledRules = domainRules.toMutableList()
@@ -270,14 +307,70 @@ private data class StoredSnapshotReader(
         }
 
         return FamilyLocalSnapshot(
-            schemaVersion = 4,
+            schemaVersion = 5,
             persons = mergedPersons,
             categories = categoryList,
             events = mergedEvents,
             reminderRules = backfilledRules,
             tasks = domainTasks,
             checklistItems = domainChecklist,
-            taskOccurrenceCompletions = domainCompletions
+            taskOccurrenceCompletions = domainCompletions,
+            personContactFields = domainContactFields
+        )
+    }
+}
+
+private fun legacyContactFieldsFor(person: Person): List<PersonContactField> {
+    val created = person.createdAtEpochMillis
+    val updated = person.updatedAtEpochMillis
+    return buildList {
+        person.phone?.trim()?.takeIf { it.isNotEmpty() }?.let { value ->
+            add(PersonContactField(
+                id = "${person.id}:legacy-phone", personId = person.id, type = PersonContactFieldType.PHONE,
+                label = "Di động", value = value, isPrimary = true, sortOrder = 0,
+                createdAtEpochMillis = created, updatedAtEpochMillis = updated, deletedAtEpochMillis = person.deletedAtEpochMillis
+            ))
+        }
+        person.address?.trim()?.takeIf { it.isNotEmpty() }?.let { value ->
+            add(PersonContactField(
+                id = "${person.id}:legacy-address", personId = person.id, type = PersonContactFieldType.ADDRESS,
+                label = "Nhà", value = value, isPrimary = true, sortOrder = 100,
+                createdAtEpochMillis = created, updatedAtEpochMillis = updated, deletedAtEpochMillis = person.deletedAtEpochMillis
+            ))
+        }
+    }
+}
+
+@Serializable
+private data class StoredPersonContactField(
+    val id: String,
+    val personId: String,
+    val type: String,
+    val label: String? = null,
+    val value: String,
+    val isPrimary: Boolean = false,
+    val sortOrder: Int = 0,
+    val createdAtEpochMillis: Long,
+    val updatedAtEpochMillis: Long,
+    val deletedAtEpochMillis: Long? = null
+) {
+    fun toDomain() = PersonContactField(
+        id = id,
+        personId = personId,
+        type = runCatching { PersonContactFieldType.valueOf(type) }.getOrDefault(PersonContactFieldType.CUSTOM),
+        label = label,
+        value = value,
+        isPrimary = isPrimary,
+        sortOrder = sortOrder,
+        createdAtEpochMillis = createdAtEpochMillis,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        deletedAtEpochMillis = deletedAtEpochMillis
+    )
+    companion object {
+        fun from(v: PersonContactField) = StoredPersonContactField(
+            id = v.id, personId = v.personId, type = v.type.name, label = v.label, value = v.value,
+            isPrimary = v.isPrimary, sortOrder = v.sortOrder, createdAtEpochMillis = v.createdAtEpochMillis,
+            updatedAtEpochMillis = v.updatedAtEpochMillis, deletedAtEpochMillis = v.deletedAtEpochMillis
         )
     }
 }
