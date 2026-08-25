@@ -11,10 +11,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -26,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,6 +36,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
@@ -266,11 +270,14 @@ fun FamilyScreen(
                     onReminder = { reminderTarget = it }
                 )
                 FamilyTab.PERSONS -> PersonList(
-                    snapshot.persons.filter { it.deletedAtEpochMillis == null },
+                    persons = snapshot.persons.filter { it.deletedAtEpochMillis == null },
+                    contactFields = snapshot.personContactFields.filter { it.deletedAtEpochMillis == null },
+                    today = today,
                     onEdit = { editingPerson = it },
-                    onReminder = { person ->
-                        val bdayDate = resolver.nextBirthday(person, today)?.occurrenceDateSolar ?: person.birthDateSolar
-                        reminderTarget = ReminderTargetInfo(ReminderTargetType.PERSON_BIRTHDAY, person.id, "Sinh nhật ${person.fullName}", RecurrenceType.YEARLY, bdayDate)
+                    onDelete = { person ->
+                        scope.launch {
+                            repository.deletePerson(person.id, System.currentTimeMillis())
+                        }
                     }
                 )
                 FamilyTab.EVENTS -> {
@@ -1629,32 +1636,333 @@ private fun CategoryFilterRow(
 @Composable
 private fun PersonList(
     persons: List<Person>,
+    contactFields: List<PersonContactField>,
+    today: LocalDate,
     onEdit: (Person) -> Unit,
-    onReminder: (Person) -> Unit
-) = LazyColumn(
-    Modifier.fillMaxSize(),
-    contentPadding = PaddingValues(16.dp),
-    verticalArrangement = Arrangement.spacedBy(8.dp)
+    onDelete: (Person) -> Unit
 ) {
-    if (persons.isEmpty()) item { Text("Chưa có người nào. Nhấn + để thêm.") }
-    items(persons, key = { it.id }) { person ->
-        Card(Modifier.fillMaxWidth().clickable { onEdit(person) }) {
-            Column(Modifier.padding(16.dp)) {
-                Text(person.fullName, style = MaterialTheme.typography.titleMedium)
-                val groupLabel = person.group.displayName()
-                val details = listOfNotNull(
-                    groupLabel,
-                    person.nickname?.takeIf(String::isNotBlank),
-                    person.relationshipLabel?.takeIf(String::isNotBlank)
-                ).joinToString(" · ")
-                if (details.isNotBlank()) {
-                    Text(details, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedGroup by rememberSaveable { mutableStateOf<PersonGroup?>(null) }
+    var sortOption by rememberSaveable { mutableStateOf(PersonSortOption.NAME_AZ) }
+    var personToDelete by remember { mutableStateOf<Person?>(null) }
+
+    val contactFieldsByPersonId = remember(contactFields) {
+        contactFields.filter { it.deletedAtEpochMillis == null }.groupBy { it.personId }
+    }
+
+    val visiblePeople = remember(persons, contactFieldsByPersonId, searchQuery, selectedGroup, sortOption, today) {
+        PeopleListPresentation.filterAndSortPeople(
+            persons = persons,
+            contactFieldsByPersonId = contactFieldsByPersonId,
+            searchQuery = searchQuery,
+            selectedGroup = selectedGroup,
+            sortOption = sortOption,
+            today = today
+        )
+    }
+
+    val clipboardManager = LocalClipboardManager.current
+
+    Column(Modifier.fillMaxSize()) {
+        // Search bar & Filter/Sort Controls
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 52.dp, max = 56.dp),
+                placeholder = { Text("Tìm tên, SĐT, email...", style = MaterialTheme.typography.bodyMedium) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Tìm kiếm") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Xóa tìm kiếm")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Group Filter Menu
+                var groupMenuExpanded by remember { mutableStateOf(false) }
+                Box {
+                    AssistChip(
+                        onClick = { groupMenuExpanded = true },
+                        label = {
+                            Text(
+                                text = selectedGroup?.let { "Nhóm: ${it.displayName()}" } ?: "Nhóm: Tất cả",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        trailingIcon = {
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, Modifier.size(18.dp))
+                        }
+                    )
+                    DropdownMenu(
+                        expanded = groupMenuExpanded,
+                        onDismissRequest = { groupMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Tất cả") },
+                            onClick = {
+                                selectedGroup = null
+                                groupMenuExpanded = false
+                            }
+                        )
+                        PersonGroup.entries.forEach { group ->
+                            DropdownMenuItem(
+                                text = { Text(group.displayName()) },
+                                onClick = {
+                                    selectedGroup = group
+                                    groupMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
                 }
-                person.birthDateSolar?.let { Text("Sinh nhật: ${DateInputHelper.formatDate(it)}") }
-                person.phone?.takeIf(String::isNotBlank)?.let { Text(it) }
-                TextButton(onClick = { onReminder(person) }) { Text("Nhắc sinh nhật") }
+
+                // Sort Option Menu
+                var sortMenuExpanded by remember { mutableStateOf(false) }
+                Box {
+                    AssistChip(
+                        onClick = { sortMenuExpanded = true },
+                        label = {
+                            Text(
+                                text = sortOption.displayName,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Sort, contentDescription = null, Modifier.size(16.dp))
+                        },
+                        trailingIcon = {
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, Modifier.size(18.dp))
+                        }
+                    )
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false }
+                    ) {
+                        PersonSortOption.entries.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option.displayName) },
+                                onClick = {
+                                    sortOption = option
+                                    sortMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
+
+        // People List Content
+        if (persons.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "Chưa có người nào. Nhấn + để thêm.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else if (visiblePeople.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Không tìm thấy người phù hợp",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (searchQuery.isNotBlank() || selectedGroup != null) {
+                        TextButton(onClick = {
+                            searchQuery = ""
+                            selectedGroup = null
+                        }) {
+                            Text("Xóa bộ lọc")
+                        }
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(visiblePeople, key = { it.id }) { person ->
+                    var menuExpanded by remember { mutableStateOf(false) }
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onEdit(person) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Circular Initials Avatar
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = PeopleListPresentation.initialsForName(person.fullName),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+
+                            // Details
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 12.dp, end = 4.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = person.fullName,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+
+                                val metadata = listOfNotNull(
+                                    person.relationshipLabel?.takeIf(String::isNotBlank),
+                                    person.nickname?.takeIf(String::isNotBlank),
+                                    person.group.displayName()
+                                ).joinToString(" · ")
+
+                                if (metadata.isNotBlank()) {
+                                    Text(
+                                        text = metadata,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                person.birthDateSolar?.let { bday ->
+                                    val bdayStr = DateInputHelper.formatDate(bday)
+                                    Text(
+                                        text = "🎂 $bdayStr",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            // Overflow Menu
+                            Box {
+                                IconButton(onClick = { menuExpanded = true }) {
+                                    Icon(
+                                        Icons.Default.MoreVert,
+                                        contentDescription = "Tùy chọn cho ${person.fullName}",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = menuExpanded,
+                                    onDismissRequest = { menuExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Chỉnh sửa") },
+                                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                        onClick = {
+                                            menuExpanded = false
+                                            onEdit(person)
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Sao chép tên") },
+                                        leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                                        onClick = {
+                                            menuExpanded = false
+                                            clipboardManager.setText(AnnotatedString(person.fullName))
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Xóa", color = MaterialTheme.colorScheme.error) },
+                                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                                        onClick = {
+                                            menuExpanded = false
+                                            personToDelete = person
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Safe Delete Confirmation Dialog
+    personToDelete?.let { person ->
+        AlertDialog(
+            onDismissRequest = { personToDelete = null },
+            title = { Text("Xóa ${person.fullName}?") },
+            text = { Text("Người này sẽ được xóa khỏi danh sách.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val target = personToDelete
+                        personToDelete = null
+                        if (target != null) {
+                            onDelete(target)
+                        }
+                    }
+                ) {
+                    Text("Xóa", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { personToDelete = null }) {
+                    Text("Hủy")
+                }
+            }
+        )
     }
 }
 
