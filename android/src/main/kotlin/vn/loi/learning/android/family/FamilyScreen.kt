@@ -115,12 +115,31 @@ fun FamilyScreen(
     val app = context.applicationContext as? vn.loi.learning.android.LearningEngineAndroidApplication
     val cloudSyncState by (app?.familyCloudSyncController?.state ?: remember { kotlinx.coroutines.flow.MutableStateFlow<FamilySyncState>(FamilySyncState.NotConfigured) }).collectAsState()
     var showCloudSync by remember { mutableStateOf(false) }
+    var legacyImportPreview by remember { mutableStateOf<LegacyImportPreview?>(null) }
+    var legacyImportError by remember { mutableStateOf<String?>(null) }
+    var familyMenuExpanded by remember { mutableStateOf(false) }
     var notificationPermissionGranted by remember {
         mutableStateOf(app?.familyNotificationPublisher?.hasPermission() ?: true)
     }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         notificationPermissionGranted = it
         if (it) app?.familyReminderReconciler?.reconcile(forceReschedule = true)
+    }
+    val legacyCsvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            legacyImportError = null
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                        ?: error("Không thể đọc tệp CSV")
+                }
+            }.onSuccess { csv ->
+                legacyImportPreview = FamilyLegacyImportPreviewService.preview(csv, snapshot)
+            }.onFailure {
+                legacyImportError = "Không thể tạo bản xem trước CSV. Dữ liệu FAMILY không thay đổi."
+            }
+        }
     }
 
     var tab by remember { mutableStateOf(FamilyTab.CALENDAR) }
@@ -168,6 +187,11 @@ fun FamilyScreen(
 
     var reminderTarget by remember { mutableStateOf<ReminderTargetInfo?>(null) }
 
+    legacyImportPreview?.let { preview ->
+        FamilyLegacyImportPreviewScreen(preview = preview, onBack = { legacyImportPreview = null })
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -180,6 +204,22 @@ fun FamilyScreen(
                 actions = {
                     IconButton(onClick = { showCloudSync = true }) {
                         Icon(Icons.Default.CloudSync, "Đồng bộ đám mây")
+                    }
+                    if (tab == FamilyTab.PERSONS) {
+                        Box {
+                            IconButton(onClick = { familyMenuExpanded = true }) {
+                                Icon(Icons.Default.MoreVert, "Tùy chọn Mọi người")
+                            }
+                            DropdownMenu(expanded = familyMenuExpanded, onDismissRequest = { familyMenuExpanded = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Xem trước nhập AppSheet CSV") },
+                                    onClick = {
+                                        familyMenuExpanded = false
+                                        legacyCsvLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain"))
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             )
@@ -198,6 +238,9 @@ fun FamilyScreen(
             }
         }
     ) { padding ->
+        legacyImportError?.let { message ->
+            Snackbar(modifier = Modifier.padding(padding).padding(16.dp)) { Text(message) }
+        }
         val onToggleTaskOccurrence: (Task, LocalDate, LocalTime?, Boolean) -> Unit = { task, occDate, occTime, isCurrentlyCompleted ->
             scope.launch {
                 if (task.recurrence == RecurrenceType.NONE) {
