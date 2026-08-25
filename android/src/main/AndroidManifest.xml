@@ -106,6 +106,45 @@
         </receiver>
 
         <receiver
+                android:name=".family.widget.FamilyAppWidgetProvider"
+                android:exported="true"
+                android:label="@string/family_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="vn.loi.learning.android.family.widget.ACTION_UPDATE_FAMILY_WIDGET" />
+            </intent-filter>
+            <meta-data
+                    android:name="android.appwidget.provider"
+                    android:resource="@xml/family_widget_info" />
+        </receiver>
+
+        <receiver
+                android:name=".family.widget.FamilyMonthAppWidgetProvider"
+                android:label="@string/family_month_widget_label"
+                android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="vn.loi.learning.android.family.widget.ACTION_UPDATE_FAMILY_WIDGET" />
+                <action android:name="vn.loi.learning.android.family.widget.ACTION_PREV_MONTH" />
+                <action android:name="vn.loi.learning.android.family.widget.ACTION_NEXT_MONTH" />
+                <action android:name="vn.loi.learning.android.family.widget.ACTION_TODAY_MONTH" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                    android:name="android.appwidget.provider"
+                    android:resource="@xml/family_month_widget_info" />
+        </receiver>
+
+        <receiver
                 android:name=".notification.DailyLearningReminderReceiver"
                 android:exported="false">
             <intent-filter>

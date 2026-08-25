@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_family_widget_card"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_vertical">
+
+        <!-- Header: Solar & Lunar Date -->
+        <LinearLayout
+            android:id="@+id/widget_header_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_solar_weekday"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thứ Ba"
+                android:textColor="#1976D2"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/widget_solar_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="25/08/2026"
+                android:textColor="#1C1B1F"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/widget_lunar_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="13/7 Âm lịch"
+                android:textColor="#D84315"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginTop="1dp"
+                android:maxLines="1" />
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E8EEF5"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="6dp" />
+
+        <!-- 1 Item Preview or Empty Message -->
+        <LinearLayout
+            android:id="@+id/widget_item_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_family_widget_item"
+            android:padding="6dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/widget_item_1_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📌"
+                android:textSize="12sp"
+                android:layout_marginEnd="6dp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_item_1_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Sự kiện"
+                    android:textColor="#1C1B1F"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_item_1_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hôm nay"
+                    android:textColor="#1976D2"
+                    android:textSize="10sp"
+                    android:maxLines="1" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_empty_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/family_widget_empty_today"
+            android:textColor="#757575"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:visibility="gone" />
+
+    </LinearLayout>
+</FrameLayout>

@@ -151,6 +151,8 @@ class FamilyNotificationPublisher(private val context: Context) {
     companion object {
         const val CHANNEL_ID = "important_dates_reminders"
         const val ACTION_OPEN_FAMILY = "vn.loi.learning.android.action.OPEN_FAMILY_REMINDER"
+        const val ACTION_OPEN_FAMILY_QUICK_ADD = "vn.loi.learning.android.action.OPEN_FAMILY_QUICK_ADD"
+        const val EXTRA_QUICK_ADD_TYPE = "EXTRA_QUICK_ADD_TYPE"
     }
 }
 

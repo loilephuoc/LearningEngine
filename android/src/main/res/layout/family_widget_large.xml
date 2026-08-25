@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_family_widget_card"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Top Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:id="@+id/widget_header_container"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/widget_solar_weekday"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Thứ Ba"
+                        android:textColor="#1976D2"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=" · "
+                        android:textColor="#9E9E9E"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/widget_solar_date"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="25/08/2026"
+                        android:textColor="#1C1B1F"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=" · "
+                        android:textColor="#9E9E9E"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/widget_lunar_date"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="13/7 Âm lịch"
+                        android:textColor="#D84315"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/widget_summary_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3 mục · 2 việc, 1 sinh nhật"
+                    android:textColor="#5F6368"
+                    android:textSize="11sp"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/widget_btn_quick_add"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+"
+                android:textColor="#1976D2"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp" />
+
+            <TextView
+                android:id="@+id/widget_btn_view_calendar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/family_widget_view_calendar"
+                android:textColor="#1976D2"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:padding="4dp" />
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E8EEF5"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Content Area: Sections -->
+        <LinearLayout
+            android:id="@+id/widget_items_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Section 1: Hôm nay -->
+            <TextView
+                android:id="@+id/widget_section_today_header"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/family_widget_today_header"
+                android:textColor="#1976D2"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone" />
+
+            <!-- Item 1 -->
+            <LinearLayout
+                android:id="@+id/widget_item_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_family_widget_item"
+                android:padding="5dp"
+                android:layout_marginBottom="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/widget_item_1_icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📋"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/widget_item_1_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Công việc 1"
+                    android:textColor="#1C1B1F"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_item_1_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="17:00"
+                    android:textColor="#1976D2"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:maxLines="1" />
+            </LinearLayout>
+
+            <!-- Item 2 -->
+            <LinearLayout
+                android:id="@+id/widget_item_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_family_widget_item"
+                android:padding="5dp"
+                android:layout_marginBottom="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/widget_item_2_icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🎂"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/widget_item_2_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Sinh nhật Ba"
+                    android:textColor="#1C1B1F"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_item_2_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hôm nay"
+                    android:textColor="#1976D2"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:maxLines="1" />
+            </LinearLayout>
+
+            <!-- Item 3 -->
+            <LinearLayout
+                android:id="@+id/widget_item_3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_family_widget_item"
+                android:padding="5dp"
+                android:layout_marginBottom="6dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/widget_item_3_icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📌"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/widget_item_3_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Công việc 2"
+                    android:textColor="#1C1B1F"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_item_3_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hôm nay"
+                    android:textColor="#1976D2"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:maxLines="1" />
+            </LinearLayout>
+
+            <!-- Section 2: Sắp tới -->
+            <TextView
+                android:id="@+id/widget_section_upcoming_header"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/family_widget_upcoming_header"
+                android:textColor="#D84315"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone" />
+
+            <!-- Item 4 -->
+            <LinearLayout
+                android:id="@+id/widget_item_4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_family_widget_item"
+                android:padding="5dp"
+                android:layout_marginBottom="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/widget_item_4_icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🎉"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/widget_item_4_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Kỷ niệm ngày cưới"
+                    android:textColor="#1C1B1F"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_item_4_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="28/08"
+                    android:textColor="#D84315"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:maxLines="1" />
+            </LinearLayout>
+
+            <!-- Item 5 -->
+            <LinearLayout
+                android:id="@+id/widget_item_5"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_family_widget_item"
+                android:padding="5dp"
+                android:layout_marginBottom="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/widget_item_5_icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🕯"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/widget_item_5_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Giỗ Ông Ngoại"
+                    android:textColor="#1C1B1F"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_item_5_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="05/09"
+                    android:textColor="#D84315"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:maxLines="1" />
+            </LinearLayout>
+
+            <!-- Item 6 -->
+            <LinearLayout
+                android:id="@+id/widget_item_6"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_family_widget_item"
+                android:padding="5dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/widget_item_6_icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📋"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/widget_item_6_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Hạn nộp hồ sơ"
+                    android:textColor="#1C1B1F"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_item_6_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="15/09"
+                    android:textColor="#1976D2"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:maxLines="1" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/widget_empty_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/family_widget_empty_upcoming"
+                android:textColor="#757575"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:visibility="gone" />
+        </LinearLayout>
+
+    </LinearLayout>
+</FrameLayout>

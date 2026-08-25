@@ -480,4 +480,17 @@
     <string name="reminder_pause_option_1h">1 hour</string>
     <string name="reminder_pause_option_4h">4 hours</string>
     <string name="reminder_pause_option_indefinite">Indefinitely</string>
+
+    <!-- Family / Ngày đáng nhớ Widgets -->
+    <string name="family_widget_label">Ngày đáng nhớ</string>
+    <string name="family_widget_description">Xem nhanh ngày Dương, Âm lịch và các sự kiện, công việc sắp tới</string>
+    <string name="family_widget_today_header">Hôm nay</string>
+    <string name="family_widget_upcoming_header">Sắp tới</string>
+    <string name="family_widget_empty_today">Hôm nay chưa có lịch</string>
+    <string name="family_widget_empty_upcoming">Không có việc sắp tới</string>
+    <string name="family_widget_view_calendar">Xem lịch</string>
+    <string name="family_widget_add_event">+ Sự kiện</string>
+    <string name="family_widget_add_task">+ Công việc</string>
+    <string name="family_month_widget_label">Lịch Ngày đáng nhớ</string>
+    <string name="family_month_widget_description">Lịch tháng Dương và Âm lịch kèm đánh dấu sự kiện</string>
 </resources>

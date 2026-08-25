@@ -82,10 +82,17 @@ data class PendingReminderReviewTarget(
     val mode: String
 )
 
+data class QuickAddEvent(
+    val type: String,
+    val date: String?,
+    val id: Long = System.currentTimeMillis()
+)
+
 class MainActivity : ComponentActivity() {
 
     private val pendingReminderTarget = MutableStateFlow<PendingReminderReviewTarget?>(null)
     private val pendingFamilyOpenDate = MutableStateFlow<String?>(null)
+    private val pendingFamilyQuickAdd = MutableStateFlow<QuickAddEvent?>(null)
 
     private val recordAudioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -294,10 +301,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleFamilyReminderIntent(intent: Intent?) {
-        if (intent?.action == vn.loi.learning.android.family.FamilyNotificationPublisher.ACTION_OPEN_FAMILY) {
-            pendingFamilyOpenDate.value = intent.getStringExtra(
+        val action = intent?.action
+        if (action == vn.loi.learning.android.family.FamilyNotificationPublisher.ACTION_OPEN_FAMILY ||
+            action == vn.loi.learning.android.family.FamilyNotificationPublisher.ACTION_OPEN_FAMILY_QUICK_ADD) {
+            val occDate = intent.getStringExtra(
                 vn.loi.learning.android.family.AndroidFamilyReminderScheduler.EXTRA_OCCURRENCE_DATE
             ) ?: java.time.LocalDate.now().toString()
+            pendingFamilyOpenDate.value = occDate
+            if (action == vn.loi.learning.android.family.FamilyNotificationPublisher.ACTION_OPEN_FAMILY_QUICK_ADD) {
+                val qType = intent.getStringExtra(
+                    vn.loi.learning.android.family.FamilyNotificationPublisher.EXTRA_QUICK_ADD_TYPE
+                ) ?: "CHOICE"
+                pendingFamilyQuickAdd.value = QuickAddEvent(qType, occDate, System.currentTimeMillis())
+            }
         }
     }
 
@@ -502,8 +518,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 val familyOpenDate by pendingFamilyOpenDate.collectAsStateWithLifecycle()
-                LaunchedEffect(familyOpenDate) {
-                    if (familyOpenDate != null) {
+                val familyQuickAdd by pendingFamilyQuickAdd.collectAsStateWithLifecycle()
+                LaunchedEffect(familyOpenDate, familyQuickAdd) {
+                    if (familyOpenDate != null || familyQuickAdd != null) {
                         navController.navigate("family") { launchSingleTop = true }
                     }
                 }
@@ -569,6 +586,12 @@ class MainActivity : ComponentActivity() {
                         FamilyScreen(
                             app.familyRepository,
                             initialCalendarDate = familyOpenDate?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
+                            quickAddEvent = familyQuickAdd,
+                            onConsumeQuickAddEvent = { eventId ->
+                                if (pendingFamilyQuickAdd.value?.id == eventId) {
+                                    pendingFamilyQuickAdd.value = null
+                                }
+                            },
                             onBack = { navController.popBackStack() }
                         )
                     }

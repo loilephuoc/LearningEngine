@@ -69,6 +69,8 @@ class LearningEngineAndroidApplication : Application() {
     val familyRepository: vn.loi.learning.android.family.FamilyRepository by lazy {
         vn.loi.learning.android.family.SyncAwareFamilyRepository(rawFamilyRepository, familySyncMetadataStore) {
             familyCloudSyncController.enqueueBackground()
+            vn.loi.learning.android.family.widget.FamilyAppWidgetProvider.updateAll(this)
+            vn.loi.learning.android.family.widget.FamilyMonthAppWidgetProvider.updateAll(this)
         }
     }
     val familyCloudSyncController: vn.loi.learning.android.family.FamilyCloudSyncController by lazy {
@@ -85,7 +87,11 @@ class LearningEngineAndroidApplication : Application() {
             configuration,
             familyRepository,
             familySyncMetadataStore,
-            afterMerge = { familyReminderReconciler.reconcile() }
+            afterMerge = {
+                familyReminderReconciler.reconcile()
+                vn.loi.learning.android.family.widget.FamilyAppWidgetProvider.updateAll(this)
+                vn.loi.learning.android.family.widget.FamilyMonthAppWidgetProvider.updateAll(this)
+            }
         )
     }
     val familyReminderScheduler: vn.loi.learning.android.family.AndroidFamilyReminderScheduler by lazy {

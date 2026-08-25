@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
@@ -77,7 +78,13 @@ private enum class TaskFilter(val title: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FamilyScreen(repository: FamilyRepository, initialCalendarDate: LocalDate? = null, onBack: () -> Unit) {
+fun FamilyScreen(
+    repository: FamilyRepository,
+    initialCalendarDate: LocalDate? = null,
+    quickAddEvent: vn.loi.learning.android.QuickAddEvent? = null,
+    onConsumeQuickAddEvent: ((Long) -> Unit)? = null,
+    onBack: () -> Unit
+) {
     val snapshot by repository.snapshot.collectAsState()
     val scope = rememberCoroutineScope()
     val calendar = remember { AstronomicalVietnameseLunarCalendar() }
@@ -104,11 +111,39 @@ fun FamilyScreen(repository: FamilyRepository, initialCalendarDate: LocalDate? =
     var addingPerson by remember { mutableStateOf(false) }
 
     var editingEvent by remember { mutableStateOf<ImportantEvent?>(null) }
-    var addingEvent by remember { mutableStateOf(false) }
+    var addingEvent by rememberSaveable { mutableStateOf(false) }
 
     var editingTask by remember { mutableStateOf<Task?>(null) }
     var editingOccurrence by remember { mutableStateOf<TaskOccurrence?>(null) }
-    var addingTask by remember { mutableStateOf(false) }
+    var addingTask by rememberSaveable { mutableStateOf(false) }
+
+    var showQuickAddChoice by rememberSaveable { mutableStateOf(false) }
+    var lastConsumedQuickAddId by rememberSaveable { mutableStateOf(0L) }
+
+    LaunchedEffect(quickAddEvent) {
+        val event = quickAddEvent ?: return@LaunchedEffect
+        if (event.id != lastConsumedQuickAddId) {
+            lastConsumedQuickAddId = event.id
+            when (event.type) {
+                "TASK" -> {
+                    showQuickAddChoice = false
+                    addingEvent = false
+                    addingTask = true
+                }
+                "EVENT" -> {
+                    showQuickAddChoice = false
+                    addingTask = false
+                    addingEvent = true
+                }
+                else -> {
+                    addingTask = false
+                    addingEvent = false
+                    showQuickAddChoice = true
+                }
+            }
+            onConsumeQuickAddEvent?.invoke(event.id)
+        }
+    }
 
     var reminderTarget by remember { mutableStateOf<ReminderTargetInfo?>(null) }
 
@@ -496,6 +531,67 @@ fun FamilyScreen(repository: FamilyRepository, initialCalendarDate: LocalDate? =
             onSignOut = { app?.familyCloudSyncController?.signOut() },
             onSync = { app?.familyCloudSyncController?.syncNow() }
         )
+    }
+
+    if (showQuickAddChoice) {
+        ModalBottomSheet(
+            onDismissRequest = { showQuickAddChoice = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Thêm nhanh",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                ListItem(
+                    headlineContent = { Text("📋 Công việc", fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
+                    supportingContent = { Text("Lên lịch nhắc nhở, thời hạn, danh sách việc cần làm") },
+                    leadingContent = {
+                        FilledTonalIconButton(onClick = {
+                            showQuickAddChoice = false
+                            addingTask = true
+                        }) {
+                            Icon(Icons.Default.Checklist, contentDescription = null)
+                        }
+                    },
+                    modifier = Modifier.clickable {
+                        showQuickAddChoice = false
+                        addingTask = true
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text("📌 Sự kiện", fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
+                    supportingContent = { Text("Ngày kỷ niệm, ngày sinh, ngày giỗ (Dương/Âm lịch)") },
+                    leadingContent = {
+                        FilledTonalIconButton(onClick = {
+                            showQuickAddChoice = false
+                            addingEvent = true
+                        }) {
+                            Icon(Icons.Default.Event, contentDescription = null)
+                        }
+                    },
+                    modifier = Modifier.clickable {
+                        showQuickAddChoice = false
+                        addingEvent = true
+                    }
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { showQuickAddChoice = false }) {
+                        Text("Hủy", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
     }
 }
 
