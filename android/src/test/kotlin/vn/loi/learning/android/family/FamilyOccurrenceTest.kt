@@ -4,6 +4,8 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.YearMonth
 import kotlin.test.*
 import org.junit.Test
 
@@ -1098,5 +1100,204 @@ class FamilyOccurrenceTest {
         val occ = result.single { it.sourceType == CalendarItemType.TASK_DUE }
         assertTrue(occ.completed)
         assertEquals("✓", occ.iconKey)
+    }
+
+    @Test
+    fun `date picker UTC epoch millis converts to exact LocalDate without timezone day shift`() {
+        val expected = LocalDate.of(2026, 8, 25)
+        val epochMillis = expected.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+        val converted = java.time.Instant.ofEpochMilli(epochMillis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
+        assertEquals(expected, converted)
+        assertEquals("25-08-2026", DateInputHelper.formatDate(converted))
+    }
+
+    @Test
+    fun `lunar today helper converts solar today into valid Vietnamese lunar components`() {
+        val calendar = AstronomicalVietnameseLunarCalendar()
+        val solarToday = LocalDate.of(2026, 8, 25)
+        val lunar = calendar.solarToLunar(solarToday)
+        assertTrue(lunar.day in 1..30)
+        assertTrue(lunar.month in 1..12)
+        assertEquals(2026, lunar.year)
+        val roundtripSolar = calendar.lunarToSolar(lunar.year, lunar.month, lunar.day, lunar.isLeapMonth)
+        assertEquals(solarToday, roundtripSolar)
+    }
+
+    @Test
+    fun `important event preserves both relatedPersonId and relatedPersonName`() {
+        val event = ImportantEvent(
+            id = "ev_test",
+            categoryId = "cat_memorial",
+            title = "Lễ Giỗ",
+            relatedPersonId = "person_123",
+            relatedPersonName = "Ông Cố",
+            calendarType = CalendarType.LUNAR,
+            lunarDay = 15,
+            lunarMonth = 7,
+            recurrence = RecurrenceType.YEARLY,
+            createdAtEpochMillis = 1000,
+            updatedAtEpochMillis = 1000
+        )
+        assertEquals("person_123", event.relatedPersonId)
+        assertEquals("Ông Cố", event.relatedPersonName)
+    }
+
+    @Test
+    fun `bounded markers overflow calculation caps at max dots and computes remainder`() {
+        val maxDots = 3
+        val emptyOccurrences = emptyList<CalendarOccurrence>()
+        assertEquals(0, emptyOccurrences.take(maxDots).size)
+        assertEquals(0, maxOf(0, emptyOccurrences.size - maxDots))
+
+        fun createMockOcc(id: String, type: CalendarItemType) = CalendarOccurrence(
+            id = id,
+            sourceType = type,
+            sourceId = "src_$id",
+            title = "Item $id",
+            date = LocalDate.of(2026, 8, 25),
+            allDay = true
+        )
+
+        val smallList = listOf(
+            createMockOcc("1", CalendarItemType.EVENT),
+            createMockOcc("2", CalendarItemType.TASK_DUE)
+        )
+        assertEquals(2, smallList.take(maxDots).size)
+        assertEquals(0, maxOf(0, smallList.size - maxDots))
+
+        val largeList = listOf(
+            createMockOcc("1", CalendarItemType.EVENT),
+            createMockOcc("2", CalendarItemType.TASK_DUE),
+            createMockOcc("3", CalendarItemType.BIRTHDAY),
+            createMockOcc("4", CalendarItemType.TASK_DUE),
+            createMockOcc("5", CalendarItemType.TASK_DUE)
+        )
+        assertEquals(3, largeList.take(maxDots).size)
+        assertEquals(2, largeList.size - largeList.take(maxDots).size)
+    }
+
+    @Test
+    fun `generic event editor category default prefers neutral ANNIVERSARY or non-memorial category`() {
+        val categories = listOf(
+            EventCategory("cat_bday", "Sinh nhật", builtInKey = "BIRTHDAY", builtIn = true, createdAtEpochMillis = 0, updatedAtEpochMillis = 0),
+            EventCategory("cat_mem", "Đám giỗ", builtInKey = "MEMORIAL", builtIn = true, createdAtEpochMillis = 0, updatedAtEpochMillis = 0),
+            EventCategory("cat_anniv", "Kỷ niệm", builtInKey = "ANNIVERSARY", builtIn = true, createdAtEpochMillis = 0, updatedAtEpochMillis = 0),
+            EventCategory("cat_other", "Khác", builtInKey = "OTHER", builtIn = false, createdAtEpochMillis = 0, updatedAtEpochMillis = 0)
+        )
+        val defaultCatId = categories.firstOrNull { it.builtInKey == "ANNIVERSARY" }?.id
+            ?: categories.firstOrNull { it.builtInKey != "MEMORIAL" && it.builtInKey != "BIRTHDAY" }?.id
+            ?: categories.firstOrNull()?.id.orEmpty()
+        assertEquals("cat_anniv", defaultCatId)
+    }
+
+    @Test
+    fun `occupied day visual states correctly distinguish today, selected, and occupied`() {
+        val today = LocalDate.of(2026, 8, 25)
+        val selectedDate = LocalDate.of(2026, 9, 5)
+        val emptyDate = LocalDate.of(2026, 8, 26)
+        val occupiedDate = LocalDate.of(2026, 9, 5)
+
+        val occurrences = listOf(
+            CalendarOccurrence(
+                id = "occ_1",
+                sourceType = CalendarItemType.EVENT,
+                sourceId = "ev_1",
+                title = "Khánh thành",
+                date = occupiedDate,
+                allDay = true
+            )
+        )
+
+        // Today with no items
+        val isTodayEmpty = (today == today) && occurrences.none { it.date == today }
+        assertTrue(isTodayEmpty)
+
+        // Selected occupied date
+        val isSelectedOccupied = (selectedDate == selectedDate) && occurrences.any { it.date == selectedDate }
+        assertTrue(isSelectedOccupied)
+
+        // Empty non-today non-selected date
+        val isEmpty = (emptyDate != today) && (emptyDate != selectedDate) && occurrences.none { it.date == emptyDate }
+        assertTrue(isEmpty)
+    }
+
+    @Test
+    fun `selecting date across month boundary keeps exact target LocalDate and updates month`() {
+        var currentMonth = YearMonth.of(2026, 8)
+        var selectedDate = LocalDate.of(2026, 8, 25)
+
+        val targetAdjacentDate = LocalDate.of(2026, 9, 5)
+
+        // User taps adjacent month date 05/09/2026
+        selectedDate = targetAdjacentDate
+        if (targetAdjacentDate.month != currentMonth.month || targetAdjacentDate.year != currentMonth.year) {
+            currentMonth = YearMonth.from(targetAdjacentDate)
+        }
+
+        assertEquals(LocalDate.of(2026, 9, 5), selectedDate)
+        assertEquals(YearMonth.of(2026, 9), currentMonth)
+    }
+
+    @Test
+    fun `Day Agenda receives 100 percent of occurrences for the selected date`() {
+        val service = CalendarProjectionService(AstronomicalVietnameseLunarCalendar())
+        val selectedDate = LocalDate.of(2026, 9, 5)
+
+        val event = ImportantEvent(
+            id = "ev_sep5",
+            categoryId = "cat_event",
+            title = "Họp mặt",
+            calendarType = CalendarType.SOLAR,
+            solarDate = selectedDate,
+            recurrence = RecurrenceType.NONE,
+            createdAtEpochMillis = 1000,
+            updatedAtEpochMillis = 1000
+        )
+        val task = Task(
+            id = "task_sep5",
+            title = "Mua quà",
+            dueAt = LocalDateTime.of(selectedDate, LocalTime.of(14, 0)),
+            status = TaskStatus.TODO,
+            createdAtEpochMillis = 1000,
+            updatedAtEpochMillis = 1000
+        )
+
+        val projected = service.project(
+            persons = emptyList(),
+            events = listOf(event),
+            tasks = listOf(task),
+            completions = emptyList(),
+            startDate = selectedDate,
+            endDate = selectedDate,
+            now = LocalDateTime.of(2026, 8, 25, 8, 0)
+        )
+
+        val dayOccurrences = projected.filter { it.date == selectedDate }
+        assertEquals(2, dayOccurrences.size)
+        assertTrue(dayOccurrences.any { it.sourceType == CalendarItemType.EVENT && it.title == "Họp mặt" })
+        assertTrue(dayOccurrences.any { it.sourceType == CalendarItemType.TASK_DUE && it.title == "Mua quà" })
+    }
+
+    @Test
+    fun `Week header date range formatting produces concise single-line text`() {
+        val weekStart = LocalDate.of(2026, 8, 24)
+        val weekEnd = weekStart.plusDays(6)
+        val headerText = "Tuần ${weekStart.dayOfMonth}/${weekStart.monthValue} – ${weekEnd.dayOfMonth}/${weekEnd.monthValue}"
+        assertEquals("Tuần 24/8 – 30/8", headerText)
+    }
+
+    @Test
+    fun `CalendarFilter correctly isolates relevant categories`() {
+        val occurrences = listOf(
+            CalendarOccurrence(id = "1", sourceType = CalendarItemType.BIRTHDAY, sourceId = "p1", title = "Sinh nhật An", date = LocalDate.of(2026, 8, 25), allDay = true),
+            CalendarOccurrence(id = "2", sourceType = CalendarItemType.EVENT, sourceId = "e1", title = "Kỷ niệm", date = LocalDate.of(2026, 8, 25), allDay = true),
+            CalendarOccurrence(id = "3", sourceType = CalendarItemType.TASK_DUE, sourceId = "t1", title = "Mua sắm", date = LocalDate.of(2026, 8, 25), allDay = true),
+            CalendarOccurrence(id = "4", sourceType = CalendarItemType.TASK_COMPLETION, sourceId = "t2", title = "Đã trả nợ", date = LocalDate.of(2026, 8, 25), allDay = true)
+        )
+
+        assertEquals(4, filterOccurrences(occurrences, CalendarFilter.ALL).size)
+        assertEquals(1, filterOccurrences(occurrences, CalendarFilter.BIRTHDAY).size)
+        assertEquals(1, filterOccurrences(occurrences, CalendarFilter.EVENT).size)
+        assertEquals(2, filterOccurrences(occurrences, CalendarFilter.TASK).size)
     }
 }

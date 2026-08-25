@@ -3,12 +3,14 @@ package vn.loi.learning.android.family
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,10 +35,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
 import android.os.Build
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
@@ -50,13 +54,13 @@ private enum class FamilyTab(val title: String) {
     TASKS("Công việc")
 }
 
-private enum class CalendarViewMode(val title: String) {
+internal enum class CalendarViewMode(val title: String) {
     MONTH("Tháng"),
     WEEK("Tuần"),
     LIST("Danh sách")
 }
 
-private enum class CalendarFilter(val title: String) {
+internal enum class CalendarFilter(val title: String) {
     ALL("Tất cả"),
     BIRTHDAY("Sinh nhật"),
     EVENT("Sự kiện"),
@@ -361,6 +365,8 @@ fun FamilyScreen(repository: FamilyRepository, initialCalendarDate: LocalDate? =
             existing = editingEvent,
             categories = snapshot.categories.filter { it.deletedAtEpochMillis == null },
             persons = snapshot.persons.filter { it.deletedAtEpochMillis == null },
+            calendar = calendar,
+            initialDate = null,
             onAddCategory = { newCategory ->
                 scope.launch { repository.upsertCategory(newCategory) }
             },
@@ -554,7 +560,7 @@ private fun FamilyCloudSyncDialog(
     )
 }
 
-private fun filterOccurrences(list: List<CalendarOccurrence>, filter: CalendarFilter): List<CalendarOccurrence> {
+internal fun filterOccurrences(list: List<CalendarOccurrence>, filter: CalendarFilter): List<CalendarOccurrence> {
     return when (filter) {
         CalendarFilter.ALL -> list
         CalendarFilter.BIRTHDAY -> list.filter { it.sourceType == CalendarItemType.BIRTHDAY }
@@ -595,39 +601,201 @@ private fun CalendarScreenView(
 
     val projectionService = remember { CalendarProjectionService(calendar) }
 
+    var filterMenuExpanded by remember { mutableStateOf(false) }
+
     Column(Modifier.fillMaxSize()) {
-        // Top Switcher: Month / Week / List
+        // Compact Control Bar - Row 1: View Modes Segmented Button + "Hôm nay" Button
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                CalendarViewMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = viewMode == mode,
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.height(36.dp)
+            ) {
+                CalendarViewMode.entries.forEachIndexed { index, mode ->
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = CalendarViewMode.entries.size),
                         onClick = { viewMode = mode },
-                        label = { Text(mode.title) }
+                        selected = viewMode == mode,
+                        label = {
+                            Text(
+                                mode.title,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
                     )
                 }
             }
-        }
 
-        // Category Filter Chips
-        FlowRow(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            CalendarFilter.entries.forEach { f ->
-                FilterChip(
-                    selected = filter == f,
-                    onClick = { filter = f },
-                    label = { Text(f.title) }
+            OutlinedButton(
+                onClick = {
+                    currentMonth = YearMonth.from(today)
+                    currentWeekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                    selectedDate = today
+                },
+                modifier = Modifier.height(36.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.Today, contentDescription = null, modifier = Modifier.size(15.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = "Hôm nay",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        // Compact Control Bar - Row 2: Unified Navigation Header & Compact Filter Dropdown
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Navigation on Left
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                when (viewMode) {
+                    CalendarViewMode.MONTH -> {
+                        IconButton(
+                            onClick = {
+                                val newMonth = currentMonth.minusMonths(1)
+                                currentMonth = newMonth
+                                if (selectedDate.month != newMonth.month || selectedDate.year != newMonth.year) {
+                                    selectedDate = if (today.year == newMonth.year && today.month == newMonth.month) today else newMonth.atDay(1)
+                                }
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.ChevronLeft, "Tháng trước", modifier = Modifier.size(20.dp))
+                        }
+                        Text(
+                            "Tháng ${currentMonth.monthValue}/${currentMonth.year}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                        IconButton(
+                            onClick = {
+                                val newMonth = currentMonth.plusMonths(1)
+                                currentMonth = newMonth
+                                if (selectedDate.month != newMonth.month || selectedDate.year != newMonth.year) {
+                                    selectedDate = if (today.year == newMonth.year && today.month == newMonth.month) today else newMonth.atDay(1)
+                                }
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.ChevronRight, "Tháng sau", modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    CalendarViewMode.WEEK -> {
+                        val weekEnd = currentWeekStart.plusDays(6)
+                        IconButton(
+                            onClick = {
+                                val newWeekStart = currentWeekStart.minusWeeks(1)
+                                currentWeekStart = newWeekStart
+                                val newWeekEnd = newWeekStart.plusDays(6)
+                                if (selectedDate.isBefore(newWeekStart) || selectedDate.isAfter(newWeekEnd)) {
+                                    selectedDate = if (!today.isBefore(newWeekStart) && !today.isAfter(newWeekEnd)) today else newWeekStart
+                                }
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.ChevronLeft, "Tuần trước", modifier = Modifier.size(20.dp))
+                        }
+                        Text(
+                            "Tuần ${currentWeekStart.dayOfMonth}/${currentWeekStart.monthValue} – ${weekEnd.dayOfMonth}/${weekEnd.monthValue}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                        IconButton(
+                            onClick = {
+                                val newWeekStart = currentWeekStart.plusWeeks(1)
+                                currentWeekStart = newWeekStart
+                                val newWeekEnd = newWeekStart.plusDays(6)
+                                if (selectedDate.isBefore(newWeekStart) || selectedDate.isAfter(newWeekEnd)) {
+                                    selectedDate = if (!today.isBefore(newWeekStart) && !today.isAfter(newWeekEnd)) today else newWeekStart
+                                }
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.ChevronRight, "Tuần sau", modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    CalendarViewMode.LIST -> {
+                        Text(
+                            "Danh sách sự kiện",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 6.dp),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+            }
+
+            // Compact Filter Dropdown on Right
+            Box {
+                OutlinedButton(
+                    onClick = { filterMenuExpanded = true },
+                    modifier = Modifier.height(36.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = filter.title,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Spacer(Modifier.width(2.dp))
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
+
+                DropdownMenu(
+                    expanded = filterMenuExpanded,
+                    onDismissRequest = { filterMenuExpanded = false }
+                ) {
+                    CalendarFilter.entries.forEach { f ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    f.title,
+                                    fontWeight = if (filter == f) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (filter == f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                            },
+                            onClick = {
+                                filter = f
+                                filterMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
 
         when (viewMode) {
             CalendarViewMode.MONTH -> {
@@ -640,11 +808,11 @@ private fun CalendarScreenView(
                     calendar = calendar,
                     projectionService = projectionService,
                     now = now,
-                    onMonthChange = { currentMonth = it },
-                    onSelectDate = { selectedDate = it },
-                    onTodayClick = {
-                        currentMonth = YearMonth.from(today)
-                        selectedDate = today
+                    onSelectDate = { date ->
+                        selectedDate = date
+                        if (date.month != currentMonth.month || date.year != currentMonth.year) {
+                            currentMonth = YearMonth.from(date)
+                        }
                     },
                     onEditPerson = onEditPerson,
                     onEditEvent = onEditEvent,
@@ -663,12 +831,6 @@ private fun CalendarScreenView(
                     calendar = calendar,
                     projectionService = projectionService,
                     now = now,
-                    onWeekChange = { currentWeekStart = it },
-                    onSelectDate = { selectedDate = it },
-                    onTodayClick = {
-                        currentWeekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-                        selectedDate = today
-                    },
                     onEditPerson = onEditPerson,
                     onEditEvent = onEditEvent,
                     onEditTaskOccurrence = onEditTaskOccurrence,
@@ -696,6 +858,13 @@ private fun CalendarScreenView(
 }
 
 @Composable
+fun familyLunarDateColor(isCurrentMonth: Boolean = true): Color {
+    val isDark = isSystemInDarkTheme()
+    val base = if (isDark) Color(0xFFFFB74D) else Color(0xFFD84315)
+    return if (isCurrentMonth) base else base.copy(alpha = 0.38f)
+}
+
+@Composable
 private fun MonthCalendarView(
     currentMonth: YearMonth,
     selectedDate: LocalDate,
@@ -705,9 +874,7 @@ private fun MonthCalendarView(
     calendar: AstronomicalVietnameseLunarCalendar,
     projectionService: CalendarProjectionService,
     now: LocalDateTime,
-    onMonthChange: (YearMonth) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
-    onTodayClick: () -> Unit,
     onEditPerson: (Person) -> Unit,
     onEditEvent: (ImportantEvent) -> Unit,
     onEditTaskOccurrence: (Task, LocalDate, LocalTime?) -> Unit,
@@ -736,32 +903,8 @@ private fun MonthCalendarView(
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        // Month Navigation Header
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            IconButton(onClick = { onMonthChange(currentMonth.minusMonths(1)) }) {
-                Icon(Icons.Default.ChevronLeft, "Tháng trước")
-            }
-            Text(
-                "Tháng ${currentMonth.monthValue}/${currentMonth.year}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }) {
-                Icon(Icons.Default.ChevronRight, "Tháng sau")
-            }
-            TextButton(onClick = onTodayClick) {
-                Icon(Icons.Default.Today, null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Hôm nay")
-            }
-        }
-
         // Weekday header
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp)) {
             listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN").forEach { label ->
                 Text(
                     text = label,
@@ -782,29 +925,36 @@ private fun MonthCalendarView(
                     val isToday = date == today
                     val isSelected = date == selectedDate
                     val cellOccurrences = filteredMonthOccurrences.filter { it.date == date }
+                    val isOccupied = cellOccurrences.isNotEmpty()
                     val lunar = remember(date) { calendar.solarToLunar(date) }
                     val lunarText = if (lunar.day == 1) "${lunar.day}/${lunar.month}" else "${lunar.day}"
 
+                    val cellColor = when {
+                        isSelected -> MaterialTheme.colorScheme.primaryContainer
+                        isToday -> MaterialTheme.colorScheme.surfaceVariant
+                        isOccupied -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f)
+                        else -> MaterialTheme.colorScheme.surface
+                    }
+
+                    val cellBorder = when {
+                        isSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                        isToday -> BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary)
+                        isOccupied -> BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+                        else -> null
+                    }
+
                     Surface(
+                        onClick = { onSelectDate(date) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
-                            .padding(1.dp)
-                            .clickable { onSelectDate(date) },
+                            .height(54.dp)
+                            .padding(1.dp),
                         shape = RoundedCornerShape(6.dp),
-                        color = when {
-                            isSelected -> MaterialTheme.colorScheme.primaryContainer
-                            isToday -> MaterialTheme.colorScheme.surfaceVariant
-                            else -> MaterialTheme.colorScheme.surface
-                        },
-                        border = when {
-                            isSelected -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-                            isToday -> BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
-                            else -> null
-                        }
+                        color = cellColor,
+                        border = cellBorder
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxSize().padding(1.dp),
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 1.dp, vertical = 2.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -817,38 +967,44 @@ private fun MonthCalendarView(
                             Text(
                                 text = lunarText,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontSize = 9.sp,
-                                color = if (isCurrentMonth) {
-                                    if (lunar.day == 1 || lunar.day == 15) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
-                                }
+                                fontSize = 9.5.sp,
+                                fontWeight = if (lunar.day == 1 || lunar.day == 15) FontWeight.Bold else FontWeight.Medium,
+                                color = familyLunarDateColor(isCurrentMonth)
                             )
-                            // Markers row
+                            // Bounded markers row (max 3 prominent dots + "+N" overflow indicator)
                             Row(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth().height(6.dp)
+                                modifier = Modifier.fillMaxWidth().height(8.dp)
                             ) {
                                 if (cellOccurrences.isNotEmpty()) {
-                                    cellOccurrences.take(3).forEach { occ ->
+                                    val maxDots = 3
+                                    val visibleOccurrences = cellOccurrences.take(maxDots)
+                                    visibleOccurrences.forEach { occ ->
                                         Box(
                                             Modifier
-                                                .size(4.dp)
+                                                .size(5.5.dp)
                                                 .padding(horizontal = 0.5.dp)
                                                 .background(
                                                     color = when (occ.sourceType) {
                                                         CalendarItemType.BIRTHDAY -> MaterialTheme.colorScheme.primary
-                                                        CalendarItemType.EVENT -> MaterialTheme.colorScheme.tertiary
+                                                        CalendarItemType.EVENT -> Color(0xFFF57C00)
                                                         CalendarItemType.TASK_DUE -> if (occ.completed) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.error
-                                                        CalendarItemType.TASK_COMPLETION -> MaterialTheme.colorScheme.secondary
+                                                        CalendarItemType.TASK_COMPLETION -> Color(0xFF2E7D32)
                                                     },
-                                                    shape = RoundedCornerShape(2.dp)
+                                                    shape = RoundedCornerShape(3.dp)
                                                 )
                                         )
                                     }
-                                    if (cellOccurrences.size > 3) {
-                                        Text("+", fontSize = 7.sp, color = MaterialTheme.colorScheme.primary)
+                                    val overflow = cellOccurrences.size - visibleOccurrences.size
+                                    if (overflow > 0) {
+                                        Text(
+                                            text = "+$overflow",
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(start = 1.dp)
+                                        )
                                     }
                                 }
                             }
@@ -873,15 +1029,55 @@ private fun MonthCalendarView(
             DayOfWeek.SUNDAY -> "Chủ Nhật"
         }
 
-        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                "$dayName, ${DateInputHelper.formatDate(selectedDate)} · ${selectedLunar.day}/${selectedLunar.month} âm lịch",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
+        val selectedOccurrences = filteredMonthOccurrences.filter { it.date == selectedDate }
+        val taskCount = selectedOccurrences.count { it.sourceType == CalendarItemType.TASK_DUE || it.sourceType == CalendarItemType.TASK_COMPLETION }
+        val eventCount = selectedOccurrences.count { it.sourceType == CalendarItemType.EVENT }
+        val birthdayCount = selectedOccurrences.count { it.sourceType == CalendarItemType.BIRTHDAY }
+        val summaryText = remember(selectedOccurrences) {
+            if (selectedOccurrences.isEmpty()) {
+                "Không có lịch trong ngày này"
+            } else {
+                buildString {
+                    append("${selectedOccurrences.size} mục")
+                    val parts = mutableListOf<String>()
+                    if (taskCount > 0) parts.add("$taskCount việc")
+                    if (eventCount > 0) parts.add("$eventCount sự kiện")
+                    if (birthdayCount > 0) parts.add("$birthdayCount sinh nhật")
+                    if (parts.isNotEmpty()) {
+                        append(" · ")
+                        append(parts.joinToString(", "))
+                    }
+                }
+            }
+        }
 
-            val selectedOccurrences = filteredMonthOccurrences.filter { it.date == selectedDate }
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "$dayName, ${DateInputHelper.formatDate(selectedDate)}",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "${selectedLunar.day}/${selectedLunar.month} âm lịch",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = familyLunarDateColor(true)
+                    )
+                }
+                Text(
+                    text = summaryText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             if (selectedOccurrences.isEmpty()) {
                 Text(
                     "Không có lịch trong ngày này.",
@@ -916,9 +1112,6 @@ private fun WeekCalendarView(
     calendar: AstronomicalVietnameseLunarCalendar,
     projectionService: CalendarProjectionService,
     now: LocalDateTime,
-    onWeekChange: (LocalDate) -> Unit,
-    onSelectDate: (LocalDate) -> Unit,
-    onTodayClick: () -> Unit,
     onEditPerson: (Person) -> Unit,
     onEditEvent: (ImportantEvent) -> Unit,
     onEditTaskOccurrence: (Task, LocalDate, LocalTime?) -> Unit,
@@ -934,29 +1127,6 @@ private fun WeekCalendarView(
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            IconButton(onClick = { onWeekChange(currentWeekStart.minusWeeks(1)) }) {
-                Icon(Icons.Default.ChevronLeft, "Tuần trước")
-            }
-            Text(
-                "Tuần ${DateInputHelper.formatDate(currentWeekStart)} - ${DateInputHelper.formatDate(weekEnd)}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            IconButton(onClick = { onWeekChange(currentWeekStart.plusWeeks(1)) }) {
-                Icon(Icons.Default.ChevronRight, "Tuần sau")
-            }
-            TextButton(onClick = onTodayClick) {
-                Icon(Icons.Default.Today, null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Hôm nay")
-            }
-        }
-
         Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             for (i in 0..6) {
                 val date = currentWeekStart.plusDays(i.toLong())
@@ -992,7 +1162,8 @@ private fun WeekCalendarView(
                             Text(
                                 "${lunar.day}/${lunar.month} âm",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary
+                                fontWeight = FontWeight.SemiBold,
+                                color = familyLunarDateColor(true)
                             )
                         }
 
@@ -1085,7 +1256,8 @@ private fun AgendaListCalendarView(
                         Text(
                             "${lunar.day}/${lunar.month} âm",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary
+                            fontWeight = FontWeight.SemiBold,
+                            color = familyLunarDateColor(true)
                         )
                     }
                 }
@@ -1182,11 +1354,18 @@ private fun CalendarOccurrenceCard(
                             CalendarItemType.BIRTHDAY -> append("Sinh nhật")
                             CalendarItemType.EVENT -> {
                                 val ev = snapshot.events.firstOrNull { it.id == occ.sourceId }
+                                val cat = snapshot.categories.firstOrNull { it.id == ev?.categoryId }
+                                val person = snapshot.persons.firstOrNull { it.id == ev?.relatedPersonId }
+                                val parts = mutableListOf<String>()
+                                if (cat != null) parts.add(cat.name) else parts.add("Sự kiện")
                                 if (ev?.calendarType == CalendarType.LUNAR) {
-                                    append("${ev.lunarDay}/${ev.lunarMonth} âm lịch")
-                                } else {
-                                    append("Sự kiện")
+                                    parts.add("${ev.lunarDay}/${ev.lunarMonth} âm")
                                 }
+                                if (ev?.recurrence == RecurrenceType.YEARLY) parts.add("Hàng năm")
+                                else if (ev?.recurrence == RecurrenceType.MONTHLY) parts.add("Hàng tháng")
+                                if (person != null) parts.add(person.fullName)
+                                else if (!ev?.relatedPersonName.isNullOrBlank()) parts.add(ev.relatedPersonName)
+                                append(parts.joinToString(" · "))
                             }
                             CalendarItemType.TASK_DUE -> {
                                 if (occ.completed) append("Đã hoàn thành")
@@ -1655,36 +1834,60 @@ private fun PersonEditor(
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun EventEditor(
     existing: ImportantEvent?,
     categories: List<EventCategory>,
     persons: List<Person>,
+    calendar: AstronomicalVietnameseLunarCalendar,
+    initialDate: LocalDate? = null,
     onAddCategory: (EventCategory) -> Unit,
     onDismiss: () -> Unit,
     onSave: (ImportantEvent) -> Unit
 ) {
-    val defaultCatId = categories.firstOrNull { it.builtInKey == "MEMORIAL" }?.id ?: categories.firstOrNull()?.id.orEmpty()
+    val defaultCatId = categories.firstOrNull { it.builtInKey == "ANNIVERSARY" }?.id
+        ?: categories.firstOrNull { it.builtInKey != "MEMORIAL" && it.builtInKey != "BIRTHDAY" }?.id
+        ?: categories.firstOrNull()?.id.orEmpty()
     var selectedCatId by remember(existing) { mutableStateOf(existing?.categoryId ?: defaultCatId) }
     val currentCategory = categories.firstOrNull { it.id == selectedCatId }
     val isMemorial = currentCategory?.builtInKey == "MEMORIAL"
     val isBirthday = currentCategory?.builtInKey == "BIRTHDAY"
 
     var title by remember(existing) { mutableStateOf(existing?.title.orEmpty()) }
+    var categoryDropdownExpanded by remember { mutableStateOf(false) }
+
+    var selectedPersonId by remember(existing) { mutableStateOf(existing?.relatedPersonId) }
     var relatedPersonName by remember(existing) { mutableStateOf(existing?.relatedPersonName.orEmpty()) }
+    var showPersonPicker by remember { mutableStateOf(false) }
+
     var calendarType by remember(existing, selectedCatId) {
         mutableStateOf(existing?.calendarType ?: if (isMemorial) CalendarType.LUNAR else CalendarType.SOLAR)
     }
 
-    var solarDateValue by remember(existing) {
-        val formatted = DateInputHelper.formatDate(existing?.solarDate)
+    val initialSolar = remember(existing, initialDate) {
+        existing?.solarDate ?: if (existing == null) initialDate else null
+    }
+    var solarDateValue by remember(existing, initialDate) {
+        val formatted = DateInputHelper.formatDate(initialSolar)
         mutableStateOf(TextFieldValue(formatted, TextRange(formatted.length)))
     }
-    var lunarDay by remember(existing) { mutableStateOf(existing?.lunarDay?.toString().orEmpty()) }
-    var lunarMonth by remember(existing) { mutableStateOf(existing?.lunarMonth?.toString().orEmpty()) }
-    var sourceYear by remember(existing) { mutableStateOf(existing?.sourceYear?.toString().orEmpty()) }
-    var lunarLeapMonth by remember(existing) { mutableStateOf(existing?.lunarLeapMonth ?: false) }
+
+    val initialLunar = remember(existing, initialDate) {
+        if (existing == null && initialDate != null) calendar.solarToLunar(initialDate) else null
+    }
+    var lunarDay by remember(existing, initialLunar) {
+        mutableStateOf(existing?.lunarDay?.toString() ?: initialLunar?.day?.toString().orEmpty())
+    }
+    var lunarMonth by remember(existing, initialLunar) {
+        mutableStateOf(existing?.lunarMonth?.toString() ?: initialLunar?.month?.toString().orEmpty())
+    }
+    var sourceYear by remember(existing, initialLunar) {
+        mutableStateOf(existing?.sourceYear?.toString() ?: if (existing == null && initialLunar != null) initialLunar.year.toString() else "")
+    }
+    var lunarLeapMonth by remember(existing, initialLunar) {
+        mutableStateOf(existing?.lunarLeapMonth ?: initialLunar?.isLeapMonth ?: false)
+    }
 
     var recurrence by remember(existing, selectedCatId) {
         mutableStateOf(existing?.recurrence ?: if (isMemorial) RecurrenceType.YEARLY else RecurrenceType.YEARLY)
@@ -1714,38 +1917,18 @@ private fun EventEditor(
         else -> false
     }
 
+    val selectedPerson = remember(selectedPersonId, persons) {
+        persons.firstOrNull { it.id == selectedPersonId }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (existing == null) "Thêm sự kiện" else "Sửa sự kiện") },
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Loại sự kiện:", style = MaterialTheme.typography.labelLarge)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    categories.forEach { cat ->
-                        FilterChip(
-                            selected = selectedCatId == cat.id,
-                            onClick = {
-                                selectedCatId = cat.id
-                                if (cat.builtInKey == "MEMORIAL") {
-                                    calendarType = CalendarType.LUNAR
-                                    recurrence = RecurrenceType.YEARLY
-                                }
-                            },
-                            label = { Text("${cat.iconKey.orEmpty()} ${cat.name}".trim()) }
-                        )
-                    }
-                    AssistChip(
-                        onClick = { addingCustomCategory = true },
-                        label = { Text("+ Thêm loại") }
-                    )
-                }
-
                 if (isBirthday) {
                     Text(
                         "Sinh nhật được tính tự động từ danh sách 'Mọi người'. Hãy thêm hoặc sửa thông tin tại tab 'Mọi người'.",
@@ -1753,9 +1936,52 @@ private fun EventEditor(
                         color = MaterialTheme.colorScheme.primary
                     )
                 } else {
+                    // 1. Title
                     Field(title, { title = it }, if (isMemorial) "Họ tên người đã khuất *" else "Tên sự kiện *")
-                    Field(relatedPersonName, { relatedPersonName = it }, "Quan hệ / người liên quan")
 
+                    // 2. Compact Category Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = categoryDropdownExpanded,
+                        onExpandedChange = { categoryDropdownExpanded = !categoryDropdownExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = "${currentCategory?.iconKey.orEmpty()} ${currentCategory?.name.orEmpty()}".trim(),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Loại sự kiện") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryDropdownExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = categoryDropdownExpanded,
+                            onDismissRequest = { categoryDropdownExpanded = false }
+                        ) {
+                            categories.forEach { cat ->
+                                DropdownMenuItem(
+                                    text = { Text("${cat.iconKey.orEmpty()} ${cat.name}".trim()) },
+                                    onClick = {
+                                        selectedCatId = cat.id
+                                        if (cat.builtInKey == "MEMORIAL") {
+                                            calendarType = CalendarType.LUNAR
+                                            recurrence = RecurrenceType.YEARLY
+                                        }
+                                        categoryDropdownExpanded = false
+                                    }
+                                )
+                            }
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("+ Thêm loại sự kiện...", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) },
+                                onClick = {
+                                    categoryDropdownExpanded = false
+                                    addingCustomCategory = true
+                                }
+                            )
+                        }
+                    }
+
+                    // 3. Calendar Type (if not memorial)
                     if (!isMemorial) {
                         Text("Loại lịch:", style = MaterialTheme.typography.labelMedium)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1772,6 +1998,7 @@ private fun EventEditor(
                         }
                     }
 
+                    // 4. Date Fields
                     if (calendarType == CalendarType.SOLAR) {
                         FamilyGregorianDateField(
                             value = solarDateValue,
@@ -1779,6 +2006,30 @@ private fun EventEditor(
                             label = "Ngày dương lịch (dd-MM-yyyy) *"
                         )
                     } else {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Ngày âm lịch:", style = MaterialTheme.typography.labelMedium)
+                            TextButton(
+                                onClick = {
+                                    val todayLunar = calendar.solarToLunar(LocalDate.now())
+                                    lunarDay = todayLunar.day.toString()
+                                    lunarMonth = todayLunar.month.toString()
+                                    lunarLeapMonth = todayLunar.isLeapMonth
+                                    if (recurrence == RecurrenceType.NONE) {
+                                        sourceYear = todayLunar.year.toString()
+                                    }
+                                },
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                modifier = Modifier.height(28.dp)
+                            ) {
+                                Icon(Icons.Default.Today, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Hôm nay (Âm lịch)", fontSize = 11.sp)
+                            }
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Box(Modifier.weight(1f)) {
                                 Field(lunarDay, { lunarDay = it.filter(Char::isDigit).take(2) }, "Ngày âm *", KeyboardType.Number)
@@ -1797,6 +2048,7 @@ private fun EventEditor(
                         }
                     }
 
+                    // 5. Recurrence
                     if (!isMemorial) {
                         Text("Lặp lại:", style = MaterialTheme.typography.labelMedium)
                         if (calendarType == CalendarType.SOLAR) {
@@ -1840,6 +2092,37 @@ private fun EventEditor(
                         }
                     }
 
+                    // 6. Person Picker
+                    if (persons.isNotEmpty()) {
+                        Text("Người liên quan:", style = MaterialTheme.typography.labelMedium)
+                        if (selectedPerson != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                FilterChip(
+                                    selected = true,
+                                    onClick = { showPersonPicker = true },
+                                    label = { Text(selectedPerson.fullName) },
+                                    trailingIcon = {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Bỏ chọn người này",
+                                            modifier = Modifier.size(16.dp).clickable { selectedPersonId = null }
+                                        )
+                                    }
+                                )
+                            }
+                        } else {
+                            AssistChip(
+                                onClick = { showPersonPicker = true },
+                                label = { Text("+ Chọn người liên quan") },
+                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            )
+                        }
+                    }
+
+                    // 7. Relationship / Note for Person
+                    Field(relatedPersonName, { relatedPersonName = it }, "Quan hệ / ghi chú người liên quan (tùy chọn)")
+
+                    // 8. General Note
                     Field(note, { note = it }, "Ghi chú")
                 }
             }
@@ -1855,7 +2138,7 @@ private fun EventEditor(
                                 id = existing?.id ?: UUID.randomUUID().toString(),
                                 categoryId = selectedCatId,
                                 title = title.trim(),
-                                relatedPersonId = existing?.relatedPersonId,
+                                relatedPersonId = selectedPersonId,
                                 relatedPersonName = relatedPersonName.blankNull(),
                                 calendarType = calendarType,
                                 solarDate = if (calendarType == CalendarType.SOLAR) parsedSolar else null,
@@ -1876,6 +2159,57 @@ private fun EventEditor(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
     )
+
+    if (showPersonPicker) {
+        AlertDialog(
+            onDismissRequest = { showPersonPicker = false },
+            title = { Text("Chọn người liên quan") },
+            text = {
+                val activePersons = persons.filter { it.deletedAtEpochMillis == null }
+                if (activePersons.isEmpty()) {
+                    Text("Chưa có hồ sơ trong danh sách 'Mọi người'.")
+                } else {
+                    LazyColumn(
+                        Modifier.fillMaxWidth().heightIn(max = 300.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(activePersons, key = { it.id }) { p ->
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedPersonId = p.id
+                                        if (relatedPersonName.isBlank() && !p.relationshipLabel.isNullOrBlank()) {
+                                            relatedPersonName = p.relationshipLabel
+                                        }
+                                        showPersonPicker = false
+                                    },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (selectedPersonId == p.id) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(p.fullName, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                                        if (!p.relationshipLabel.isNullOrBlank()) {
+                                            Text(p.relationshipLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                    Text(p.group.displayName(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPersonPicker = false }) { Text("Đóng") }
+            }
+        )
+    }
 
     if (addingCustomCategory) {
         AlertDialog(
@@ -2617,22 +2951,84 @@ private fun Field(
     modifier = Modifier.fillMaxWidth()
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FamilyGregorianDateField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     label: String,
     modifier: Modifier = Modifier
-) = OutlinedTextField(
-    value = value,
-    onValueChange = { next ->
-        onValueChange(DateInputHelper.formatTextFieldValue(value, next))
-    },
-    label = { Text(label) },
-    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-    singleLine = true,
-    modifier = modifier.fillMaxWidth()
-)
+) {
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = { next ->
+            onValueChange(DateInputHelper.formatTextFieldValue(value, next))
+        },
+        label = { Text(label) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        singleLine = true,
+        trailingIcon = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = {
+                        val todayStr = DateInputHelper.formatDate(LocalDate.now())
+                        onValueChange(TextFieldValue(todayStr, TextRange(todayStr.length)))
+                    },
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text("Hôm nay", fontSize = 11.sp)
+                }
+                IconButton(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.CalendarToday,
+                        contentDescription = "Chọn ngày trên lịch",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
+        modifier = modifier.fillMaxWidth()
+    )
+
+    if (showDatePicker) {
+        val parsed = DateInputHelper.parseDate(value.text) ?: LocalDate.now()
+        val initialEpochMillis = parsed.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialEpochMillis
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { selectedMillis ->
+                            val pickedDate = Instant.ofEpochMilli(selectedMillis).atZone(ZoneOffset.UTC).toLocalDate()
+                            val pickedStr = DateInputHelper.formatDate(pickedDate)
+                            onValueChange(TextFieldValue(pickedStr, TextRange(pickedStr.length)))
+                        }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("Chọn")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Hủy")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+}
 
 // Alias for backwards compatibility
 @Composable
