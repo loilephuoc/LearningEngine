@@ -20,6 +20,8 @@ class LearningEngineAndroidApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        vn.loi.learning.infrastructure.persistence.sqlite.SqliteDatabaseFactory.defaultDriverFactory =
+            vn.loi.learning.android.platform.AndroidSqliteDriverFactory(this)
         AndroidStartupTrace.enabled = BuildConfig.DEBUG
         JsonPersistenceTrace.enabled = BuildConfig.DEBUG
         vn.loi.learning.android.platform.AppLanguageManager.init(this)

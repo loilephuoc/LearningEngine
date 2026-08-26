@@ -247,10 +247,14 @@ object LearningApplicationFactory {
 
     fun createPersisted(
         persistenceDirectory: Path,
-        reconcilePartOfSpeechRegistryOnCreate: Boolean = true
+        reconcilePartOfSpeechRegistryOnCreate: Boolean = true,
+        sqliteDriverFactory: vn.loi.learning.infrastructure.persistence.sqlite.SqliteDriverFactory? = null
     ): LearningApplicationContext {
         val dbPath = persistenceDirectory.resolve("learning_engine.db")
-        val handle = vn.loi.learning.infrastructure.persistence.sqlite.SqliteDatabaseFactory.createHandleFromFile(dbPath.toFile())
+        val handle = vn.loi.learning.infrastructure.persistence.sqlite.SqliteDatabaseFactory.createHandleFromFile(
+            databaseFile = dbPath.toFile(),
+            driverFactory = sqliteDriverFactory
+        )
         vn.loi.learning.infrastructure.persistence.sqlite.JsonToSqliteMigrationService.migrateIfNeeded(persistenceDirectory, handle.database)
 
         return createFromDatabase(

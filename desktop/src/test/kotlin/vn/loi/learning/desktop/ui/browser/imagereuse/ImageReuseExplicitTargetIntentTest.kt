@@ -232,7 +232,8 @@ class ImageReuseExplicitTargetIntentTest {
 
         // Create a user replacement image file
         val tempImg = File.createTempFile("user_custom_apple", ".png")
-        tempImg.writeBytes("custom_user_apple_image_bytes".toByteArray())
+        val bi = java.awt.image.BufferedImage(10, 10, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        javax.imageio.ImageIO.write(bi, "png", tempImg)
 
         // User Replaces target image
         viewModel.replaceImageReuseTargetImage(tempImg)

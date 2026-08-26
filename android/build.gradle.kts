@@ -67,7 +67,10 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":"))
+    implementation(project(":")) {
+        exclude(group = "app.cash.sqldelight", module = "sqlite-driver")
+        exclude(group = "org.xerial", module = "sqlite-jdbc")
+    }
     val composeBom = platform("androidx.compose:compose-bom:2026.06.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -89,4 +92,5 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("app.cash.sqldelight:sqlite-driver:2.0.2")
 }
