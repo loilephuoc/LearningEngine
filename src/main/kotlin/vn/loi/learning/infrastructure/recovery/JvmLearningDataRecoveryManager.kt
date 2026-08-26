@@ -478,6 +478,18 @@ class JvmLearningDataRecoveryManager(
                 Files.createDirectories(requireNotNull(emptyInstalled.parent))
                 writeUtf8String(emptyInstalled, "{\"schemaVersion\":1,\"records\":[]}")
             }
+            val liveDb = roots["data"]?.resolve("learning_engine.db")
+            if (liveDb != null && Files.isRegularFile(liveDb)) {
+                vn.loi.learning.infrastructure.persistence.sqlite.SqliteDatabaseFactory.createHandleFromFile(liveDb.toFile()).use { handle ->
+                    vn.loi.learning.infrastructure.persistence.sqlite.SqliteToJsonExportService.exportToJsonDirectory(
+                        handle.database,
+                        staging.resolve("portable/data")
+                    )
+                }
+                Files.deleteIfExists(staging.resolve("portable/data/learning_engine.db"))
+                Files.deleteIfExists(staging.resolve("portable/data/learning_engine.db-wal"))
+                Files.deleteIfExists(staging.resolve("portable/data/learning_engine.db-shm"))
+            }
 
             var packageEntries = if (selective || !descriptor.includeLearningProgress) {
                 val packageIds = descriptor.specificPackageIds?.takeIf { it.isNotEmpty() }
@@ -633,13 +645,20 @@ class JvmLearningDataRecoveryManager(
             failureHook("$scope-staging-create", null)
             staging = Files.createTempDirectory(normalized.parent, ".learning-engine-snapshot-")
             val inventory = inventory()
-            val files = inventory.mapIndexed { index, (name, source) ->
+            inventory.forEachIndexed { index, (name, source) ->
                 failureHook("$scope-snapshot-copy", "$index:${inventory.size}:$name")
                 val staged = staging.resolve(name).normalize()
                 require(staged.startsWith(staging))
                 Files.createDirectories(requireNotNull(staged.parent))
                 Files.copy(source, staged)
-                name to staged
+            }
+            val files: List<Pair<String, Path>> = Files.walk(staging).use { paths ->
+                paths.filter { Files.isRegularFile(it) }
+                    .iterator()
+                    .asSequence()
+                    .map { staging.relativize(it).toString().replace('\\', '/') to it }
+                    .sortedBy { it.first }
+                    .toList()
             }
             failureHook("$scope-manifest-create", null)
             ZipOutputStream(Files.newOutputStream(temporary)).use { zip ->
@@ -829,7 +848,12 @@ class JvmLearningDataRecoveryManager(
         roots.entries.sortedByDescending { it.value.nameCount }.forEach { (rootName, root) ->
             if (Files.notExists(root)) return@forEach
             Files.walk(root).use { paths -> paths
-                .filter { Files.isRegularFile(it) && !it.startsWith(safetyDirectory) && !it.fileName.toString().endsWith(".tmp") }
+                .filter {
+                    Files.isRegularFile(it) &&
+                    !it.startsWith(safetyDirectory) &&
+                    !it.fileName.toString().endsWith(".tmp") &&
+                    !it.fileName.toString().startsWith("learning_engine.db")
+                }
                 .forEach { source ->
                     val physical = source.toAbsolutePath().normalize()
                     if (claimed.add(physical)) {
@@ -1630,6 +1654,12 @@ class JvmLearningDataRecoveryManager(
                 statusDetail = "Chưa cài đặt trên thiết bị này"
             )
         }
+        val liveDb = liveData.resolve("learning_engine.db")
+        if (Files.isRegularFile(liveDb) && !Files.isRegularFile(liveData.resolve("installed-packages.json"))) {
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteDatabaseFactory.createHandleFromFile(liveDb.toFile()).use { handle ->
+                vn.loi.learning.infrastructure.persistence.sqlite.SqliteToJsonExportService.exportToJsonDirectory(handle.database, liveData)
+            }
+        }
         val liveInstalledFile = liveData.resolve("installed-packages.json")
         val livePackages = if (Files.isRegularFile(liveInstalledFile)) {
             extractPackageEntries(liveData)
@@ -1680,6 +1710,12 @@ class JvmLearningDataRecoveryManager(
     private fun applySelectiveRestoreFromStaging(staging: Path, selectedPackageIds: Set<String>) {
         val liveData = requireNotNull(roots["data"]) { "Live data root missing." }
         val liveMedia = roots["media"]
+        val liveDb = liveData.resolve("learning_engine.db")
+        if (Files.isRegularFile(liveDb)) {
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteDatabaseFactory.createHandleFromFile(liveDb.toFile()).use { handle ->
+                vn.loi.learning.infrastructure.persistence.sqlite.SqliteToJsonExportService.exportToJsonDirectory(handle.database, liveData)
+            }
+        }
         val stagedData = staging.resolve("portable/data")
         val scope = buildPackageBackupScope(stagedData, selectedPackageIds, includeLearningProgress = true)
         validatePackageBackupScope(scope, requireMedia = true, mediaRoot = staging.resolve("portable/media"))
@@ -1730,6 +1766,12 @@ class JvmLearningDataRecoveryManager(
                 Files.createDirectories(requireNotNull(target.parent))
                 Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING)
             }
+        }
+
+        if (Files.isRegularFile(liveDb)) {
+            Files.deleteIfExists(liveDb)
+            Files.deleteIfExists(liveData.resolve("learning_engine.db-wal"))
+            Files.deleteIfExists(liveData.resolve("learning_engine.db-shm"))
         }
     }
 

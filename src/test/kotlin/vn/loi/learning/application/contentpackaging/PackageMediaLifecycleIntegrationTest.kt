@@ -59,10 +59,11 @@ class PackageMediaLifecycleIntegrationTest {
     @Test
     fun `uninstall package removes metadata and physical media namespace then reimport succeeds`() {
         val tempDir = Files.createTempDirectory("uninstall-reimport-test-")
+        var app: vn.loi.learning.infrastructure.LearningApplicationContext? = null
         try {
             val dataDir = tempDir.resolve("data")
             val mediaDir = dataDir.resolve("media")
-            val app = LearningApplicationFactory.createPersisted(dataDir, false)
+            app = LearningApplicationFactory.createPersisted(dataDir, false)
 
             // Step 1: Create and import Package B
             val packageBFile = tempDir.resolve("PackageB.opd3")
@@ -101,6 +102,7 @@ class PackageMediaLifecycleIntegrationTest {
             assertTrue(mediaStorage.exists("PackageB/image.jpg"))
             assertEquals("AUDIO_B_BYTES", Files.readString(mediaStorage.resolve("PackageB/audio.mp3")!!))
         } finally {
+            app?.close()
             deleteTree(tempDir)
         }
     }
@@ -201,13 +203,14 @@ class PackageMediaLifecycleIntegrationTest {
     @Test
     fun `real production import workflow replaces orphan media namespace through full PackageImportService pipeline`() {
         val tempDir = Files.createTempDirectory("prod-orphan-import-test-")
+        var app: vn.loi.learning.infrastructure.LearningApplicationContext? = null
         try {
             val dataDir = tempDir.resolve("data")
             val mediaDir = dataDir.resolve("media")
             val importDir = tempDir.resolve("imports")
             Files.createDirectories(importDir)
 
-            val app = LearningApplicationFactory.createPersisted(dataDir, false)
+            app = LearningApplicationFactory.createPersisted(dataDir, false)
 
             // Setup: Intermediate is installed in repository
             val intermediatePkg = InstalledPackage(
@@ -253,6 +256,7 @@ class PackageMediaLifecycleIntegrationTest {
             assertEquals("NEW_STREAMED_BYTES_FROM_ARCHIVE", Files.readString(finalResolved))
             assertNull(mediaStorage.resolve("Vocabulary_In_Use_Elementary/stale-file.jpg"))
         } finally {
+            app?.close()
             deleteTree(tempDir)
         }
     }
@@ -260,13 +264,14 @@ class PackageMediaLifecycleIntegrationTest {
     @Test
     fun `negative control active installed package collision is rejected through full production import pipeline`() {
         val tempDir = Files.createTempDirectory("prod-active-collision-test-")
+        var app: vn.loi.learning.infrastructure.LearningApplicationContext? = null
         try {
             val dataDir = tempDir.resolve("data")
             val mediaDir = dataDir.resolve("media")
             val importDir = tempDir.resolve("imports")
             Files.createDirectories(importDir)
 
-            val app = LearningApplicationFactory.createPersisted(dataDir, false)
+            app = LearningApplicationFactory.createPersisted(dataDir, false)
 
             // Setup: Elementary is actively installed
             val elementaryPkg = InstalledPackage(
@@ -310,6 +315,7 @@ class PackageMediaLifecycleIntegrationTest {
             assertNotNull(resolved)
             assertEquals("ACTIVE_CANONICAL_BYTES", Files.readString(resolved))
         } finally {
+            app?.close()
             deleteTree(tempDir)
         }
     }
@@ -403,8 +409,6 @@ class PackageMediaLifecycleIntegrationTest {
 
     private fun deleteTree(path: Path) {
         if (Files.notExists(path)) return
-        Files.walk(path).use { paths ->
-            paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
-        }
+        path.toFile().deleteRecursively()
     }
 }

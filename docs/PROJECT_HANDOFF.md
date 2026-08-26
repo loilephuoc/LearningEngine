@@ -1,5 +1,11 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+Runtime persistence is fully upgraded to SQLite via SQLDelight 2.0.2 across Desktop (JVM) and Android.
+The runtime database (`learning_engine.db`) provides full WAL mode, atomic multi-table transactions,
+and direct SQL queries for high-volume datasets (50,000+ contents, 250,000+ learning items, scalable to 1,000,000+ items).
+Automatic startup migration seamlessly imports legacy JSON persistence files without data loss or file deletion.
+Full interchange compatibility is preserved with OPD3 packages and portable backups (Format 2).
+
 Phase 5 separates persistent Safety Backup from transactional rollback. Restore defaults to no persistent
 backup, offers explicit opt-in, and uses a hidden verified temporary rollback artifact cleaned after the
 operation. Automatic newest-two deletion is removed; users explicitly create and delete safety archives.

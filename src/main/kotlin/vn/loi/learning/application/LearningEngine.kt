@@ -345,7 +345,7 @@ class LearningEngine(
         )
 
     private val continuousReviewService =
-        continuousReviewIntentRepository?.let(::ContinuousReviewService)
+        continuousReviewIntentRepository?.let { ContinuousReviewService(it, transactionRunner) }
 
     private val recoverContinuousReviewUseCase =
         continuousReviewService?.let {

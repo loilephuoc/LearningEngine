@@ -6,3 +6,7 @@
 -keep class vn.loi.learning.android.MainActivity { *; }
 
 # kotlinx.serialization generates serializers; its dependency-supplied consumer rules retain them.
+
+# SQLDelight Android Driver
+-keep class app.cash.sqldelight.** { *; }
+-keep class vn.loi.learning.infrastructure.persistence.sqlite.** { *; }

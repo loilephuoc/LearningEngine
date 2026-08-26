@@ -113,6 +113,14 @@ class CorruptBackupRejectionMatrixTest {
             Files.writeString(config.resolve("settings.properties"), "safe-setting")
             Files.write(data.resolve("media-a.bin"), byteArrayOf(1, 2, 3))
             Files.write(data.resolve("media-b.bin"), byteArrayOf(4, 5, 6))
+            context.close()
+            val dbHandle = vn.loi.learning.infrastructure.persistence.sqlite.SqliteDatabaseFactory.createHandleFromFile(data.resolve("learning_engine.db").toFile())
+            dbHandle.use { handle ->
+                vn.loi.learning.infrastructure.persistence.sqlite.SqliteToJsonExportService.exportToJsonDirectory(handle.database, data)
+            }
+            Files.deleteIfExists(data.resolve("learning_engine.db"))
+            Files.deleteIfExists(data.resolve("learning_engine.db-wal"))
+            Files.deleteIfExists(data.resolve("learning_engine.db-shm"))
             manager.createBackup(valid)
         }
 

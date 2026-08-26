@@ -530,7 +530,11 @@ Do not add disconnected abstractions or placeholders solely to name a future cap
 
 ## Persistence compatibility
 
-Existing persisted data and package formats are product contracts. Changes must preserve compatibility or include explicit migration, validation, rollback considerations, and tests in the same batch.
+Existing persisted data and package formats are product contracts. Runtime persistence uses SQLDelight 2.0.2 with SQLite database (`learning_engine.db`) across JVM Desktop and Android, providing WAL mode, transactional guarantees, foreign keys, and indexes for scale up to 200,000+ contents and 1,000,000+ learning items.
+
+- Automatic Startup Migration: If `learning_engine.db` does not exist but legacy JSON stores exist, `JsonToSqliteMigrationService` automatically discovers, parses, and batch-inserts all entities in a single atomic transaction without deleting legacy JSON files.
+- Query Push-Down: Repositories push filtering, joins, counting, and pagination down to SQL (`WHERE`, `JOIN`, `COUNT(*)`, `LIMIT`), avoiding full table scans (`loadAll()`) in hot paths like `DailyStudyBudgetQueryService`.
+- Export & Interchange: OPD3 packages and portable backups (Format 2) export canonical JSON files on the fly via `SqliteToJsonExportService`, ensuring 100% interoperability with external tools and portable backups.
 
 ## Platform strategy
 

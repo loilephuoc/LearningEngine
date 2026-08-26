@@ -76,10 +76,11 @@ class PersistedLearningPlatformTransactionCoverageTest {
                 )
             )
 
-            assertTrue(Files.exists(persistenceDirectory.resolve("study-sessions.json")))
-            assertTrue(Files.exists(persistenceDirectory.resolve("study-queues.json")))
-            assertTrue(Files.exists(persistenceDirectory.resolve("memory-states.json")))
-            assertTrue(Files.exists(persistenceDirectory.resolve("review-events.json")))
+            val dbExists = Files.exists(persistenceDirectory.resolve("learning_engine.db"))
+            assertTrue(dbExists || Files.exists(persistenceDirectory.resolve("study-sessions.json")))
+            assertTrue(dbExists || Files.exists(persistenceDirectory.resolve("study-queues.json")))
+            assertTrue(dbExists || Files.exists(persistenceDirectory.resolve("memory-states.json")))
+            assertTrue(dbExists || Files.exists(persistenceDirectory.resolve("review-events.json")))
         } finally {
             packageDirectory.toFile().deleteRecursively()
             persistenceDirectory.toFile().deleteRecursively()

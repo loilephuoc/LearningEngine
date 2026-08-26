@@ -1,0 +1,110 @@
+CREATE TABLE content_library (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    contentIdsJson TEXT NOT NULL DEFAULT '[]'
+);
+
+CREATE TABLE library_collection (
+    id TEXT PRIMARY KEY NOT NULL,
+    libraryId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    packageIdsJson TEXT NOT NULL DEFAULT '[]'
+);
+
+CREATE INDEX idx_library_collection_library_id ON library_collection(libraryId);
+
+CREATE TABLE canonical_library (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    entriesJson TEXT NOT NULL DEFAULT '[]',
+    activePackageId TEXT,
+    createdAt TEXT NOT NULL
+);
+
+CREATE TABLE canonical_collection (
+    id TEXT PRIMARY KEY NOT NULL,
+    libraryId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    assignedPackageIdsJson TEXT NOT NULL DEFAULT '[]',
+    state TEXT NOT NULL,
+    createdAt TEXT NOT NULL
+);
+
+CREATE INDEX idx_canonical_collection_library_id ON canonical_collection(libraryId);
+
+-- ContentLibrary queries
+selectContentLibraryById:
+SELECT * FROM content_library WHERE id = ?;
+
+selectAllContentLibraries:
+SELECT * FROM content_library;
+
+insertOrReplaceContentLibrary:
+INSERT OR REPLACE INTO content_library (id, name, contentIdsJson) VALUES (?, ?, ?);
+
+deleteContentLibraryById:
+DELETE FROM content_library WHERE id = ?;
+
+deleteContentLibrariesByIds:
+DELETE FROM content_library WHERE id IN ?;
+
+deleteAllContentLibraries:
+DELETE FROM content_library;
+
+-- LibraryCollection queries
+selectLibraryCollectionById:
+SELECT * FROM library_collection WHERE id = ?;
+
+selectAllLibraryCollectionsByLibraryId:
+SELECT * FROM library_collection WHERE libraryId = ?;
+
+selectAllLibraryCollections:
+SELECT * FROM library_collection;
+
+insertOrReplaceLibraryCollection:
+INSERT OR REPLACE INTO library_collection (id, libraryId, name, packageIdsJson) VALUES (?, ?, ?, ?);
+
+deleteLibraryCollectionById:
+DELETE FROM library_collection WHERE id = ?;
+
+deleteLibraryCollectionsByIds:
+DELETE FROM library_collection WHERE id IN ?;
+
+deleteAllLibraryCollections:
+DELETE FROM library_collection;
+
+-- CanonicalLibrary queries
+selectCanonicalLibraryById:
+SELECT * FROM canonical_library WHERE id = ?;
+
+selectAllCanonicalLibraries:
+SELECT * FROM canonical_library;
+
+insertOrReplaceCanonicalLibrary:
+INSERT OR REPLACE INTO canonical_library (id, name, entriesJson, activePackageId, createdAt) VALUES (?, ?, ?, ?, ?);
+
+deleteCanonicalLibraryById:
+DELETE FROM canonical_library WHERE id = ?;
+
+deleteAllCanonicalLibraries:
+DELETE FROM canonical_library;
+
+-- CanonicalCollection queries
+selectCanonicalCollectionById:
+SELECT * FROM canonical_collection WHERE id = ?;
+
+selectAllCanonicalCollectionsByLibraryId:
+SELECT * FROM canonical_collection WHERE libraryId = ?;
+
+selectAllCanonicalCollections:
+SELECT * FROM canonical_collection;
+
+insertOrReplaceCanonicalCollection:
+INSERT OR REPLACE INTO canonical_collection (id, libraryId, name, description, assignedPackageIdsJson, state, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteCanonicalCollectionById:
+DELETE FROM canonical_collection WHERE id = ?;
+
+deleteAllCanonicalCollections:
+DELETE FROM canonical_collection;

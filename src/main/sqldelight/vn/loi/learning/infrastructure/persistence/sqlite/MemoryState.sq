@@ -1,0 +1,53 @@
+CREATE TABLE memory_state (
+    learnerId TEXT NOT NULL,
+    learningItemId TEXT NOT NULL,
+    schemaVersion INTEGER NOT NULL DEFAULT 1,
+    stage TEXT NOT NULL,
+    difficulty REAL NOT NULL,
+    stabilityDays REAL NOT NULL,
+    dueAtEpochMillis INTEGER NOT NULL,
+    lastReviewedAtEpochMillis INTEGER,
+    reviewCount INTEGER NOT NULL,
+    lapseCount INTEGER NOT NULL,
+    PRIMARY KEY (learnerId, learningItemId)
+);
+
+CREATE INDEX idx_memory_state_learner ON memory_state(learnerId);
+CREATE INDEX idx_memory_state_due ON memory_state(learnerId, dueAtEpochMillis);
+CREATE INDEX idx_memory_state_stage ON memory_state(learnerId, stage);
+CREATE INDEX idx_memory_state_item ON memory_state(learningItemId);
+
+find:
+SELECT * FROM memory_state WHERE learnerId = ? AND learningItemId = ?;
+
+findAllByLearner:
+SELECT * FROM memory_state WHERE learnerId = ?;
+
+findAll:
+SELECT * FROM memory_state;
+
+countAll:
+SELECT COUNT(*) FROM memory_state;
+
+countDue:
+SELECT COUNT(*) FROM memory_state WHERE learnerId = ? AND dueAtEpochMillis <= ?;
+
+insertOrReplace:
+INSERT OR REPLACE INTO memory_state (
+    learnerId, learningItemId, schemaVersion, stage, difficulty,
+    stabilityDays, dueAtEpochMillis, lastReviewedAtEpochMillis,
+    reviewCount, lapseCount
+) VALUES (
+    ?, ?, ?, ?, ?,
+    ?, ?, ?,
+    ?, ?
+);
+
+delete:
+DELETE FROM memory_state WHERE learnerId = ? AND learningItemId = ?;
+
+deleteByLearningItemIds:
+DELETE FROM memory_state WHERE learningItemId IN ?;
+
+deleteAll:
+DELETE FROM memory_state;

@@ -1,0 +1,53 @@
+CREATE TABLE study_queue (
+    sessionId TEXT PRIMARY KEY NOT NULL,
+    schemaVersion INTEGER NOT NULL DEFAULT 7,
+    createdAtEpochMillis INTEGER NOT NULL,
+    learningItemIdsJson TEXT NOT NULL,
+    currentIndex INTEGER NOT NULL,
+    itemOriginsJson TEXT NOT NULL DEFAULT '{}',
+    itemContentIdsJson TEXT NOT NULL DEFAULT '{}',
+    configuredNewTarget INTEGER NOT NULL DEFAULT 0,
+    effectiveNewWorkload INTEGER NOT NULL DEFAULT 0,
+    configuredReviewTarget INTEGER NOT NULL DEFAULT 0,
+    effectiveReviewWorkload INTEGER NOT NULL DEFAULT 0,
+    fixedPracticeMembershipJson TEXT NOT NULL DEFAULT '[]',
+    practiceSeed INTEGER,
+    practiceRound INTEGER NOT NULL DEFAULT 0,
+    practiceLoopPolicy TEXT NOT NULL DEFAULT 'NONE',
+    practiceReinforcementStatesJson TEXT NOT NULL DEFAULT '{}',
+    practiceExposureSequence INTEGER NOT NULL DEFAULT 0,
+    practiceMembershipUndoJson TEXT,
+    coverageReinforcementStatesJson TEXT NOT NULL DEFAULT '{}',
+    coverageReinforcementUndoJson TEXT
+);
+
+findBySessionId:
+SELECT * FROM study_queue WHERE sessionId = ?;
+
+findAll:
+SELECT * FROM study_queue;
+
+insertOrReplace:
+INSERT OR REPLACE INTO study_queue (
+    sessionId, schemaVersion, createdAtEpochMillis, learningItemIdsJson,
+    currentIndex, itemOriginsJson, itemContentIdsJson, configuredNewTarget,
+    effectiveNewWorkload, configuredReviewTarget, effectiveReviewWorkload,
+    fixedPracticeMembershipJson, practiceSeed, practiceRound,
+    practiceLoopPolicy, practiceReinforcementStatesJson, practiceExposureSequence,
+    practiceMembershipUndoJson, coverageReinforcementStatesJson,
+    coverageReinforcementUndoJson
+) VALUES (
+    ?, ?, ?, ?,
+    ?, ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, ?,
+    ?
+);
+
+deleteBySessionId:
+DELETE FROM study_queue WHERE sessionId = ?;
+
+deleteAll:
+DELETE FROM study_queue;

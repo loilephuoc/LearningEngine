@@ -65,16 +65,16 @@ class StoreBackedStudySessionRepository(
     ): StudySession? =
         store.loadAll()
             .asSequence()
-            .map(
+            .filter { record ->
+                record.learnerId == learnerId.value &&
+                    record.status == SessionStatus.ACTIVE.name
+            }
+            .maxByOrNull { record ->
+                record.startedAtEpochMillis
+            }
+            ?.let(
                 StudySessionRecordMapper::toDomain
             )
-            .filter { session ->
-                session.learnerId == learnerId &&
-                        session.status == SessionStatus.ACTIVE
-            }
-            .maxByOrNull { session ->
-                session.startedAt.epochMillis
-            }
 
     override fun findActiveByLearnerAndTopic(
         learnerId: LearnerId,
@@ -82,17 +82,17 @@ class StoreBackedStudySessionRepository(
     ): StudySession? =
         store.loadAll()
             .asSequence()
-            .map(
+            .filter { record ->
+                record.learnerId == learnerId.value &&
+                    record.topicId == topicId.value &&
+                    record.status == SessionStatus.ACTIVE.name
+            }
+            .maxByOrNull { record ->
+                record.startedAtEpochMillis
+            }
+            ?.let(
                 StudySessionRecordMapper::toDomain
             )
-            .filter { session ->
-                session.learnerId == learnerId &&
-                    session.topicId == topicId &&
-                    session.status == SessionStatus.ACTIVE
-            }
-            .maxByOrNull { session ->
-                session.startedAt.epochMillis
-            }
 
     override fun findLatestUndoableByLearner(learnerId: LearnerId): StudySession? =
         store.loadAll().asSequence()

@@ -1,0 +1,59 @@
+CREATE TABLE learning_item (
+    id TEXT PRIMARY KEY NOT NULL,
+    contentId TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    isEnabled INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX idx_learning_item_content_id ON learning_item(contentId);
+CREATE INDEX idx_learning_item_enabled ON learning_item(isEnabled);
+CREATE INDEX idx_learning_item_content_mode ON learning_item(contentId, mode);
+
+selectById:
+SELECT * FROM learning_item WHERE id = ?;
+
+selectByIds:
+SELECT * FROM learning_item WHERE id IN ? ORDER BY rowid ASC;
+
+selectByContentId:
+SELECT * FROM learning_item WHERE contentId = ? ORDER BY rowid ASC;
+
+selectByContentIds:
+SELECT * FROM learning_item WHERE contentId IN ? ORDER BY rowid ASC;
+
+selectAll:
+SELECT * FROM learning_item ORDER BY rowid ASC;
+
+selectAllEnabled:
+SELECT * FROM learning_item WHERE isEnabled = 1 ORDER BY rowid ASC;
+
+selectContentIdsByItemIds:
+SELECT id, contentId FROM learning_item WHERE id IN ?;
+
+countAll:
+SELECT COUNT(*) FROM learning_item;
+
+countEnabled:
+SELECT COUNT(*) FROM learning_item WHERE isEnabled = 1;
+
+insertOrReplace:
+INSERT OR REPLACE INTO learning_item (
+    id, contentId, mode, isEnabled
+) VALUES (
+    ?, ?, ?, ?
+);
+
+deleteById:
+DELETE FROM learning_item WHERE id = ?;
+
+deleteByIds:
+DELETE FROM learning_item WHERE id IN ?;
+
+deleteByContentId:
+DELETE FROM learning_item WHERE contentId = ?;
+
+deleteByContentIds:
+DELETE FROM learning_item WHERE contentId IN ?;
+
+deleteAll:
+DELETE FROM learning_item;

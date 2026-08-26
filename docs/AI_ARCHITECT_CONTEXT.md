@@ -1,5 +1,14 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Scalable SQLite Runtime Persistence Migration (Desktop + Android)
+
+- Re-architected runtime persistence across root engine, Desktop (JVM), and Android from JSON files to SQLDelight 2.0.2 SQLite database (`learning_engine.db`).
+- Features WAL mode, foreign keys, deterministic indexes, and atomic multi-table transaction runners (`SqliteTransactionRunner`).
+- Automatic startup migration (`JsonToSqliteMigrationService`) migrates legacy JSON files into SQLite safely inside a single transaction with count verification and non-destructive JSON retention.
+- Eliminated hot-path memory scans: `DailyStudyBudgetQueryService`, due items, enabled items, and topic sessions push filtering and counting to SQL.
+- Preserved OPD3 export/import formats and portable backup (Format 2) compatibility via on-demand JSON serialization (`SqliteToJsonExportService`).
+- Verification: 100% test pass on root engine (`:test`: 2,357 tests) and Desktop (`:desktop:test`: 1,968 tests), plus Android platform unit tests.
+
 ## Desktop Content/Auth Hotfix — full-surface image drop + persistent Supabase session
 
 - Baseline `837e1c54` on `integration/learning-engine-2.0` was clean. Baseline

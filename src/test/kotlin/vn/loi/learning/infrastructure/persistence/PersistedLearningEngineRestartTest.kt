@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.infrastructure.persistence
+package vn.loi.learning.infrastructure.persistence
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -242,26 +242,10 @@ class PersistedLearningEngineRestartTest {
                         .reviewedContentIds.size
             )
 
-            assertTrue(
-                persistenceDirectory
-                    .resolve("memory-states.json")
-                    .toFile()
-                    .exists()
-            )
-
-            assertTrue(
-                persistenceDirectory
-                    .resolve("review-events.json")
-                    .toFile()
-                    .exists()
-            )
-
-            assertTrue(
-                persistenceDirectory
-                    .resolve("study-sessions.json")
-                    .toFile()
-                    .exists()
-            )
+            val dbExists = persistenceDirectory.resolve("learning_engine.db").toFile().exists()
+            assertTrue(dbExists || persistenceDirectory.resolve("memory-states.json").toFile().exists())
+            assertTrue(dbExists || persistenceDirectory.resolve("review-events.json").toFile().exists())
+            assertTrue(dbExists || persistenceDirectory.resolve("study-sessions.json").toFile().exists())
         } finally {
             deleteDirectoryRecursively(
                 persistenceDirectory
@@ -325,9 +309,8 @@ class PersistedLearningEngineRestartTest {
     private fun deleteDirectoryRecursively(
         directory: Path
     ) {
-        Files.walk(directory)
-            .sorted(Comparator.reverseOrder())
-            .forEach(Files::deleteIfExists)
+        if (Files.notExists(directory)) return
+        directory.toFile().deleteRecursively()
     }
 }
 

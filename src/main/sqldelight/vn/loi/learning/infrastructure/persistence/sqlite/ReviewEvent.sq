@@ -1,0 +1,66 @@
+CREATE TABLE review_event (
+    id TEXT PRIMARY KEY NOT NULL,
+    learnerId TEXT NOT NULL,
+    learningItemId TEXT NOT NULL,
+    schemaVersion INTEGER NOT NULL DEFAULT 2,
+    rating TEXT NOT NULL,
+    reviewedAtEpochMillis INTEGER NOT NULL,
+    responseTimeMillis INTEGER,
+    stateBeforeJson TEXT NOT NULL,
+    stateAfterJson TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'STANDARD_REVIEW'
+);
+
+CREATE INDEX idx_review_event_learner_reviewed_at ON review_event(learnerId, reviewedAtEpochMillis);
+CREATE INDEX idx_review_event_learner_item ON review_event(learnerId, learningItemId, reviewedAtEpochMillis);
+CREATE INDEX idx_review_event_item ON review_event(learningItemId);
+
+selectById:
+SELECT * FROM review_event WHERE id = ?;
+
+findAll:
+SELECT * FROM review_event ORDER BY reviewedAtEpochMillis ASC;
+
+findAllByLearner:
+SELECT * FROM review_event WHERE learnerId = ? ORDER BY reviewedAtEpochMillis ASC;
+
+findAllByLearnerAndItem:
+SELECT * FROM review_event WHERE learnerId = ? AND learningItemId = ? ORDER BY reviewedAtEpochMillis ASC;
+
+findLatestByLearner:
+SELECT * FROM review_event WHERE learnerId = ? ORDER BY reviewedAtEpochMillis DESC, id DESC LIMIT 1;
+
+findLatestByLearnerAndItem:
+SELECT * FROM review_event WHERE learnerId = ? AND learningItemId = ? ORDER BY reviewedAtEpochMillis DESC, id DESC LIMIT 1;
+
+findEventsInRange:
+SELECT * FROM review_event WHERE learnerId = ? AND reviewedAtEpochMillis >= ? AND reviewedAtEpochMillis < ? ORDER BY reviewedAtEpochMillis ASC;
+
+countAll:
+SELECT COUNT(*) FROM review_event;
+
+countByLearner:
+SELECT COUNT(*) FROM review_event WHERE learnerId = ?;
+
+countInRange:
+SELECT COUNT(*) FROM review_event WHERE learnerId = ? AND reviewedAtEpochMillis >= ? AND reviewedAtEpochMillis < ?;
+
+insert:
+INSERT INTO review_event (
+    id, learnerId, learningItemId, schemaVersion, rating,
+    reviewedAtEpochMillis, responseTimeMillis, stateBeforeJson,
+    stateAfterJson, source
+) VALUES (
+    ?, ?, ?, ?, ?,
+    ?, ?, ?,
+    ?, ?
+);
+
+deleteById:
+DELETE FROM review_event WHERE id = ?;
+
+deleteByLearningItemIds:
+DELETE FROM review_event WHERE learningItemId IN ?;
+
+deleteAll:
+DELETE FROM review_event;

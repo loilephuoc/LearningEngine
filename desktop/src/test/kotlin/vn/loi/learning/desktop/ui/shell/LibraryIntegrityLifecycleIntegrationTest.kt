@@ -454,23 +454,7 @@ class LibraryIntegrityLifecycleIntegrationTest {
 
             val faultyUseCase = vn.loi.learning.application.contentpackaging.UninstallContentPackageUseCase(
                 uninstallOperation = faultyUninstallOp,
-                transactionRunner = vn.loi.learning.infrastructure.transaction.JsonFileTransactionRunner(
-                    listOf(
-                        persistenceDir.resolve("installed-packages.json"),
-                        persistenceDir.resolve("canonical-libraries.json"),
-                        persistenceDir.resolve("canonical-library-collections.json"),
-                        persistenceDir.resolve("content-libraries.json"),
-                        persistenceDir.resolve("library-collections.json"),
-                        persistenceDir.resolve("contents.json"),
-                        persistenceDir.resolve("learning-items.json"),
-                        persistenceDir.resolve("memory-states.json"),
-                        persistenceDir.resolve("review-events.json"),
-                        persistenceDir.resolve("study-sessions.json"),
-                        persistenceDir.resolve("study-queues.json"),
-                        persistenceDir.resolve("content-packages.json"),
-                        persistenceDir.resolve("package-catalogs.json")
-                    )
-                )
+                transactionRunner = appContext.transactionRunner!!
             )
 
             // 4. Execute faulty uninstall and verify exception is thrown
@@ -482,25 +466,30 @@ class LibraryIntegrityLifecycleIntegrationTest {
                 assertTrue(ex.message?.contains("Simulated repository failure") == true)
             }
             assertTrue(exceptionThrown, "Exception must be thrown by faulty operation")
+            appContext.close()
 
             // 5. Assert ALL 9 boundaries + Collection + MemoryState + ReviewEvent are restored intact after rollback
             val reloadedContext = LearningApplicationFactory.createPersisted(persistenceDir)
-            assertNotNull(reloadedContext.contentPackageRepository?.findById(pkgId), "1. ContentPackage must exist after transaction rollback")
-            assertTrue(reloadedContext.packageCatalog?.findById(catalogId)?.contains(pkgId) == true, "2. PackageCatalog must contain package after transaction rollback")
-            assertNotNull(reloadedContext.installedPackageRepository?.findAll()?.firstOrNull { it.packageId == pkgId }, "3. InstalledPackage must exist after transaction rollback")
-            assertTrue(reloadedContext.domainLibraryRepository?.findById(defaultLibId)?.hasPackage(instPkgId) == true, "4. Canonical Library entry must exist after transaction rollback")
-            assertTrue(reloadedContext.contentLibraryRepository?.findAll()?.isNotEmpty() == true, "5. ContentLibrary must exist after transaction rollback")
-            assertNotNull(reloadedContext.contentRepository?.findById(ContentId("cnt-a-1")), "6. Content must exist after transaction rollback")
-            assertTrue(reloadedContext.learningItemRepository?.findByContentId(ContentId("cnt-a-1"))?.isNotEmpty() == true, "7. LearningItem must exist after transaction rollback")
+            try {
+                assertNotNull(reloadedContext.contentPackageRepository?.findById(pkgId), "1. ContentPackage must exist after transaction rollback")
+                assertTrue(reloadedContext.packageCatalog?.findById(catalogId)?.contains(pkgId) == true, "2. PackageCatalog must contain package after transaction rollback")
+                assertNotNull(reloadedContext.installedPackageRepository?.findAll()?.firstOrNull { it.packageId == pkgId }, "3. InstalledPackage must exist after transaction rollback")
+                assertTrue(reloadedContext.domainLibraryRepository?.findById(defaultLibId)?.hasPackage(instPkgId) == true, "4. Canonical Library entry must exist after transaction rollback")
+                assertTrue(reloadedContext.contentLibraryRepository?.findAll()?.isNotEmpty() == true, "5. ContentLibrary must exist after transaction rollback")
+                assertNotNull(reloadedContext.contentRepository?.findById(ContentId("cnt-a-1")), "6. Content must exist after transaction rollback")
+                assertTrue(reloadedContext.learningItemRepository?.findByContentId(ContentId("cnt-a-1"))?.isNotEmpty() == true, "7. LearningItem must exist after transaction rollback")
 
-            val reloadedNavTree = reloadedContext.libraryQuery?.getNavigationTree(defaultLibId)
-            assertNotNull(reloadedNavTree)
-            val reloadedCol = reloadedNavTree.collections.firstOrNull()
-            assertNotNull(reloadedCol, "8. Collection must exist after transaction rollback")
-            assertTrue(reloadedCol.assignedPackages.any { it.packageId == pkgId }, "Collection package assignment must be preserved after transaction rollback")
+                val reloadedNavTree = reloadedContext.libraryQuery?.getNavigationTree(defaultLibId)
+                assertNotNull(reloadedNavTree)
+                val reloadedCol = reloadedNavTree.collections.firstOrNull()
+                assertNotNull(reloadedCol, "8. Collection must exist after transaction rollback")
+                assertTrue(reloadedCol.assignedPackages.any { it.packageId == pkgId }, "Collection package assignment must be preserved after transaction rollback")
 
-            assertNotNull(reloadedContext.memoryStateRepository?.find(learnerId, LearningItemId("cnt-a-1-rec")), "9. MemoryState must exist after transaction rollback")
-            assertTrue(reloadedContext.reviewHistory.query(vn.loi.learning.application.reviewhistory.ReviewHistoryQuery(learnerId = learnerId)).isNotEmpty(), "10. ReviewHistory must exist after transaction rollback")
+                assertNotNull(reloadedContext.memoryStateRepository?.find(learnerId, LearningItemId("cnt-a-1-rec")), "9. MemoryState must exist after transaction rollback")
+                assertTrue(reloadedContext.reviewHistory.query(vn.loi.learning.application.reviewhistory.ReviewHistoryQuery(learnerId = learnerId)).isNotEmpty(), "10. ReviewHistory must exist after transaction rollback")
+            } finally {
+                reloadedContext.close()
+            }
         } finally {
             tempDir.toFile().deleteRecursively()
             persistenceDir.toFile().deleteRecursively()

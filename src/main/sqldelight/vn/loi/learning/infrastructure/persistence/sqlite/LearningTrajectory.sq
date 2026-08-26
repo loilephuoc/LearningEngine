@@ -1,0 +1,31 @@
+CREATE TABLE learning_trajectory (
+    learnerId TEXT NOT NULL,
+    contentId TEXT NOT NULL,
+    schemaVersion INTEGER NOT NULL DEFAULT 1,
+    chainsJson TEXT NOT NULL,
+    PRIMARY KEY (learnerId, contentId)
+);
+
+CREATE INDEX idx_learning_trajectory_learner ON learning_trajectory(learnerId);
+
+find:
+SELECT * FROM learning_trajectory WHERE learnerId = ? AND contentId = ?;
+
+findAll:
+SELECT * FROM learning_trajectory;
+
+findAllByLearner:
+SELECT * FROM learning_trajectory WHERE learnerId = ?;
+
+insertOrReplace:
+INSERT OR REPLACE INTO learning_trajectory (
+    learnerId, contentId, schemaVersion, chainsJson
+) VALUES (
+    ?, ?, ?, ?
+);
+
+delete:
+DELETE FROM learning_trajectory WHERE learnerId = ? AND contentId = ?;
+
+deleteAll:
+DELETE FROM learning_trajectory;

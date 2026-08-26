@@ -23,6 +23,30 @@ interface LearningItemRepository {
         return contentIds.flatMap { findByContentId(it) }
     }
 
+    /**
+     * Resolves only the LearningItem -> Content relationship required by
+     * accounting/query code.
+     *
+     * Implementations backed by persistence should override this method so
+     * they can filter records before constructing full domain objects.
+     */
+    fun findContentIdsByLearningItemIds(
+        learningItemIds: Set<LearningItemId>
+    ): Map<LearningItemId, ContentId> {
+        if (learningItemIds.isEmpty()) {
+            return emptyMap()
+        }
+
+        return learningItemIds
+            .mapNotNull { learningItemId ->
+                findById(learningItemId)
+                    ?.let { learningItem ->
+                        learningItemId to learningItem.contentId
+                    }
+            }
+            .toMap()
+    }
+
     fun findAllEnabled(): List<LearningItem>
 
     fun save(

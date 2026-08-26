@@ -1,0 +1,17 @@
+CREATE TABLE migration_metadata (
+    key TEXT PRIMARY KEY NOT NULL,
+    value TEXT NOT NULL,
+    migratedAtEpochMillis INTEGER NOT NULL
+);
+
+get:
+SELECT * FROM migration_metadata WHERE key = ?;
+
+getAll:
+SELECT * FROM migration_metadata;
+
+insertOrReplace:
+INSERT OR REPLACE INTO migration_metadata (key, value, migratedAtEpochMillis) VALUES (?, ?, ?);
+
+delete:
+DELETE FROM migration_metadata WHERE key = ?;

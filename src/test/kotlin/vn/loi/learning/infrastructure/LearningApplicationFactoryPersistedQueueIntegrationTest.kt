@@ -81,6 +81,10 @@ class LearningApplicationFactoryPersistedQueueIntegrationTest {
                     persistenceDirectory.resolve(
                         "study-queues.json"
                     )
+                ) || Files.exists(
+                    persistenceDirectory.resolve(
+                        "learning_engine.db"
+                    )
                 )
             )
 

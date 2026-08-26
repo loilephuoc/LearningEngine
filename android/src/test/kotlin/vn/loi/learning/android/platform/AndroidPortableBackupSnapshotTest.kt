@@ -278,26 +278,24 @@ class AndroidPortableBackupSnapshotTest {
             Files.createDirectories(mediaFileB.parent)
             Files.write(mediaFileB, byteArrayOf(4, 5, 6))
 
-            val liveBeforeRestore = Files.readString(dataDir.resolve("installed-packages.json"))
-            assertTrue(liveBeforeRestore.contains("Vocabulary_In_Use_Elementary"))
-
             // 4. Restore Backup A
             val result = graph.restorePortableBackup(backupA, operationActive = false)
             assertIs<vn.loi.learning.infrastructure.recovery.PortableBackupV2RestoreResult.Success>(result)
 
-            // 5. Inspect live persisted file directly on disk
-            val liveAfterRestore = Files.readString(dataDir.resolve("installed-packages.json"))
-            assertTrue(liveAfterRestore.contains("Vocabulary_in_Use_Intermediate"))
-            assertFalse(liveAfterRestore.contains("Vocabulary_In_Use_Elementary"), "Elementary package must NOT survive restore!")
+            // 5. Inspect live media files directly on disk
             assertFalse(Files.exists(mediaFileB), "Elementary media directory must NOT survive restore!")
             assertTrue(Files.exists(mediaFileA), "Intermediate media file must be restored!")
 
             // 6. Recreate fresh application context and verify repository
             val freshEngine = LearningApplicationFactory.createPersisted(dataDir, false)
-            val repo: vn.loi.learning.domain.library.repository.InstalledPackageRepository = freshEngine.installedPackageRepository!!
-            val installedList = repo.findAll()
-            kotlin.test.assertEquals(1, installedList.size)
-            kotlin.test.assertEquals("Vocabulary_in_Use_Intermediate", installedList[0].name.value)
+            try {
+                val repo: vn.loi.learning.domain.library.repository.InstalledPackageRepository = freshEngine.installedPackageRepository!!
+                val installedList = repo.findAll()
+                kotlin.test.assertEquals(1, installedList.size)
+                kotlin.test.assertEquals("Vocabulary_in_Use_Intermediate", installedList[0].name.value)
+            } finally {
+                freshEngine.close()
+            }
         } finally {
             temp.toFile().deleteRecursively()
         }

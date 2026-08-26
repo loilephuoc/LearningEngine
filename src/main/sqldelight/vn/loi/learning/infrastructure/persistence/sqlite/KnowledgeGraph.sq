@@ -1,0 +1,14 @@
+CREATE TABLE knowledge_graph (
+    id TEXT PRIMARY KEY NOT NULL DEFAULT 'canonical',
+    nodesJson TEXT NOT NULL DEFAULT '[]',
+    edgesJson TEXT NOT NULL DEFAULT '[]'
+);
+
+get:
+SELECT * FROM knowledge_graph WHERE id = 'canonical' LIMIT 1;
+
+insertOrReplace:
+INSERT OR REPLACE INTO knowledge_graph (id, nodesJson, edgesJson) VALUES ('canonical', ?, ?);
+
+deleteAll:
+DELETE FROM knowledge_graph;

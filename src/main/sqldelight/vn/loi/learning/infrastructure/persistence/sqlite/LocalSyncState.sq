@@ -1,0 +1,22 @@
+CREATE TABLE local_sync_state (
+    id TEXT PRIMARY KEY NOT NULL DEFAULT 'local_sync',
+    outboxJson TEXT NOT NULL DEFAULT '[]',
+    inboxJson TEXT NOT NULL DEFAULT '[]',
+    cursorsJson TEXT NOT NULL DEFAULT '{}',
+    quarantinesJson TEXT NOT NULL DEFAULT '[]',
+    pendingMediaJson TEXT NOT NULL DEFAULT '[]',
+    mediaGcCandidatesJson TEXT NOT NULL DEFAULT '[]'
+);
+
+get:
+SELECT * FROM local_sync_state WHERE id = 'local_sync' LIMIT 1;
+
+insertOrReplace:
+INSERT OR REPLACE INTO local_sync_state (
+    id, outboxJson, inboxJson, cursorsJson, quarantinesJson, pendingMediaJson, mediaGcCandidatesJson
+) VALUES (
+    'local_sync', ?, ?, ?, ?, ?, ?
+);
+
+deleteAll:
+DELETE FROM local_sync_state;

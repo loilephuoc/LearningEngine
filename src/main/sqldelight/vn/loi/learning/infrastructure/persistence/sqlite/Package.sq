@@ -1,0 +1,111 @@
+CREATE TABLE content_package (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    version TEXT NOT NULL,
+    format TEXT NOT NULL,
+    libraryIdsJson TEXT NOT NULL DEFAULT '[]',
+    schemaVersion INTEGER NOT NULL DEFAULT 1,
+    minimumEngineVersion TEXT,
+    maximumEngineVersion TEXT,
+    dependenciesJson TEXT NOT NULL DEFAULT '[]',
+    topicId TEXT
+);
+
+CREATE TABLE package_catalog (
+    id TEXT PRIMARY KEY NOT NULL,
+    packageIdsJson TEXT NOT NULL DEFAULT '[]'
+);
+
+CREATE TABLE installed_package (
+    id TEXT PRIMARY KEY NOT NULL,
+    libraryId TEXT NOT NULL,
+    packageId TEXT NOT NULL,
+    topicId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    version TEXT NOT NULL,
+    state TEXT NOT NULL,
+    installedAt TEXT NOT NULL,
+    contentCount INTEGER NOT NULL DEFAULT 0,
+    learningItemCount INTEGER NOT NULL DEFAULT 0,
+    contentChecksum TEXT
+);
+
+CREATE INDEX idx_installed_package_package_id ON installed_package(packageId);
+CREATE INDEX idx_installed_package_topic_id ON installed_package(topicId);
+CREATE INDEX idx_installed_package_state ON installed_package(state);
+CREATE INDEX idx_installed_package_library_id ON installed_package(libraryId);
+
+-- ContentPackage queries
+selectContentPackageById:
+SELECT * FROM content_package WHERE id = ?;
+
+selectAllContentPackages:
+SELECT * FROM content_package;
+
+insertOrReplaceContentPackage:
+INSERT OR REPLACE INTO content_package (
+    id, name, version, format, libraryIdsJson, schemaVersion,
+    minimumEngineVersion, maximumEngineVersion, dependenciesJson, topicId
+) VALUES (
+    ?, ?, ?, ?, ?, ?,
+    ?, ?, ?, ?
+);
+
+deleteContentPackageById:
+DELETE FROM content_package WHERE id = ?;
+
+deleteAllContentPackages:
+DELETE FROM content_package;
+
+-- PackageCatalog queries
+selectPackageCatalogById:
+SELECT * FROM package_catalog WHERE id = ?;
+
+selectAllPackageCatalogs:
+SELECT * FROM package_catalog;
+
+insertOrReplacePackageCatalog:
+INSERT OR REPLACE INTO package_catalog (id, packageIdsJson) VALUES (?, ?);
+
+deletePackageCatalogById:
+DELETE FROM package_catalog WHERE id = ?;
+
+deleteAllPackageCatalogs:
+DELETE FROM package_catalog;
+
+-- InstalledPackage queries
+selectInstalledPackageById:
+SELECT * FROM installed_package WHERE id = ?;
+
+selectInstalledPackageByPackageId:
+SELECT * FROM installed_package WHERE packageId = ?;
+
+selectInstalledPackageByTopicId:
+SELECT * FROM installed_package WHERE topicId = ?;
+
+selectAllInstalledPackagesByState:
+SELECT * FROM installed_package WHERE state = ?;
+
+selectAllInstalledPackages:
+SELECT * FROM installed_package;
+
+selectAllInstalledPackagesByLibraryId:
+SELECT * FROM installed_package WHERE libraryId = ?;
+
+selectAllInstalledPackagesByLibraryIdAndState:
+SELECT * FROM installed_package WHERE libraryId = ? AND state = ?;
+
+insertOrReplaceInstalledPackage:
+INSERT OR REPLACE INTO installed_package (
+    id, libraryId, packageId, topicId, name, version, state,
+    installedAt, contentCount, learningItemCount, contentChecksum
+) VALUES (
+    ?, ?, ?, ?, ?, ?, ?,
+    ?, ?, ?, ?
+);
+
+deleteInstalledPackageById:
+DELETE FROM installed_package WHERE id = ?;
+
+deleteAllInstalledPackages:
+DELETE FROM installed_package;

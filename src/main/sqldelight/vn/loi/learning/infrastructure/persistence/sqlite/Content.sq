@@ -1,0 +1,63 @@
+CREATE TABLE content (
+    id TEXT PRIMARY KEY NOT NULL,
+    type TEXT NOT NULL,
+    primaryText TEXT NOT NULL,
+    translatedText TEXT,
+    pronunciation TEXT,
+    exampleText TEXT,
+    exampleTranslation TEXT,
+    groupName TEXT,
+    section TEXT,
+    lesson TEXT,
+    customFields TEXT NOT NULL DEFAULT '{}',
+    primaryTextFormat TEXT NOT NULL DEFAULT 'PLAIN_TEXT',
+    translatedTextFormat TEXT NOT NULL DEFAULT 'PLAIN_TEXT',
+    exampleTextFormat TEXT NOT NULL DEFAULT 'PLAIN_TEXT',
+    exampleTranslationFormat TEXT NOT NULL DEFAULT 'PLAIN_TEXT',
+    primaryAudio TEXT,
+    translatedAudio TEXT,
+    image TEXT,
+    exampleAudio TEXT,
+    exampleTranslatedAudio TEXT,
+    title TEXT,
+    tags TEXT NOT NULL DEFAULT '[]',
+    source TEXT
+);
+
+CREATE INDEX idx_content_lesson ON content(lesson);
+
+selectById:
+SELECT * FROM content WHERE id = ?;
+
+selectByIds:
+SELECT * FROM content WHERE id IN ?;
+
+selectAll:
+SELECT * FROM content;
+
+countAll:
+SELECT COUNT(*) FROM content;
+
+insertOrReplace:
+INSERT OR REPLACE INTO content (
+    id, type, primaryText, translatedText, pronunciation, exampleText,
+    exampleTranslation, groupName, section, lesson, customFields,
+    primaryTextFormat, translatedTextFormat, exampleTextFormat, exampleTranslationFormat,
+    primaryAudio, translatedAudio, image, exampleAudio, exampleTranslatedAudio,
+    title, tags, source
+) VALUES (
+    ?, ?, ?, ?, ?, ?,
+    ?, ?, ?, ?, ?,
+    ?, ?, ?, ?,
+    ?, ?, ?, ?, ?,
+    ?, ?, ?
+);
+
+deleteById:
+DELETE FROM content WHERE id = ?;
+
+deleteByIds:
+DELETE FROM content WHERE id IN ?;
+
+deleteAll:
+DELETE FROM content;

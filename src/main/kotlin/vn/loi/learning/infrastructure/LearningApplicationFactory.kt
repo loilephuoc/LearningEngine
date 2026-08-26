@@ -92,61 +92,84 @@ object LearningApplicationFactory {
         persistenceDirectory: Path,
         checkpoint: (String) -> Unit = {}
     ) {
-        val context = createPersisted(persistenceDirectory, reconcilePartOfSpeechRegistryOnCreate = false)
-        checkpoint("content-libraries")
-        val libraries = context.contentLibraryRepository?.findAll().orEmpty()
-        checkpoint("content-packages")
-        val packages = context.contentPackageRepository?.findAll().orEmpty()
-        checkpoint("contents")
-        val contents = context.contentRepository?.findAll().orEmpty()
-        checkpoint("learning-items")
-        val items = context.learningItemRepository?.findAll().orEmpty()
-        checkpoint("memory-states")
-        val memoryStates = context.memoryStateRepository?.findAll().orEmpty()
-        checkpoint("review-events")
-        val reviewEvents = context.reviewEventRepository?.findAll().orEmpty()
-        checkpoint("learning-trajectories")
-        val trajectories = context.learningTrajectoryRepository?.findAll().orEmpty()
-        checkpoint("study-sessions")
-        val sessions = context.studySessionRepository?.findAll().orEmpty()
-        checkpoint("study-queues")
-        val queues = context.studyQueueRepository?.findAll().orEmpty()
-        checkpoint("package-catalogs")
-        context.packageCatalog?.findAll()
-        checkpoint("installed-packages")
-        val installedPackages = context.installedPackageRepository?.findAll().orEmpty()
-        checkpoint("local-sync-state")
-        (context.localSyncStateRepository as? vn.loi.learning.infrastructure.persistence.json.JsonLocalSyncStateRepository)
-            ?.validate()
+        val jsonFiles = listOf(
+            "contents.json", "learning-items.json", "content-libraries.json", "content-packages.json",
+            "memory-states.json", "review-events.json", "learning-trajectories.json", "study-sessions.json",
+            "study-queues.json", "package-catalogs.json", "installed-packages.json", "canonical-libraries.json",
+            "canonical-library-collections.json", "continuous-review-intents.json", "knowledge-graph.json",
+            "sync-state.json"
+        )
+        for (name in jsonFiles) {
+            val file = persistenceDirectory.resolve(name)
+            if (java.nio.file.Files.exists(file)) {
+                require(java.nio.file.Files.size(file) > 0L) { "Canonical store file $name must not be empty." }
+                val text = String(java.nio.file.Files.readAllBytes(file), java.nio.charset.StandardCharsets.UTF_8)
+                val element = kotlinx.serialization.json.Json.parseToJsonElement(text)
+                require(element is kotlinx.serialization.json.JsonObject || element is kotlinx.serialization.json.JsonArray) {
+                    "Canonical store file $name must be a JSON object or array."
+                }
+            }
+        }
 
-        val contentIds = contents.mapTo(hashSetOf()) { it.id }
-        val libraryIds = libraries.mapTo(hashSetOf()) { it.id }
-        val itemIds = items.mapTo(hashSetOf()) { it.id }
-        require(items.all { it.contentId in contentIds }) { "LearningItem references missing Content." }
-        require(memoryStates.all { it.learningItemId in itemIds }) { "MemoryState references missing LearningItem." }
-        require(reviewEvents.all { it.learningItemId in itemIds }) { "ReviewEvent references missing LearningItem." }
-        require(queues.all { queue -> queue.learningItemIds.all { it in itemIds } }) {
-            "StudyQueue references missing LearningItem."
-        }
-        require(libraries.all { library -> library.contentIds.all { it in contentIds } }) {
-            "ContentLibrary references missing Content."
-        }
-        require(packages.all { contentPackage -> contentPackage.libraryIds.all { it in libraryIds } }) {
-            "ContentPackage references missing ContentLibrary."
-        }
-        require(contents.map { it.id }.distinct().size == contents.size) { "Duplicate Content IDs." }
-        require(items.map { it.id }.distinct().size == items.size) { "Duplicate LearningItem IDs." }
-        require(libraries.map { it.id }.distinct().size == libraries.size) { "Duplicate ContentLibrary IDs." }
-        require(packages.map { it.id }.distinct().size == packages.size) { "Duplicate ContentPackage IDs." }
-        require(installedPackages.map { it.id }.distinct().size == installedPackages.size) { "Duplicate InstalledPackage IDs." }
-        require(sessions.map { it.id }.distinct().size == sessions.size) { "Duplicate StudySession IDs." }
-        require(queues.map { it.sessionId }.distinct().size == queues.size) { "Duplicate StudyQueue session IDs." }
-        require(reviewEvents.map { it.id }.distinct().size == reviewEvents.size) { "Duplicate ReviewEvent IDs." }
-        require(memoryStates.map { it.learnerId to it.learningItemId }.distinct().size == memoryStates.size) {
-            "Duplicate MemoryState identities."
-        }
-        require(trajectories.map { it.learnerId to it.trajectory.contentId }.distinct().size == trajectories.size) {
-            "Duplicate LearningTrajectory identities."
+        val context = createPersisted(persistenceDirectory, reconcilePartOfSpeechRegistryOnCreate = false)
+        try {
+            checkpoint("content-libraries")
+            val libraries = context.contentLibraryRepository?.findAll().orEmpty()
+            checkpoint("content-packages")
+            val packages = context.contentPackageRepository?.findAll().orEmpty()
+            checkpoint("contents")
+            val contents = context.contentRepository?.findAll().orEmpty()
+            checkpoint("learning-items")
+            val items = context.learningItemRepository?.findAll().orEmpty()
+            checkpoint("memory-states")
+            val memoryStates = context.memoryStateRepository?.findAll().orEmpty()
+            checkpoint("review-events")
+            val reviewEvents = context.reviewEventRepository?.findAll().orEmpty()
+            checkpoint("learning-trajectories")
+            val trajectories = context.learningTrajectoryRepository?.findAll().orEmpty()
+            checkpoint("study-sessions")
+            val sessions = context.studySessionRepository?.findAll().orEmpty()
+            checkpoint("study-queues")
+            val queues = context.studyQueueRepository?.findAll().orEmpty()
+            checkpoint("package-catalogs")
+            context.packageCatalog?.findAll()
+            checkpoint("installed-packages")
+            val installedPackages = context.installedPackageRepository?.findAll().orEmpty()
+            checkpoint("local-sync-state")
+            (context.localSyncStateRepository as? vn.loi.learning.infrastructure.persistence.json.JsonLocalSyncStateRepository)
+                ?.validate()
+
+            val contentIds = contents.mapTo(hashSetOf()) { it.id }
+            val libraryIds = libraries.mapTo(hashSetOf()) { it.id }
+            val itemIds = items.mapTo(hashSetOf()) { it.id }
+            require(items.all { it.contentId in contentIds }) { "LearningItem references missing Content." }
+            require(memoryStates.all { it.learningItemId in itemIds }) { "MemoryState references missing LearningItem." }
+            require(reviewEvents.all { it.learningItemId in itemIds }) { "ReviewEvent references missing LearningItem." }
+            require(queues.all { queue -> queue.learningItemIds.all { it in itemIds } }) {
+                "StudyQueue references missing LearningItem."
+            }
+            require(libraries.all { library -> library.contentIds.all { it in contentIds } }) {
+                "ContentLibrary references missing Content."
+            }
+            require(packages.all { contentPackage -> contentPackage.libraryIds.all { it in libraryIds } }) {
+                "ContentPackage references missing ContentLibrary."
+            }
+            require(contents.map { it.id }.distinct().size == contents.size) { "Duplicate Content IDs." }
+            require(items.map { it.id }.distinct().size == items.size) { "Duplicate LearningItem IDs." }
+            require(libraries.map { it.id }.distinct().size == libraries.size) { "Duplicate ContentLibrary IDs." }
+            require(packages.map { it.id }.distinct().size == packages.size) { "Duplicate ContentPackage IDs." }
+            require(installedPackages.map { it.id }.distinct().size == installedPackages.size) { "Duplicate InstalledPackage IDs." }
+            require(sessions.map { it.id }.distinct().size == sessions.size) { "Duplicate StudySession IDs." }
+            require(queues.map { it.sessionId }.distinct().size == queues.size) { "Duplicate StudyQueue session IDs." }
+            require(reviewEvents.map { it.id }.distinct().size == reviewEvents.size) { "Duplicate ReviewEvent IDs." }
+            require(memoryStates.map { it.learnerId to it.learningItemId }.distinct().size == memoryStates.size) {
+                "Duplicate MemoryState identities."
+            }
+            require(trajectories.map { it.learnerId to it.trajectory.contentId }.distinct().size == trajectories.size) {
+                "Duplicate LearningTrajectory identities."
+            }
+        } finally {
+            context.close()
         }
     }
 
@@ -226,242 +249,88 @@ object LearningApplicationFactory {
         persistenceDirectory: Path,
         reconcilePartOfSpeechRegistryOnCreate: Boolean = true
     ): LearningApplicationContext {
-        val contentLibrariesPath =
-            persistenceDirectory.resolve(
-                CONTENT_LIBRARIES_FILE_NAME
-            )
+        val dbPath = persistenceDirectory.resolve("learning_engine.db")
+        val handle = vn.loi.learning.infrastructure.persistence.sqlite.SqliteDatabaseFactory.createHandleFromFile(dbPath.toFile())
+        vn.loi.learning.infrastructure.persistence.sqlite.JsonToSqliteMigrationService.migrateIfNeeded(persistenceDirectory, handle.database)
 
-        val installedPackagesPath =
-            persistenceDirectory.resolve(
-                INSTALLED_PACKAGES_FILE_NAME
-            )
+        return createFromDatabase(
+            database = handle.database,
+            mediaDirectory = persistenceDirectory.resolve(MEDIA_DIRECTORY_NAME),
+            reconcilePartOfSpeechRegistryOnCreate = reconcilePartOfSpeechRegistryOnCreate,
+            closeable = handle
+        )
+    }
 
-        val libraryCollectionsPath =
-            persistenceDirectory.resolve(
-                LIBRARY_COLLECTIONS_FILE_NAME
-            )
-
-        val contentsPath =
-            persistenceDirectory.resolve(
-                CONTENTS_FILE_NAME
-            )
-
-        val learningItemsPath =
-            persistenceDirectory.resolve(
-                LEARNING_ITEMS_FILE_NAME
-            )
-
-        val memoryStatesPath =
-            persistenceDirectory.resolve(
-                MEMORY_STATES_FILE_NAME
-            )
-
-        val reviewEventsPath =
-            persistenceDirectory.resolve(
-                REVIEW_EVENTS_FILE_NAME
-            )
-        val learningTrajectoriesPath = persistenceDirectory.resolve(LEARNING_TRAJECTORIES_FILE_NAME)
-
-        val studySessionsPath =
-            persistenceDirectory.resolve(
-                STUDY_SESSIONS_FILE_NAME
-            )
-
-
-        val studyQueuesPath =
-            persistenceDirectory.resolve(
-                STUDY_QUEUES_FILE_NAME
-            )
-
-        val continuousReviewIntentsPath =
-            persistenceDirectory.resolve(CONTINUOUS_REVIEW_INTENTS_FILE_NAME)
-
-        val localSyncStatePath = persistenceDirectory.resolve(LOCAL_SYNC_STATE_FILE_NAME)
-        val localSyncStateRepository =
-            vn.loi.learning.infrastructure.persistence.json.JsonLocalSyncStateRepository(localSyncStatePath)
-
-        val contentPackagesPath =
-            persistenceDirectory.resolve(
-                CONTENT_PACKAGES_FILE_NAME
-            )
-
-        val packageCatalogsPath =
-            persistenceDirectory.resolve(
-                PACKAGE_CATALOGS_FILE_NAME
-            )
-
-        val canonicalLibrariesPath =
-            persistenceDirectory.resolve(
-                CANONICAL_LIBRARIES_FILE_NAME
-            )
-
-        val canonicalCollectionsPath =
-            persistenceDirectory.resolve(
-                CANONICAL_COLLECTIONS_FILE_NAME
-            )
-
+    fun createFromDatabase(
+        database: vn.loi.learning.infrastructure.persistence.sqlite.LearningEngineDatabase,
+        mediaDirectory: Path? = null,
+        reconcilePartOfSpeechRegistryOnCreate: Boolean = true,
+        closeable: AutoCloseable? = null
+    ): LearningApplicationContext {
         val contentLibraryRepository =
-            StoreBackedContentLibraryRepository(
-                JsonContentLibraryStore(
-                    contentLibrariesPath
-                )
-            )
-
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteContentLibraryRepository(database)
         val libraryCollectionRepository =
-            StoreBackedLibraryCollectionRepository(
-                JsonLibraryCollectionStore(
-                    libraryCollectionsPath
-                )
-            )
-
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteLibraryCollectionRepository(database)
         val contentRepository =
-            StoreBackedContentRepository(
-                JsonContentStore(
-                    contentsPath
-                )
-            )
-
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteContentRepository(database)
         val learningItemRepository =
-            StoreBackedLearningItemRepository(
-                JsonLearningItemStore(
-                    learningItemsPath
-                )
-            )
-
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteLearningItemRepository(database)
         val memoryStateRepository =
-            StoreBackedMemoryStateRepository(
-                JsonMemoryStateStore(
-                    memoryStatesPath
-                )
-            )
-
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteMemoryStateRepository(database)
         val reviewEventRepository =
-            StoreBackedReviewEventRepository(
-                JsonReviewEventStore(
-                    reviewEventsPath
-                )
-            )
-
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteReviewEventRepository(database)
         val studySessionRepository =
-            StoreBackedStudySessionRepository(
-                JsonStudySessionStore(
-                    studySessionsPath
-                )
-            )
-
-
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteStudySessionRepository(database)
         val studyQueueRepository =
-            StoreBackedStudyQueueRepository(
-                JsonStudyQueueStore(
-                    studyQueuesPath
-                )
-            )
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteStudyQueueRepository(database)
+        val contentPackageRepository =
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteContentPackageRepository(database)
+        val packageCatalogRepository =
+            vn.loi.learning.infrastructure.persistence.sqlite.SqlitePackageCatalogRepository(database)
+        val installedPackageRepository =
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteInstalledPackageRepository(database)
+        val canonicalLibraryRepository =
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteCanonicalLibraryRepository(database)
+        val canonicalCollectionRepository =
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteCanonicalCollectionRepository(database)
+        val continuousReviewIntentRepository =
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteContinuousReviewIntentRepository(database)
+        val learningTrajectoryRepository =
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteLearningTrajectoryRepository(database)
+        val localSyncStateRepository =
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteLocalSyncStateRepository(database)
+        val knowledgeGraphStore =
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteKnowledgeGraphRepository(database)
 
         val recoveryOperationGate = RecoveryOperationGate()
-        val continuousReviewIntentRepository =
-            JsonContinuousReviewIntentRepository(continuousReviewIntentsPath) { mutation ->
-                recoveryOperationGate.canonicalMutation(mutation)
-            }
-        val learningTrajectoryRepository = StoreBackedLearningTrajectoryRepository(
-            JsonLearningTrajectoryStore(learningTrajectoriesPath)
-        )
-
-        val contentPackageRepository =
-            StoreBackedContentPackageRepository(
-                JsonContentPackageStore(
-                    contentPackagesPath
-                )
-            )
-
-        val packageCatalogRepository =
-            StoreBackedPackageCatalogRepository(
-                JsonPackageCatalogStore(
-                    packageCatalogsPath
-                )
-            )
-
-        val canonicalLibraryRepository =
-            vn.loi.learning.infrastructure.persistence.repository.StoreBackedCanonicalLibraryRepository(
-                vn.loi.learning.infrastructure.persistence.json.JsonCanonicalLibraryStore(
-                    canonicalLibrariesPath
-                )
-            )
-
-        val canonicalCollectionRepository =
-            vn.loi.learning.infrastructure.persistence.repository.StoreBackedCanonicalCollectionRepository(
-                vn.loi.learning.infrastructure.persistence.json.JsonCanonicalCollectionStore(
-                    canonicalCollectionsPath
-                )
-            )
-
         val transactionRunner = RecoveryCoordinatedTransactionRunner(
-            JsonFileTransactionRunner(
-                listOf(
-                    installedPackagesPath,
-                    canonicalLibrariesPath,
-                    canonicalCollectionsPath,
-                    contentLibrariesPath,
-                    libraryCollectionsPath,
-                    contentsPath,
-                    learningItemsPath,
-                    memoryStatesPath,
-                    reviewEventsPath,
-                    learningTrajectoriesPath,
-                    studySessionsPath,
-                    studyQueuesPath,
-                    continuousReviewIntentsPath,
-                    localSyncStatePath,
-                    contentPackagesPath,
-                    packageCatalogsPath
-                )
-            ),
+            vn.loi.learning.infrastructure.persistence.sqlite.SqliteTransactionRunner(database),
             recoveryOperationGate
         )
 
         return createContext(
-            contentLibraryRepository =
-                contentLibraryRepository,
-            libraryCollectionRepository =
-                libraryCollectionRepository,
-            contentRepository =
-                contentRepository,
-            learningItemRepository =
-                learningItemRepository,
-            memoryStateRepository =
-                memoryStateRepository,
-            reviewEventRepository =
-                reviewEventRepository,
-            studySessionRepository =
-                studySessionRepository,
-            studyQueueRepository =
-                studyQueueRepository,
-            contentPackageRepository =
-                contentPackageRepository,
-            packageCatalogRepository =
-                packageCatalogRepository,
+            contentLibraryRepository = contentLibraryRepository,
+            libraryCollectionRepository = libraryCollectionRepository,
+            contentRepository = contentRepository,
+            learningItemRepository = learningItemRepository,
+            memoryStateRepository = memoryStateRepository,
+            reviewEventRepository = reviewEventRepository,
+            studySessionRepository = studySessionRepository,
+            studyQueueRepository = studyQueueRepository,
+            contentPackageRepository = contentPackageRepository,
+            packageCatalogRepository = packageCatalogRepository,
             transactionRunner = transactionRunner,
             continuousReviewIntentRepository = continuousReviewIntentRepository,
             learningTrajectoryRepository = learningTrajectoryRepository,
             localSyncStateRepository = localSyncStateRepository,
-            mediaDirectory = persistenceDirectory.resolve(MEDIA_DIRECTORY_NAME),
-            installedPackageRepository =
-                StoreBackedInstalledPackageRepository(
-                    JsonInstalledPackageStore(
-                        installedPackagesPath
-                    )
-                ),
-            knowledgeGraphRepository =
-                StoreBackedKnowledgeGraphRepository(
-                    JsonKnowledgeGraphStore(
-                        persistenceDirectory.resolve(
-                            KNOWLEDGE_GRAPH_FILE_NAME
-                        )
-                    )
-                ),
+            mediaDirectory = mediaDirectory,
+            installedPackageRepository = installedPackageRepository,
+            knowledgeGraphRepository = StoreBackedKnowledgeGraphRepository(knowledgeGraphStore),
             domainLibraryRepository = canonicalLibraryRepository,
             domainCollectionRepository = canonicalCollectionRepository,
             reconcilePartOfSpeechRegistryOnCreate = reconcilePartOfSpeechRegistryOnCreate,
-            recoveryOperationGate = recoveryOperationGate
+            recoveryOperationGate = recoveryOperationGate,
+            closeable = closeable
         )
     }
 
@@ -503,7 +372,8 @@ object LearningApplicationFactory {
         domainCollectionRepository:
         vn.loi.learning.domain.library.repository.CollectionRepository? = null,
         reconcilePartOfSpeechRegistryOnCreate: Boolean = true,
-        recoveryOperationGate: RecoveryOperationGate? = null
+        recoveryOperationGate: RecoveryOperationGate? = null,
+        closeable: AutoCloseable? = null
     ): LearningApplicationContext {
         val partOfSpeechRegistry =
             vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry()
@@ -1043,7 +913,8 @@ object LearningApplicationFactory {
                 )
             } else {
                 null
-            }
+            },
+            closeable = closeable
         )
 
     }

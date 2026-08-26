@@ -1,0 +1,103 @@
+CREATE TABLE study_session (
+    id TEXT PRIMARY KEY NOT NULL,
+    learnerId TEXT NOT NULL,
+    schemaVersion INTEGER NOT NULL DEFAULT 1,
+    startedAtEpochMillis INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    policyNewItemLimit INTEGER NOT NULL,
+    policyReviewItemLimit INTEGER NOT NULL,
+    policyAllowRepeatInSameSession INTEGER NOT NULL,
+    policyEvaluation TEXT NOT NULL DEFAULT 'EVALUATIVE',
+    policyPracticeLoop TEXT NOT NULL DEFAULT 'NONE',
+    policyFocusedPracticeKind TEXT NOT NULL DEFAULT 'NONE',
+    includedContentIdsJson TEXT NOT NULL DEFAULT '[]',
+    reviewedItemIdsJson TEXT NOT NULL DEFAULT '[]',
+    reviewedContentIdsJson TEXT NOT NULL DEFAULT '[]',
+    introducedContentIdsJson TEXT NOT NULL DEFAULT '[]',
+    lapsedContentIdsJson TEXT NOT NULL DEFAULT '[]',
+    newItemsReviewed INTEGER NOT NULL DEFAULT 0,
+    reviewItemsReviewed INTEGER NOT NULL DEFAULT 0,
+    finishedAtEpochMillis INTEGER,
+    currentLearningItemId TEXT,
+    currentItemPresentedAtEpochMillis INTEGER,
+    answerRevealed INTEGER NOT NULL DEFAULT 0,
+    pendingReviewEventId TEXT,
+    pendingReviewLearningItemId TEXT,
+    pendingReviewRating TEXT,
+    pendingReviewReviewedAtEpochMillis INTEGER,
+    pendingReviewResponseTimeMillis INTEGER,
+    pendingReviewRatingSource TEXT NOT NULL DEFAULT 'STANDARD_REVIEW',
+    pendingRecallResult TEXT,
+    pendingRecallRevealUsed INTEGER NOT NULL DEFAULT 0,
+    pendingRecallTypingLatencyMillis INTEGER,
+    undoableReviewJson TEXT,
+    completionSnapshotJson TEXT,
+    completionProvenance TEXT,
+    topicId TEXT,
+    installedPackageId TEXT,
+    studyMode TEXT NOT NULL DEFAULT 'ADAPTIVE',
+    recallModeHistoryJson TEXT NOT NULL DEFAULT '[]'
+);
+
+CREATE INDEX idx_study_session_learner_status ON study_session(learnerId, status);
+CREATE INDEX idx_study_session_topic ON study_session(topicId);
+CREATE INDEX idx_study_session_started ON study_session(learnerId, startedAtEpochMillis DESC);
+
+findById:
+SELECT * FROM study_session WHERE id = ?;
+
+findActiveByLearner:
+SELECT * FROM study_session WHERE learnerId = ? AND status = 'ACTIVE' ORDER BY startedAtEpochMillis DESC LIMIT 1;
+
+findActiveByLearnerAndTopic:
+SELECT * FROM study_session WHERE learnerId = ? AND topicId = ? AND status = 'ACTIVE' ORDER BY startedAtEpochMillis DESC LIMIT 1;
+
+findLatestUndoableByLearner:
+SELECT * FROM study_session WHERE learnerId = ? AND undoableReviewJson IS NOT NULL ORDER BY startedAtEpochMillis DESC LIMIT 1;
+
+findAll:
+SELECT * FROM study_session;
+
+findAllByLearner:
+SELECT * FROM study_session WHERE learnerId = ? ORDER BY startedAtEpochMillis DESC;
+
+insertOrReplace:
+INSERT OR REPLACE INTO study_session (
+    id, learnerId, schemaVersion, startedAtEpochMillis, status,
+    policyNewItemLimit, policyReviewItemLimit, policyAllowRepeatInSameSession,
+    policyEvaluation, policyPracticeLoop, policyFocusedPracticeKind,
+    includedContentIdsJson, reviewedItemIdsJson, reviewedContentIdsJson,
+    introducedContentIdsJson, lapsedContentIdsJson, newItemsReviewed,
+    reviewItemsReviewed, finishedAtEpochMillis, currentLearningItemId,
+    currentItemPresentedAtEpochMillis, answerRevealed, pendingReviewEventId,
+    pendingReviewLearningItemId, pendingReviewRating, pendingReviewReviewedAtEpochMillis,
+    pendingReviewResponseTimeMillis, pendingReviewRatingSource, pendingRecallResult,
+    pendingRecallRevealUsed, pendingRecallTypingLatencyMillis, undoableReviewJson,
+    completionSnapshotJson, completionProvenance, topicId, installedPackageId,
+    studyMode, recallModeHistoryJson
+) VALUES (
+    ?, ?, ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?, ?,
+    ?, ?
+);
+
+deleteById:
+DELETE FROM study_session WHERE id = ?;
+
+deleteForTopic:
+DELETE FROM study_session WHERE topicId = ?;
+
+deleteForTopicAndLearner:
+DELETE FROM study_session WHERE learnerId = ? AND topicId = ?;
+
+deleteAll:
+DELETE FROM study_session;

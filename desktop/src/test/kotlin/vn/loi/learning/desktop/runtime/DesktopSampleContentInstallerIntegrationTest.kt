@@ -10,12 +10,18 @@ class DesktopSampleContentInstallerIntegrationTest {
     fun `starter sample imports through production OPD3 persistence and survives restart`() {
         val directory = Files.createTempDirectory("desktop-sample-content-test")
         try {
-            DesktopSampleContentInstaller.install(LearningApplicationFactory.createPersisted(directory))
+            val app1 = LearningApplicationFactory.createPersisted(directory)
+            DesktopSampleContentInstaller.install(app1)
+            app1.close()
             val restarted = LearningApplicationFactory.createPersisted(directory)
-            assertEquals(1, restarted.installedPackages.query().size)
-            assertEquals("Learning Engine Starter", restarted.installedPackages.query().single().name)
-            assertEquals(2, restarted.contentLibraries.query().single().learningItemCount)
-            assertEquals(true, Files.readString(directory.resolve("learning-items.json")).contains("starter-item-spacing"))
+            try {
+                assertEquals(1, restarted.installedPackages.query().size)
+                assertEquals("Learning Engine Starter", restarted.installedPackages.query().single().name)
+                assertEquals(2, restarted.contentLibraries.query().single().learningItemCount)
+                assertEquals(true, restarted.learningItemRepository?.findAll()?.any { it.id.value == "starter-item-spacing" })
+            } finally {
+                restarted.close()
+            }
         } finally { directory.toFile().deleteRecursively() }
     }
 }
