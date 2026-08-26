@@ -2,7 +2,9 @@
 
 ## Scalable SQLite Runtime Persistence Migration (Desktop + Android)
 
+- Baseline `8cf0101b` on `integration/learning-engine-2.0`.
 - Re-architected runtime persistence across root engine, Desktop (JVM), and Android from JSON files to SQLDelight 2.0.2 SQLite database (`learning_engine.db`).
+- Pluggable Driver Provider Architecture: `SqliteDriverFactory` interface allows platform-specific driver creation. Android exclusively uses `AndroidSqliteDriver` via `AndroidSqliteDriverFactory` and native `SQLiteOpenHelper`, strictly excluding JVM JDBC driver (`sqlite-driver` and `sqlite-jdbc`) from Android APK runtime. Desktop JVM uses `JvmSqliteDriverFactory` with JDBC SQLite.
 - Features WAL mode, foreign keys, deterministic indexes, and atomic multi-table transaction runners (`SqliteTransactionRunner`).
 - Automatic startup migration (`JsonToSqliteMigrationService`) migrates legacy JSON files into SQLite safely inside a single transaction with count verification and non-destructive JSON retention.
 - Eliminated hot-path memory scans: `DailyStudyBudgetQueryService`, due items, enabled items, and topic sessions push filtering and counting to SQL.
