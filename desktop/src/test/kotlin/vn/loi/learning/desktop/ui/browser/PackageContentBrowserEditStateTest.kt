@@ -836,14 +836,14 @@ class PackageContentBrowserEditStateTest {
         vm.startNewItem()
 
         val sampleFile = java.io.File.createTempFile("sample", ".png")
-        sampleFile.writeBytes(byteArrayOf(1, 2, 3, 4))
+        javax.imageio.ImageIO.write(java.awt.image.BufferedImage(40, 30, java.awt.image.BufferedImage.TYPE_INT_RGB), "png", sampleFile)
         sampleFile.deleteOnExit()
 
         vm.importDraftMediaFile(sampleFile, "image")
 
         val state = vm.packageBrowserUiState!!
         assertNotNull(state.draftEdits?.imageRef)
-        assertTrue(state.draftEdits!!.imageRef!!.endsWith(sampleFile.name))
+        assertTrue(state.draftEdits!!.imageRef!!.endsWith(".jpg"))
         assertNotNull(storage.resolve(state.draftEdits!!.imageRef!!))
         assertTrue(storage.exists(state.draftEdits!!.imageRef!!))
     }
@@ -1305,7 +1305,7 @@ class PackageContentBrowserEditStateTest {
         vmWithStorage.attemptSelectRowAutoEdit("cnt-1")
 
         val imageFile = java.io.File.createTempFile("photo", ".png").apply {
-            writeBytes(byteArrayOf(1, 2, 3))
+            javax.imageio.ImageIO.write(java.awt.image.BufferedImage(40, 30, java.awt.image.BufferedImage.TYPE_INT_RGB), "png", this)
             deleteOnExit()
         }
 
@@ -1355,7 +1355,7 @@ class PackageContentBrowserEditStateTest {
         vm.attemptSelectRowAutoEdit("cnt-1")
 
         val imageFile = java.io.File.createTempFile("photo_fail", ".jpg").apply {
-            writeBytes(byteArrayOf(5, 6, 7))
+            javax.imageio.ImageIO.write(java.awt.image.BufferedImage(40, 30, java.awt.image.BufferedImage.TYPE_INT_RGB), "jpg", this)
             deleteOnExit()
         }
 

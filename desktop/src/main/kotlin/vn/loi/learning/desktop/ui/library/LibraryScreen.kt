@@ -252,6 +252,7 @@ fun LibraryScreen(
                     onUpdateDraftExampleAudioRef = contentLibraryViewModel::updateDraftExampleAudioRef,
                     onUpdateDraftTranslationAudioRef = contentLibraryViewModel::updateDraftTranslationAudioRef,
                     onImportMediaFile = contentLibraryViewModel::importDraftMediaFile,
+                    onImageAcquisitionError = contentLibraryViewModel::reportMediaAcquisitionError,
                     onDoubleClickRow = contentLibraryViewModel::doubleClickPackageBrowserRow,
                     // Delete callbacks
                     onRequestDelete = contentLibraryViewModel::showDeleteConfirmation,

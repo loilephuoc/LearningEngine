@@ -4174,6 +4174,10 @@ class ContentLibraryViewModel(
             )
     }
 
+    fun reportMediaAcquisitionError(message: String) {
+        uiState = uiState.copy(importError = message, importMessage = null)
+    }
+
     private fun runContentLibraryMutation(
         title: String,
         phase: String,

@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
@@ -21,15 +23,21 @@ import androidx.compose.ui.draganddrop.awtTransferable
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.PointerButton
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.awt.Toolkit
@@ -50,6 +58,28 @@ enum class HeroFitMode {
     FIT_WIDTH,
     FIT_HEIGHT
 }
+
+internal val LocalContentStudioEditableFocusReporter =
+    staticCompositionLocalOf<(Boolean) -> Unit> { {} }
+
+@OptIn(ExperimentalComposeUiApi::class)
+internal fun Modifier.quickPasteImageOnSecondaryClick(onQuickPasteImage: (() -> Unit)?): Modifier =
+    if (onQuickPasteImage == null) {
+        this
+    } else {
+        pointerInput(onQuickPasteImage) {
+            awaitEachGesture {
+                val downEvent = awaitPointerEvent(PointerEventPass.Main)
+                if (downEvent.button != PointerButton.Secondary) return@awaitEachGesture
+                val down = downEvent.changes.firstOrNull { it.changedToDownIgnoreConsumed() }
+                    ?: return@awaitEachGesture
+                down.consume()
+                val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+                up.consume()
+                onQuickPasteImage()
+            }
+        }
+    }
 
 /** Helper function to resolve image file reference for StudioHeroImage */
 private fun resolveHeroImageFile(reference: String, storage: ContentMediaStorage?): File? {
@@ -104,6 +134,7 @@ sealed interface HeroImageState {
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun Modifier.editorImageDropTarget(
+    dropIntentKey: String,
     onFileDropped: (File) -> Unit,
     onDragOverChanged: (Boolean) -> Unit,
     onError: (String) -> Unit
@@ -111,6 +142,9 @@ private fun Modifier.editorImageDropTarget(
     val currentOnFileDropped by rememberUpdatedState(onFileDropped)
     val currentOnDragOverChanged by rememberUpdatedState(onDragOverChanged)
     val currentOnError by rememberUpdatedState(onError)
+    val currentDropIntentKey by rememberUpdatedState(dropIntentKey)
+    val coroutineScope = rememberCoroutineScope()
+    val extractor = remember { BrowserImageDropExtractor() }
     val target = remember {
         object : DragAndDropTarget {
             override fun onStarted(event: DragAndDropEvent) { currentOnDragOverChanged(true) }
@@ -119,21 +153,30 @@ private fun Modifier.editorImageDropTarget(
             override fun onEnded(event: DragAndDropEvent) { currentOnDragOverChanged(false) }
             override fun onDrop(event: DragAndDropEvent): Boolean {
                 currentOnDragOverChanged(false)
-                return try {
-                    val transferable = event.awtTransferable
-                    val files = DragDropUtils.extractFiles(transferable)
-                    val file = files.firstOrNull()
-                    when (val decision = ContentImageDropPolicy.evaluate(file)) {
-                        is ContentImageDropDecision.Import -> {
-                            currentOnFileDropped(decision.file)
-                            true
+                val intendedKey = currentDropIntentKey
+                val snapshot = try {
+                    extractor.snapshot(event.awtTransferable)
+                } catch (failure: BrowserImageDropException) {
+                    currentOnError(failure.message ?: "Could not read image from browser drag.")
+                    return false
+                }
+                coroutineScope.launch {
+                    try {
+                        extractor.extract(snapshot).use { extracted ->
+                            if (currentDropIntentKey != intendedKey) {
+                                currentOnError("Image import was cancelled because the selected item changed.")
+                                return@use
+                            }
+                            when (val decision = ContentImageDropPolicy.evaluate(extracted.file)) {
+                                is ContentImageDropDecision.Import -> currentOnFileDropped(decision.file)
+                                is ContentImageDropDecision.Reject -> currentOnError(decision.message)
+                            }
                         }
-                        is ContentImageDropDecision.Reject -> {
-                            currentOnError(decision.message)
-                            false
-                        }
+                    } catch (failure: BrowserImageDropException) {
+                        currentOnError(failure.message ?: "Could not read image from browser drag.")
                     }
-                } catch (_: Exception) { false }
+                }
+                return true
             }
         }
     }
@@ -273,6 +316,7 @@ fun ContentEditorPane(
     onUpdateDraftExampleTranslation: ((String) -> Unit)? = null,
     onUpdateDraftImageRef: ((String?) -> Unit)? = null,
     onImportMediaFile: ((File, String) -> Unit)? = null,
+    onQuickPasteImage: (() -> Unit)? = null,
     onRequestDelete: (() -> Unit)? = null,
     onConfirmDelete: (() -> Unit)? = null,
     onDismissDelete: (() -> Unit)? = null,
@@ -821,7 +865,9 @@ fun ContentEditorPane(
                     backgroundColor = if (isHeroDragOver) LEColors.primary.copy(alpha = 0.06f) else LEColors.surface,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(min = 320.dp)
                         .editorImageDropTarget(
+                            dropIntentKey = "${uiState.installedPackageId.value}|${uiState.editingContentId}|${uiState.isCreatingNewItem}",
                             onFileDropped = { file ->
                                 imageDropError = null
                                 if (onImportMediaFile != null) onImportMediaFile(file, "image")
@@ -837,6 +883,7 @@ fun ContentEditorPane(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 220.dp, max = 380.dp)
+                                .quickPasteImageOnSecondaryClick(onQuickPasteImage)
                                 .border(
                                     width = if (isHeroDragOver) 2.dp else 1.dp,
                                     color = if (isHeroDragOver) LEColors.primary else LEColors.borderSubtle,
@@ -986,8 +1033,14 @@ fun ContentEditorPane(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(120.dp)
-                                .background(if (isHeroDragOver) LEColors.primary.copy(alpha = 0.08f) else LEColors.surfaceElevated)
+                                .height(520.dp)
+                                .quickPasteImageOnSecondaryClick(onQuickPasteImage)
+                                .background(
+                                    if (isHeroDragOver)
+                                        LEColors.primary.copy(alpha = 0.08f)
+                                    else
+                                        LEColors.surfaceElevated
+                                )
                                 .border(
                                     width = if (isHeroDragOver) 2.dp else 1.dp,
                                     color = if (isHeroDragOver) LEColors.primary else LEColors.borderSubtle,
@@ -997,12 +1050,23 @@ fun ContentEditorPane(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = if (isHeroDragOver) "Drop image here to attach" else "No Image Attached",
+                                    text = if (isHeroDragOver)
+                                        "Drop image here to attach"
+                                    else
+                                        "No Image Attached",
                                     style = LETypography.fieldValue,
-                                    color = if (isHeroDragOver) LEColors.primary else LEColors.textMuted
+                                    color = if (isHeroDragOver)
+                                        LEColors.primary
+                                    else
+                                        LEColors.textMuted
                                 )
                                 Text(
-                                    text = "Drag & drop image file from Explorer or Desktop",
+                                    text = "Drag & drop an image here",
+                                    style = LETypography.caption,
+                                    color = LEColors.textMuted
+                                )
+                                Text(
+                                    text = "Ctrl+V or Right-click to paste copied image",
                                     style = LETypography.caption,
                                     color = LEColors.textMuted
                                 )
@@ -1064,6 +1128,7 @@ private fun CompactMetadataFieldCard(
     focusRequester: FocusRequester? = null,
     nextFocusRequester: FocusRequester? = null
 ) {
+    val reportEditableFocus = LocalContentStudioEditableFocusReporter.current
     Card(
         shape = LERadius.md,
         colors = CardDefaults.cardColors(containerColor = LEColors.surface),
@@ -1092,6 +1157,7 @@ private fun CompactMetadataFieldCard(
                     cursorBrush = SolidColor(LEColors.primary),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .onFocusChanged { reportEditableFocus(it.isFocused) }
                         .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
                         .let { if (nextFocusRequester != null) it.focusProperties { next = nextFocusRequester } else it }
                 )
@@ -1146,6 +1212,7 @@ private fun EditorFieldCard(
     maxLines: Int = if (minLines > 1) 4 else 1,
     singleLine: Boolean = false
 ) {
+    val reportEditableFocus = LocalContentStudioEditableFocusReporter.current
     Card(
         shape = LERadius.md,
         colors = CardDefaults.cardColors(containerColor = LEColors.surface),
@@ -1183,6 +1250,7 @@ private fun EditorFieldCard(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .onFocusChanged { reportEditableFocus(it.isFocused) }
                         .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
                         .let { if (nextFocusRequester != null) it.focusProperties { next = nextFocusRequester } else it }
                 )

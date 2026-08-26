@@ -13,6 +13,7 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
 import vn.loi.learning.application.contentpackaging.browser.BrowserSortOption
 import vn.loi.learning.application.port.ContentMediaStorage
@@ -29,6 +30,16 @@ import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
 import vn.loi.learning.desktop.platform.DesktopFileActions
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
+
+internal object ContentStudioImagePastePolicy {
+    fun shouldAttempt(
+        ctrlPressed: Boolean,
+        isVKey: Boolean,
+        editableTextFocused: Boolean,
+        hasDraftContext: Boolean,
+        importerAvailable: Boolean
+    ): Boolean = ctrlPressed && isVKey && !editableTextFocused && hasDraftContext && importerAvailable
+}
 
 @Composable
 fun ContentStudioScreen(
@@ -82,6 +93,7 @@ fun ContentStudioScreen(
     onUpdateDraftExampleAudioRef: ((String?) -> Unit)? = null,
     onUpdateDraftTranslationAudioRef: ((String?) -> Unit)? = null,
     onImportMediaFile: ((java.io.File, String) -> Unit)? = null,
+    onImageAcquisitionError: ((String) -> Unit)? = null,
     onDoubleClickRow: ((String) -> Unit)? = null,
     onRequestDelete: (() -> Unit)? = null,
     onConfirmDelete: (() -> Unit)? = null,
@@ -142,6 +154,35 @@ fun ContentStudioScreen(
     }
 
     val screenFocusRequester = remember { FocusRequester() }
+    val clipboardScope = rememberCoroutineScope()
+    val clipboardExtractor = remember { ClipboardImageExtractor() }
+    var isEditableTextFocused by remember { mutableStateOf(false) }
+    val pasteIntentKey = "${uiState.installedPackageId.value}|${uiState.editingContentId}|${uiState.isCreatingNewItem}"
+    val currentPasteIntentKey by rememberUpdatedState(pasteIntentKey)
+    val pasteImageFromClipboard: () -> Unit = {
+        val intendedKey = currentPasteIntentKey
+        when (val result = clipboardExtractor.snapshotSystemClipboard()) {
+            ClipboardImageSnapshotResult.NoImage ->
+                onImageAcquisitionError?.invoke("Clipboard does not contain a supported image.")
+            is ClipboardImageSnapshotResult.Failure ->
+                onImageAcquisitionError?.invoke(result.message)
+            is ClipboardImageSnapshotResult.Ready -> {
+                clipboardScope.launch {
+                    try {
+                        clipboardExtractor.extract(result.snapshot).use { extracted ->
+                            if (currentPasteIntentKey != intendedKey) {
+                                onImageAcquisitionError?.invoke("Image paste was cancelled because the selected item changed.")
+                                return@use
+                            }
+                            onImportMediaFile?.invoke(extracted.file, "image")
+                        }
+                    } catch (failure: BrowserImageDropException) {
+                        onImageAcquisitionError?.invoke(failure.message ?: "Clipboard image import failed.")
+                    }
+                }
+            }
+        }
+    }
     // PLE-020: search field focus requester (passed down to ContentExplorerPane)
     val searchFocusRequester = remember { FocusRequester() }
 
@@ -187,6 +228,16 @@ fun ContentStudioScreen(
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when {
+                    ContentStudioImagePastePolicy.shouldAttempt(
+                        ctrlPressed = event.isCtrlPressed,
+                        isVKey = event.key == Key.V,
+                        editableTextFocused = isEditableTextFocused,
+                        hasDraftContext = uiState.draftEdits != null,
+                        importerAvailable = onImportMediaFile != null
+                    ) -> {
+                        pasteImageFromClipboard()
+                        true
+                    }
                     event.isCtrlPressed && event.key == Key.Z && uiState.canUndoDelete && !uiState.isDirty && !uiState.isCreatingNewItem -> { onUndoDelete?.invoke(); true }
                     event.key == Key.Delete && !uiState.isCreatingNewItem && uiState.selectedContentId != null -> { onRequestDelete?.invoke(); true }
                     event.key == Key.DirectionUp && !event.isCtrlPressed -> { onNavigateUp?.invoke(); true }
@@ -313,7 +364,10 @@ fun ContentStudioScreen(
                 VerticalDivider(color = LEColors.borderSubtle)
 
                 // CENTER: Editor (~56%, Priority)
-                ContentEditorPane(
+                CompositionLocalProvider(
+                    LocalContentStudioEditableFocusReporter provides { focused -> isEditableTextFocused = focused }
+                ) {
+                    ContentEditorPane(
                     modifier = Modifier.weight(0.56f),
                     uiState = uiState,
                     isCreatingNewItem = uiState.isCreatingNewItem,
@@ -333,13 +387,19 @@ fun ContentStudioScreen(
                     onUpdateDraftExampleTranslation = onUpdateDraftExampleTranslation,
                     onUpdateDraftImageRef = onUpdateDraftImageRef,
                     onImportMediaFile = onImportMediaFile,
+                    onQuickPasteImage = if (uiState.draftEdits != null && onImportMediaFile != null) {
+                        pasteImageFromClipboard
+                    } else {
+                        null
+                    },
                     onRequestDelete = onRequestDelete,
                     onConfirmDelete = onConfirmDelete,
                     onDismissDelete = onDismissDelete,
                     onConfirmSaveAndProceed = onConfirmSaveAndProceed,
                     onConfirmDiscardAndProceed = onConfirmDiscardAndProceed,
                     onCancelUnsavedDialog = onCancelUnsavedDialog
-                )
+                    )
+                }
 
                 VerticalDivider(color = LEColors.borderSubtle)
 

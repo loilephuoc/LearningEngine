@@ -1,12 +1,22 @@
 package vn.loi.learning.desktop.ui.studio
 
 import java.io.File
+import java.io.ByteArrayOutputStream
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
+import java.awt.datatransfer.UnsupportedFlavorException
+import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.time.Instant
+import java.util.Base64
+import javax.imageio.ImageIO
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserFacade
@@ -159,7 +169,7 @@ class CentralImageDropTargetTest {
         val (vm, storage, contentId) = createHarness(initialImageRef = null)
 
         val tempImage = File.createTempFile("test_cat", ".jpg").apply {
-            writeBytes(byteArrayOf(1, 2, 3, 4, 5))
+            javax.imageio.ImageIO.write(java.awt.image.BufferedImage(40, 30, java.awt.image.BufferedImage.TYPE_INT_RGB), "jpg", this)
             deleteOnExit()
         }
 
@@ -171,7 +181,7 @@ class CentralImageDropTargetTest {
         assertNotNull(draft)
         val imageRef = draft.imageRef
         assertNotNull(imageRef)
-        assertTrue(imageRef.contains(tempImage.name))
+        assertTrue(imageRef.endsWith(".jpg"))
         assertFalse(state.isDirty, "Existing item must be auto-saved and clean after image drop")
         assertTrue(storage.exists(imageRef), "Imported file must exist in media storage")
         assertEquals(imageRef, state.selectedItemAnywhere?.imageRef, "Canonical item must reflect new imageRef after auto-save")
@@ -185,7 +195,7 @@ class CentralImageDropTargetTest {
         assertEquals("media/old_image.png", initialDraft?.imageRef)
 
         val replacementImage = File.createTempFile("test_dog", ".png").apply {
-            writeBytes(byteArrayOf(9, 8, 7, 6))
+            javax.imageio.ImageIO.write(java.awt.image.BufferedImage(50, 35, java.awt.image.BufferedImage.TYPE_INT_RGB), "png", this)
             deleteOnExit()
         }
 
@@ -198,7 +208,7 @@ class CentralImageDropTargetTest {
         val updatedRef = updatedDraft.imageRef
         assertNotNull(updatedRef)
         assertTrue(updatedRef != "media/old_image.png")
-        assertTrue(updatedRef.contains(replacementImage.name))
+        assertTrue(updatedRef.endsWith(".jpg"))
         assertTrue(storage.exists(updatedRef))
         assertFalse(state.isDirty, "Existing item must be clean after image replace auto-save")
         assertEquals(updatedRef, state.selectedItemAnywhere?.imageRef)
@@ -213,8 +223,8 @@ class CentralImageDropTargetTest {
         vm.updateDraftExampleTranslation("Bản dịch mới chưa lưu")
         vm.updateDraftPartOfSpeech("verb")
 
-        val imageFile = File.createTempFile("preserved_fields", ".webp").apply {
-            writeBytes(byteArrayOf(42, 43))
+        val imageFile = File.createTempFile("preserved_fields", ".png").apply {
+            javax.imageio.ImageIO.write(java.awt.image.BufferedImage(45, 35, java.awt.image.BufferedImage.TYPE_INT_RGB), "png", this)
             deleteOnExit()
         }
 
@@ -226,7 +236,7 @@ class CentralImageDropTargetTest {
         // Image is updated
         val imageRef = draft.imageRef
         assertNotNull(imageRef)
-        assertTrue(imageRef.contains(imageFile.name))
+        assertTrue(imageRef.endsWith(".jpg"))
         // All unsaved text fields remain intact and are persisted together
         assertEquals("New Question Edited", draft.questionText)
         assertEquals("Bản dịch mới chưa lưu", draft.exampleTranslation)
@@ -243,7 +253,7 @@ class CentralImageDropTargetTest {
         vm.startNewItem()
 
         val tempImage = File.createTempFile("new_item_cat", ".jpg").apply {
-            writeBytes(byteArrayOf(1, 2, 3))
+            javax.imageio.ImageIO.write(java.awt.image.BufferedImage(40, 30, java.awt.image.BufferedImage.TYPE_INT_RGB), "jpg", this)
             deleteOnExit()
         }
 
@@ -253,7 +263,7 @@ class CentralImageDropTargetTest {
         assertTrue(state.isCreatingNewItem, "Must still be creating new item")
         assertTrue(state.isDirty, "New item draft must remain dirty")
         assertNotNull(state.draftEdits?.imageRef)
-        assertTrue(state.draftEdits!!.imageRef!!.contains(tempImage.name))
+        assertTrue(state.draftEdits!!.imageRef!!.endsWith(".jpg"))
     }
 
     @Test
@@ -292,4 +302,106 @@ class CentralImageDropTargetTest {
         assertEquals(beforeDraft, vm.packageBrowserUiState!!.draftEdits)
         assertTrue(vm.uiState.importError?.contains("Unknown media slot") == true)
     }
+
+    @Test
+    fun `browser data image uses canonical import and preserves existing unsaved text`() = runBlocking {
+        val (vm, storage, _) = createHarness(initialImageRef = "media/old.png")
+        vm.updateDraftQuestion("Unsaved browser-drop question")
+        val beforeAnswer = vm.packageBrowserUiState!!.draftEdits!!.answerText
+
+        BrowserImageDropExtractor().extractOwnedForCentralTest(browserDataTransferable()).use { extracted ->
+            vm.importDraftMediaFile(extracted.file, "image")
+        }
+
+        val state = vm.packageBrowserUiState!!
+        val imageRef = requireNotNull(state.draftEdits?.imageRef)
+        assertTrue(imageRef.endsWith(".jpg"))
+        assertTrue(storage.exists(imageRef))
+        assertTrue(ImageIO.read(storage.resolve(imageRef)!!.toFile()) != null)
+        assertEquals("Unsaved browser-drop question", state.draftEdits?.questionText)
+        assertEquals(beforeAnswer, state.draftEdits?.answerText)
+        assertEquals(imageRef, state.selectedItemAnywhere?.imageRef)
+        assertFalse(state.isDirty)
+    }
+
+    @Test
+    fun `browser data image keeps a new item unpersisted and acquisition failure is atomic`() = runBlocking {
+        val (vm, _, _) = createHarness(initialImageRef = "media/original.jpg")
+        vm.startNewItem()
+        vm.updateDraftQuestion("New browser item")
+
+        BrowserImageDropExtractor().extractOwnedForCentralTest(browserDataTransferable()).use { extracted ->
+            vm.importDraftMediaFile(extracted.file, "image")
+        }
+        val imported = vm.packageBrowserUiState!!
+        assertTrue(imported.isCreatingNewItem)
+        assertTrue(imported.isDirty)
+        assertEquals("New browser item", imported.draftEdits?.questionText)
+        val importedRef = imported.draftEdits?.imageRef
+
+        assertFailsWith<BrowserImageDropException> {
+            BrowserImageDropExtractor().extractOwnedForCentralTest(TestTransferable(DataFlavor.stringFlavor to "javascript:alert(1)"))
+        }
+        val afterFailure = vm.packageBrowserUiState!!
+        assertEquals(importedRef, afterFailure.draftEdits?.imageRef)
+        assertEquals("New browser item", afterFailure.draftEdits?.questionText)
+        assertTrue(afterFailure.isCreatingNewItem)
+    }
+
+    @Test
+    fun `clipboard image paste preserves unsaved text auto-saves existing item and remains UUID unique`() = runBlocking {
+        val (vm, storage, _) = createHarness(initialImageRef = "media/before-clipboard.jpg")
+        vm.updateDraftQuestion("Clipboard preserved question")
+        val extractor = ClipboardImageExtractor()
+        val refs = (1..12).map {
+            val ready = assertIs<ClipboardImageSnapshotResult.Ready>(extractor.snapshot(browserDataTransferable()))
+            extractor.extract(ready.snapshot).use { extracted ->
+                vm.importDraftMediaFile(extracted.file, "image")
+            }
+            requireNotNull(vm.packageBrowserUiState!!.draftEdits?.imageRef)
+        }
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals(12, refs.toSet().size)
+        assertTrue(refs.all { it.endsWith(".jpg") && storage.exists(it) })
+        assertEquals("Clipboard preserved question", state.draftEdits?.questionText)
+        assertEquals(refs.last(), state.selectedItemAnywhere?.imageRef)
+        assertFalse(state.isDirty)
+    }
+
+    @Test
+    fun `clipboard image paste keeps new item as an unpersisted dirty draft`() = runBlocking {
+        val (vm, _, _) = createHarness()
+        vm.startNewItem()
+        vm.updateDraftQuestion("Clipboard new draft")
+        val extractor = ClipboardImageExtractor()
+        val ready = assertIs<ClipboardImageSnapshotResult.Ready>(extractor.snapshot(browserDataTransferable()))
+        extractor.extract(ready.snapshot).use { vm.importDraftMediaFile(it.file, "image") }
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.isCreatingNewItem)
+        assertTrue(state.isDirty)
+        assertEquals("Clipboard new draft", state.draftEdits?.questionText)
+        assertTrue(state.draftEdits?.imageRef?.endsWith(".jpg") == true)
+    }
+
+    private fun browserDataTransferable(): Transferable {
+        val bytes = ByteArrayOutputStream().use { output ->
+            ImageIO.write(BufferedImage(48, 36, BufferedImage.TYPE_INT_RGB), "png", output)
+            output.toByteArray()
+        }
+        val value = "data:image/png;base64,${Base64.getEncoder().encodeToString(bytes)}"
+        return TestTransferable(DataFlavor("text/html;class=java.lang.String") to "<img src=\"$value\">")
+    }
+
+    private class TestTransferable(vararg entries: Pair<DataFlavor, Any>) : Transferable {
+        private val values = entries.toMap()
+        override fun getTransferDataFlavors(): Array<DataFlavor> = values.keys.toTypedArray()
+        override fun isDataFlavorSupported(flavor: DataFlavor): Boolean = flavor in values
+        override fun getTransferData(flavor: DataFlavor): Any =
+            values[flavor] ?: throw UnsupportedFlavorException(flavor)
+    }
 }
+
+private suspend fun BrowserImageDropExtractor.extractOwnedForCentralTest(transferable: Transferable): ExtractedDroppedImage =
+    extract(snapshot(transferable))

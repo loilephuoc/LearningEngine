@@ -32,6 +32,7 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.Toolkit
 import java.io.File
+import kotlinx.coroutines.launch
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnail
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
@@ -47,20 +48,50 @@ private val AUDIO_EXTS = setOf("mp3", "wav", "aiff")
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun Modifier.fileDropTarget(
+    dropIntentKey: String,
     allowedExtensions: Set<String>,
     rejectedSlotMessage: String,
     onFileDropped: (File) -> Unit,
     onDragOverChanged: (Boolean) -> Unit,
     onError: (String) -> Unit
 ): Modifier {
+    val currentDropIntentKey by rememberUpdatedState(dropIntentKey)
+    val currentOnFileDropped by rememberUpdatedState(onFileDropped)
+    val currentOnDragOverChanged by rememberUpdatedState(onDragOverChanged)
+    val currentOnError by rememberUpdatedState(onError)
+    val coroutineScope = rememberCoroutineScope()
+    val imageExtractor = remember { BrowserImageDropExtractor() }
     val target = remember(allowedExtensions) {
         object : DragAndDropTarget {
-            override fun onStarted(event: DragAndDropEvent) { onDragOverChanged(true) }
-            override fun onEntered(event: DragAndDropEvent) { onDragOverChanged(true) }
-            override fun onExited(event: DragAndDropEvent) { onDragOverChanged(false) }
-            override fun onEnded(event: DragAndDropEvent) { onDragOverChanged(false) }
+            override fun onStarted(event: DragAndDropEvent) { currentOnDragOverChanged(true) }
+            override fun onEntered(event: DragAndDropEvent) { currentOnDragOverChanged(true) }
+            override fun onExited(event: DragAndDropEvent) { currentOnDragOverChanged(false) }
+            override fun onEnded(event: DragAndDropEvent) { currentOnDragOverChanged(false) }
             override fun onDrop(event: DragAndDropEvent): Boolean {
-                onDragOverChanged(false)
+                currentOnDragOverChanged(false)
+                if (allowedExtensions == IMAGE_EXTS) {
+                    val intendedKey = currentDropIntentKey
+                    val snapshot = try {
+                        imageExtractor.snapshot(event.awtTransferable)
+                    } catch (failure: BrowserImageDropException) {
+                        currentOnError(failure.message ?: "Could not read image from browser drag.")
+                        return false
+                    }
+                    coroutineScope.launch {
+                        try {
+                            imageExtractor.extract(snapshot).use { extracted ->
+                                if (currentDropIntentKey != intendedKey) {
+                                    currentOnError("Image import was cancelled because the selected item changed.")
+                                    return@use
+                                }
+                                currentOnFileDropped(extracted.file)
+                            }
+                        } catch (failure: BrowserImageDropException) {
+                            currentOnError(failure.message ?: "Could not read image from browser drag.")
+                        }
+                    }
+                    return true
+                }
                 return try {
                     val transferable = event.awtTransferable
                     val files = DragDropUtils.extractFiles(transferable)
@@ -68,10 +99,10 @@ private fun Modifier.fileDropTarget(
                     if (file != null && file.exists() && file.isFile) {
                         val ext = file.extension.lowercase()
                         if (ext in allowedExtensions) {
-                            onFileDropped(file)
+                            currentOnFileDropped(file)
                             true
                         } else {
-                            onError(if (ext in (DragDropUtils.IMAGE_EXTENSIONS + DragDropUtils.AUDIO_EXTENSIONS)) rejectedSlotMessage else "Unsupported file type: .$ext")
+                            currentOnError(if (ext in (DragDropUtils.IMAGE_EXTENSIONS + DragDropUtils.AUDIO_EXTENSIONS)) rejectedSlotMessage else "Unsupported file type: .$ext")
                             false
                         }
                     } else false
@@ -142,6 +173,7 @@ fun MediaInspectorPane(
 
             // Image Asset Card (PLE-020: larger preview + real drag & drop)
             ImageAssetCard(
+                dropIntentKey = "${uiState.installedPackageId.value}|${uiState.editingContentId}|${uiState.isCreatingNewItem}",
                 imageRef = currentImageRef,
                 thumbnailLoader = thumbnailLoader,
                 onImportMediaFile = onImportMediaFile,
@@ -281,6 +313,7 @@ fun MediaInspectorPane(
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun ImageAssetCard(
+    dropIntentKey: String,
     imageRef: String?,
     thumbnailLoader: LessonThumbnailLoader,
     onImportMediaFile: ((File, String) -> Unit)?,
@@ -325,6 +358,7 @@ private fun ImageAssetCard(
             .fillMaxWidth()
             .border(1.dp, borderColor.copy(alpha = borderAlpha), LERadius.sm)
             .fileDropTarget(
+                dropIntentKey = dropIntentKey,
                 allowedExtensions = IMAGE_EXTS,
                 rejectedSlotMessage = "Audio file dropped on image slot. Use an audio slot instead.",
                 onFileDropped = { file ->
@@ -523,6 +557,7 @@ private fun ImageAssetCard(
                         )
                         .border(1.dp, borderColor.copy(alpha = borderAlpha), LERadius.sm)
                         .fileDropTarget(
+                            dropIntentKey = dropIntentKey,
                             allowedExtensions = IMAGE_EXTS,
                             rejectedSlotMessage = "Audio file dropped on image slot. Use an audio slot instead.",
                             onFileDropped = { file ->
@@ -633,6 +668,7 @@ private fun AudioAssetSlotCard(
             .fillMaxWidth()
             .border(1.dp, borderColor.copy(alpha = borderAlpha), LERadius.sm)
             .fileDropTarget(
+                dropIntentKey = slotName,
                 allowedExtensions = AUDIO_EXTS,
                 rejectedSlotMessage = "Image dropped on audio slot. Use the Image card instead.",
                 onFileDropped = { file ->
@@ -763,6 +799,7 @@ private fun AudioAssetSlotCard(
                         )
                         .border(1.dp, borderColor.copy(alpha = borderAlpha), LERadius.sm)
                         .fileDropTarget(
+                            dropIntentKey = slotName,
                             allowedExtensions = AUDIO_EXTS,
                             rejectedSlotMessage = "Image dropped on audio slot. Use the Image card instead.",
                             onFileDropped = { file ->

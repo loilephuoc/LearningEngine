@@ -43,3 +43,8 @@
 -keep class vn.loi.learning.desktop.ui.statistics.StatisticsFacade {
     *;
 }
+
+# SQLite JDBC / SQLDelight
+-keep class org.sqlite.** { *; }
+-keep class app.cash.sqldelight.** { *; }
+-keep class vn.loi.learning.infrastructure.persistence.sqlite.** { *; }
