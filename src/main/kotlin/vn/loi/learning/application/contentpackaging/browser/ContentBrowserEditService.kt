@@ -51,7 +51,8 @@ class ContentBrowserEditService(
     private val mediaStorage: ContentMediaStorage? = null,
     private val localSyncStateRepository: LocalSyncStateRepository? = null,
     private val syncAccountProvider: (() -> SyncAccountId?)? = null,
-    private val syncDeviceIdProvider: (() -> SyncDeviceId)? = null
+    private val syncDeviceIdProvider: (() -> SyncDeviceId)? = null,
+    private val imageOptimizer: vn.loi.learning.application.contentmedia.ContentImageOptimizer = vn.loi.learning.application.contentmedia.ContentImageOptimizer()
 ) {
 
     /**
@@ -67,8 +68,14 @@ class ContentBrowserEditService(
         val validExts = setOf("png", "jpg", "jpeg", "webp", "mp3", "wav", "aiff")
         require(ext in validExts) { "Unsupported media file extension: .$ext" }
 
-        val bytes = sourceFile.readBytes()
-        val uniqueName = "${UUID.randomUUID().toString().take(8)}_${sourceFile.name}"
+        val isImage = ext in setOf("png", "jpg", "jpeg", "webp")
+        val optimized = if (isImage) imageOptimizer.optimize(sourceFile) else null
+        val bytes = optimized?.bytes ?: sourceFile.readBytes()
+        val uniqueName = if (optimized != null) {
+            "${UUID.randomUUID().toString().take(8)}_${sourceFile.nameWithoutExtension}.${optimized.extension}"
+        } else {
+            "${UUID.randomUUID().toString().take(8)}_${sourceFile.name}"
+        }
         val asset = mediaStorage.store(packageName, uniqueName, bytes)
         return asset.relativePath
     }

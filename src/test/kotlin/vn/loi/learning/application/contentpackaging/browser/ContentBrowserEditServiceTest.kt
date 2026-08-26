@@ -519,11 +519,15 @@ class ContentBrowserEditServiceTest {
     }
 
     @Test
-    fun `importMediaAsset generates unique file name with original name suffix`() {
+    fun `importMediaAsset stores a real image as canonical JPEG`() {
         val (appContext, _) = createFixture(contentCount = 1)
         val tempFile = java.io.File.createTempFile("test_source_", ".jpg")
         try {
-            tempFile.writeBytes("dummy-bytes".toByteArray())
+            javax.imageio.ImageIO.write(
+                java.awt.image.BufferedImage(80, 60, java.awt.image.BufferedImage.TYPE_INT_RGB),
+                "jpg",
+                tempFile
+            )
             val tempDir = java.nio.file.Files.createTempDirectory("media_storage_test")
             try {
                 val mediaStorage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(tempDir)
@@ -533,6 +537,7 @@ class ContentBrowserEditServiceTest {
                 assertTrue(relativePath.startsWith("TestPkg/"))
                 assertTrue(relativePath.endsWith(".jpg"))
                 assertFalse(relativePath.contains("no_image.jpg"))
+                assertNotNull(javax.imageio.ImageIO.read(mediaStorage.resolve(relativePath)!!.toFile()))
             } finally {
                 tempDir.toFile().deleteRecursively()
             }
