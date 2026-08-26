@@ -1097,9 +1097,8 @@ private fun CalendarScreenView(
 }
 
 @Composable
-fun familyLunarDateColor(isCurrentMonth: Boolean = true): Color {
-    val isDark = isSystemInDarkTheme()
-    val base = if (isDark) Color(0xFFFFB74D) else Color(0xFFD84315)
+fun familyLunarDateTone(isCurrentMonth: Boolean = true): Color {
+    val base = vn.loi.learning.android.ui.LearningEngineThemeTokens.semanticColors.streak
     return if (isCurrentMonth) base else base.copy(alpha = 0.38f)
 }
 
@@ -1237,7 +1236,7 @@ private fun MonthCalendarView(
                                     style = MaterialTheme.typography.labelSmall,
                                     fontSize = 9.5.sp,
                                     fontWeight = if (lunar.day == 1 || lunar.day == 15) FontWeight.Bold else FontWeight.Medium,
-                                    color = familyLunarDateColor(isCurrentMonth)
+                                    color = familyLunarDateTone(isCurrentMonth)
                                 )
                                 // Bounded markers row (max 3 prominent dots + "+N" overflow indicator)
                                 Row(
@@ -1256,9 +1255,9 @@ private fun MonthCalendarView(
                                                     .background(
                                                         color = when (occ.sourceType) {
                                                             CalendarItemType.BIRTHDAY -> MaterialTheme.colorScheme.primary
-                                                            CalendarItemType.EVENT -> Color(0xFFF57C00)
+                                                            CalendarItemType.EVENT -> vn.loi.learning.android.ui.LearningEngineThemeTokens.semanticColors.warning
                                                             CalendarItemType.TASK_DUE -> if (occ.completed) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.error
-                                                            CalendarItemType.TASK_COMPLETION -> Color(0xFF2E7D32)
+                                                            CalendarItemType.TASK_COMPLETION -> vn.loi.learning.android.ui.LearningEngineThemeTokens.semanticColors.success
                                                         },
                                                         shape = RoundedCornerShape(3.dp)
                                                     )
@@ -1337,7 +1336,7 @@ private fun MonthCalendarView(
                         "${selectedLunar.day}/${selectedLunar.month} âm lịch",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = familyLunarDateColor(true)
+                        color = familyLunarDateTone(true)
                     )
                 }
                 Text(
@@ -1432,7 +1431,7 @@ private fun WeekCalendarView(
                                 "${lunar.day}/${lunar.month} âm",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold,
-                                color = familyLunarDateColor(true)
+                                color = familyLunarDateTone(true)
                             )
                         }
 
@@ -1526,7 +1525,7 @@ private fun AgendaListCalendarView(
                             "${lunar.day}/${lunar.month} âm",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = familyLunarDateColor(true)
+                            color = familyLunarDateTone(true)
                         )
                     }
                 }

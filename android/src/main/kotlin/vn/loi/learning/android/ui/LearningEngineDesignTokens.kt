@@ -99,6 +99,20 @@ object StudySwipeFeedbackColors {
     val quickReviewHeadwordForeground = Color(0xFF000000)
 }
 
+object FamilyWidgetColors {
+    val taskOverdue = Color(0xFFD32F2F)
+    val birthday = Color(0xFF1976D2)
+    val event = Color(0xFFD84315)
+    val taskDueToday = Color(0xFF1976D2)
+    val taskUpcoming = Color(0xFF5F6368)
+
+    val solarSunday = Color(0xFFD32F2F)
+    val solarNormal = Color(0xFF1C1B1F)
+    val lunarCurrentMonth = Color(0xFFD84315)
+    val solarOtherMonth = Color(0xFFBDBDBD)
+    val lunarOtherMonth = Color(0xFFFFCCBC)
+}
+
 val LearningEngineTypography = Typography(
     displayLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = 48.sp, lineHeight = 56.sp),
     headlineLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = 32.sp, lineHeight = 40.sp),

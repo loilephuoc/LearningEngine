@@ -332,7 +332,7 @@ internal fun FamilyLegacyImportPreviewScreen(
                                 style =
                                     MaterialTheme.typography.labelMedium,
                                 color =
-                                    statusColor(
+                                    resolveStatusTone(
                                         candidate.status
                                     )
                             )
@@ -811,7 +811,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope
 }
 
 @Composable
-private fun statusColor(
+private fun resolveStatusTone(
     status: LegacyDuplicateStatus
 ) = when (status) {
     LegacyDuplicateStatus.NEW ->

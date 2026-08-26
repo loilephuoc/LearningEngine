@@ -4,7 +4,7 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
@@ -18,6 +18,7 @@ import vn.loi.learning.android.family.AstronomicalVietnameseLunarCalendar
 import vn.loi.learning.android.family.CalendarProjectionService
 import vn.loi.learning.android.family.FamilyLocalSnapshot
 import vn.loi.learning.android.family.FamilyNotificationPublisher
+import vn.loi.learning.android.ui.FamilyWidgetColors
 
 object FamilyAppWidgetRenderer {
 
@@ -122,14 +123,8 @@ object FamilyAppWidgetRenderer {
             views.setTextViewText(R.id.widget_item_1_title, topItem.title)
             views.setTextViewText(R.id.widget_item_1_badge, topItem.badgeText)
 
-            val badgeColor = when (topItem.semantic) {
-                FamilyWidgetItemSemantic.TASK_OVERDUE -> Color.parseColor("#D32F2F")
-                FamilyWidgetItemSemantic.BIRTHDAY -> Color.parseColor("#1976D2")
-                FamilyWidgetItemSemantic.EVENT -> Color.parseColor("#D84315")
-                FamilyWidgetItemSemantic.TASK_DUE_TODAY -> Color.parseColor("#1976D2")
-                FamilyWidgetItemSemantic.TASK_UPCOMING -> Color.parseColor("#5F6368")
-            }
-            views.setTextColor(R.id.widget_item_1_badge, badgeColor)
+            val badgeTint = resolveBadgeTint(topItem.semantic)
+            views.setInt(R.id.widget_item_1_badge, "setTextColor", badgeTint)
 
             val itemPendingIntent = createOpenFamilyIntent(context, topItem.date, 101)
             views.setOnClickPendingIntent(R.id.widget_item_1, itemPendingIntent)
@@ -179,14 +174,8 @@ object FamilyAppWidgetRenderer {
                     views.setTextViewText(titleId, item.title)
                     views.setTextViewText(badgeId, item.badgeText)
 
-                    val badgeColor = when (item.semantic) {
-                        FamilyWidgetItemSemantic.TASK_OVERDUE -> Color.parseColor("#D32F2F")
-                        FamilyWidgetItemSemantic.BIRTHDAY -> Color.parseColor("#1976D2")
-                        FamilyWidgetItemSemantic.EVENT -> Color.parseColor("#D84315")
-                        FamilyWidgetItemSemantic.TASK_DUE_TODAY -> Color.parseColor("#1976D2")
-                        FamilyWidgetItemSemantic.TASK_UPCOMING -> Color.parseColor("#5F6368")
-                    }
-                    views.setTextColor(badgeId, badgeColor)
+                    val badgeTint = resolveBadgeTint(item.semantic)
+                    views.setInt(badgeId, "setTextColor", badgeTint)
 
                     val itemPendingIntent = createOpenFamilyIntent(context, item.date, 201 + i)
                     views.setOnClickPendingIntent(layoutId, itemPendingIntent)
@@ -254,14 +243,8 @@ object FamilyAppWidgetRenderer {
                     views.setTextViewText(titleId, item.title)
                     views.setTextViewText(badgeId, item.badgeText)
 
-                    val badgeColor = when (item.semantic) {
-                        FamilyWidgetItemSemantic.TASK_OVERDUE -> Color.parseColor("#D32F2F")
-                        FamilyWidgetItemSemantic.BIRTHDAY -> Color.parseColor("#1976D2")
-                        FamilyWidgetItemSemantic.EVENT -> Color.parseColor("#D84315")
-                        FamilyWidgetItemSemantic.TASK_DUE_TODAY -> Color.parseColor("#1976D2")
-                        FamilyWidgetItemSemantic.TASK_UPCOMING -> Color.parseColor("#5F6368")
-                    }
-                    views.setTextColor(badgeId, badgeColor)
+                    val badgeTint = resolveBadgeTint(item.semantic)
+                    views.setInt(badgeId, "setTextColor", badgeTint)
 
                     val itemPendingIntent = createOpenFamilyIntent(context, item.date, 301 + i)
                     views.setOnClickPendingIntent(layoutId, itemPendingIntent)
@@ -295,14 +278,8 @@ object FamilyAppWidgetRenderer {
                     views.setTextViewText(titleId, item.title)
                     views.setTextViewText(badgeId, item.badgeText)
 
-                    val badgeColor = when (item.semantic) {
-                        FamilyWidgetItemSemantic.TASK_OVERDUE -> Color.parseColor("#D32F2F")
-                        FamilyWidgetItemSemantic.BIRTHDAY -> Color.parseColor("#1976D2")
-                        FamilyWidgetItemSemantic.EVENT -> Color.parseColor("#D84315")
-                        FamilyWidgetItemSemantic.TASK_DUE_TODAY -> Color.parseColor("#1976D2")
-                        FamilyWidgetItemSemantic.TASK_UPCOMING -> Color.parseColor("#5F6368")
-                    }
-                    views.setTextColor(badgeId, badgeColor)
+                    val badgeTint = resolveBadgeTint(item.semantic)
+                    views.setInt(badgeId, "setTextColor", badgeTint)
 
                     val itemPendingIntent = createOpenFamilyIntent(context, item.date, 311 + i)
                     views.setOnClickPendingIntent(layoutId, itemPendingIntent)
@@ -313,5 +290,13 @@ object FamilyAppWidgetRenderer {
         }
 
         return views
+    }
+
+    private fun resolveBadgeTint(semantic: FamilyWidgetItemSemantic): Int = when (semantic) {
+        FamilyWidgetItemSemantic.TASK_OVERDUE -> FamilyWidgetColors.taskOverdue.toArgb()
+        FamilyWidgetItemSemantic.BIRTHDAY -> FamilyWidgetColors.birthday.toArgb()
+        FamilyWidgetItemSemantic.EVENT -> FamilyWidgetColors.event.toArgb()
+        FamilyWidgetItemSemantic.TASK_DUE_TODAY -> FamilyWidgetColors.taskDueToday.toArgb()
+        FamilyWidgetItemSemantic.TASK_UPCOMING -> FamilyWidgetColors.taskUpcoming.toArgb()
     }
 }

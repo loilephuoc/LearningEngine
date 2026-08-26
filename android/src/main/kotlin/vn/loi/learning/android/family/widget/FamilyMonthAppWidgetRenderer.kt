@@ -4,7 +4,7 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
@@ -17,6 +17,7 @@ import vn.loi.learning.android.family.AstronomicalVietnameseLunarCalendar
 import vn.loi.learning.android.family.CalendarProjectionService
 import vn.loi.learning.android.family.FamilyLocalSnapshot
 import vn.loi.learning.android.family.FamilyNotificationPublisher
+import vn.loi.learning.android.ui.FamilyWidgetColors
 
 object FamilyMonthAppWidgetRenderer {
 
@@ -150,12 +151,12 @@ object FamilyMonthAppWidgetRenderer {
 
                 if (cell.isCurrentMonth) {
                     val isSunday = (i % 7 == 6)
-                    val solarColor = if (isSunday) Color.parseColor("#D32F2F") else Color.parseColor("#1C1B1F")
-                    views.setTextColor(solarId, solarColor)
-                    views.setTextColor(lunarId, Color.parseColor("#D84315"))
+                    val solarTint = if (isSunday) FamilyWidgetColors.solarSunday.toArgb() else FamilyWidgetColors.solarNormal.toArgb()
+                    views.setInt(solarId, "setTextColor", solarTint)
+                    views.setInt(lunarId, "setTextColor", FamilyWidgetColors.lunarCurrentMonth.toArgb())
                 } else {
-                    views.setTextColor(solarId, Color.parseColor("#BDBDBD"))
-                    views.setTextColor(lunarId, Color.parseColor("#FFCCBC"))
+                    views.setInt(solarId, "setTextColor", FamilyWidgetColors.solarOtherMonth.toArgb())
+                    views.setInt(lunarId, "setTextColor", FamilyWidgetColors.lunarOtherMonth.toArgb())
                 }
 
                 when {
@@ -173,12 +174,12 @@ object FamilyMonthAppWidgetRenderer {
                 if (cell.isOccupied && cell.isCurrentMonth && cell.markerText.isNotEmpty()) {
                     views.setViewVisibility(markerId, View.VISIBLE)
                     views.setTextViewText(markerId, cell.markerText)
-                    val markerColor = when {
-                        cell.hasBirthday -> Color.parseColor("#1976D2")
-                        cell.hasEvent -> Color.parseColor("#D84315")
-                        else -> Color.parseColor("#D32F2F")
+                    val markerTint = when {
+                        cell.hasBirthday -> FamilyWidgetColors.birthday.toArgb()
+                        cell.hasEvent -> FamilyWidgetColors.event.toArgb()
+                        else -> FamilyWidgetColors.taskOverdue.toArgb()
                     }
-                    views.setTextColor(markerId, markerColor)
+                    views.setInt(markerId, "setTextColor", markerTint)
                 } else {
                     views.setViewVisibility(markerId, View.GONE)
                 }
