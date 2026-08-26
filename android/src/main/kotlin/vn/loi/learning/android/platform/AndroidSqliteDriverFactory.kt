@@ -23,13 +23,7 @@ class AndroidSqliteDriverFactory(
                 override fun onConfigure(db: SupportSQLiteDatabase) {
                     super.onConfigure(db)
                     db.setForeignKeyConstraintsEnabled(true)
-                }
-
-                override fun onOpen(db: SupportSQLiteDatabase) {
-                    super.onOpen(db)
                     db.enableWriteAheadLogging()
-                    db.execSQL("PRAGMA synchronous = NORMAL;")
-                    db.execSQL("PRAGMA busy_timeout = 5000;")
                 }
             }
         )
