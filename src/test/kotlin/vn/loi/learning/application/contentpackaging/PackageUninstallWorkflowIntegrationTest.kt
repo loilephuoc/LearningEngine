@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.application.contentpackaging
+package vn.loi.learning.application.contentpackaging
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -494,49 +494,16 @@ class PackageUninstallWorkflowIntegrationTest {
 
     private fun createRepositories(
         directory: Path
-    ): Repositories =
-        Repositories(
-            libraryRepository =
-                StoreBackedContentLibraryRepository(
-                    JsonContentLibraryStore(
-                        directory.resolve(
-                            "content-libraries.json"
-                        )
-                    )
-                ),
-            contentRepository =
-                StoreBackedContentRepository(
-                    JsonContentStore(
-                        directory.resolve(
-                            "contents.json"
-                        )
-                    )
-                ),
-            learningItemRepository =
-                StoreBackedLearningItemRepository(
-                    JsonLearningItemStore(
-                        directory.resolve(
-                            "learning-items.json"
-                        )
-                    )
-                ),
-            packageRepository =
-                StoreBackedContentPackageRepository(
-                    JsonContentPackageStore(
-                        directory.resolve(
-                            "content-packages.json"
-                        )
-                    )
-                ),
-            catalogRepository =
-                StoreBackedPackageCatalogRepository(
-                    JsonPackageCatalogStore(
-                        directory.resolve(
-                            "package-catalogs.json"
-                        )
-                    )
-                )
+    ): Repositories {
+        val app = vn.loi.learning.infrastructure.LearningApplicationFactory.createPersisted(directory, false)
+        return Repositories(
+            libraryRepository = app.contentLibraryRepository!!,
+            contentRepository = app.contentRepository!!,
+            learningItemRepository = app.learningItemRepository!!,
+            packageRepository = app.contentPackageRepository!!,
+            catalogRepository = app.packageCatalog!!
         )
+    }
 
     private fun createContent(
         id: ContentId,
@@ -589,10 +556,10 @@ class PackageUninstallWorkflowIntegrationTest {
         )
 
     private data class Repositories(
-        val libraryRepository: StoreBackedContentLibraryRepository,
-        val contentRepository: StoreBackedContentRepository,
-        val learningItemRepository: StoreBackedLearningItemRepository,
-        val packageRepository: StoreBackedContentPackageRepository,
-        val catalogRepository: StoreBackedPackageCatalogRepository
+        val libraryRepository: vn.loi.learning.application.port.ContentLibraryRepository,
+        val contentRepository: vn.loi.learning.application.port.ContentRepository,
+        val learningItemRepository: vn.loi.learning.application.port.LearningItemRepository,
+        val packageRepository: vn.loi.learning.application.port.ContentPackageRepository,
+        val catalogRepository: vn.loi.learning.application.port.PackageCatalogRepository
     )
 }

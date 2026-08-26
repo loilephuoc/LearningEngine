@@ -41,10 +41,42 @@ class StoreBackedLearningItemRepository(
         contentIds: Set<ContentId>
     ): List<LearningItem> {
         if (contentIds.isEmpty()) return emptyList()
-        val strIds = contentIds.mapTo(hashSetOf()) { it.value }
+
+        val strIds =
+            contentIds.mapTo(hashSetOf()) {
+                it.value
+            }
+
         return store.loadAll()
-            .filter { record -> record.contentId in strIds }
-            .map(LearningItemRecordMapper::toDomain)
+            .filter { record ->
+                record.contentId in strIds
+            }
+            .map(
+                LearningItemRecordMapper::toDomain
+            )
+    }
+
+    override fun findContentIdsByLearningItemIds(
+        learningItemIds: Set<LearningItemId>
+    ): Map<LearningItemId, ContentId> {
+        if (learningItemIds.isEmpty()) {
+            return emptyMap()
+        }
+
+        val ids =
+            learningItemIds.mapTo(hashSetOf()) {
+                it.value
+            }
+
+        return store.loadAll()
+            .asSequence()
+            .filter { record ->
+                record.id in ids
+            }
+            .associate { record ->
+                LearningItemId(record.id) to
+                    ContentId(record.contentId)
+            }
     }
 
     override fun findAllEnabled(): List<LearningItem> =
@@ -118,7 +150,12 @@ class StoreBackedLearningItemRepository(
         if (learningItemIds.isEmpty()) {
             return
         }
-        val ids = learningItemIds.mapTo(hashSetOf()) { it.value }
+
+        val ids =
+            learningItemIds.mapTo(hashSetOf()) {
+                it.value
+            }
+
         val existingRecords =
             store.loadAll()
 

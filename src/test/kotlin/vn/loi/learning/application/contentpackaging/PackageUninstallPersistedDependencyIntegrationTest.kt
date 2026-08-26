@@ -489,25 +489,13 @@ class PackageUninstallPersistedDependencyIntegrationTest {
 
     private fun createRepositories(
         directory: Path
-    ): Repositories =
-        Repositories(
-            packageRepository =
-                StoreBackedContentPackageRepository(
-                    JsonContentPackageStore(
-                        directory.resolve(
-                            "content-packages.json"
-                        )
-                    )
-                ),
-            catalogRepository =
-                StoreBackedPackageCatalogRepository(
-                    JsonPackageCatalogStore(
-                        directory.resolve(
-                            "package-catalogs.json"
-                        )
-                    )
-                )
+    ): Repositories {
+        val app = vn.loi.learning.infrastructure.LearningApplicationFactory.createPersisted(directory, false)
+        return Repositories(
+            packageRepository = app.contentPackageRepository!!,
+            catalogRepository = app.packageCatalog!!
         )
+    }
 
     private fun createPackage(
         id: PackageId,
@@ -533,9 +521,7 @@ class PackageUninstallPersistedDependencyIntegrationTest {
         )
 
     private data class Repositories(
-        val packageRepository:
-        StoreBackedContentPackageRepository,
-        val catalogRepository:
-        StoreBackedPackageCatalogRepository
+        val packageRepository: vn.loi.learning.application.port.ContentPackageRepository,
+        val catalogRepository: vn.loi.learning.application.port.PackageCatalogRepository
     )
 }
