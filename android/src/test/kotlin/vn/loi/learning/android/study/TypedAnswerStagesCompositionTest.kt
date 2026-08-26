@@ -6,11 +6,13 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import vn.loi.learning.domain.study.recall.RecallOutcome
 
 class TypedAnswerStagesCompositionTest {
     @Test
     fun `Listening autoplay and manual replay are plan keyed and never loop`() {
-        val autoplay = screen.substringAfter("state is AndroidStudyState.Listening").substringBefore("LaunchedEffect(")
+        val autoplay = screen.substringAfter("LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen) {\n        if (state is AndroidStudyState.Listening")
+            .substringBefore("LaunchedEffect(")
         assertTrue(autoplay.contains("restartAudio(AudioRole.PROMPT, state.resolvedPromptAudio, false)"))
         val listening = modes
             .substringAfter("internal fun ListeningStudyStage(").substringBefore("private fun TypedAnswerStageFrame(")
@@ -91,6 +93,107 @@ class TypedAnswerStagesCompositionTest {
     }
 
     @Test
+    fun `Listening result owns one bounded vertical scroll without changing other mode hosts`() {
+        val runtimeHost = screen.substringAfter("modifier = (when (state) {")
+            .substringBefore("}).reviewNavigationGestures(")
+        val listening = modes.substringAfter("internal fun ListeningStudyStage(")
+            .substringBefore("internal fun TypedAnswerStageFrame(")
+        val frame = modes.substringAfter("internal fun TypedAnswerStageFrame(")
+            .substringBefore("internal fun Modifier.typingRevealedGestures(")
+
+        assertTrue(runtimeHost.contains("is AndroidStudyState.Listening,"))
+        assertFalse(runtimeHost.substringBefore("else ->").contains("verticalScroll("))
+        assertTrue(listening.contains("fillViewport = feedbackVisible"))
+        assertEquals(0, Regex("verticalScroll\\(").findAll(listening).count())
+        assertEquals(1, Regex("verticalScroll\\(").findAll(frame).count())
+        assertTrue(frame.contains("if (fillViewport) modifier.fillMaxSize()"))
+
+        assertTrue(runtimeHost.contains("is AndroidStudyState.Typing,"))
+        assertTrue(runtimeHost.contains("else -> Modifier.fillMaxWidth().verticalScroll(scrollState)"))
+        assertTrue(runtimeHost.contains("is AndroidStudyState.ImageRecall -> Modifier.fillMaxWidth().weight(1f)"))
+        assertFalse(runtimeHost.contains("is AndroidStudyState.MultipleChoice"))
+    }
+
+    @Test
+    fun `Listening correct waits for compact success render and advances from one owner`() {
+        val listening = modes.substringAfter("internal fun ListeningStudyStage(")
+            .substringBefore("internal fun TypedAnswerStageFrame(")
+        val successAdvance = screen.substringAfter("listeningCompactSuccessRendered\n    ) {")
+            .substringBefore("LaunchedEffect(itemKey, audioOwnerToken")
+
+        assertFalse(shouldStartListeningSuccessAutoAdvance(true, RecallOutcome.CORRECT, false))
+        assertTrue(shouldStartListeningSuccessAutoAdvance(true, RecallOutcome.CORRECT, true))
+        assertFalse(shouldStartListeningSuccessAutoAdvance(false, RecallOutcome.CORRECT, true))
+        assertFalse(shouldStartListeningSuccessAutoAdvance(true, RecallOutcome.INCORRECT, true))
+        assertTrue(listening.contains("onRendered = onCompactSuccessRendered"))
+        assertTrue(modes.contains("SideEffect(onRendered)"))
+        assertTrue(successAdvance.contains("withFrameNanos { }"))
+        assertTrue(successAdvance.contains("AndroidTypingSuccessPresentationPolicy.minimumDwellMillis"))
+        assertEquals(1, Regex("onEvent\\(AndroidStudyEvent\\.NextVisited\\)").findAll(successAdvance).count())
+        assertFalse(successAdvance.contains("ImageRecallStudyStage"))
+    }
+
+    @Test
+    fun `Listening wrong reveal splits legacy examples and keeps audio roles independent`() {
+        val reveal = screen.substringAfter("private fun StudyRevealAndFeedbackContent(")
+            .substringBefore("private fun Completion(")
+        val listeningPair = resolveRevealExamplePair(
+            "Air pollution causes health problems.\nÔ nhiễm không khí gây ra các vấn đề sức khỏe.",
+            null
+        )
+
+        assertEquals("Air pollution causes health problems.", listeningPair.english)
+        assertEquals("Ô nhiễm không khí gây ra các vấn đề sức khỏe.", listeningPair.vietnamese)
+        assertTrue(reveal.contains("if (listeningWrongReveal ||"))
+        assertTrue(reveal.contains("resolveRevealExamplePair("))
+        assertTrue(reveal.contains("englishExample = revealExamplePair.english"))
+        assertTrue(reveal.contains("vietnameseExample = revealExamplePair.vietnamese"))
+        assertTrue(reveal.contains("AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio"))
+        assertTrue(reveal.contains("AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio"))
+        assertTrue(reveal.contains("englishExampleSectionLabel = null"))
+        assertTrue(reveal.contains("vietnameseExampleSectionLabel = null"))
+        val sharedAnswerContract = answerSection.substringAfter("internal fun StudyAnswerSection(")
+            .substringBefore("private fun StudyExampleSurface(")
+        assertEquals(2, Regex("StudyExampleSurface\\(").findAll(sharedAnswerContract).count())
+
+        val compactSuccess = modes.substringAfter(
+            "if (state.completionPending && state.outcome == RecallOutcome.CORRECT && !state.revealed)"
+        ).substringBefore("} else if")
+        assertTrue(compactSuccess.contains("TypedCompactSuccess("))
+        assertTrue(modes.contains("englishExample = null"))
+        assertTrue(modes.contains("vietnameseExample = null"))
+    }
+
+    @Test
+    fun `Image Recall reuses automatic compact success reveal and bounded scroll contracts`() {
+        val image = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/android/study/modes/ImageRecallStage.kt")
+        )
+        val imageSuccess = image.substringAfter(
+            "if (state.completionPending && state.outcome == RecallOutcome.CORRECT && !state.revealed)"
+        ).substringBefore("if (state.completed || state.revealed)")
+        val imageAdvance = screen.substringAfter(
+            "(state as? AndroidStudyState.ImageRecall)?.completionPending"
+        ).substringBefore("(state as? AndroidStudyState.Listening)?.completionPending")
+
+        assertTrue(imageSuccess.contains("TypedCompactSuccess("))
+        val sharedCompact = modes.substringAfter("internal fun TypedCompactSuccess(")
+            .substringBefore("internal fun TypingStudyStage(")
+        assertTrue(sharedCompact.contains("SideEffect(onRendered)"))
+        assertTrue(sharedCompact.contains("StudyMedia("))
+        assertTrue(sharedCompact.contains("StudyAnswerSection("))
+        assertTrue(sharedCompact.contains("englishExample = null"))
+        assertTrue(sharedCompact.contains("resolveTypingRatingTransition("))
+        assertTrue(imageAdvance.contains("imageRecallCompactSuccessRendered"))
+        assertTrue(imageAdvance.contains("AndroidTypingSuccessPresentationPolicy.minimumDwellMillis"))
+        assertEquals(1, Regex("onEvent\\(AndroidStudyEvent\\.NextVisited\\)").findAll(imageAdvance).count())
+        assertFalse(image.contains("delay(420)"))
+        assertTrue(screen.contains("imageRecallWrongReveal"))
+        assertTrue(screen.contains("AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio"))
+        assertTrue(screen.contains("AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio"))
+    }
+
+    @Test
     fun `StudyScreen delegates typed mode presentation`() {
         assertTrue(screen.contains("TypingStudyStage("))
         assertTrue(screen.contains("ListeningStudyStage("))
@@ -115,20 +218,16 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(genericFeedback.contains("is AndroidStudyState.ExampleCompletion -> true"))
         assertFalse(genericFeedback.contains("is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true"))
         assertFalse(activeTyping.contains("TypingDifferenceComparison("))
-        val frontTyping = activeTyping.substringAfter("} else {\n        if (!feedbackVisible)")
+        val frontTyping = activeTyping.substringAfter("} else {").substringAfter("if (!feedbackVisible)")
         assertFalse(frontTyping.substringBefore("feedbackContent()").contains("answerContract.canonicalAnswer"))
         assertTrue(typing.contains("StudyRatingBar("))
         assertTrue(typing.contains("selectedRating = state.manualRating"))
         assertTrue(typing.contains("TypingInputActions("))
         assertTrue(typing.contains("modifier = Modifier.bringIntoViewRequester(stableActionsRequester)"))
         assertFalse(typing.contains("stableActionsRequester.bringIntoView()"))
-        assertTrue(typing.contains("fillViewport = true"))
+        assertTrue(typing.contains("fillViewport = feedbackVisible"))
         assertTrue(modes.contains("Modifier.fillMaxSize().verticalScroll(rememberScrollState())"))
-        assertFalse(typing.contains("Spacer("))
-        assertTrue(typing.contains("normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation)"))
-        assertFalse(genericFeedback.substringAfter("if (typingSuccessPending)").substringBefore("} else {").contains("StudyRatingBar("))
-        assertTrue(typing.contains("if (state.completionPending)"))
-        assertTrue(typing.contains("englishExample = null"))
+        assertTrue(modes.contains("TypedCompactSuccess("))
         assertFalse(typing.contains("pronunciation = null"))
         assertFalse(typing.substringAfter("if (state.completionPending)").substringBefore("} else {").contains("feedbackContent()"))
         assertTrue(viewModel.contains("delay(AndroidTypingSuccessPresentationPolicy.minimumDwellMillis)"))
@@ -139,7 +238,7 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(finalize.contains("typingPreparedNext[key]"))
         assertFalse(finalize.contains("commitTypingRating"))
         assertFalse(finalize.contains("facade::next"))
-        assertTrue(screen.contains("typingLeadContent = if (state is AndroidStudyState.Typing && state.revealed)"))
+        assertTrue(screen.contains("state is AndroidStudyState.Typing && state.revealed ->"))
         assertTrue(screen.indexOf("TypingDifferenceComparison(state.answer") < screen.indexOf("ReviewImageNavigationOverlay("))
         assertTrue(genericFeedback.contains("typingLeadContent?.invoke()"))
         assertTrue(genericFeedback.indexOf("typingLeadContent?.invoke()") < genericFeedback.indexOf("StudyAnswerSection("))
@@ -167,20 +266,20 @@ class TypedAnswerStagesCompositionTest {
     fun `forced Typing reveal restores projected examples without changing compact success`() {
         val reveal = screen.substringAfter("private fun StudyRevealAndFeedbackContent(")
             .substringBefore("private fun Completion(")
-        val compactSuccess = modes.substringAfter("if (state.completionPending)")
-            .substringBefore("} else {")
+        val compactSuccess = modes.substringAfter("internal fun TypedCompactSuccess(")
+            .substringBefore("internal fun TypingStudyStage(")
 
         assertTrue(reveal.contains("state.revealed && !state.completionPending"))
-        assertTrue(reveal.contains("forcedTypingReveal -> state.example"))
-        assertTrue(reveal.contains("forcedTypingReveal -> state.translation"))
+        assertTrue(reveal.contains("forcedTypedReveal -> state.example"))
+        assertTrue(reveal.contains("forcedTypedReveal -> state.translation"))
         assertTrue(reveal.contains("englishExampleAudioPath = state.resolvedExampleEnglishAudio"))
         assertTrue(reveal.contains("vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio"))
-        assertTrue(reveal.contains("allowStandaloneVietnameseExample = forcedTypingReveal"))
+        assertTrue(reveal.contains("allowStandaloneVietnameseExample = forcedTypedReveal"))
         assertTrue(reveal.contains("normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation)"))
         assertTrue(compactSuccess.contains("englishExample = null"))
         assertTrue(compactSuccess.contains("vietnameseExample = null"))
         assertTrue(compactSuccess.contains("StudyMediaRole.COMPACT"))
-        assertTrue(compactSuccess.contains("normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation)"))
+        assertTrue(compactSuccess.contains("normalizedIntroductionPronunciation("))
         assertFalse(compactSuccess.contains("state.example"))
         assertFalse(compactSuccess.contains("state.translation"))
         assertTrue(answerSection.contains("allowStandaloneVietnameseExample && !vietnameseExample.isNullOrBlank()"))
@@ -261,7 +360,7 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(ending.contains("bringIntoViewRequester.bringIntoView()"))
         assertTrue(foundation.contains("LaunchedEffect(planId, enabled)"))
         assertTrue(foundation.contains("focusRequester.requestFocus()"))
-        assertTrue(modes.contains("TypingImeContinuityAnchor(state.plan.planId.value)"))
+        assertTrue(modes.contains("TypingImeContinuityAnchor(presentation.answer)"))
         val anchor = modes.substringAfter("private fun TypingImeContinuityAnchor(")
             .substringBefore("private fun TypingInputActions(")
         assertTrue(anchor.contains("BasicTextField("))
@@ -315,7 +414,7 @@ class TypedAnswerStagesCompositionTest {
 
     @Test
     fun `READY and wrong Typing share one stable action skeleton`() {
-        val actions = modes.substringAfter("private fun TypingInputActions(")
+        val actions = modes.substringAfter("fun TypingInputActions(")
             .substringBefore("@Composable\ninternal fun TypingDifferenceComparison(")
 
         assertTrue(actions.contains("heightIn(min = 24.dp)"))

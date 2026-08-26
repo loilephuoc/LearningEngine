@@ -309,17 +309,25 @@ class AndroidStudyViewModel(
                 is AndroidStudyEvent.AnswerChanged -> {
                     val runtime = current as? AndroidStudyState.Runtime ?: return@withContext current
                     val edited = facade.updateAnswer(runtime, event.value)
-                    if (edited is AndroidStudyState.Typing) facade.submitTypingIfCorrect(edited) else edited
+                    when (edited) {
+                        is AndroidStudyState.Typing -> facade.submitTypingIfCorrect(edited)
+                        is AndroidStudyState.Listening -> facade.submitListeningIfCorrect(edited)
+                        is AndroidStudyState.ImageRecall -> facade.submitImageRecallIfCorrect(edited)
+                        else -> edited
+                    }
                 }
                 is AndroidStudyEvent.Choose ->
                     (current as? AndroidStudyState.MultipleChoice)?.let { facade.choose(it, event.choiceId) } ?: current
                 is AndroidStudyEvent.Submit ->
                     when (current) {
                         is AndroidStudyState.Typing -> if (current.completionPending) current else {
-                            val submitted = facade.submitText(current, event.typedAnswer)
-                            if (submitted is AndroidStudyState.Typing && !submitted.completed &&
-                                submitted.evaluation == TypingAnswerEvaluationStatus.INCORRECT
-                            ) facade.reveal(submitted, event.typedAnswer) else submitted
+                            facade.submitText(current, event.typedAnswer)
+                        }
+                        is AndroidStudyState.ImageRecall -> when {
+                            current.completionPending -> current
+                            current.evaluation == TypingAnswerEvaluationStatus.INCORRECT ->
+                                facade.updateAnswer(current, event.typedAnswer ?: current.answer)
+                            else -> facade.submitText(current, event.typedAnswer)
                         }
                         is AndroidStudyState.Runtime -> facade.submitText(current, event.typedAnswer)
                         else -> current
@@ -353,8 +361,12 @@ class AndroidStudyViewModel(
                     } ?: current
                 AndroidStudyEvent.Retry -> when (current) {
                     is AndroidStudyState.Typing -> current.copy(answer = "", evaluation = TypingAnswerEvaluationStatus.EMPTY)
-                    is AndroidStudyState.Listening -> current.copy(answer = "")
-                    is AndroidStudyState.ImageRecall -> current.copy(answer = "")
+                    is AndroidStudyState.Listening -> current.copy(
+                        answer = "", evaluation = TypingAnswerEvaluationStatus.EMPTY
+                    )
+                    is AndroidStudyState.ImageRecall -> current.copy(
+                        answer = "", evaluation = TypingAnswerEvaluationStatus.EMPTY
+                    )
                     is AndroidStudyState.ExampleCompletion -> current.copy(answer = "")
                     is AndroidStudyState.Failed -> current.retrySessionId?.let(facade::loadExact) ?: facade.load(savedState[SESSION_ID])
                     else -> current

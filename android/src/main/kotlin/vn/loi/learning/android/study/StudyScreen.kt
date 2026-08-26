@@ -348,6 +348,11 @@ fun StudyScreen(
             if (event == Lifecycle.Event.ON_PAUSE) {
                 audioOwnership.stopForForegroundLoss()
                 feedbackAudioController.stop()
+                if (state is AndroidStudyState.Typing) {
+                    vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                        vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+                    )
+                }
                 vn.loi.learning.android.controller.StudyControllerBridge.onActivityForegroundChanged(false)
             }
             if (state is AndroidStudyState.Typing) when (event) {
@@ -361,6 +366,11 @@ fun StudyScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             audioOwnership.stopForForegroundLoss()
             feedbackAudioController.stop()
+            if (state is AndroidStudyState.Typing) {
+                vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                    vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+                )
+            }
             vn.loi.learning.android.controller.StudyControllerBridge.onStudySurfaceChanged(false)
         }
     }
@@ -551,6 +561,113 @@ private fun PreparingStudyMode(state: AndroidStudyState.PreparingMode) {
 
 internal enum class AudioRole { PROMPT, EXPECTED_ANSWER, MEANING, EXAMPLE_ENGLISH, EXAMPLE_VIETNAMESE }
 
+internal data class MultipleChoiceRevealAudioRoute(
+    val role: AudioRole,
+    val path: String
+)
+
+private fun looksVietnameseText(text: String?): Boolean {
+    val value = text?.trim().orEmpty()
+    if (value.isEmpty()) return false
+    val vietnameseCharacters =
+        "ăâđêôơưĂÂĐÊÔƠƯ" +
+                "àáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệ" +
+                "ìíỉĩịòóỏõọồốổỗộờớởỡợ" +
+                "ùúủũụừứửữựỳýỷỹỵ" +
+                "ÀÁẢÃẠẰẮẲẴẶẦẤẨẪẬÈÉẺẼẸỀẾỂỄỆ" +
+                "ÌÍỈĨỊÒÓỎÕỌỒỐỔỖỘỜỚỞỠỢ" +
+                "ÙÚỦŨỤỪỨỬỮỰỲÝỶỸỴ"
+    return value.any { it in vietnameseCharacters }
+}
+
+/**
+ * Resolves which side of an MCQ should be spoken when a WRONG answer opens
+ * the full-answer reveal:
+ *
+ * EN question -> VI choices -> speak the Vietnamese correct answer.
+ * VI question -> EN choices -> speak the English correct answer.
+ *
+ * Prefer the authoritative audio-path relationship.  If prompt audio is a
+ * dedicated asset instead of reusing one side's primary audio, use the
+ * selected-choice language only as a fallback because every choice in one MCQ
+ * is generated on the same answer side.
+ */
+internal fun multipleChoiceWrongRevealAudioRoute(
+    promptAudio: String?,
+    englishAnswerAudio: String?,
+    vietnameseAnswerAudio: String?,
+    selectedChoiceText: String?
+): MultipleChoiceRevealAudioRoute? {
+    val prompt = promptAudio?.takeIf { it.isNotBlank() }
+    val english = englishAnswerAudio?.takeIf { it.isNotBlank() }
+    val vietnamese = vietnameseAnswerAudio?.takeIf { it.isNotBlank() }
+
+    return when {
+        prompt != null && english != null && prompt == english && vietnamese != null ->
+            MultipleChoiceRevealAudioRoute(AudioRole.MEANING, vietnamese)
+
+        prompt != null && vietnamese != null && prompt == vietnamese && english != null ->
+            MultipleChoiceRevealAudioRoute(AudioRole.EXPECTED_ANSWER, english)
+
+        looksVietnameseText(selectedChoiceText) && vietnamese != null ->
+            MultipleChoiceRevealAudioRoute(AudioRole.MEANING, vietnamese)
+
+        !selectedChoiceText.isNullOrBlank() && english != null ->
+            MultipleChoiceRevealAudioRoute(AudioRole.EXPECTED_ANSWER, english)
+
+        vietnamese != null && english == null ->
+            MultipleChoiceRevealAudioRoute(AudioRole.MEANING, vietnamese)
+
+        english != null && vietnamese == null ->
+            MultipleChoiceRevealAudioRoute(AudioRole.EXPECTED_ANSWER, english)
+
+        else -> null
+    }
+}
+
+internal data class RevealExamplePair(
+    val english: String?,
+    val vietnamese: String?
+)
+
+/**
+ * Normal source data already stores Example and Translation separately.
+ * Some legacy/preview states can still carry both lines in `example` while
+ * `translation` is blank.  Split only that fallback shape, so normal content
+ * is never rewritten.
+ */
+internal fun resolveRevealExamplePair(
+    englishExample: String?,
+    vietnameseExample: String?
+): RevealExamplePair {
+    val english = englishExample?.trim()?.takeIf { it.isNotBlank() }
+    val vietnamese = vietnameseExample?.trim()?.takeIf { it.isNotBlank() }
+
+    if (english == null || vietnamese != null) {
+        return RevealExamplePair(english, vietnamese)
+    }
+
+    val nonBlankLines = english
+        .lineSequence()
+        .map(String::trim)
+        .filter(String::isNotBlank)
+        .toList()
+
+    if (nonBlankLines.size < 2) {
+        return RevealExamplePair(english, null)
+    }
+
+    val firstVietnameseLine = nonBlankLines.indexOfFirst(::looksVietnameseText)
+    if (firstVietnameseLine <= 0) {
+        return RevealExamplePair(english, null)
+    }
+
+    return RevealExamplePair(
+        english = nonBlankLines.take(firstVietnameseLine).joinToString("\n"),
+        vietnamese = nonBlankLines.drop(firstVietnameseLine).joinToString("\n")
+    )
+}
+
 internal data class IntroductionExampleAudioRoute(
     val role: AudioRole,
     val path: String?,
@@ -680,13 +797,13 @@ private fun StudyRuntimeScreen(
 ) {
     var limitEditor by rememberSaveable { mutableStateOf<String?>(null) }
     val quickReview = state is AndroidStudyState.Introduction && state.focusedPracticeKind ==
-        vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
     val focusedSkimUx = state is AndroidStudyState.Introduction && usesFocusedSkimUx(state.focusedPracticeKind)
     val recallModeLabel = when (state) {
         is AndroidStudyState.Introduction -> when {
             quickReview -> "Quick Review"
             state.focusedPracticeKind ==
-                vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT -> "Again / Hard"
+                    vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT -> "Again / Hard"
             else -> "NEW · PACKAGE"
         }
         is AndroidStudyState.Typing -> "Typing"
@@ -702,12 +819,17 @@ private fun StudyRuntimeScreen(
     val itemKey = studyRuntimeItemKey(state)
     var activeRole by remember(itemKey) { mutableStateOf<AudioRole?>(null) }
     var introductionPlaybackFocus by remember(itemKey) { mutableStateOf(IntroductionPlaybackFocus.WORD) }
+    var typingLoopFocus by remember(itemKey) { mutableStateOf<IntroductionPlaybackFocus?>(null) }
+    var listeningLoopFocus by remember(itemKey) { mutableStateOf<IntroductionPlaybackFocus?>(null) }
+    var imageRecallLoopFocus by remember(itemKey) { mutableStateOf<IntroductionPlaybackFocus?>(null) }
     var introductionImageExpanded by remember(itemKey) { mutableStateOf(false) }
     var swipeRatingSubmitted by remember(itemKey) { mutableStateOf(false) }
     var revealAudioStarted by rememberSaveable(itemKey) { mutableStateOf(false) }
     var quickReviewTransitionPending by remember(itemKey) { mutableStateOf(false) }
     var quickReviewQuestionPlaying by remember(itemKey) { mutableStateOf(false) }
     var multipleChoiceWrongRevealReady by remember(itemKey) { mutableStateOf(false) }
+    var listeningCompactSuccessRendered by remember(itemKey) { mutableStateOf(false) }
+    var imageRecallCompactSuccessRendered by remember(itemKey) { mutableStateOf(false) }
     var quickReviewTransitionGeneration by remember { mutableLongStateOf(0L) }
     val foregroundAudioOwner = remember(audioController, itemKey) { Any() }
 
@@ -743,6 +865,36 @@ private fun StudyRuntimeScreen(
 
     val playAudio: (AudioRole, String?, Boolean) -> Unit = { role, path, isLooping ->
         if (!quickReviewTransitionPending && audioOwnership.permitsManualPlayback(audioOwnerToken) && !path.isNullOrBlank()) {
+            if (state is AndroidStudyState.ImageRecall && state.revealed) {
+                imageRecallLoopFocus = when (role) {
+                    AudioRole.EXPECTED_ANSWER -> IntroductionPlaybackFocus.WORD.takeIf { isLooping }
+                    AudioRole.EXAMPLE_ENGLISH -> IntroductionPlaybackFocus.EXAMPLE.takeIf { isLooping }
+                    AudioRole.MEANING, AudioRole.EXAMPLE_VIETNAMESE, AudioRole.PROMPT -> null
+                }
+                vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                    vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+                )
+            }
+            if (state is AndroidStudyState.Listening && state.revealed) {
+                listeningLoopFocus = when (role) {
+                    AudioRole.EXPECTED_ANSWER -> IntroductionPlaybackFocus.WORD.takeIf { isLooping }
+                    AudioRole.EXAMPLE_ENGLISH -> IntroductionPlaybackFocus.EXAMPLE.takeIf { isLooping }
+                    AudioRole.MEANING, AudioRole.EXAMPLE_VIETNAMESE, AudioRole.PROMPT -> null
+                }
+                vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                    vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+                )
+            }
+            if (state is AndroidStudyState.Typing && state.revealed) {
+                typingLoopFocus = when (role) {
+                    AudioRole.EXPECTED_ANSWER -> IntroductionPlaybackFocus.WORD.takeIf { isLooping }
+                    AudioRole.EXAMPLE_ENGLISH -> IntroductionPlaybackFocus.EXAMPLE.takeIf { isLooping }
+                    AudioRole.MEANING, AudioRole.EXAMPLE_VIETNAMESE, AudioRole.PROMPT -> null
+                }
+                vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                    vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+                )
+            }
             if (activeRole == role) {
                 audioController.stop()
                 activeRole = null
@@ -815,20 +967,87 @@ private fun StudyRuntimeScreen(
     val toggleTypingRevealedAudioLoop: () -> Unit = {
         val typing = state as? AndroidStudyState.Typing
         if (typing != null && typing.revealed && !typing.completionPending) {
-            nextIntroductionPlaybackFocus(
-                introductionPlaybackFocus,
-                hasWordAudio = !typing.resolvedExpectedAnswerAudio.isNullOrBlank() ||
-                        !typing.resolvedPromptAudio.isNullOrBlank(),
-                hasExampleAudio = !typing.resolvedExampleEnglishAudio.isNullOrBlank()
-            )?.let { nextFocus ->
+            val nextFocus = when (typingLoopFocus) {
+                null, IntroductionPlaybackFocus.EXAMPLE -> IntroductionPlaybackFocus.WORD
+                IntroductionPlaybackFocus.WORD -> IntroductionPlaybackFocus.EXAMPLE
+            }
+            val path = when (nextFocus) {
+                IntroductionPlaybackFocus.WORD -> typing.resolvedExpectedAnswerAudio
+                IntroductionPlaybackFocus.EXAMPLE -> typing.resolvedExampleEnglishAudio
+            }
+            if (!path.isNullOrBlank()) {
+                vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                    vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+                )
+                audioController.stop()
+                activeRole = null
+                typingLoopFocus = nextFocus
+                if (nextFocus == IntroductionPlaybackFocus.WORD) {
+                    restartAudio(AudioRole.EXPECTED_ANSWER, path, true)
+                } else {
+                    restartAudio(AudioRole.EXAMPLE_ENGLISH, path, true)
+                }
+            }
+        }
+    }
+
+    val toggleListeningRevealedAudioLoop: () -> Unit = {
+        val listening = state as? AndroidStudyState.Listening
+        if (listening != null && listening.revealed && !listening.completionPending) {
+            val nextFocus = when (listeningLoopFocus) {
+                null, IntroductionPlaybackFocus.EXAMPLE -> IntroductionPlaybackFocus.WORD
+                IntroductionPlaybackFocus.WORD -> IntroductionPlaybackFocus.EXAMPLE
+            }
+            val path = when (nextFocus) {
+                IntroductionPlaybackFocus.WORD -> listening.resolvedExpectedAnswerAudio
+                IntroductionPlaybackFocus.EXAMPLE -> listening.resolvedExampleEnglishAudio
+            }
+            if (!path.isNullOrBlank()) {
+                vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                    vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+                )
+                audioController.stop()
+                activeRole = null
+                listeningLoopFocus = nextFocus
                 if (nextFocus == IntroductionPlaybackFocus.WORD) {
                     restartAudio(
                         AudioRole.EXPECTED_ANSWER,
-                        typing.resolvedExpectedAnswerAudio ?: typing.resolvedPromptAudio,
+                        path,
                         true
                     )
                 } else {
-                    restartAudio(AudioRole.EXAMPLE_ENGLISH, typing.resolvedExampleEnglishAudio, true)
+                    restartAudio(AudioRole.EXAMPLE_ENGLISH, path, true)
+                }
+            }
+        }
+    }
+
+    val toggleImageRecallRevealedAudioLoop: () -> Unit = {
+        val imageRecall = state as? AndroidStudyState.ImageRecall
+        if (imageRecall != null && imageRecall.revealed && !imageRecall.completionPending) {
+            val nextFocus = when (imageRecallLoopFocus) {
+                null, IntroductionPlaybackFocus.EXAMPLE -> IntroductionPlaybackFocus.WORD
+                IntroductionPlaybackFocus.WORD -> IntroductionPlaybackFocus.EXAMPLE
+            }
+            val path = when (nextFocus) {
+                IntroductionPlaybackFocus.WORD -> imageRecall.resolvedExpectedAnswerAudio
+                IntroductionPlaybackFocus.EXAMPLE -> imageRecall.resolvedExampleEnglishAudio
+            }
+            if (!path.isNullOrBlank()) {
+                vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+                    vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+                )
+                audioController.stop()
+                activeRole = null
+                imageRecallLoopFocus = nextFocus
+                if (nextFocus == IntroductionPlaybackFocus.WORD) {
+                    restartAudio(
+                        AudioRole.EXPECTED_ANSWER,
+                        path,
+                        true
+                    )
+                } else {
+                    restartAudio(AudioRole.EXAMPLE_ENGLISH, path, true)
                 }
             }
         }
@@ -909,6 +1128,17 @@ private fun StudyRuntimeScreen(
             audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.MEANING)
         ) {
             restartAudio(AudioRole.MEANING, introduction.resolvedMeaningAudio, false)
+        }
+    }
+
+    LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen) {
+        val typing = state as? AndroidStudyState.Typing ?: return@LaunchedEffect
+        if (autoplayGateOpen &&
+            !typing.completed && !typing.revealed && !typing.viAutoplayMuted &&
+            !typing.resolvedMeaningAudio.isNullOrBlank() &&
+            audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.MEANING)
+        ) {
+            restartAudio(AudioRole.MEANING, typing.resolvedMeaningAudio, false)
         }
     }
 
@@ -1093,15 +1323,126 @@ private fun StudyRuntimeScreen(
         itemKey,
         audioOwnerToken,
         autoplayGateOpen,
-        (state as? AndroidStudyState.ImageRecall)?.completed
+        multipleChoiceWrongRevealReady,
+        (state as? AndroidStudyState.MultipleChoice)?.outcome
+    ) {
+        val multipleChoice = state as? AndroidStudyState.MultipleChoice ?: return@LaunchedEffect
+        if (!autoplayGateOpen ||
+            !multipleChoiceWrongRevealReady ||
+            multipleChoice.outcome != RecallOutcome.INCORRECT
+        ) return@LaunchedEffect
+
+        val route = multipleChoiceWrongRevealAudioRoute(
+            promptAudio = multipleChoice.resolvedPromptAudio,
+            englishAnswerAudio = multipleChoice.resolvedExpectedAnswerAudio,
+            vietnameseAnswerAudio = multipleChoice.resolvedMeaningAudio,
+            selectedChoiceText = selectedMultipleChoiceAnswer(multipleChoice)
+        ) ?: return@LaunchedEffect
+
+        if (audioOwnership.claimAutoplay(audioOwnerToken, route.role)) {
+            audioController.stop()
+            activeRole = null
+            restartAudio(route.role, route.path, false)
+        }
+    }
+
+    LaunchedEffect(
+        itemKey,
+        (state as? AndroidStudyState.ImageRecall)?.completionPending,
+        imageRecallCompactSuccessRendered
     ) {
         val imageRecall = state as? AndroidStudyState.ImageRecall ?: return@LaunchedEffect
-        if (imageRecall.completed && imageRecall.answerAudioLoopEnabled &&
-            !imageRecall.resolvedExpectedAnswerAudio.isNullOrBlank() &&
-            audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.EXPECTED_ANSWER)
-        ) {
-            restartAudio(AudioRole.EXPECTED_ANSWER, imageRecall.resolvedExpectedAnswerAudio, true)
+        if (!shouldStartListeningSuccessAutoAdvance(
+                imageRecall.completionPending,
+                imageRecall.outcome,
+                imageRecallCompactSuccessRendered
+            )
+        ) return@LaunchedEffect
+
+        withFrameNanos { }
+        val successVisibleAt = System.currentTimeMillis()
+        audioController.stop()
+        activeRole = AudioRole.EXPECTED_ANSWER
+        val audioFinished = CompletableDeferred<Unit>()
+        val initial = audioController.replay(
+            imageRecall.resolvedExpectedAnswerAudio ?: imageRecall.resolvedPromptAudio,
+            isLooping = false,
+            onPlaybackEvent = { event ->
+                if (event is AndroidAudioPlaybackEvent.Completed) {
+                    audioFinished.complete(Unit)
+                }
+            },
+            onState = { playback ->
+                when (playback) {
+                    AndroidAudioState.Idle, AndroidAudioState.Unavailable,
+                    is AndroidAudioState.Failed -> {
+                        activeRole = null
+                        audioFinished.complete(Unit)
+                    }
+                    else -> Unit
+                }
+            }
+        )
+        if (initial is AndroidAudioState.Unavailable || initial is AndroidAudioState.Failed) {
+            activeRole = null
+            audioFinished.complete(Unit)
         }
+        withTimeoutOrNull(AndroidTypingSuccessPresentationPolicy.audioWatchdogMillis) {
+            audioFinished.await()
+        }
+        val visibleMillis = System.currentTimeMillis() - successVisibleAt
+        delay((AndroidTypingSuccessPresentationPolicy.minimumDwellMillis - visibleMillis).coerceAtLeast(0L))
+        onEvent(AndroidStudyEvent.NextVisited)
+    }
+
+    LaunchedEffect(
+        itemKey,
+        (state as? AndroidStudyState.Listening)?.completionPending,
+        listeningCompactSuccessRendered
+    ) {
+        val listening = state as? AndroidStudyState.Listening ?: return@LaunchedEffect
+        if (!shouldStartListeningSuccessAutoAdvance(
+                completionPending = listening.completionPending,
+                outcome = listening.outcome,
+                compactSuccessRendered = listeningCompactSuccessRendered
+            )
+        ) return@LaunchedEffect
+
+        withFrameNanos { }
+        val successVisibleAt = System.currentTimeMillis()
+        audioController.stop()
+        activeRole = AudioRole.EXPECTED_ANSWER
+        val audioFinished = CompletableDeferred<Unit>()
+        val initial = audioController.replay(
+            listening.resolvedExpectedAnswerAudio ?: listening.resolvedPromptAudio,
+            isLooping = false,
+            onPlaybackEvent = { event ->
+                if (event is AndroidAudioPlaybackEvent.Completed) audioFinished.complete(Unit)
+            },
+            onState = { playback ->
+                when (playback) {
+                    AndroidAudioState.Idle, AndroidAudioState.Unavailable,
+                    is AndroidAudioState.Failed -> {
+                        activeRole = null
+                        audioFinished.complete(Unit)
+                    }
+                    else -> Unit
+                }
+            }
+        )
+        if (initial is AndroidAudioState.Unavailable || initial is AndroidAudioState.Failed) {
+            activeRole = null
+            audioFinished.complete(Unit)
+        }
+        withTimeoutOrNull(AndroidTypingSuccessPresentationPolicy.audioWatchdogMillis) {
+            audioFinished.await()
+        }
+        val visibleMillis = System.currentTimeMillis() - successVisibleAt
+        delay(
+            (AndroidTypingSuccessPresentationPolicy.minimumDwellMillis - visibleMillis)
+                .coerceAtLeast(0L)
+        )
+        onEvent(AndroidStudyEvent.NextVisited)
     }
 
     LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen, (state as? AndroidStudyState.Introduction)?.revealed) {
@@ -1132,12 +1473,54 @@ private fun StudyRuntimeScreen(
         ) return@LaunchedEffect
 
         revealAudioStarted = true
+        typingLoopFocus = null
+        vn.loi.learning.android.controller.StudyControllerBridge.stopAudio(
+            vn.loi.learning.android.controller.StudyAudioReason.CONTINUE_EXIT
+        )
         audioController.stop()
         activeRole = null
         restartAudio(
             AudioRole.EXPECTED_ANSWER,
-            typing.resolvedExpectedAnswerAudio ?: typing.resolvedPromptAudio,
-            true
+            typing.resolvedExpectedAnswerAudio,
+            false
+        )
+    }
+
+    LaunchedEffect(
+        itemKey,
+        (state as? AndroidStudyState.Listening)?.revealed,
+        (state as? AndroidStudyState.Listening)?.completionPending
+    ) {
+        val listening = state as? AndroidStudyState.Listening ?: return@LaunchedEffect
+        if (!listening.revealed || listening.completionPending || revealAudioStarted) {
+            return@LaunchedEffect
+        }
+        revealAudioStarted = true
+        audioController.stop()
+        activeRole = null
+        restartAudio(
+            AudioRole.EXPECTED_ANSWER,
+            listening.resolvedExpectedAnswerAudio,
+            false
+        )
+    }
+
+    LaunchedEffect(
+        itemKey,
+        (state as? AndroidStudyState.ImageRecall)?.revealed,
+        (state as? AndroidStudyState.ImageRecall)?.completionPending
+    ) {
+        val imageRecall = state as? AndroidStudyState.ImageRecall ?: return@LaunchedEffect
+        if (!imageRecall.revealed || imageRecall.completionPending || revealAudioStarted) {
+            return@LaunchedEffect
+        }
+        revealAudioStarted = true
+        audioController.stop()
+        activeRole = null
+        restartAudio(
+            AudioRole.EXPECTED_ANSWER,
+            imageRecall.resolvedExpectedAnswerAudio,
+            false
         )
     }
 
@@ -1170,17 +1553,17 @@ private fun StudyRuntimeScreen(
                 }
             }
         ) { playback ->
-                if (playback is AndroidAudioState.Idle || playback is AndroidAudioState.Failed) {
-                    if (playback is AndroidAudioState.Failed) {
-                        AndroidTypingSuccessTrace.event(
-                            "audioCompletionCallback", typing.plan.planId.value, true, false, activeRole,
-                            "fallback=Failed reason=${playback.reason.orEmpty()}"
-                        )
-                    }
-                    activeRole = null
-                    audioFinished.complete(Unit)
+            if (playback is AndroidAudioState.Idle || playback is AndroidAudioState.Failed) {
+                if (playback is AndroidAudioState.Failed) {
+                    AndroidTypingSuccessTrace.event(
+                        "audioCompletionCallback", typing.plan.planId.value, true, false, activeRole,
+                        "fallback=Failed reason=${playback.reason.orEmpty()}"
+                    )
                 }
+                activeRole = null
+                audioFinished.complete(Unit)
             }
+        }
         if (initial is AndroidAudioState.Unavailable || initial is AndroidAudioState.Failed) {
             activeRole = null
             AndroidTypingSuccessTrace.event(
@@ -1199,16 +1582,18 @@ private fun StudyRuntimeScreen(
     val isRevealed = when (state) {
         is AndroidStudyState.Introduction -> state.revealed
         is AndroidStudyState.Typing -> state.revealed
+        is AndroidStudyState.Listening -> state.revealed
         is AndroidStudyState.ExampleCompletion -> state.revealed
         else -> false
     }
-    val typingSuccessPending = (state as? AndroidStudyState.Typing)?.completionPending == true
+    val typingSuccessPending = (state as? AndroidStudyState.Typing)?.completionPending == true ||
+            (state as? AndroidStudyState.ImageRecall)?.completionPending == true
     val isEnded = state.completed || isRevealed
     val multipleChoicePath = (state as? AndroidStudyState.MultipleChoice)?.let {
         multipleChoiceCompletionPath(it.completed, it.outcome, multipleChoiceWrongRevealReady)
     }
     val preserveTypingIme = state is AndroidStudyState.Typing &&
-        state.completionPending && state.outcome == RecallOutcome.CORRECT
+            state.completionPending && state.outcome == RecallOutcome.CORRECT
 
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -1263,12 +1648,14 @@ private fun StudyRuntimeScreen(
         LearningEngineLearningStage(
             modifier = (when (state) {
                 is AndroidStudyState.Introduction,
-                is AndroidStudyState.Typing -> Modifier.fillMaxWidth().weight(1f)
+                is AndroidStudyState.Typing,
+                is AndroidStudyState.Listening,
+                is AndroidStudyState.ImageRecall -> Modifier.fillMaxWidth().weight(1f)
                 else -> Modifier.fillMaxWidth().verticalScroll(scrollState)
             }).reviewNavigationGestures(
                 enabled = state !is AndroidStudyState.Introduction && isEnded && !typingSuccessPending &&
-                    (state !is AndroidStudyState.MultipleChoice ||
-                        multipleChoicePath == MultipleChoiceCompletionPath.WRONG_FULL_ANSWER),
+                        (state !is AndroidStudyState.MultipleChoice ||
+                                multipleChoicePath == MultipleChoiceCompletionPath.WRONG_FULL_ANSWER),
                 canPrevious = state.navigation.canPrevious,
                 canNext = state.navigation.canNext,
                 onPrevious = { stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited) },
@@ -1332,6 +1719,10 @@ private fun StudyRuntimeScreen(
                 }
             },
             onTypingStageTap = toggleTypingRevealedAudioLoop,
+            onListeningStageTap = toggleListeningRevealedAudioLoop,
+            onListeningCompactSuccessRendered = { listeningCompactSuccessRendered = true },
+            onImageRecallStageTap = toggleImageRecallRevealedAudioLoop,
+            onImageRecallCompactSuccessRendered = { imageRecallCompactSuccessRendered = true },
             multipleChoiceWrongRevealReady = multipleChoiceWrongRevealReady,
             onEvent = stopAudioAndDispatch,
             onOpenFullscreenImage = onOpenFullscreenImage,
@@ -1390,9 +1781,9 @@ internal fun androidStudyRuntimeModeLabel(
     val identity = state.runtimeIdentity ?: return recallModeLabel
     return when {
         identity.focusedPracticeKind ==
-            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW -> "Quick Review"
+                vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW -> "Quick Review"
         identity.studyMode == StudyMode.ADAPTIVE && identity.practiceLoopPolicy ==
-            vn.loi.learning.domain.study.session.model.PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED ->
+                vn.loi.learning.domain.study.session.model.PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED ->
             "Adaptive · Continuous practice"
         identity.studyMode == StudyMode.ADAPTIVE -> "Adaptive"
         else -> recallModeLabel
@@ -1495,7 +1886,7 @@ private fun QuickReviewProgressHeader(state: AndroidStudyState.Introduction, hud
     Surface(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
             contentDescription = "Ôn nhanh. Lượt $position trong nhóm $poolSize mục đã học " +
-                "in the current review pass. Endless learned vocabulary review."
+                    "in the current review pass. Endless learned vocabulary review."
         },
         color = Color.Transparent
     ) {
@@ -1588,6 +1979,10 @@ private fun LearningEngineLearningStage(
     onIntroductionNext: () -> Unit,
     onIntroductionRating: (ReviewRating) -> Unit,
     onTypingStageTap: () -> Unit = {},
+    onListeningStageTap: () -> Unit = {},
+    onListeningCompactSuccessRendered: () -> Unit = {},
+    onImageRecallStageTap: () -> Unit = {},
+    onImageRecallCompactSuccessRendered: () -> Unit = {},
     multipleChoiceWrongRevealReady: Boolean = false,
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit,
@@ -1635,27 +2030,76 @@ private fun LearningEngineLearningStage(
                 activeRole,
                 playAudio,
                 onEvent,
-                showResponseActions = state !is AndroidStudyState.MultipleChoice ||
-                    multipleChoiceAllowsManualRating(),
-                onTypingStageTap = onTypingStageTap,
-                typingLeadContent = if (state is AndroidStudyState.Typing && state.revealed) {
-                    {
-                        if (state.answer.isNotBlank()) {
-                            TypingDifferenceComparison(state.answer, state.plan.answerContract.canonicalAnswer)
-                        }
-                        ReviewImageNavigationOverlay(
-                            canPrevious = state.navigation.canPrevious,
-                            canNext = state.navigation.canNext,
-                            onPrevious = { onEvent(AndroidStudyEvent.PreviousVisited) },
-                            onNext = { onEvent(AndroidStudyEvent.NextVisited) },
-                            gesturesEnabled = false,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            StudyMedia(state.resolvedImage, StudyMediaRole.STANDARD, contentDensity,
-                                availableMediaHeightDp, onOpenFullscreenImage)
+                showResponseActions = when (state) {
+                    is AndroidStudyState.MultipleChoice -> multipleChoiceAllowsManualRating()
+                    is AndroidStudyState.Typing,
+                    is AndroidStudyState.Listening,
+                    is AndroidStudyState.ImageRecall -> false
+                    else -> true
+                },
+                onTypingStageTap = when (state) {
+                    is AndroidStudyState.Listening -> onListeningStageTap
+                    is AndroidStudyState.ImageRecall -> onImageRecallStageTap
+                    else -> onTypingStageTap
+                },
+                typingLeadContent = when {
+                    state is AndroidStudyState.Typing && state.revealed -> {
+                        {
+                            if (state.answer.isNotBlank()) {
+                                TypingDifferenceComparison(state.answer, state.plan.answerContract.canonicalAnswer)
+                            }
+                            ReviewImageNavigationOverlay(
+                                canPrevious = state.navigation.canPrevious,
+                                canNext = state.navigation.canNext,
+                                onPrevious = { onEvent(AndroidStudyEvent.PreviousVisited) },
+                                onNext = { onEvent(AndroidStudyEvent.NextVisited) },
+                                gesturesEnabled = false,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                StudyMedia(state.resolvedImage, StudyMediaRole.STANDARD, StudyContentDensity.DENSE,
+                                    availableMediaHeightDp, onOpenFullscreenImage)
+                            }
                         }
                     }
-                } else null
+                    state is AndroidStudyState.Listening && state.revealed -> {
+                        {
+                            if (state.answer.isNotBlank()) {
+                                TypingDifferenceComparison(state.answer, state.plan.answerContract.canonicalAnswer)
+                            }
+                            ReviewImageNavigationOverlay(
+                                canPrevious = state.navigation.canPrevious,
+                                canNext = state.navigation.canNext,
+                                onPrevious = { onEvent(AndroidStudyEvent.PreviousVisited) },
+                                onNext = { onEvent(AndroidStudyEvent.NextVisited) },
+                                gesturesEnabled = false,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                StudyMedia(state.resolvedImage, StudyMediaRole.STANDARD, StudyContentDensity.DENSE,
+                                    availableMediaHeightDp, onOpenFullscreenImage)
+                            }
+                        }
+                    }
+                    state is AndroidStudyState.ImageRecall && state.completed &&
+                            state.outcome != RecallOutcome.CORRECT -> {
+                        {
+                            if (state.answer.isNotBlank()) {
+                                TypingDifferenceComparison(state.answer, state.plan.answerContract.canonicalAnswer)
+                            }
+                            ReviewImageNavigationOverlay(
+                                canPrevious = state.navigation.canPrevious,
+                                canNext = state.navigation.canNext,
+                                onPrevious = { onEvent(AndroidStudyEvent.PreviousVisited) },
+                                onNext = { onEvent(AndroidStudyEvent.NextVisited) },
+                                gesturesEnabled = false,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                StudyMedia(state.resolvedImage, StudyMediaRole.STANDARD, StudyContentDensity.DENSE,
+                                    availableMediaHeightDp, onOpenFullscreenImage)
+                            }
+                        }
+                    }
+                    else -> null
+                }
             )
         }
     }
@@ -1682,9 +2126,18 @@ private fun LearningEngineLearningStage(
             state = state,
             activeRole = activeRole,
             baseDensity = contentDensity,
+            availableMediaHeightDp = availableMediaHeightDp,
             playAudio = playAudio,
             onEvent = onEvent,
+            onOpenFullscreenImage = onOpenFullscreenImage,
             feedbackContent = feedbackContent,
+            onCompactSuccessRendered = onListeningCompactSuccessRendered,
+            onStageTap = if (state.revealed && !state.completionPending) {
+                onListeningStageTap
+            } else null,
+            onSwipeNext = if (state.revealed && !state.completionPending) {
+                { onEvent(AndroidStudyEvent.NextVisited) }
+            } else null,
             modifier = modifier
         )
         return
@@ -1707,11 +2160,18 @@ private fun LearningEngineLearningStage(
     if (state is AndroidStudyState.ImageRecall) {
         ImageRecallStudyStage(
             state = state,
+            activeRole = activeRole,
             baseDensity = contentDensity,
             availableMediaHeightDp = availableMediaHeightDp,
+            playAudio = playAudio,
             onEvent = onEvent,
             onOpenFullscreenImage = onOpenFullscreenImage,
             feedbackContent = feedbackContent,
+            onCompactSuccessRendered = onImageRecallCompactSuccessRendered,
+            onStageTap = if (state.revealed && !state.completionPending) onImageRecallStageTap else null,
+            onSwipeNext = if (state.revealed && !state.completionPending) {
+                { onEvent(AndroidStudyEvent.NextVisited) }
+            } else null,
             modifier = modifier
         )
         return
@@ -1759,9 +2219,9 @@ private fun IntroductionLearningStage(
     onEditItem: (() -> Unit)? = null
 ) {
     val difficultSkim = state.focusedPracticeKind ==
-        vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
     val quickReview = state.focusedPracticeKind ==
-        vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
     val focusedSkimUx = usesFocusedSkimUx(state.focusedPracticeKind)
     val isPlayingExpected = activeRole == AudioRole.EXPECTED_ANSWER
     val isPlayingMeaning = activeRole == AudioRole.MEANING
@@ -1904,9 +2364,9 @@ private fun IntroductionLearningStage(
                                 transitionSpec = {
                                     val duration = studyMotionDurationMillis(StudyMotionRole.REVEAL, reducedMotion)
                                     val enter = fadeIn(tween(duration, easing = FastOutSlowInEasing)) +
-                                        if (reducedMotion) EnterTransition.None else slideInVertically(
-                                            tween(duration, easing = FastOutSlowInEasing)
-                                        ) { it / 18 }
+                                            if (reducedMotion) EnterTransition.None else slideInVertically(
+                                                tween(duration, easing = FastOutSlowInEasing)
+                                            ) { it / 18 }
                                     enter togetherWith fadeOut(tween(duration, easing = FastOutSlowInEasing))
                                 },
                                 label = "Introduction coordinated reveal"
@@ -2164,6 +2624,8 @@ private fun StudyRevealAndFeedbackContent(
     val plan = state.plan ?: return
     val isRevealed = when (state) {
         is AndroidStudyState.Typing -> state.revealed
+        is AndroidStudyState.Listening -> state.revealed
+        is AndroidStudyState.ImageRecall -> state.revealed
         is AndroidStudyState.ExampleCompletion -> state.revealed
         else -> false
     }
@@ -2190,7 +2652,15 @@ private fun StudyRevealAndFeedbackContent(
     ) {
         Column(
             Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
+            verticalArrangement = Arrangement.spacedBy(
+                if (state is AndroidStudyState.Typing ||
+                    state is AndroidStudyState.ImageRecall || state is AndroidStudyState.Listening
+                ) {
+                    LearningSpacing.small
+                } else {
+                    LearningSpacing.medium
+                }
+            )
         ) {
             // Feedback badge
             val tone = when (state.outcome) {
@@ -2205,7 +2675,15 @@ private fun StudyRevealAndFeedbackContent(
                 state.outcome == RecallOutcome.INCORRECT -> "Incorrect"
                 else -> "Answer recorded"
             }
-            if (!typingSuccessPending && state !is AndroidStudyState.Typing) {
+            if (!typingSuccessPending &&
+                state !is AndroidStudyState.Typing &&
+                !(state is AndroidStudyState.Listening &&
+                        state.outcome != RecallOutcome.CORRECT) &&
+                !(state is AndroidStudyState.ImageRecall &&
+                        state.outcome != RecallOutcome.CORRECT) &&
+                !(state is AndroidStudyState.MultipleChoice &&
+                        state.outcome == RecallOutcome.INCORRECT)
+            ) {
                 Box(modifier = Modifier.graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }) {
                     LearningEngineStatusBadge(
                         label = if (state is AndroidStudyState.MultipleChoice &&
@@ -2241,20 +2719,58 @@ private fun StudyRevealAndFeedbackContent(
             val clozePresentation = (state as? AndroidStudyState.ExampleCompletion)?.let {
                 resolveClozePresentation(it.prefix, it.blank, it.suffix, it.example, it.translation)
             }
-            val forcedTypingReveal = state is AndroidStudyState.Typing &&
-                    state.revealed && !state.completionPending
-            val answerExample = when {
-                forcedTypingReveal -> state.example
+            val forcedTypedReveal = when (state) {
+                is AndroidStudyState.Typing -> state.revealed && !state.completionPending
+                is AndroidStudyState.Listening -> state.revealed && !state.completionPending
+                is AndroidStudyState.ImageRecall -> state.revealed && !state.completionPending
+                else -> false
+            }
+            val forcedTypingReveal = state is AndroidStudyState.Typing && forcedTypedReveal
+            val listeningWrongReveal = state is AndroidStudyState.Listening && forcedTypedReveal
+            val imageRecallWrongReveal = state is AndroidStudyState.ImageRecall && forcedTypedReveal
+            val rawAnswerExample = when {
+                forcedTypedReveal -> state.example
                 state is AndroidStudyState.Typing -> null
                 clozePresentation != null -> clozePresentation.supportingExample
                 else -> state.example
             }
-            val answerExampleTranslation = when {
-                forcedTypingReveal -> state.translation
+            val rawAnswerExampleTranslation = when {
+                forcedTypedReveal -> state.translation
                 state is AndroidStudyState.Typing -> null
                 clozePresentation != null -> clozePresentation.supportingExampleTranslation
                 else -> state.translation
             }
+            val revealExamplePair =
+                if (imageRecallWrongReveal) {
+                    val imageRecallExampleLines = rawAnswerExample
+                        ?.lineSequence()
+                        ?.map(String::trim)
+                        ?.filter(String::isNotBlank)
+                        ?.toList()
+                        .orEmpty()
+                    val firstVietnameseLine = imageRecallExampleLines.indexOfFirst(::looksVietnameseText)
+                    RevealExamplePair(
+                        english = if (firstVietnameseLine > 0) {
+                            imageRecallExampleLines.take(firstVietnameseLine).joinToString("\n")
+                        } else {
+                            rawAnswerExample?.trim()?.takeIf(String::isNotBlank)
+                        },
+                        vietnamese = if (firstVietnameseLine > 0) {
+                            imageRecallExampleLines.drop(firstVietnameseLine).joinToString("\n")
+                        } else {
+                            rawAnswerExampleTranslation?.trim()?.takeIf(String::isNotBlank)
+                        }
+                    )
+                } else if (listeningWrongReveal || forcedTypingReveal ||
+                    state is AndroidStudyState.MultipleChoice && state.outcome == RecallOutcome.INCORRECT
+                ) {
+                    resolveRevealExamplePair(
+                        englishExample = rawAnswerExample,
+                        vietnameseExample = rawAnswerExampleTranslation
+                    )
+                } else {
+                    RevealExamplePair(rawAnswerExample, rawAnswerExampleTranslation)
+                }
             typingLeadContent?.invoke()
 
             StudyAnswerSection(
@@ -2262,33 +2778,36 @@ private fun StudyRevealAndFeedbackContent(
                 pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
                 partOfSpeech = partOfSpeechPresentation(state.partOfSpeech),
                 vietnameseAnswer = state.meaning,
-                englishExample = answerExample,
-                vietnameseExample = answerExampleTranslation,
+                englishExample = revealExamplePair.english,
+                vietnameseExample = revealExamplePair.vietnamese,
                 answerAudioPath = state.resolvedExpectedAnswerAudio,
                 englishExampleAudioPath = state.resolvedExampleEnglishAudio,
                 isPlayingAnswer = activeRole == AudioRole.EXPECTED_ANSWER,
                 isPlayingVietnamese = activeRole == AudioRole.MEANING,
                 isPlayingEnglishExample = activeRole == AudioRole.EXAMPLE_ENGLISH,
                 isPlayingVietnameseExample = activeRole == AudioRole.EXAMPLE_VIETNAMESE,
-                onAnswerAudio = if (forcedTypingReveal) onTypingStageTap else {
+                onAnswerAudio = if (forcedTypingReveal || listeningWrongReveal || imageRecallWrongReveal) onTypingStageTap else {
                     { playAudio(AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true) }
                 },
-                onEnglishExampleAudio = if (forcedTypingReveal) onTypingStageTap else {
-                    { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) }
+                onEnglishExampleAudio = {
+                    playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
                 },
                 vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio,
-                onVietnameseExampleAudio = if (forcedTypingReveal) onTypingStageTap else {
-                    { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) }
+                onVietnameseExampleAudio = {
+                    playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)
                 },
-                answerHero = state is AndroidStudyState.Typing,
-                allowStandaloneVietnameseExample = forcedTypingReveal
-                    || state is AndroidStudyState.MultipleChoice,
-                englishExampleSectionLabel = if (state is AndroidStudyState.MultipleChoice) {
-                    stringResource(R.string.study_example_english)
+                answerHero = state is AndroidStudyState.Typing || state is AndroidStudyState.Listening,
+                allowStandaloneVietnameseExample = forcedTypedReveal
+                        || state is AndroidStudyState.MultipleChoice,
+                englishExampleSectionLabel = null,
+                vietnameseExampleSectionLabel = null,
+                vietnameseAnswerAudioPath = if (forcedTypingReveal || listeningWrongReveal || imageRecallWrongReveal) {
+                    state.resolvedMeaningAudio
                 } else null,
-                vietnameseExampleSectionLabel = if (state is AndroidStudyState.MultipleChoice) {
-                    stringResource(R.string.study_translation_vietnamese)
-                } else null
+                onVietnameseAnswerAudio = if (forcedTypingReveal || listeningWrongReveal || imageRecallWrongReveal) {
+                    { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) }
+                } else null,
+                answerInteractionEnabled = !forcedTypingReveal && !listeningWrongReveal && !imageRecallWrongReveal
             )
 
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)

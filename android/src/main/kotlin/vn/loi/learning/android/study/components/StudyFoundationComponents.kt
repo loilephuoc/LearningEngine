@@ -247,6 +247,7 @@ internal fun StudyAnswerInput(
     label: String = "Answer",
     accessibilityLabel: String = label,
     feedback: StudyFeedbackVisualState = StudyFeedbackVisualState.NEUTRAL,
+    keepImeOnSubmit: Boolean = false,
     onAnswerChanged: (String) -> Unit,
     onSubmit: (String) -> Unit
 ) {
@@ -268,7 +269,13 @@ internal fun StudyAnswerInput(
         minLines = 1, maxLines = 4, isError = error || feedback == StudyFeedbackVisualState.INCORRECT,
         textStyle = StudyTypography.input,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { keyboard?.hide(); focusManager.clearFocus(); onSubmit(value.text) }),
+        keyboardActions = KeyboardActions(onDone = {
+            if (!keepImeOnSubmit) {
+                keyboard?.hide()
+                focusManager.clearFocus()
+            }
+            onSubmit(value.text)
+        }),
         label = { Text(label) },
         shape = StudyShapes.interactive,
         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester).bringIntoViewRequester(bringIntoView)

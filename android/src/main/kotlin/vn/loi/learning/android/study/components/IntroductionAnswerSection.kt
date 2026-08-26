@@ -78,7 +78,10 @@ internal fun StudyAnswerSection(
     englishExampleSectionLabel: String? = null,
     vietnameseExampleSectionLabel: String? = null,
     swipeSuccessGlowActive: Boolean = false,
-    interactionEnabled: Boolean = true
+    interactionEnabled: Boolean = true,
+    vietnameseAnswerAudioPath: String? = null,
+    onVietnameseAnswerAudio: (() -> Unit)? = null,
+    answerInteractionEnabled: Boolean = true
 ) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(
@@ -101,7 +104,8 @@ internal fun StudyAnswerSection(
                 answerAudioPath, isPlayingAnswer, true,
                 onAnswerAudio, centered = true, strongEmphasis = true, headingSemantics = true,
                 swipeSuccessGlowActive = swipeSuccessGlowActive,
-                interactionEnabled = interactionEnabled
+                interactionEnabled = interactionEnabled && answerInteractionEnabled,
+                interaction = if (answerInteractionEnabled) StudyTextInteraction.AUDIO else StudyTextInteraction.PASSIVE
             )
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small, Alignment.CenterHorizontally),
@@ -125,15 +129,19 @@ internal fun StudyAnswerSection(
                 StudyAudioTextTarget(
                     it,
                     LearningContentTypography.meaning.copy(fontWeight = FontWeight.SemiBold),
-                    null,
+                    vietnameseAnswerAudioPath,
                     isPlayingVietnamese,
                     false,
-                    null,
+                    onVietnameseAnswerAudio,
                     centered = true,
                     maxLines = 3,
                     contentColor = MaterialTheme.colorScheme.secondary,
                     headingSemantics = false,
-                    interaction = StudyTextInteraction.PASSIVE
+                    interaction = if (onVietnameseAnswerAudio == null) {
+                        StudyTextInteraction.PASSIVE
+                    } else {
+                        StudyTextInteraction.AUDIO
+                    }
                 )
             }
         }
@@ -143,7 +151,7 @@ internal fun StudyAnswerSection(
         ) {
             Column(
                 Modifier.fillMaxWidth().padding(top = StudyContentSpacing.meaningToExamples),
-                verticalArrangement = Arrangement.spacedBy(StudyContentSpacing.examplePair)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 englishExample?.takeIf(String::isNotBlank)?.let {
                     StudyExampleSurface(

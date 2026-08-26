@@ -491,7 +491,7 @@ class AndroidReviewNavigationHistoryTest {
         val incorrect = "not-$answer"
         viewModel.onEvent(AndroidStudyEvent.AnswerChanged(incorrect))
         advanceUntilIdle()
-        viewModel.onEvent(AndroidStudyEvent.Submit(incorrect))
+        viewModel.onEvent(AndroidStudyEvent.Reveal(incorrect))
         advanceUntilIdle()
         assertTrue(assertIs<AndroidStudyState.Typing>(viewModel.state.value).completed)
         viewModel.onEvent(AndroidStudyEvent.NextVisited)

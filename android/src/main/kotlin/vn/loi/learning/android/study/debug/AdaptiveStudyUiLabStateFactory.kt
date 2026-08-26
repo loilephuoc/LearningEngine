@@ -17,6 +17,7 @@ import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.CaseSensitivity
 import vn.loi.learning.domain.study.recall.PunctuationPolicy
 import vn.loi.learning.domain.study.recall.RecallAnswerContract
@@ -39,6 +40,8 @@ import vn.loi.learning.domain.study.recall.RecallResourceId
 import vn.loi.learning.domain.study.recall.RecallTextSpan
 import vn.loi.learning.domain.study.recall.WhitespacePolicy
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.application.typing.TypingAutoRatingDecision
+import vn.loi.learning.application.typing.TypingAutoRatingReason
 
 object AdaptiveStudyUiLabStateFactory {
 
@@ -232,6 +235,9 @@ object AdaptiveStudyUiLabStateFactory {
         selectedChoiceId: String?,
         isRevealed: Boolean,
         isCompleted: Boolean,
+        listeningCompletionPending: Boolean = false,
+        adaptiveTypingCompletionPending: Boolean = false,
+        imageRecallCompletionPending: Boolean = false,
         currentIndex: Int,
         totalCount: Int,
         packageTitle: String
@@ -284,15 +290,22 @@ object AdaptiveStudyUiLabStateFactory {
 
         return when (mode) {
             LabStudyMode.TYPING -> {
-                val evaluation = evaluateTyping(currentInput, content.text.primaryText, isCompleted)
+                val typingCorrect = adaptiveTypingCompletionPending && !isRevealed
+                val evaluation = evaluateTyping(currentInput, content.text.primaryText, typingCorrect || isCompleted)
                 AndroidStudyState.Typing(
                     plan = plan,
                     prompt = meaning ?: content.text.primaryText,
                     answer = currentInput,
                     evaluation = evaluation,
                     revealed = isRevealed,
-                    completed = isCompleted,
-                    outcome = outcome,
+                    previousCanonicalRating = if (typingCorrect) ReviewRating.GOOD else null,
+                    canonicalRatingTransitionEligible = typingCorrect,
+                    automaticRating = if (typingCorrect) TypingAutoRatingDecision(
+                        ReviewRating.GOOD, TypingAutoRatingReason.STANDARD_EXACT, 1_000L
+                    ) else null,
+                    completionPending = typingCorrect,
+                    completed = typingCorrect || isCompleted,
+                    outcome = if (typingCorrect) RecallOutcome.CORRECT else outcome,
                     pronunciation = ipa,
                     partOfSpeech = pos,
                     meaning = meaning,
@@ -312,12 +325,33 @@ object AdaptiveStudyUiLabStateFactory {
                 )
             }
             LabStudyMode.LISTENING -> {
+                val listeningCorrect = listeningCompletionPending && !isRevealed
                 AndroidStudyState.Listening(
                     plan = plan,
                     audioPath = primaryAudio,
                     answer = currentInput,
-                    completed = isCompleted,
-                    outcome = outcome,
+                    revealed = isRevealed,
+                    evaluation = if (listeningCorrect) {
+                        TypingAnswerEvaluationStatus.CORRECT
+                    } else {
+                        TypingAnswerEvaluationStatus.EMPTY
+                    },
+                    previousCanonicalRating = if (listeningCorrect) ReviewRating.GOOD else null,
+                    canonicalRatingTransitionEligible = listeningCorrect,
+                    automaticRating = if (listeningCorrect) {
+                        TypingAutoRatingDecision(
+                            ReviewRating.GOOD,
+                            TypingAutoRatingReason.STANDARD_EXACT,
+                            1_000L
+                        )
+                    } else null,
+                    completionPending = listeningCorrect,
+                    completed = listeningCorrect || isCompleted || isRevealed,
+                    outcome = when {
+                        isRevealed -> RecallOutcome.REVEALED
+                        listeningCorrect -> RecallOutcome.CORRECT
+                        else -> outcome
+                    },
                     pronunciation = ipa,
                     partOfSpeech = pos,
                     meaning = meaning,
@@ -363,12 +397,25 @@ object AdaptiveStudyUiLabStateFactory {
                 )
             }
             LabStudyMode.IMAGE_RECALL -> {
+                val imageCorrect = imageRecallCompletionPending && !isRevealed
                 AndroidStudyState.ImageRecall(
                     plan = plan,
                     imagePath = resolvedImage,
                     answer = currentInput,
-                    completed = isCompleted,
-                    outcome = outcome,
+                    evaluation = if (imageCorrect) TypingAnswerEvaluationStatus.CORRECT else TypingAnswerEvaluationStatus.EMPTY,
+                    previousCanonicalRating = if (imageCorrect) ReviewRating.GOOD else null,
+                    canonicalRatingTransitionEligible = imageCorrect,
+                    automaticRating = if (imageCorrect) TypingAutoRatingDecision(
+                        ReviewRating.GOOD, TypingAutoRatingReason.STANDARD_EXACT, 1_000L
+                    ) else null,
+                    completionPending = imageCorrect,
+                    revealed = isRevealed,
+                    completed = imageCorrect || isCompleted || isRevealed,
+                    outcome = when {
+                        isRevealed -> RecallOutcome.REVEALED
+                        imageCorrect -> RecallOutcome.CORRECT
+                        else -> outcome
+                    },
                     pronunciation = ipa,
                     partOfSpeech = pos,
                     meaning = meaning,

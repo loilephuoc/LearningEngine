@@ -66,7 +66,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(image < answer)
         assertTrue(introduction.contains("StudyStageCard("))
         assertTrue(screen.contains("is AndroidStudyState.Introduction,"))
-        assertTrue(screen.contains("is AndroidStudyState.Typing -> Modifier.fillMaxWidth().weight(1f)"))
+        assertTrue(screen.contains("is AndroidStudyState.ImageRecall -> Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("state = introductionScrollState"))
         assertTrue(introduction.contains("Spacer(modifier = Modifier.height(14.dp))"))
     }
@@ -75,7 +75,7 @@ class AndroidImmersiveStudyCompositionTest {
     fun `Introduction occupies the available interaction viewport while content remains scrollable`() {
         val introduction = introductionSource()
         assertTrue(screen.contains("is AndroidStudyState.Introduction,"))
-        assertTrue(screen.contains("is AndroidStudyState.Typing -> Modifier.fillMaxWidth().weight(1f)"))
+        assertTrue(screen.contains("is AndroidStudyState.ImageRecall -> Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("BoxWithConstraints(modifier.fillMaxSize())"))
         assertTrue(introduction.contains(".weight(1f).graphicsLayer"))
         assertTrue(introduction.contains(".introductionStageGestures("))
@@ -262,7 +262,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)"))
         assertFalse(introduction.contains("playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)"))
         assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)"))
-        assertTrue(answerSection.contains("interaction = StudyTextInteraction.PASSIVE"))
+        assertTrue(answerSection.contains("StudyTextInteraction.PASSIVE"))
         assertTrue(answerSection.contains("boundedAudioTarget = !isLooping"))
     }
 

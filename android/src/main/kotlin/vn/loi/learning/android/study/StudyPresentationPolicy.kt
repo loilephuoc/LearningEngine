@@ -1,6 +1,7 @@
 package vn.loi.learning.android.study
 
 import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.domain.study.recall.RecallOutcome
 import vn.loi.learning.domain.study.session.model.FocusedPracticeKind
 
 /** Presentation-only sizing and interaction policy for the Android Study canvas. */
@@ -196,6 +197,12 @@ internal object AndroidTypingSuccessPresentationPolicy {
     fun expectedAdvanceMillis(audioDurationMillis: Long): Long =
         maxOf(minimumDwellMillis, audioDurationMillis.coerceAtLeast(0L))
 }
+
+internal fun shouldStartListeningSuccessAutoAdvance(
+    completionPending: Boolean,
+    outcome: RecallOutcome?,
+    compactSuccessRendered: Boolean
+): Boolean = completionPending && outcome == RecallOutcome.CORRECT && compactSuccessRendered
 
 internal fun shouldStartTypingRevealAnswerAutoplay(
     revealed: Boolean,

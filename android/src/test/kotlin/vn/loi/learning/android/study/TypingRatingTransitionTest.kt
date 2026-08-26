@@ -80,7 +80,8 @@ class TypingRatingTransitionTest {
         assertFalse(modes.contains("getContentLearningState"))
         assertFalse(screen.contains("getContentLearningState"))
         assertFalse(screen.contains("clickable"))
-        assertTrue(modes.contains("typingRatingTransitionPresentation(state)"))
+        assertTrue(modes.contains("typedResultPresentation(state)"))
+        assertTrue(modes.contains("resolveTypingRatingTransition("))
     }
 
     private fun resolve(

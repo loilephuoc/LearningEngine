@@ -286,6 +286,13 @@ sealed interface AndroidStudyState {
         override val plan: RecallPlan,
         val audioPath: String?,
         val answer: String = "",
+        val evaluation: TypingAnswerEvaluationStatus = TypingAnswerEvaluationStatus.EMPTY,
+        val attempt: TypingAttemptState? = null,
+        val previousCanonicalRating: ReviewRating? = null,
+        val canonicalRatingTransitionEligible: Boolean = false,
+        val automaticRating: TypingAutoRatingDecision? = null,
+        val completionPending: Boolean = false,
+        val revealed: Boolean = false,
         val audioUnavailable: Boolean = audioPath == null,
         override val completed: Boolean = false,
         override val outcome: RecallOutcome? = null,
@@ -311,6 +318,13 @@ sealed interface AndroidStudyState {
         override val plan: RecallPlan,
         val imagePath: String?,
         val answer: String = "",
+        val evaluation: TypingAnswerEvaluationStatus = TypingAnswerEvaluationStatus.EMPTY,
+        val attempt: TypingAttemptState? = null,
+        val previousCanonicalRating: ReviewRating? = null,
+        val canonicalRatingTransitionEligible: Boolean = false,
+        val automaticRating: TypingAutoRatingDecision? = null,
+        val completionPending: Boolean = false,
+        val revealed: Boolean = false,
         val imageUnavailable: Boolean = imagePath == null,
         val answerAudioLoopEnabled: Boolean = false,
         override val completed: Boolean = false,
@@ -1353,8 +1367,36 @@ class AndroidStudyFacade(
                 }
             )
         }
-        is AndroidStudyState.Listening -> if (state.completed) state else state.copy(answer = answer)
-        is AndroidStudyState.ImageRecall -> if (state.completed) state else state.copy(answer = answer)
+        is AndroidStudyState.Listening -> {
+            if (state.completed || state.revealed) state else state.copy(
+                answer = answer,
+                evaluation = typingEvaluator.evaluate(
+                    TypingRecallPrompt(state.plan.answerContract.canonicalAnswer), answer
+                ).status,
+                attempt = state.attempt?.let { attempt ->
+                    val prompt = TypingRecallPrompt(state.plan.answerContract.canonicalAnswer)
+                    TypingAttemptTracker.update(
+                        attempt, answer, typingEvaluator.evaluate(prompt, answer),
+                        typingEvaluator.evaluateExpectedPrefix(prompt, answer),
+                        TypingAttemptTimeSource.MONOTONIC.nowMillis()
+                    )
+                }
+            )
+        }
+        is AndroidStudyState.ImageRecall -> if (state.completed || state.revealed) state else {
+            val prompt = TypingRecallPrompt(state.plan.answerContract.canonicalAnswer)
+            val evaluation = typingEvaluator.evaluate(prompt, answer)
+            val attempt = state.attempt
+            state.copy(
+                answer = answer,
+                evaluation = evaluation.status,
+                attempt = if (attempt == null) null else TypingAttemptTracker.update(
+                    attempt, answer, evaluation,
+                    typingEvaluator.evaluateExpectedPrefix(prompt, answer),
+                    TypingAttemptTimeSource.MONOTONIC.nowMillis()
+                )
+            )
+        }
         is AndroidStudyState.ExampleCompletion -> if (state.completed || state.revealed) state else state.copy(answer = answer)
         is AndroidStudyState.MultipleChoice -> state
     }
@@ -1388,6 +1430,97 @@ class AndroidStudyFacade(
             completed = true,
             outcome = execution.result.outcome
         )
+    }
+
+    fun submitListeningIfCorrect(state: AndroidStudyState.Listening): AndroidStudyState {
+        val evaluation = typingEvaluator.evaluate(
+            TypingRecallPrompt(state.plan.answerContract.canonicalAnswer), state.answer
+        )
+        if (!evaluation.isCorrect || state.completionPending || state.plan.planId in submittedPlans) {
+            return state.copy(evaluation = evaluation.status)
+        }
+        val item = currentItem ?: return AndroidStudyState.Failed("Study item is unavailable.")
+        val attempt = state.attempt ?: return AndroidStudyState.Failed("Listening typing attempt is unavailable.")
+        val metrics = attempt.snapshot(revealUsed = false)
+        val decision = TypingAutomaticRatingResolver.decide(metrics)
+        val strategyContext = strategyContext(item.session)
+        val execution = context.engine.executeRecall(
+            RecallExecutionRequest(
+                state.plan,
+                typedSubmission(state.plan, state.answer),
+                evaluationContext = strategyContext
+            )
+        ) as? RecallExecutionResult.Completed
+            ?: return AndroidStudyState.Failed("Shared recall execution rejected the Listening attempt.")
+        val learning = context.engine.executeRecallLearning(
+            RecallLearningExecutionRequest(
+                execution.result, item.session.id, item.item.learningItem.id, learnerId,
+                item.item.content.id, strategyContext,
+                policy = RecallLearningExecutionPolicy(
+                    strongExactRating = decision.rating,
+                    standardSuccessRating = decision.rating,
+                    weakSuccessRating = decision.rating
+                )
+            )
+        )
+        if (learning !is RecallLearningExecutionResult.Committed &&
+            learning !is RecallLearningExecutionResult.PracticeRecorded
+        ) {
+            return AndroidStudyState.Failed("Shared learning execution rejected the Listening rating.")
+        }
+        submittedPlans += state.plan.planId
+        val completed = state.copy(
+            evaluation = evaluation.status,
+            automaticRating = decision,
+            completionPending = true,
+            completed = true,
+            outcome = execution.result.outcome
+        )
+        val committedSession = context.engine.getSession(item.session.id) ?: item.session
+        return attachHud(completed, committedSession)
+    }
+
+    fun submitImageRecallIfCorrect(state: AndroidStudyState.ImageRecall): AndroidStudyState {
+        val evaluation = typingEvaluator.evaluate(
+            TypingRecallPrompt(state.plan.answerContract.canonicalAnswer), state.answer
+        )
+        if (!evaluation.isCorrect || state.completionPending || state.plan.planId in submittedPlans) {
+            return state.copy(evaluation = evaluation.status)
+        }
+        val item = currentItem ?: return AndroidStudyState.Failed("Study item is unavailable.")
+        val attempt = state.attempt ?: return AndroidStudyState.Failed("Image Recall typing attempt is unavailable.")
+        val decision = TypingAutomaticRatingResolver.decide(attempt.snapshot(revealUsed = false))
+        val strategyContext = strategyContext(item.session)
+        val execution = context.engine.executeRecall(
+            RecallExecutionRequest(
+                state.plan, typedSubmission(state.plan, state.answer),
+                evaluationContext = strategyContext
+            )
+        ) as? RecallExecutionResult.Completed
+            ?: return AndroidStudyState.Failed("Shared recall execution rejected the Image Recall attempt.")
+        val learning = context.engine.executeRecallLearning(
+            RecallLearningExecutionRequest(
+                execution.result, item.session.id, item.item.learningItem.id, learnerId,
+                item.item.content.id, strategyContext,
+                policy = RecallLearningExecutionPolicy(
+                    strongExactRating = decision.rating,
+                    standardSuccessRating = decision.rating,
+                    weakSuccessRating = decision.rating
+                )
+            )
+        )
+        if (learning !is RecallLearningExecutionResult.Committed &&
+            learning !is RecallLearningExecutionResult.PracticeRecorded
+        ) return AndroidStudyState.Failed("Shared learning execution rejected the Image Recall rating.")
+        submittedPlans += state.plan.planId
+        val completed = state.copy(
+            evaluation = evaluation.status,
+            automaticRating = decision,
+            completionPending = true,
+            completed = true,
+            outcome = execution.result.outcome
+        )
+        return attachHud(completed, context.engine.getSession(item.session.id) ?: item.session)
     }
 
     fun commitTypingRating(state: AndroidStudyState.Typing, manualRating: ReviewRating?): AndroidStudyState =
@@ -1509,6 +1642,9 @@ class AndroidStudyFacade(
             return if (pending is AndroidStudyState.Typing && pending.completionPending) {
                 commitTypingRating(pending, null)
             } else pending
+        }
+        if (updatedState is AndroidStudyState.Listening) {
+            return submitListeningIfCorrect(updatedState)
         }
         val plan = state.plan ?: return state
         return execute(updatedState, typedSubmission(plan, answerToUse))
@@ -1673,8 +1809,32 @@ class AndroidStudyFacade(
             )
             is RecallPrompt.Listening -> {
                 val audioPath = resolveMedia(prompt.audio.value) ?: promptAudio
+                val canonicalRatingTransitionEligible = item?.session?.policy?.evaluationPolicy ==
+                    SessionEvaluationPolicy.EVALUATIVE
+                val previousCanonicalRating = if (canonicalRatingTransitionEligible) {
+                    requireNotNull(item).item.content.id.let { contentId ->
+                        context.engine.getContentLearningState(learnerId, contentId).latestEffectiveRating
+                    }
+                } else null
                 AndroidStudyState.Listening(
                     plan, audioPath,
+                    attempt = item?.let { next ->
+                        TypingAttemptState(
+                            context = ExperienceRotationContext.from(next),
+                            attemptGeneration = attemptSequence.incrementAndGet(),
+                            startedAtMillis = TypingAttemptTimeSource.MONOTONIC.nowMillis(),
+                            canonicalCodePointCount = plan.answerContract.canonicalAnswer.codePointCount(
+                                0, plan.answerContract.canonicalAnswer.length
+                            ),
+                            itemOrigin = next.origin,
+                            learningStage = null,
+                            previousRating = null,
+                            itemPresentedAtEpochMillis = now(),
+                            timingPolicy = TypingTimingPolicy.MEASURE_FROM_FIRST_INPUT
+                        )
+                    },
+                    previousCanonicalRating = previousCanonicalRating,
+                    canonicalRatingTransitionEligible = canonicalRatingTransitionEligible,
                     pronunciation = pronunciation, partOfSpeech = partOfSpeech, meaning = meaning, example = example, translation = translation,
                     resolvedPromptAudio = audioPath, resolvedExpectedAnswerAudio = expectedAnswerAudio,
                     resolvedMeaningAudio = meaningAudio, resolvedExampleEnglishAudio = exampleEnglishAudio,
@@ -1685,8 +1845,32 @@ class AndroidStudyFacade(
             }
             is RecallPrompt.ImageRecall -> {
                 val imagePath = resolveMedia(prompt.image.value) ?: mediaImage
+                val canonicalRatingTransitionEligible = item?.session?.policy?.evaluationPolicy ==
+                    SessionEvaluationPolicy.EVALUATIVE
+                val previousCanonicalRating = if (canonicalRatingTransitionEligible) {
+                    requireNotNull(item).item.content.id.let { contentId ->
+                        context.engine.getContentLearningState(learnerId, contentId).latestEffectiveRating
+                    }
+                } else null
                 AndroidStudyState.ImageRecall(
                     plan, imagePath,
+                    attempt = item?.let { next ->
+                        TypingAttemptState(
+                            context = ExperienceRotationContext.from(next),
+                            attemptGeneration = attemptSequence.incrementAndGet(),
+                            startedAtMillis = TypingAttemptTimeSource.MONOTONIC.nowMillis(),
+                            canonicalCodePointCount = plan.answerContract.canonicalAnswer.codePointCount(
+                                0, plan.answerContract.canonicalAnswer.length
+                            ),
+                            itemOrigin = next.origin,
+                            learningStage = null,
+                            previousRating = null,
+                            itemPresentedAtEpochMillis = now(),
+                            timingPolicy = TypingTimingPolicy.MEASURE_FROM_FIRST_INPUT
+                        )
+                    },
+                    previousCanonicalRating = previousCanonicalRating,
+                    canonicalRatingTransitionEligible = canonicalRatingTransitionEligible,
                     answerAudioLoopEnabled = item?.session?.policy?.let { policy ->
                         policy.evaluationPolicy == SessionEvaluationPolicy.EVALUATIVE &&
                             policy.allowRepeatInSameSession && policy.newItemLimit == 0
@@ -1740,8 +1924,17 @@ class AndroidStudyFacade(
                 revealed = submission is RecallSubmission.Reveal, completed = true, outcome = result.result.outcome
             )
             is AndroidStudyState.MultipleChoice -> state.copy(completed = true, outcome = result.result.outcome)
-            is AndroidStudyState.Listening -> state.copy(completed = true, outcome = result.result.outcome)
-            is AndroidStudyState.ImageRecall -> state.copy(completed = true, outcome = result.result.outcome)
+            is AndroidStudyState.Listening -> state.copy(
+                revealed = submission is RecallSubmission.Reveal,
+                completed = true,
+                outcome = result.result.outcome
+            )
+            is AndroidStudyState.ImageRecall -> state.copy(
+                revealed = submission is RecallSubmission.Reveal,
+                completionPending = false,
+                completed = true,
+                outcome = result.result.outcome
+            )
             is AndroidStudyState.ExampleCompletion -> state.copy(
                 revealed = submission is RecallSubmission.Reveal, completed = true, outcome = result.result.outcome
             )

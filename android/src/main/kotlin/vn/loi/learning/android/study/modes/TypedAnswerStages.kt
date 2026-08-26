@@ -40,9 +40,93 @@ import vn.loi.learning.android.ui.*
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingDifferenceKind
+import vn.loi.learning.domain.study.recall.RecallOutcome
 import vn.loi.learning.application.typing.*
 import kotlinx.coroutines.delay
+import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 import vn.loi.learning.android.study.components.PartOfSpeechBadge
+
+internal data class TypedResultPresentation(
+    val answer: String,
+    val image: String?,
+    val pronunciation: String?,
+    val partOfSpeech: String?,
+    val meaning: String?,
+    val previousRating: vn.loi.learning.domain.study.memory.model.ReviewRating?,
+    val automaticRating: TypingAutoRatingDecision?,
+    val ratingTransitionEligible: Boolean,
+    val completionPending: Boolean,
+    val revealed: Boolean,
+    val outcome: RecallOutcome?,
+    val focusedPractice: Boolean
+)
+
+internal fun typedResultPresentation(state: AndroidStudyState.Runtime): TypedResultPresentation? = when (state) {
+    is AndroidStudyState.Typing -> TypedResultPresentation(
+        state.plan.answerContract.canonicalAnswer, state.resolvedImage, state.pronunciation,
+        state.partOfSpeech, state.meaning, state.previousCanonicalRating, state.automaticRating,
+        state.canonicalRatingTransitionEligible, state.completionPending, state.revealed,
+        state.outcome, state.hud?.focusedPractice == true
+    )
+    is AndroidStudyState.Listening -> TypedResultPresentation(
+        state.plan.answerContract.canonicalAnswer, state.resolvedImage, state.pronunciation,
+        state.partOfSpeech, state.meaning, state.previousCanonicalRating, state.automaticRating,
+        state.canonicalRatingTransitionEligible, state.completionPending, state.revealed,
+        state.outcome, state.hud?.focusedPractice == true
+    )
+    is AndroidStudyState.ImageRecall -> TypedResultPresentation(
+        state.plan.answerContract.canonicalAnswer, state.resolvedImage, state.pronunciation,
+        state.partOfSpeech, state.meaning, state.previousCanonicalRating, state.automaticRating,
+        state.canonicalRatingTransitionEligible, state.completionPending, state.revealed,
+        state.outcome, state.hud?.focusedPractice == true
+    )
+    else -> null
+}
+
+@Composable
+internal fun TypedCompactSuccess(
+    presentation: TypedResultPresentation,
+    density: StudyContentDensity,
+    availableMediaHeightDp: Int,
+    onOpenFullscreenImage: (String) -> Unit,
+    onRendered: () -> Unit = {}
+) {
+    SideEffect(onRendered)
+    TypingImeContinuityAnchor(presentation.answer)
+    StudyMedia(
+        presentation.image, StudyMediaRole.COMPACT, density,
+        availableMediaHeightDp, onOpenFullscreenImage
+    )
+    StudyAnswerSection(
+        englishAnswer = presentation.answer,
+        pronunciation = normalizedIntroductionPronunciation(
+            presentation.partOfSpeech, presentation.pronunciation
+        ),
+        partOfSpeech = presentation.partOfSpeech?.let(::partOfSpeechPresentation),
+        vietnameseAnswer = presentation.meaning,
+        englishExample = null,
+        vietnameseExample = null,
+        answerAudioPath = null,
+        englishExampleAudioPath = null,
+        isPlayingAnswer = false,
+        isPlayingVietnamese = false,
+        isPlayingEnglishExample = false,
+        isPlayingVietnameseExample = false,
+        onAnswerAudio = {},
+        onEnglishExampleAudio = {},
+        answerHero = true
+    )
+    resolveTypingRatingTransition(
+        previousCanonicalRating = presentation.previousRating,
+        automaticRating = presentation.automaticRating,
+        manualRating = null,
+        eligible = presentation.ratingTransitionEligible,
+        completionPending = presentation.completionPending,
+        revealed = presentation.revealed,
+        outcome = presentation.outcome,
+        focusedPractice = presentation.focusedPractice
+    )?.let { TypingRatingTransition(it, Modifier.fillMaxWidth()) }
+}
 
 @Composable
 internal fun TypingStudyStage(
@@ -62,6 +146,12 @@ internal fun TypingStudyStage(
     LaunchedEffect(state.answer) { currentInput = state.answer }
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val feedbackVisible = state.completed || state.revealed
+    val liveEvaluation = remember(currentInput, state.plan.answerContract.canonicalAnswer) {
+        TypingAnswerEvaluator().evaluate(
+            TypingRecallPrompt(state.plan.answerContract.canonicalAnswer),
+            currentInput
+        )
+    }
     val density = resolveTypedModeDensity(
         baseDensity, imeVisible, !state.resolvedImage.isNullOrBlank(),
         state.prompt.length + state.meaning.orEmpty().length + state.example.orEmpty().length,
@@ -70,7 +160,7 @@ internal fun TypingStudyStage(
     val inputState = resolveStudyInputVisualState(
         enabled = !feedbackVisible,
         focused = !feedbackVisible,
-        typingEvaluation = state.evaluation,
+        typingEvaluation = liveEvaluation.status,
         outcome = state.outcome
     )
     val inputSessionActive = !feedbackVisible
@@ -80,6 +170,12 @@ internal fun TypingStudyStage(
         imeVisible = imeVisible,
         inputSessionActive = inputSessionActive
     )
+    val typingFrontBounds = if (!state.revealed) resolveTypingFrontMediaBounds(
+        density = density,
+        availableHeightDp = if (imeVisible) availableMediaHeightDp / 2 else availableMediaHeightDp,
+        hasMedia = !state.resolvedImage.isNullOrBlank(),
+        imeVisible = imeVisible
+    ) else null
     LaunchedEffect(state.plan.planId.value, imeVisible, density, mediaRole, availableMediaHeightDp) {
         AndroidTypingLayoutTrace.changed(
             planId = state.plan.planId.value,
@@ -105,45 +201,24 @@ internal fun TypingStudyStage(
     val elapsedMillis = state.attempt?.activeTypingElapsedMillis(clockMillis) ?: 0L
     val projectedRating = state.automaticRating ?: state.attempt?.projectedMetrics(clockMillis)?.let(TypingAutomaticRatingResolver::decide)
     val stableActionsRequester = remember(state.plan.planId.value) { BringIntoViewRequester() }
+    val typingStageDensity = if (imeVisible || state.revealed && !state.completionPending) {
+        StudyContentDensity.DENSE
+    } else density
     TypedAnswerStageFrame(
         modifier = modifier,
         feedback = inputState.feedbackVisual(),
-        density = density,
-        fillViewport = true,
+        density = typingStageDensity,
+        fillViewport = feedbackVisible,
         onStageTap = onStageTap,
         onSwipeNext = onSwipeNext
     ) {
         if (state.completionPending) {
-            TypingImeContinuityAnchor(state.plan.planId.value)
-            StudyMedia(
-                state.resolvedImage,
-                StudyMediaRole.COMPACT,
-                density,
-                availableMediaHeightDp,
-                onOpenFullscreenImage
+            TypedCompactSuccess(
+                requireNotNull(typedResultPresentation(state)), density,
+                availableMediaHeightDp, onOpenFullscreenImage
             )
-            StudyAnswerSection(
-                englishAnswer = state.plan.answerContract.canonicalAnswer,
-                pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
-                partOfSpeech = state.partOfSpeech?.let(::partOfSpeechPresentation),
-                vietnameseAnswer = state.meaning,
-                englishExample = null,
-                vietnameseExample = null,
-                answerAudioPath = null,
-                englishExampleAudioPath = null,
-                isPlayingAnswer = false,
-                isPlayingVietnamese = false,
-                isPlayingEnglishExample = false,
-                isPlayingVietnameseExample = false,
-                onAnswerAudio = {},
-                onEnglishExampleAudio = {},
-                answerHero = true
-            )
-            typingRatingTransitionPresentation(state)?.let { presentation ->
-                TypingRatingTransition(presentation, Modifier.fillMaxWidth())
-            }
         } else {
-        if (!feedbackVisible) {
+            if (!feedbackVisible) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -175,20 +250,14 @@ internal fun TypingStudyStage(
                     }
                 }
             }
-            if (!state.revealed) {
-                val typingFrontBounds = resolveTypingFrontMediaBounds(
-                    density = density,
-                    availableHeightDp = availableMediaHeightDp,
-                    hasMedia = !state.resolvedImage.isNullOrBlank(),
-                    imeVisible = imeVisible
-                )
+            if (!state.revealed && !imeVisible) {
                 StudyMedia(
                     state.resolvedImage, mediaRole, density, availableMediaHeightDp,
                     onOpenFullscreenImage,
                     customBounds = typingFrontBounds
                 )
             }
-            if (state.attempt?.firstInputAtMillis != null && !state.revealed) {
+            if (state.attempt?.firstInputAtMillis != null && !state.revealed && !imeVisible) {
                 Text(
                     "⏱ ${formatTypingSeconds(elapsedMillis)}   ${if (state.completionPending) "AUTO: " else ""}${projectedRating?.rating?.name ?: "ACTIVE"}",
                     style = StudyTypography.metadata,
@@ -202,25 +271,34 @@ internal fun TypingStudyStage(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     StudyAnswerInput(
-                        state.plan.planId.value, state.answer, true, state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
+                        state.plan.planId.value, state.answer, true, liveEvaluation.status == TypingAnswerEvaluationStatus.INCORRECT,
                         label = "Type your answer", feedback = inputState.feedbackVisual(),
+                        keepImeOnSubmit = true,
                         onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
                         onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
                     )
                     TypingInputActions(
-                        currentInput, inputState, showRetry = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
+                        currentInput, inputState, showRetry = liveEvaluation.status == TypingAnswerEvaluationStatus.INCORRECT,
                         onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
                         onRetry = { onEvent(AndroidStudyEvent.Retry) },
                         onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) },
+                        showIncorrectStatus = false,
                         modifier = Modifier.bringIntoViewRequester(stableActionsRequester)
                     )
-                    if (!imeVisible) {
+                    if (!imeVisible && liveEvaluation.status != TypingAnswerEvaluationStatus.INCORRECT) {
                         StudyRatingBar(
                             onRating = { onEvent(AndroidStudyEvent.SelectTypingRatingOverride(it)) },
                             selectedRating = state.manualRating
                         )
                     }
                 }
+            }
+            if (!state.revealed && imeVisible) {
+                StudyMedia(
+                    state.resolvedImage, mediaRole, density, availableMediaHeightDp,
+                    onOpenFullscreenImage,
+                    customBounds = typingFrontBounds
+                )
             }
             feedbackContent()
         }
@@ -240,13 +318,14 @@ private fun TypingImeContinuityAnchor(planId: String) {
 }
 
 @Composable
-private fun TypingInputActions(
+internal fun TypingInputActions(
     answer: String,
     visualState: StudyInputVisualState,
     showRetry: Boolean,
     onSubmit: () -> Unit,
     onRetry: () -> Unit,
     onReveal: () -> Unit,
+    showIncorrectStatus: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -254,7 +333,7 @@ private fun TypingInputActions(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(StudySpacing.micro)
     ) {
-        Box(
+        if (showIncorrectStatus) Box(
             modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -380,7 +459,7 @@ internal fun resolveAndroidTypingRevealComparison(actual: String, expected: Stri
         actualSpans = safeActualSpans,
         expectedSpans = safeExpectedSpans,
         accessibilityDescription = "Your answer $actual. Correct answer $expected. " +
-            androidTypingDifferenceAccessibilityText(evaluation.differences)
+                androidTypingDifferenceAccessibilityText(evaluation.differences)
     )
 }
 
@@ -439,41 +518,104 @@ internal fun ListeningStudyStage(
     state: AndroidStudyState.Listening,
     activeRole: AudioRole?,
     baseDensity: StudyContentDensity,
+    availableMediaHeightDp: Int,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit,
+    onOpenFullscreenImage: (String) -> Unit,
     feedbackContent: @Composable () -> Unit,
+    onCompactSuccessRendered: () -> Unit = {},
+    onStageTap: (() -> Unit)? = null,
+    onSwipeNext: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var currentInput by remember(state.plan.planId.value) { mutableStateOf(state.answer) }
     LaunchedEffect(state.answer) { currentInput = state.answer }
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val feedbackVisible = state.completed || state.revealed
+    val liveEvaluation = remember(currentInput, state.plan.answerContract.canonicalAnswer) {
+        TypingAnswerEvaluator().evaluate(
+            TypingRecallPrompt(state.plan.answerContract.canonicalAnswer),
+            currentInput
+        )
+    }
     val density = resolveTypedModeDensity(
-        baseDensity, imeVisible, false,
+        baseDensity, imeVisible, !state.resolvedImage.isNullOrBlank(),
         state.meaning.orEmpty().length + state.example.orEmpty().length,
         !state.example.isNullOrBlank()
     )
-    val inputState = resolveStudyInputVisualState(!state.completed && !state.audioUnavailable, !state.completed, outcome = state.outcome)
-    TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density) {
-        StudyListeningAudioPrompt(
-            isPlaying = activeRole == AudioRole.PROMPT,
-            audioAvailable = !state.resolvedPromptAudio.isNullOrBlank(),
-            onReplay = { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, false) }
-        )
-        if (state.audioUnavailable) StudyUnavailableNotice("Listening audio unavailable")
-        StudyAnswerInput(
-            state.plan.planId.value, state.answer, !state.completed && !state.audioUnavailable, false,
-            label = "Type what you hear", feedback = inputState.feedbackVisual(),
-            onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
-            onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
-        )
-        TypedInputActions(currentInput, inputState, false,
-            { onEvent(AndroidStudyEvent.Submit(currentInput)) }, { onEvent(AndroidStudyEvent.Retry) })
-        feedbackContent()
+    val inputState = resolveStudyInputVisualState(
+        enabled = !feedbackVisible && !state.audioUnavailable,
+        focused = !feedbackVisible,
+        typingEvaluation = liveEvaluation.status,
+        outcome = state.outcome
+    )
+    val listeningRevealDensity = if (state.revealed ||
+        state.completed && state.outcome != RecallOutcome.CORRECT
+    ) StudyContentDensity.DENSE else density
+
+    LaunchedEffect(
+        state.plan.planId.value,
+        currentInput,
+        liveEvaluation.status,
+        state.completed,
+        state.revealed,
+        state.audioUnavailable
+    ) {
+        if (!state.completed && !state.revealed && !state.audioUnavailable &&
+            liveEvaluation.status == TypingAnswerEvaluationStatus.CORRECT
+        ) {
+            delay(420)
+            onEvent(AndroidStudyEvent.Submit(currentInput))
+        }
+    }
+
+    TypedAnswerStageFrame(
+        modifier = modifier,
+        feedback = inputState.feedbackVisual(),
+        density = listeningRevealDensity,
+        fillViewport = feedbackVisible,
+        onStageTap = onStageTap,
+        onSwipeNext = onSwipeNext
+    ) {
+        if (state.completionPending && state.outcome == RecallOutcome.CORRECT && !state.revealed) {
+            TypedCompactSuccess(
+                requireNotNull(typedResultPresentation(state)), density,
+                availableMediaHeightDp, onOpenFullscreenImage,
+                onRendered = onCompactSuccessRendered
+            )
+        } else if (state.revealed || (state.completed && state.outcome != RecallOutcome.CORRECT)) {
+            feedbackContent()
+        } else {
+            StudyListeningAudioPrompt(
+                isPlaying = activeRole == AudioRole.PROMPT,
+                audioAvailable = !state.resolvedPromptAudio.isNullOrBlank(),
+                onReplay = { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, false) }
+            )
+            if (state.audioUnavailable) StudyUnavailableNotice("Listening audio unavailable")
+            StudyAnswerInput(
+                state.plan.planId.value,
+                state.answer,
+                !state.audioUnavailable,
+                liveEvaluation.status == TypingAnswerEvaluationStatus.INCORRECT,
+                label = "Type your answer",
+                feedback = inputState.feedbackVisual(),
+                onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
+                onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
+            )
+            TypingInputActions(
+                answer = currentInput,
+                visualState = inputState,
+                showRetry = liveEvaluation.status == TypingAnswerEvaluationStatus.INCORRECT,
+                onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
+                onRetry = { onEvent(AndroidStudyEvent.Retry) },
+                onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) }
+            )
+        }
     }
 }
 
 @Composable
-private fun TypedAnswerStageFrame(
+internal fun TypedAnswerStageFrame(
     modifier: Modifier,
     feedback: StudyFeedbackVisualState,
     density: StudyContentDensity,

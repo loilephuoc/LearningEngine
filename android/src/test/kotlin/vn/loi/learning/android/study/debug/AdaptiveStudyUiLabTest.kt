@@ -107,6 +107,68 @@ class AdaptiveStudyUiLabTest {
     }
 
     @Test
+    fun `Listening exact input builds production compact success and incomplete input stays active`() {
+        val content = sampleContent()
+        fun state(input: String, pending: Boolean) = AdaptiveStudyUiLabStateFactory.buildState(
+            content = content,
+            allPackageContents = listOf(content),
+            mode = LabStudyMode.LISTENING,
+            mediaResolver = { "media/$it" },
+            currentInput = input,
+            selectedChoiceId = null,
+            isRevealed = false,
+            isCompleted = pending,
+            listeningCompletionPending = pending,
+            currentIndex = 0,
+            totalCount = 1,
+            packageTitle = "Test Package"
+        ) as AndroidStudyState.Listening
+
+        assertTrue(isExactListeningPreviewAnswer("  RESILIENCE ", content.text.primaryText))
+        assertFalse(isExactListeningPreviewAnswer("resilien", content.text.primaryText))
+
+        val active = state("resilien", false)
+        assertFalse(active.completionPending)
+        assertFalse(active.completed)
+        assertEquals(TypingAnswerEvaluationStatus.EMPTY, active.evaluation)
+
+        val success = state("resilience", true)
+        assertTrue(success.completionPending)
+        assertTrue(success.completed)
+        assertEquals(RecallOutcome.CORRECT, success.outcome)
+        assertEquals(TypingAnswerEvaluationStatus.CORRECT, success.evaluation)
+        assertEquals(ReviewRating.GOOD, success.previousCanonicalRating)
+        assertTrue(success.canonicalRatingTransitionEligible)
+        assertEquals(ReviewRating.GOOD, success.automaticRating?.rating)
+        assertEquals("media/image_1.png", success.resolvedImage)
+        assertEquals("resilience", success.plan.answerContract.canonicalAnswer)
+        assertEquals("NOUN", success.partOfSpeech)
+        assertEquals("rɪˈzɪljəns", success.pronunciation)
+        assertEquals("khả năng phục hồi", success.meaning)
+    }
+
+    @Test
+    fun `Listening preview exact answer and navigation are local reset only`() {
+        val previewSource = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/android/study/debug/AdaptiveStudyUiPreviewScreen.kt")
+        )
+        val answerChanged = previewSource.substringAfter("is AndroidStudyEvent.AnswerChanged ->")
+            .substringBefore("is AndroidStudyEvent.Submit ->")
+        val nextVisited = previewSource.substringAfter("is AndroidStudyEvent.NextVisited ->")
+            .substringBefore("is AndroidStudyEvent.PreviousVisited ->")
+
+        assertTrue(answerChanged.contains("selectedMode == LabStudyMode.LISTENING"))
+        assertTrue(answerChanged.contains("isExactListeningPreviewAnswer"))
+        assertTrue(answerChanged.contains("listeningCompletionPending = true"))
+        assertTrue(answerChanged.contains("isCompleted = true"))
+        assertTrue(nextVisited.contains("listeningCompletionPending = false"))
+        assertTrue(nextVisited.contains("currentItemIndex + 1"))
+        assertTrue(nextVisited.contains("else {\n                                0"))
+        assertFalse(previewSource.contains("AndroidStudyFacade"))
+        assertFalse(previewSource.contains("executeRecallLearning"))
+    }
+
+    @Test
     fun `3 Multiple Choice request builds correct state with choices`() {
         val target = sampleContent("c1", "resilience", "khả năng phục hồi")
         val distractor = sampleContent("c2", "meticulous", "tỉ mỉ")
@@ -149,6 +211,27 @@ class AdaptiveStudyUiLabTest {
         assertIs<AndroidStudyState.ImageRecall>(state)
         assertEquals("media/tree.png", state.imagePath)
         assertEquals("media/tree.png", state.resolvedImage)
+    }
+
+    @Test
+    fun `Adaptive Typing and Image Recall exact previews enter automatic compact success`() {
+        val content = sampleContent()
+        fun build(mode: LabStudyMode) = AdaptiveStudyUiLabStateFactory.buildState(
+            content, listOf(content), mode, { "media/$it" }, "resilience", null,
+            false, true,
+            adaptiveTypingCompletionPending = mode == LabStudyMode.TYPING,
+            imageRecallCompletionPending = mode == LabStudyMode.IMAGE_RECALL,
+            currentIndex = 0, totalCount = 1, packageTitle = "Test"
+        )
+
+        val typing = build(LabStudyMode.TYPING) as AndroidStudyState.Typing
+        val image = build(LabStudyMode.IMAGE_RECALL) as AndroidStudyState.ImageRecall
+        listOf(typing.completionPending, image.completionPending).forEach(::assertTrue)
+        assertEquals(RecallOutcome.CORRECT, typing.outcome)
+        assertEquals(RecallOutcome.CORRECT, image.outcome)
+        assertEquals(ReviewRating.GOOD, typing.automaticRating?.rating)
+        assertEquals(ReviewRating.GOOD, image.automaticRating?.rating)
+        assertNotNull(image.resolvedImage)
     }
 
     @Test

@@ -17,15 +17,14 @@ class FinalRecallModesCompositionTest {
     @Test fun `Image Recall delegates a hero media first typed composition`() {
         assertTrue(screen.contains("ImageRecallStudyStage("))
         assertTrue(image.indexOf("StudyMedia(") < image.indexOf("StudyAnswerInput("))
-        assertTrue(image.contains("imageRecallMediaRole(imeVisible, true)"))
         assertTrue(image.contains("imageRecallMediaRole(imeVisible, false)"))
         assertTrue(image.contains("WindowInsets.ime"))
         assertTrue(image.contains("remember(state.plan.planId.value)"))
     }
 
     @Test fun `Image Recall preserves one submit and fullscreen route`() {
-        assertEquals(2, Regex("onEvent\\(AndroidStudyEvent\\.Submit").findAll(image).count())
-        assertTrue(image.contains("ReviewImageNavigationOverlay("))
+        assertEquals(1, Regex("onEvent\\(AndroidStudyEvent\\.Submit").findAll(image).count())
+        assertTrue(screen.contains("ReviewImageNavigationOverlay("))
         assertTrue(image.contains("availableMediaHeightDp, onOpenFullscreenImage"))
         assertTrue(screen.contains("StudyAnswerSection("))
         assertFalse(image.contains("requiredHeight"))

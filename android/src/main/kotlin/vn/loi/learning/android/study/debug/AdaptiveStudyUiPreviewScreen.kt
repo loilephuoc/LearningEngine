@@ -2,6 +2,7 @@ package vn.loi.learning.android.study.debug
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -9,6 +10,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import vn.loi.learning.android.study.AndroidStudyEvent
 import vn.loi.learning.android.study.StudyScreen
+import vn.loi.learning.android.study.AndroidTypingSuccessPresentationPolicy
+import kotlinx.coroutines.delay
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.InstalledPackageId
@@ -73,6 +76,12 @@ fun AdaptiveStudyUiPreviewScreen(
     var selectedChoiceId by remember(currentItemIndex, selectedMode, selectedPackageId) { mutableStateOf<String?>(null) }
     var isRevealed by remember(currentItemIndex, selectedMode, selectedPackageId) { mutableStateOf(false) }
     var isCompleted by remember(currentItemIndex, selectedMode, selectedPackageId) { mutableStateOf(false) }
+    var listeningCompletionPending by remember(currentItemIndex, selectedMode, selectedPackageId) {
+        mutableStateOf(false)
+    }
+    var adaptiveTypingCompletionPending by remember(currentItemIndex, selectedMode, selectedPackageId) { mutableStateOf(false) }
+    var adaptiveTypingAudioCompleted by remember(currentItemIndex, selectedMode, selectedPackageId) { mutableStateOf(false) }
+    var imageRecallCompletionPending by remember(currentItemIndex, selectedMode, selectedPackageId) { mutableStateOf(false) }
 
     val studyState = remember(
         currentContent,
@@ -82,6 +91,9 @@ fun AdaptiveStudyUiPreviewScreen(
         selectedChoiceId,
         isRevealed,
         isCompleted,
+        listeningCompletionPending,
+        adaptiveTypingCompletionPending,
+        imageRecallCompletionPending,
         currentItemIndex,
         activePackageTitle
     ) {
@@ -94,10 +106,25 @@ fun AdaptiveStudyUiPreviewScreen(
             selectedChoiceId = selectedChoiceId,
             isRevealed = isRevealed,
             isCompleted = isCompleted,
+            listeningCompletionPending = listeningCompletionPending,
+            adaptiveTypingCompletionPending = adaptiveTypingCompletionPending,
+            imageRecallCompletionPending = imageRecallCompletionPending,
             currentIndex = currentItemIndex,
             totalCount = activeContents.size,
             packageTitle = activePackageTitle
         )
+    }
+
+    LaunchedEffect(adaptiveTypingCompletionPending, adaptiveTypingAudioCompleted, currentItemIndex) {
+        if (!adaptiveTypingCompletionPending || !adaptiveTypingAudioCompleted) return@LaunchedEffect
+        delay(AndroidTypingSuccessPresentationPolicy.minimumDwellMillis)
+        currentItemIndex = if (currentItemIndex < activeContents.size - 1) currentItemIndex + 1 else 0
+        currentInput = ""
+        selectedChoiceId = null
+        isRevealed = false
+        isCompleted = false
+        adaptiveTypingCompletionPending = false
+        adaptiveTypingAudioCompleted = false
     }
 
     // This is deliberately the root composable: the preview inherits the exact production
@@ -107,9 +134,35 @@ fun AdaptiveStudyUiPreviewScreen(
             onEvent = { event ->
                 when (event) {
                     is AndroidStudyEvent.Home -> onBack()
-                    is AndroidStudyEvent.AnswerChanged -> currentInput = event.value
+                    is AndroidStudyEvent.AnswerChanged -> {
+                        currentInput = event.value
+                        if (selectedMode == LabStudyMode.LISTENING &&
+                            isExactListeningPreviewAnswer(event.value, currentContent.text.primaryText)
+                        ) {
+                            listeningCompletionPending = true
+                            isCompleted = true
+                        }
+                        if (selectedMode == LabStudyMode.TYPING &&
+                            isExactListeningPreviewAnswer(event.value, currentContent.text.primaryText)
+                        ) {
+                            adaptiveTypingCompletionPending = true
+                            isCompleted = true
+                        }
+                        if (selectedMode == LabStudyMode.IMAGE_RECALL &&
+                            isExactListeningPreviewAnswer(event.value, currentContent.text.primaryText)
+                        ) {
+                            imageRecallCompletionPending = true
+                            isCompleted = true
+                        }
+                    }
                     is AndroidStudyEvent.Submit -> isCompleted = true
-                    is AndroidStudyEvent.Reveal -> isRevealed = true
+                    AndroidStudyEvent.TypingSuccessAudioCompleted -> adaptiveTypingAudioCompleted = true
+                    is AndroidStudyEvent.Reveal -> {
+                        listeningCompletionPending = false
+                        adaptiveTypingCompletionPending = false
+                        imageRecallCompletionPending = false
+                        isRevealed = true
+                    }
                     is AndroidStudyEvent.Choose -> {
                         selectedChoiceId = event.choiceId
                         isCompleted = true
@@ -128,15 +181,34 @@ fun AdaptiveStudyUiPreviewScreen(
                         selectedChoiceId = null
                         isRevealed = false
                         isCompleted = false
+                        listeningCompletionPending = false
+                        adaptiveTypingCompletionPending = false
+                        imageRecallCompletionPending = false
                     }
                     is AndroidStudyEvent.Retry -> {
                         currentInput = ""
                         selectedChoiceId = null
                         isRevealed = false
                         isCompleted = false
+                        listeningCompletionPending = false
+                        adaptiveTypingCompletionPending = false
+                        imageRecallCompletionPending = false
                     }
                     is AndroidStudyEvent.NextVisited -> {
-                        if (currentItemIndex < activeContents.size - 1) {
+                        if (selectedMode == LabStudyMode.LISTENING || selectedMode == LabStudyMode.IMAGE_RECALL) {
+                            currentItemIndex = if (currentItemIndex < activeContents.size - 1) {
+                                currentItemIndex + 1
+                            } else {
+                                0
+                            }
+                            currentInput = ""
+                            selectedChoiceId = null
+                            isRevealed = false
+                            isCompleted = false
+                            listeningCompletionPending = false
+                            adaptiveTypingCompletionPending = false
+                            imageRecallCompletionPending = false
+                        } else if (currentItemIndex < activeContents.size - 1) {
                             currentItemIndex++
                             currentInput = ""
                             selectedChoiceId = null
@@ -145,6 +217,9 @@ fun AdaptiveStudyUiPreviewScreen(
                         }
                     }
                     is AndroidStudyEvent.PreviousVisited -> {
+                        listeningCompletionPending = false
+                        adaptiveTypingCompletionPending = false
+                        imageRecallCompletionPending = false
                         if (currentItemIndex > 0) {
                             currentItemIndex--
                             currentInput = ""
@@ -162,3 +237,6 @@ fun AdaptiveStudyUiPreviewScreen(
             onSaveQuickEdit = null
     )
 }
+
+internal fun isExactListeningPreviewAnswer(input: String, expected: String): Boolean =
+    input.trim().equals(expected.trim(), ignoreCase = true)

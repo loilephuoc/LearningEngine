@@ -44,7 +44,7 @@ class AndroidStudyRevealMediaAndTopBarTest {
     @Test fun `Image Recall removes duplicate visible prompt and owns accessible unlabeled input`() {
         val source = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/study/modes/ImageRecallStage.kt"))
         assertFalse(source.contains("StudyPrompt(\"Name this item\""))
-        assertTrue(source.contains("label = \"\""))
+        assertTrue(source.contains("label = \"Type your answer\""))
         assertTrue(source.contains("accessibilityLabel = \"Nhập từ tiếng Anh được gợi nhớ bởi hình ảnh\""))
         val screen = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt"))
         val autoplay = screen.substringAfter("val imageRecall = state as? AndroidStudyState.ImageRecall")

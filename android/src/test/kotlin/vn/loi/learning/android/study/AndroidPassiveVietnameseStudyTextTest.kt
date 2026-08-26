@@ -45,12 +45,12 @@ class AndroidPassiveVietnameseStudyTextTest {
         val meaning = answerSection.substringAfter("vietnameseAnswer?.takeIf")
             .substringBefore("if (!englishExample")
 
-        assertFalse(sectionContract.contains("onVietnameseAudio"))
+        assertFalse(sectionContract.contains("onVietnameseAudio:"))
         assertTrue(sectionContract.contains("onVietnameseExampleAudio"))
-        assertFalse(sectionContract.contains("vietnameseAudioPath"))
+        assertFalse(sectionContract.contains("vietnameseAudioPath:"))
         assertTrue(sectionContract.contains("vietnameseExampleAudioPath"))
-        assertTrue(meaning.contains("interaction = StudyTextInteraction.PASSIVE"))
-        assertTrue(meaning.contains("onToggleAudio") || meaning.contains("null,"))
+        assertTrue(meaning.contains("StudyTextInteraction.PASSIVE"))
+        assertTrue(meaning.contains("onVietnameseAnswerAudio"))
     }
 
     @Test

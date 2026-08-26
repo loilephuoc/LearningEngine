@@ -206,7 +206,7 @@ class AndroidTypingRevealAudioLoopTest {
         // Word audio tap in revealed typing routes to onTypingStageTap
         val feedbackContent = screenSource.substringAfter("private fun StudyRevealAndFeedbackContent(")
             .substringBefore("private fun Completion(")
-        assertTrue(feedbackContent.contains("onAnswerAudio = if (forcedTypingReveal) onTypingStageTap else"))
-        assertTrue(feedbackContent.contains("onEnglishExampleAudio = if (forcedTypingReveal) onTypingStageTap else"))
+        assertTrue(feedbackContent.contains("onAnswerAudio = if (forcedTypingReveal || listeningWrongReveal || imageRecallWrongReveal) onTypingStageTap else"))
+        assertTrue(feedbackContent.contains("onEnglishExampleAudio = {"))
     }
 }
